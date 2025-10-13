@@ -9,9 +9,9 @@ const server = http.createServer(app);
 
 // --- THIS BLOCK IS NEW AND MORE RELIABLE ---
 cors: {
-  origin: ["http://localhost:3000", "https://hikorochess.org", "https://www.hikorochess.org"],
-  methods: ["GET", "POST"]
-}
+    origin: ["http://localhost:3000", "https://hikorochess.org", "https://www.hikorochess.org"], // <-- COMMA ADDED
+    methods: ["GET", "POST"]
+  }
 });
 // --- END OF NEW BLOCK ---
 
