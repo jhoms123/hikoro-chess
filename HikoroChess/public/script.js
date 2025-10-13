@@ -1,14 +1,14 @@
 // public/script.js (Universal Version)
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- THIS BLOCK IS NEW ---
-    // It automatically connects to the right server address.
-    const productionUrl = 'https://HikoroChess.org'; // <-- PASTE YOUR URL HERE
+    
+    const productionUrl = 'https://hikorochess.org'; 
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const serverUrl = isLocal ? 'http://localhost:3000' : productionUrl;
     
+    
     const socket = io(serverUrl);
-    // --- END OF NEW BLOCK ---
+    
 
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
