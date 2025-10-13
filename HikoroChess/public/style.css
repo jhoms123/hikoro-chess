@@ -1,0 +1,157 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #333;
+    color: #eee;
+}
+
+#game-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+#board-container {
+    border: 5px solid #4a2a00;
+}
+
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(10, 40px);
+    grid-template-rows: repeat(16, 40px);
+    width: 400px;
+    height: 640px;
+    background-color: #888;
+}
+
+.square {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+/* Checkerboard pattern */
+.square.light { background-color: #f0d9b5; }
+.square.dark { background-color: #b58863; }
+.square.invalid { background-color: #555; } /* For invalid corners */
+
+.piece {
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.piece.white { color: #ffffff; }
+.piece.black { color: #1e1e1e; }
+
+/* Selection Highlight */
+.square.selected {
+    background-color: #6a9cff !important;
+}
+
+/* Move Plate Indicators */
+.move-plate {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+    background-color: rgba(4, 255, 0, 0.4);
+    pointer-events: all; /* Make sure it's clickable */
+    cursor: pointer;
+}
+
+.move-plate.attack {
+    background-color: rgba(255, 20, 20, 0.5);
+}
+
+.move-plate.drop {
+    background-color: rgba(255, 242, 0, 0.4);
+}
+
+
+/* Captured Pieces Area */
+.captured-area {
+    width: 150px;
+    text-align: center;
+}
+
+.captured-pieces-box {
+    background-color: #4a4a4a;
+    border: 2px solid #888;
+    min-height: 200px;
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start;
+}
+
+.captured-piece {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.captured-piece.white { background-color: #f0d9b5; }
+.captured-piece.black { background-color: #b58863; }
+
+#turn-indicator-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#winner-text {
+    font-size: 1.5em;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+/* Add to the end of style.css */
+
+#lobby {
+    background-color: #444;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#create-game-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+#game-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.game-item {
+    background-color: #555;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.join-btn {
+    padding: 5px 10px;
+    cursor: pointer;
+}

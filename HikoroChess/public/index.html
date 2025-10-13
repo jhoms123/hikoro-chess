@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jasu Chess Variant - Online</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Jasu Chess Variant</h1>
+
+    <div id="lobby">
+        <h2>Game Lobby</h2>
+        <button id="create-game-btn">Create New Game</button>
+        <h3>Available Games:</h3>
+        <div id="game-list"></div>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div class="captured-area" id="black-captured-area">
+            <h3>Opponent's Hand</h3>
+            <div class="captured-pieces-box" id="black-captured"></div>
+        </div>
+
+        <div id="board-container">
+            <div id="game-board"></div>
+        </div>
+
+        <div class="captured-area" id="white-captured-area">
+            <h3>Your Hand</h3>
+            <div class="captured-pieces-box" id="white-captured"></div>
+        </div>
+    </div>
+    
+    <div id="turn-indicator-container">
+        <h2 id="turn-indicator"></h2>
+        <p id="winner-text"></p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
