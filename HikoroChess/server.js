@@ -8,9 +8,9 @@ const app = express();
 const server = http.createServer(app);
 
 // --- THIS BLOCK IS NEW AND MORE RELIABLE ---
-const io = new socketIo.Server(server, { // <-- THIS PART WAS MISSING
+const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:3000", "https://hikorochess.org", "https://www.hikorochess.org"],
+    origin: ["https://hikoro-chess.onrender.com", "https://hikorochess.org", "https://www.hikorochess.org"],
     methods: ["GET", "POST"]
   }
 });
