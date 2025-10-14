@@ -1,19 +1,17 @@
 // public/script.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- Server Connection ---
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
-    const socket = io(serverUrl);
+   
+   const productionUrl = 'https://HikoroChess.org';
+   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+   const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
+
+   const socket = io(serverUrl);
     
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
-    const sanctuarySquares = [
-        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
-        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
-    ];
-
+    
+    // UI Elements
     const lobbyElement = document.getElementById('lobby');
     const gameContainerElement = document.getElementById('game-container');
     const createGameBtn = document.getElementById('create-game-btn');
@@ -22,43 +20,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
 
+    // Client State
     let gameState = {};
     let myColor = null;
     let gameId = null;
     let selectedSquare = null;
     let isDroppingPiece = null;
     
-    createGameBtn.addEventListener('click', () => {
-        const timeControl = document.getElementById('time-control').value;
-        const byoyomi = document.getElementById('byoyomi-control').value;
-        socket.emit('createGame', { timeControl, byoyomi });
-    });
-    
+    const sanctuarySquares = [
+        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+    ];
+
+    // --- Lobby Listeners ---
+    createGameBtn.addEventListener('click', () => socket.emit('createGame'));
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
     socket.on('gameStart', onGameStart);
+    
+    // --- Game Listeners ---
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('validMoves', drawHighlights);
     socket.on('errorMsg', (message) => alert(message));
-    socket.on('timeUpdate', (data) => {
-        updateClocks(data.whiteTime, data.blackTime);
+    socket.on('connect_error', (err) => {
+        console.error("Connection failed:", err.message);
+        alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
-
-    function formatTime(seconds) {
-        if (seconds < 0) return "00:00";
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-    }
-
-    function updateClocks(whiteTime, blackTime) {
-        if (!myColor) return;
-        const yourTime = myColor === 'white' ? whiteTime : blackTime;
-        const opponentTime = myColor === 'white' ? blackTime : whiteTime;
-
-        document.getElementById(`${myColor}-time`).textContent = formatTime(yourTime);
-        document.getElementById(myColor === 'white' ? 'black-time' : 'white-time').textContent = formatTime(opponentTime);
-    }
 
     function updateLobby(games) {
         gameListElement.innerHTML = '';
@@ -68,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gameItem.innerHTML = `<span>Game by Player 1</span>`;
             const joinBtn = document.createElement('button');
             joinBtn.textContent = 'Join';
+            joinBtn.classList.add('join-btn');
             joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
             gameItem.appendChild(joinBtn);
             gameListElement.appendChild(gameItem);
@@ -93,13 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLocalState(newGameState) {
         gameState = newGameState;
         renderAll();
-        if (gameState.timeControl > 0) {
-            updateClocks(gameState.whiteTime, gameState.blackTime);
-        }
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         if (isMyTurn && gameState.bonusMoveInfo) {
-            selectedSquare = { x: gameState.bonusMoveInfo.pieceX, y: gameState.bonusMoveInfo.pieceY };
-            socket.emit('getValidMoves', { gameId, square: selectedSquare });
+            const bonusPieceSquare = { 
+                x: gameState.bonusMoveInfo.pieceX, 
+                y: gameState.bonusMoveInfo.pieceY 
+            };
+            selectedSquare = bonusPieceSquare;
+            socket.emit('getValidMoves', { gameId, square: bonusPieceSquare });
         }
     }
 
@@ -117,13 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const square = document.createElement('div');
                 square.classList.add('square');
                 
-                // THIS IS THE CORRECTED BOARD FLIPPING LOGIC
-                let displayX = x;
-                let displayY = y;
+                let displayX = x, displayY = y;
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
-                } else if (myColor === 'black') {
-                    displayY = BOARD_HEIGHT - 1 - y;
+                } else { 
                     displayX = BOARD_WIDTH - 1 - x;
                 }
                 
@@ -132,9 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.style.gridRowStart = displayY + 1;
                 square.style.gridColumnStart = displayX + 1;
 
-                square.classList.add((x + y) % 2 === 0 ? 'light' : 'dark');
+                const isLight = (x + y) % 2 === 0;
+                square.classList.add(isLight ? 'light' : 'dark');
 
-                if (sanctuarySquares.some(sq => sq.x === x && sq.y === y)) {
+                const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
+                if (isSanctuary) {
                     square.classList.add('sanctuary-square');
                 }
 
@@ -142,15 +130,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!isBoardValid) {
                     square.classList.add('invalid');
                 } else {
-                    square.addEventListener('click', () => onSquareClick(x, y));
+                    square.addEventListener('click', (event) => {
+                        const clickedSquare = event.currentTarget;
+                        const logicalX = parseInt(clickedSquare.dataset.logicalX);
+                        const logicalY = parseInt(clickedSquare.dataset.logicalY);
+                        onSquareClick(logicalX, logicalY);
+                    });
                 }
 
                 const piece = gameState.boardState[y][x];
                 if (piece) {
                     const pieceElement = document.createElement('div');
-                    pieceElement.classList.add('piece');
+                    pieceElement.classList.add('piece', piece.color);
+
                     const spriteImg = document.createElement('img');
                     spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+                    spriteImg.alt = `${piece.color} ${piece.type}`;
+
                     pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
                 }
@@ -159,41 +155,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // THIS FUNCTION CONTAINS THE FIX
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
         const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
         const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
         const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
-        
-        // This ensures the "Your Hand" and "Opponent's Hand" labels are always correct
-        const myHeader = document.querySelector(myColor === 'white' ? '#white-captured-area h3' : '#black-captured-area h3');
-        const oppHeader = document.querySelector(myColor === 'white' ? '#black-captured-area h3' : '#white-captured-area h3');
-        
-        // We only want the text part, not the clock span
-        myHeader.childNodes[0].nodeValue = "Your Hand (";
-        oppHeader.childNodes[0].nodeValue = "Opponent's Hand (";
-
+        document.querySelector(myColor === 'white' ? '#white-captured-area h3' : '#black-captured-area h3').textContent = "Your Hand";
+        document.querySelector(myColor === 'white' ? '#black-captured-area h3' : '#white-captured-area h3').textContent = "Opponent's Hand";
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
 
+        // Helper function to create a piece element to avoid repetition
         const createCapturedPieceElement = (piece, isMyPiece) => {
             const el = document.createElement('div');
+            // The class for the background/border should be the color of the piece's CURRENT owner
             el.classList.add('captured-piece', piece.color);
+
             const pieceElement = document.createElement('div');
             pieceElement.classList.add('piece');
+            
             const spriteImg = document.createElement('img');
             spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
             spriteImg.alt = `${piece.color} ${piece.type}`;
+
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
+
             if (isMyPiece) {
                 el.addEventListener('click', () => onCapturedClick(piece));
             }
             return el;
         };
 
-        myCaptured.forEach(piece => myCapturedEl.appendChild(createCapturedPieceElement(piece, true)));
-        oppCaptured.forEach(piece => oppCapturedEl.appendChild(createCapturedPieceElement(piece, false)));
+        myCaptured.forEach((piece) => {
+            const pieceEl = createCapturedPieceElement(piece, true);
+            myCapturedEl.appendChild(pieceEl);
+        });
+
+        oppCaptured.forEach((piece) => {
+            const pieceEl = createCapturedPieceElement(piece, false);
+            oppCapturedEl.appendChild(pieceEl);
+        });
     }
 
 
@@ -207,11 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
     }
 
-    // --- User Interaction ---
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         
+        // This check must come first to handle drops
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
             isDroppingPiece = null;
@@ -230,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const piece = gameState.boardState[y][x];
         if (piece && piece.color === myColor) {
-            if (selectedSquare && selectedsquare.x === x && selectedSquare.y === y) {
+            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
                 selectedSquare = null;
                 clearHighlights();
             } else {
@@ -244,22 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function onCapturedClick(piece) {
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn || gameState.gameOver) return;
-
-        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
-        }
-        
-        selectedSquare = null;
-        isDroppingPiece = piece;
-        highlightDropSquares();
-    }
-
-    // --- Highlighting Functions ---
     function drawHighlights(moves) {
         clearHighlights();
         if (!selectedSquare) return;
@@ -276,25 +263,44 @@ document.addEventListener('DOMContentLoaded', () => {
             if (moveSquare) {
                 const plate = document.createElement('div');
                 plate.classList.add('move-plate');
-                if (!isMyTurn) plate.classList.add('preview');
-                if (move.isAttack) plate.classList.add('attack');
+                if (!isMyTurn) {
+                    plate.classList.add('preview');
+                }
+                if (move.isAttack) {
+                    plate.classList.add('attack');
+                }
                 moveSquare.appendChild(plate);
             }
         });
+    }
+
+    function onCapturedClick(piece) {
+        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+        
+        if (!isMyTurn || gameState.gameOver) return;
+
+        // If you click the same piece you're already trying to drop, cancel the drop.
+        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+        
+        selectedSquare = null; // Clear any board selection when selecting from hand
+        isDroppingPiece = piece;
+        highlightDropSquares();
     }
 
     function highlightDropSquares() {
         clearHighlights();
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (gameState.boardState[y][x] === null && isBoardValid) {
                     const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
-                    if (square) {
-                        const plate = document.createElement('div');
-                        plate.classList.add('move-plate', 'drop');
-                        square.appendChild(plate);
-                    }
+                    const plate = document.createElement('div');
+                    plate.classList.add('move-plate', 'drop');
+                    if(square) square.appendChild(plate);
                 }
             }
         }

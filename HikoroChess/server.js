@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -10,6 +12,7 @@ const io = socketIo(server, {
     origin: ["https://hikorochess.org", "https://www.hikorochess.org", "https://hikoro-chess.onrender.com"],
     methods: ["GET", "POST"]
   },
+  
   pingInterval: 25000,
   pingTimeout: 20000 
 });
@@ -23,61 +26,13 @@ let lobbyGames = {};
 
 const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./gamelogic');
 
-function stopTimer(game) {
-    if (game && game.timerId) {
-        clearInterval(game.timerId);
-        game.timerId = null;
-    }
-}
-
-// Stable, standalone function to handle the game timer tick
-function gameTick(gameId) {
-    const game = games[gameId];
-    // If the game ended or was deleted for any reason, stop.
-    if (!game) { 
-        return; 
-    }
-    if (game.gameOver) {
-        stopTimer(game);
-        return;
-    }
-
-    const activePlayer = game.isWhiteTurn ? 'white' : 'black';
-    const opponent = game.isWhiteTurn ? 'black' : 'white';
-    
-    if (game[activePlayer + 'Time'] > 0) {
-        game[activePlayer + 'Time']--;
-    } else if (game.byoyomi > 0 && !game[activePlayer + 'InByoyomi']) {
-        // Player's main time is out, enter byoyomi period.
-        game[activePlayer + 'InByoyomi'] = true;
-        game[activePlayer + 'Time'] = game.byoyomi;
-    } else {
-        // Time has fully run out.
-        console.log(`Game ${gameId} ended. ${activePlayer} ran out of time.`);
-        game.gameOver = true;
-        game.winner = opponent;
-        io.to(gameId).emit('gameStateUpdate', game);
-        stopTimer(game);
-        delete games[gameId]; // Clean up the finished game
-        return; 
-    }
-    
-    // Send the updated time to the clients
-    io.to(gameId).emit('timeUpdate', { 
-        whiteTime: game.whiteTime, 
-        blackTime: game.blackTime 
-    });
-}
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
-    socket.on('createGame', (settings) => {
+    socket.on('createGame', () => {
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
-        const timeControl = parseInt(settings.timeControl, 10);
-        const byoyomi = parseInt(settings.byoyomi, 10);
-
         games[gameId] = {
             id: gameId,
             players: { white: socket.id, black: null },
@@ -88,35 +43,25 @@ io.on('connection', (socket) => {
             turnCount: 0,
             bonusMoveInfo: null,
             gameOver: false,
-            winner: null,
-            timeControl: timeControl,
-            byoyomi: byoyomi,
-            whiteTime: timeControl,
-            blackTime: timeControl,
-            whiteInByoyomi: false,
-            blackInByoyomi: false,
-            timerId: null
+            winner: null
         };
         lobbyGames[gameId] = { id: gameId, white: socket.id, black: null };
         socket.join(gameId);
         socket.emit('gameCreated', { gameId, color: 'white' });
         io.emit('lobbyUpdate', lobbyGames);
+        console.log(`Game created: ${gameId} by ${socket.id}`);
     });
 
     socket.on('joinGame', (gameId) => {
         const game = games[gameId];
         if (game && !game.players.black) {
             game.players.black = socket.id;
-            delete lobbyGames[gameId];
+            lobbyGames[gameId].black = socket.id;
             socket.join(gameId);
+            delete lobbyGames[gameId];
+            console.log(`${socket.id} joined game ${gameId} as black.`);
             io.to(gameId).emit('gameStart', game);
             io.emit('lobbyUpdate', lobbyGames);
-            
-            // Start the game timer if time control is enabled
-            if (game.timeControl > 0) {
-                console.log(`Starting timer for game ${gameId}.`);
-                game.timerId = setInterval(() => gameTick(gameId), 1000);
-            }
         } else {
             socket.emit('errorMsg', 'Game is full or does not exist.');
         }
@@ -157,9 +102,12 @@ io.on('connection', (socket) => {
         
         let bonusMoveActive = false;
         if (game.bonusMoveInfo) {
-            if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) return;
+            if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
+                return;
+            }
             bonusMoveActive = true;
         }
+
         const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
         const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
 
@@ -177,11 +125,11 @@ io.on('connection', (socket) => {
                         const intermediatePiece = game.boardState[cy][cx];
                         if (intermediatePiece && intermediatePiece.color === playerColor) {
                              if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
-                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
-                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                                 if (capturedArray.length < 6) {
-                                     capturedArray.push(pieceForHand);
-                                 }
+                                let pieceForHand = { type: intermediatePiece.type, color: playerColor };
+                                const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                                if (capturedArray.length < 6) {
+                                    capturedArray.push(pieceForHand);
+                                }
                             }
                             game.boardState[cy][cx] = null;
                         }
@@ -192,7 +140,9 @@ io.on('connection', (socket) => {
             }
 
             if (targetPiece !== null) {
-                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
+                // Defines which pieces are destroyed on capture
+                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid']; // ADDED 'mermaid'
+
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
@@ -201,6 +151,7 @@ io.on('connection', (socket) => {
                         capturedArray.push(pieceForHand);
                     }
                 } else if (!indestructiblePieces.includes(targetPiece.type)) {
+                    // Standard capture logic for all other pieces
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
                     if (targetPiece.type === 'lupa') {
                         pieceForHand.type = 'sult';
@@ -217,12 +168,9 @@ io.on('connection', (socket) => {
             
             handlePromotion(piece, to.y, wasCapture);
             checkForWinner(game);
-            
-            if (game[playerColor + 'InByoyomi']) {
-                game[playerColor + 'Time'] = game.byoyomi;
-            }
 
             game.turnCount++;
+
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
@@ -234,6 +182,7 @@ io.on('connection', (socket) => {
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
             }
+
             io.to(gameId).emit('gameStateUpdate', game);
         }
     });
@@ -242,22 +191,16 @@ io.on('connection', (socket) => {
         const { gameId, piece, to } = data;
         const game = games[gameId];
         if (!game || game.gameOver) return;
-
         const playerColor = game.players.white === socket.id ? 'white' : 'black';
         const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
         if (!isTurn) return;
         
         if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
+             game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
              const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
              const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
              if (pieceIndex > -1) {
-                game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
                 capturedArray.splice(pieceIndex, 1);
-                
-                if (game[playerColor + 'InByoyomi']) {
-                    game[playerColor + 'Time'] = game.byoyomi;
-                }
-            
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
                 game.turnCount++;
@@ -271,7 +214,6 @@ io.on('connection', (socket) => {
         for (const gameId in games) {
             const game = games[gameId];
             if (game.players.white === socket.id || game.players.black === socket.id) {
-                stopTimer(game);
                 if(!game.gameOver) {
                     game.gameOver = true;
                     game.winner = game.players.white === socket.id ? 'black' : 'white';
@@ -289,9 +231,17 @@ io.on('connection', (socket) => {
 
 function handlePromotion(piece, y, wasCapture) {
     const color = piece.color;
-    if (piece.type === 'greathorsegeneral' && wasCapture) piece.type = 'cthulhu';
-    if (piece.type === 'mermaid' && wasCapture) piece.type = 'neptune';
+    
+    if (piece.type === 'greathorsegeneral' && wasCapture) {
+        piece.type = 'cthulhu';
+    }
+
+    if (piece.type === 'mermaid' && wasCapture) {
+        piece.type = 'neptune';
+    }
+    
     if (piece.type === 'fin' && wasCapture) piece.type = 'finor';
+
     const promotablePawns = ['sult', 'pawn', 'pilut'];
     if (promotablePawns.includes(piece.type)) {
         const inPromotionZone = (color === 'white' && y > 8) || (color === 'black' && y < 7);
@@ -303,31 +253,38 @@ function handlePromotion(piece, y, wasCapture) {
 }
 
 function checkForWinner(game) {
-    let winnerFound = false;
-    const winSquares = [ {x:0,y:7},{x:1,y:7},{x:8,y:7},{x:9,y:7},{x:0,y:8},{x:1,y:8},{x:8,y:8},{x:9,y:8} ];
+    const winSquares = [
+        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+    ];
+
     for (const square of winSquares) {
         const pieceOnSquare = game.boardState[square.y][square.x];
         if (pieceOnSquare && pieceOnSquare.type === 'lupa') {
+            game.gameOver = true;
             game.winner = pieceOnSquare.color;
-            winnerFound = true;
-            break;
+            return;
         }
     }
-    if (!winnerFound) {
-        let whiteLupaCount = 0;
-        let blackLupaCount = 0;
-        for (let y = 0; y < 16; y++) for (let x = 0; x < 10; x++) {
+
+    let whiteLupaCount = 0;
+    let blackLupaCount = 0;
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 10; x++) {
             const piece = game.boardState[y][x];
             if (piece && piece.type === 'lupa') {
-                if (piece.color === 'white') whiteLupaCount++; else blackLupaCount++;
+                if (piece.color === 'white') whiteLupaCount++;
+                else blackLupaCount++;
             }
         }
-        if (blackLupaCount === 0) { game.winner = 'white'; winnerFound = true; }
-        else if (whiteLupaCount === 0) { game.winner = 'black'; winnerFound = true; }
     }
-    if (winnerFound) {
+
+    if (blackLupaCount === 0) {
         game.gameOver = true;
-        stopTimer(game);
+        game.winner = 'white';
+    } else if (whiteLupaCount === 0) {
+        game.gameOver = true;
+        game.winner = 'black';
     }
 }
 
