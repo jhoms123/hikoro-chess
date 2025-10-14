@@ -45,12 +45,13 @@ function isPositionValid(x, y) {
 
 const isProtected = (targetPiece, targetX, targetY, board) => {
     const protectingColor = targetPiece.color;
-    
-    // 1. Check for Pilut protection.
-    // The rule is a Pilut protects the piece directly IN FRONT of it.
-    // So, from the target piece's perspective, we check the square BEHIND it for a friendly Pilut.
-    const behindDir = protectingColor === 'white' ? -1 : 1; // For a white piece, behind is y-1. For black, y+1.
-    const pilutProtectorY = targetY + behindDir;
+
+    // --- 1. Check for Pilut protection (CORRECTED LOGIC) ---
+    // A Pilut protects the square directly behind itself.
+    // So, from the perspective of the piece being attacked (the target), we must
+    // check the square IN FRONT of it to find the protecting Pilut.
+    const inFrontDir = protectingColor === 'white' ? 1 : -1; // For white piece, "in front" is y+1. For black, y-1.
+    const pilutProtectorY = targetY + inFrontDir;
     if (isPositionValid(targetX, pilutProtectorY)) {
         const potentialProtector = board[pilutProtectorY][targetX];
         if (potentialProtector && potentialProtector.type === 'pilut' && potentialProtector.color === protectingColor) {
@@ -58,7 +59,7 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
         }
     }
 
-    // 2. Check for Great Shield protection
+    // --- 2. Check for Great Shield protection ---
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
@@ -78,8 +79,10 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
             }
         }
     }
+
     return false;
 };
+
 
 function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
     if (!piece) return [];
