@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
 
             if (targetPiece !== null) {
                 // Defines which pieces are destroyed on capture
-                const indestructiblePieces = ['greathorsegeneral', 'cthulhu'];
+                const indestructiblePieces = ['greathorsegeneral', 'cthulhu']; // ADDED 'cthulhu'
 
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;

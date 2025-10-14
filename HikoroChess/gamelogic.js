@@ -8,7 +8,7 @@ const pieceNotation = {
     kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
     finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
-    neptune: "Np", mermaid: "Mm", cathulhu: "Ct"
+    neptune: "Np", mermaid: "Mm", cthulhu: "Ct" // Corrected spelling
 };
 
 function getInitialBoard() {
@@ -23,7 +23,7 @@ function getInitialBoard() {
         { y: 4, x: 2, type: 'kor' }, { y: 4, x: 3, type: 'fin' },
         { y: 4, x: 4, type: 'yoli' }, { y: 4, x: 5, type: 'yoli' },
         { y: 4, x: 6, type: 'fin' }, { y: 4, x: 7, type: 'kor' },
-        { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' }, // Replaced Zur with Neptune
+        { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' },
         { y: 3, x: 1, type: 'cope' }, { y: 3, x: 2, type: 'jotu' },
         { y: 3, x: 3, type: 'pawn' }, { y: 3, x: 6, type: 'pawn' },
         { y: 3, x: 7, type: 'jotu' }, { y: 3, x: 8, type: 'cope' },
@@ -174,69 +174,16 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
     };
 
     switch (piece.type) {
-        case 'lupa':
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                addMove(x + dx, y + dy);
-            }
-            break;
-        case 'kota':
-            generateLineMoves(1, 0); generateLineMoves(-1, 0);
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                addMove(x + dx, y + dy);
-            }
-            break;
-		case 'zur': 
-			for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { 
-				if (dx === 0 && dy === 0) continue; 
-				generateLineMoves(dx, dy); 
-			} 
-			break;
-        case 'fin':
-            generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-            addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y);
-            break;
-        case 'yoli':
-            [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
-            addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1);
-            break;
-        case 'pilut':
-            const dir = piece.color === 'white' ? 1 : -1;
-            if (isPositionValid(x, y + dir) && !boardState[y + dir][x]) {
-                moves.push({ x: x, y: y + dir, isAttack: false });
-                if (isPositionValid(x, y + 2 * dir) && !boardState[y + 2 * dir][x]) {
-                    moves.push({ x: x, y: y + 2 * dir, isAttack: false });
-                }
-            }
-            break;
-        case 'sult':
-            const fwd = piece.color === 'white' ? 1 : -1;
-            addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd);
-            addMove(x, y + fwd); addMove(x, y + 2 * fwd);
-            break;
-        case 'pawn':
-            addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y);
-            addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2);
-            break;
-        case 'cope': {
-            const fwdDir = piece.color === 'white' ? 1 : -1;
-            const generateCopeMoves = (moveFunc) => {
-                moveFunc(x + 2, y + 2 * fwdDir); moveFunc(x - 2, y + 2 * fwdDir);
-                moveFunc(x, y + 1 * fwdDir); moveFunc(x, y + 2 * fwdDir);
-                moveFunc(x, y - 1 * fwdDir); moveFunc(x, y - 2 * fwdDir);
-            };
-            if (bonusMoveActive) {
-                generateCopeMoves(addNonCaptureMove);
-            } else {
-                generateCopeMoves(addMove);
-            }
-            break;
-        }
-        case 'chair':
-            generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-            generateLineMoves(0, 1); generateLineMoves(0, -1);
-            break;
+        case 'lupa': for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
+        case 'kota': generateLineMoves(1, 0); generateLineMoves(-1, 0); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
+        case 'zur': for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; generateLineMoves(dx, dy); } break;
+        case 'fin': generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1); addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y); break;
+        case 'yoli': [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
+        case 'pilut': { const dir = piece.color === 'white' ? 1 : -1; if (isPositionValid(x, y + dir) && !boardState[y + dir][x]) { moves.push({ x: x, y: y + dir, isAttack: false }); if (isPositionValid(x, y + 2 * dir) && !boardState[y + 2 * dir][x]) { moves.push({ x: x, y: y + 2 * dir, isAttack: false }); } } break; }
+        case 'sult': { const fwd = piece.color === 'white' ? 1 : -1; addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd); addMove(x, y + fwd); addMove(x, y + 2 * fwd); break; }
+        case 'pawn': addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y); addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
+        case 'cope': { const fwdDir = piece.color === 'white' ? 1 : -1; const generateCopeMoves = (moveFunc) => { moveFunc(x + 2, y + 2 * fwdDir); moveFunc(x - 2, y + 2 * fwdDir); moveFunc(x, y + 1 * fwdDir); moveFunc(x, y + 2 * fwdDir); moveFunc(x, y - 1 * fwdDir); moveFunc(x, y - 2 * fwdDir); }; if (bonusMoveActive) { generateCopeMoves(addNonCaptureMove); } else { generateCopeMoves(addMove); } break; }
+        case 'chair': generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1); generateLineMoves(0, 1); generateLineMoves(0, -1); break;
         case 'jotu':
             generateJotuJumpMoves(1, 0); 
             generateJotuJumpMoves(-1, 0);
@@ -287,80 +234,46 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             }
             break;
         }
-        // --- NEW PIECE LOGIC STARTS HERE ---
         case 'neptune': {
             const fwdDir = piece.color === 'white' ? 1 : -1;
-            
-            // 1. Cannon-like jump move
             const directions = [
-                {dx: 1, dy: 1*fwdDir}, {dx: -1, dy: 1*fwdDir}, // Forward Diagonals
-                {dx: 0, dy: 1*fwdDir}, // Forward
-                {dx: 0, dy: -1*fwdDir} // Backward
+                {dx: 1, dy: fwdDir}, {dx: -1, dy: fwdDir}, {dx: 0, dy: fwdDir}, {dx: 0, dy: -fwdDir}
             ];
-
             directions.forEach(({dx, dy}) => {
-                let cx = x + dx;
-                let cy = y + dy;
-                let screenFound = false;
-
+                let cx = x + dx; let cy = y + dy; let screenFound = false;
                 while (isPositionValid(cx, cy)) {
                     const target = boardState[cy][cx];
-                    if (!screenFound) {
-                        if (target !== null) {
-                            screenFound = true; // Found the piece to jump over
-                        }
-                    } else { // After the screen
-                        if (target === null) {
-                           moves.push({ x: cx, y: cy, isAttack: false }); // Can land on empty squares
-                        } else {
-                            if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) {
-                                moves.push({ x: cx, y: cy, isAttack: true }); // Can capture first piece after screen
-                            }
-                            break; // Path is blocked by the second piece
-                        }
+                    if (!screenFound) { if (target !== null) { screenFound = true; } } 
+                    else {
+                        if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); } 
+                        else { if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); } break; }
                     }
-                    cx += dx;
-                    cy += dy;
+                    cx += dx; cy += dy;
                 }
             });
-
-            // 2. Lupa's moveset
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                addMove(x + dx, y + dy);
-            }
-
-            // 3. Cope's moveset
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); }
             addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
             addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
             addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
             break;
         }
         case 'mermaid': {
-            // Jumps to any location in a 2-tile radius (5x5 square)
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
-                }
+            for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                addMove(x + dx, y + dy);
             }
             break;
         }
-		case 'cathulhu': {
-            // 1. Mermaid's 5x5 jump area (this includes the Lupa's 3x3 area)
+		case 'cthulhu': { // Corrected spelling
             for (let dx = -2; dx <= 2; dx++) {
                 for (let dy = -2; dy <= 2; dy++) {
                     if (dx === 0 && dy === 0) continue;
                     addMove(x + dx, y + dy);
                 }
             }
-            
-            // 2. Great Horse General's extended knight move
             [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { 
                 if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); 
             }));
-                
-            // 3. Great Horse General's line moves
             const ghgDir = piece.color === 'white' ? 1 : -1;
             generateLineMoves(-1, ghgDir);
             generateLineMoves(1, ghgDir);
