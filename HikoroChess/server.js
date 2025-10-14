@@ -84,7 +84,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // MODIFIED: To handle Great Horse General captures
     socket.on('makeMove', (data) => {
         const { gameId, from, to } = data;
         const game = games[gameId];
@@ -113,9 +112,12 @@ io.on('connection', (socket) => {
             const wasCapture = targetPiece !== null;
 
             if (targetPiece !== null) {
-                // ADDED: GHG is permanently lost when captured
                 if (targetPiece.type !== 'greathorsegeneral') {
-                    let pieceForHand = { type: targetPiece.type, color: targetPiece.color };
+                    // --- THIS IS THE ONLY LINE THAT CHANGED ---
+                    // The piece in hand now gets the capturing player's color.
+                    let pieceForHand = { type: targetPiece.type, color: playerColor }; 
+                    // --- END OF CHANGE ---
+                    
                     if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
                     if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
                     if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
@@ -129,8 +131,6 @@ io.on('connection', (socket) => {
             game.boardState[from.y][from.x] = null;
             
             handlePromotion(piece, to.y, wasCapture);
-            
-            // This now checks for both win conditions
             checkForWinner(game);
 
             if (bonusMoveActive) {
@@ -160,7 +160,7 @@ io.on('connection', (socket) => {
         if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
              game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
              const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-             const pieceIndex = capturedArray.findIndex(p => p.type === piece.type);
+             const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
              if (pieceIndex > -1) {
                 capturedArray.splice(pieceIndex, 1);
                 game.bonusMoveInfo = null;
@@ -204,7 +204,6 @@ function handlePromotion(piece, y, wasCapture) {
 }
 
 function checkForWinner(game) {
-    // --- 1. Lupa Sanctuary Win Condition ---
     const winSquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
@@ -215,12 +214,10 @@ function checkForWinner(game) {
         if (pieceOnSquare && pieceOnSquare.type === 'lupa') {
             game.gameOver = true;
             game.winner = pieceOnSquare.color;
-            return; // Game is over, no need to check further
+            return;
         }
     }
 
-    // --- 2. Lupa Capture Win Condition (Corrected Logic) ---
-    // This condition is met only when a player has ZERO Lupas left.
     let whiteLupaCount = 0;
     let blackLupaCount = 0;
     for (let y = 0; y < 16; y++) {
@@ -241,6 +238,5 @@ function checkForWinner(game) {
         game.winner = 'black';
     }
 }
-
 
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
