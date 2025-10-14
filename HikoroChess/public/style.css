@@ -55,6 +55,12 @@ body {
   width: 90%;
   height: 90%;
   object-fit: contain; /* Prevents the image from stretching */
+
+  /* ADD THESE LINES to make the images sharp */
+  image-rendering: -moz-crisp-edges;     /* Firefox */
+  image-rendering: -webkit-crisp-edges; /* Chrome, Safari */
+  image-rendering: pixelated;           /* Modern browsers */
+  image-rendering: crisp-edges;         /* General fallback */
 }
 
 /* Selection Highlight */

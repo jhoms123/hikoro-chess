@@ -32,8 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
-    // NOTE: The pieceNotation object is no longer needed and has been removed.
-
     // --- Lobby Listeners ---
     createGameBtn.addEventListener('click', () => socket.emit('createGame'));
     socket.on('lobbyUpdate', updateLobby);
@@ -142,17 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const piece = gameState.boardState[y][x];
                 if (piece) {
-                    // --- MODIFIED PIECE RENDERING LOGIC ---
                     const pieceElement = document.createElement('div');
                     pieceElement.classList.add('piece', piece.color);
 
                     const spriteImg = document.createElement('img');
-                    spriteImg.src = `sprites/${piece.type}_${piece.color}.png`; // Constructs the image path
-                    spriteImg.alt = `${piece.color} ${piece.type}`; // For accessibility
+                    spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+                    spriteImg.alt = `${piece.color} ${piece.type}`;
 
                     pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
-                    // --- END OF MODIFICATION ---
                 }
                 boardElement.appendChild(square);
             }
@@ -173,15 +169,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', myColor);
 
-            // --- MODIFIED CAPTURED PIECE RENDERING ---
+            // --- BUG FIX: Use the piece's ORIGINAL color, not your color ---
             const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece', myColor);
+            pieceElement.classList.add('piece', piece.color); // Use piece.color
             const spriteImg = document.createElement('img');
-            spriteImg.src = `sprites/${piece.type}_${myColor}.png`;
-            spriteImg.alt = `${myColor} ${piece.type}`;
+            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`; // Use piece.color
+            spriteImg.alt = `${piece.color} ${piece.type}`; // Use piece.color
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
-            // --- END OF MODIFICATION ---
+            // --- END OF FIX ---
 
             el.addEventListener('click', () => onCapturedClick(piece));
             myCapturedEl.appendChild(el);
@@ -191,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', piece.color);
             
-             // --- MODIFIED CAPTURED PIECE RENDERING ---
             const pieceElement = document.createElement('div');
             pieceElement.classList.add('piece', piece.color);
             const spriteImg = document.createElement('img');
@@ -199,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
             spriteImg.alt = `${piece.color} ${piece.type}`;
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
-            // --- END OF MODIFICATION ---
 
             oppCapturedEl.appendChild(el);
         });
