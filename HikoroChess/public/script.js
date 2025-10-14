@@ -32,21 +32,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     createGameBtn.addEventListener('click', () => {
-        const mainTime = parseInt(document.getElementById('time-control').value, 10);
-        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+   
+		const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
+		
+		const mainTime = parseInt(document.getElementById('time-control').value, 10);
+		let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
 
-        if (mainTime === 0 && byoyomiTime === 0) {
-            byoyomiTime = 15; 
-        }
+		if (mainTime === 0 && byoyomiTime === 0) {
+			byoyomiTime = 15; 
+		}
 
-        const timeControl = {
-            main: mainTime,
-            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
-            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
-        };
-        
-        socket.emit('createGame', timeControl);
-    });
+		const timeControl = {
+			main: mainTime,
+			byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
+			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
+		};
+		
+		// Send both playerName and timeControl to the server
+		socket.emit('createGame', { playerName, timeControl });
+	});
 
 
     socket.on('lobbyUpdate', updateLobby);
@@ -84,6 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
             blackTimerEl = document.getElementById('black-timer');
         }
     }
+	
+	function formatTimeControl(tc) {
+		if (!tc || tc.main === -1) {
+			return 'Unlimited';
+		}
+		const mainMinutes = Math.floor(tc.main / 60);
+		let formattedString = `${mainMinutes} min`;
+		if (tc.byoyomiTime > 0) {
+			formattedString += ` + ${tc.byoyomiTime}s`;
+		}
+		return formattedString;
+	}
 
     function formatTime(seconds, periods, inByoyomi) {
         if (seconds === -1) {
@@ -128,19 +144,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function updateLobby(games) {
-        gameListElement.innerHTML = '';
-        for (const id in games) {
-            const gameItem = document.createElement('div');
-            gameItem.classList.add('game-item');
-            gameItem.innerHTML = `<span>Game by Player 1</span>`;
-            const joinBtn = document.createElement('button');
-            joinBtn.textContent = 'Join';
-            joinBtn.classList.add('join-btn');
-            joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
-            gameItem.appendChild(joinBtn);
-            gameListElement.appendChild(gameItem);
-        }
-    }
+		gameListElement.innerHTML = '';
+		for (const id in games) {
+			const game = games[id]; // The game object from the server
+			const gameItem = document.createElement('div');
+			gameItem.classList.add('game-item');
+
+			// Create a span to hold the game info
+			const infoSpan = document.createElement('span');
+			const creatorName = game.creatorName || 'Player 1'; // Use name from server, or a fallback
+			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : ''; // Format the time
+			
+			infoSpan.textContent = `${creatorName}'s Game [${timeString}]`;
+			gameItem.appendChild(infoSpan);
+			
+			const joinBtn = document.createElement('button');
+			joinBtn.textContent = 'Join';
+			joinBtn.classList.add('join-btn');
+			joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
+			gameItem.appendChild(joinBtn);
+			
+			gameListElement.appendChild(gameItem);
+		}
+	}
 
     function onGameCreated(data) {
         gameId = data.gameId;

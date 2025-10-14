@@ -121,35 +121,51 @@ io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
-    socket.on('createGame', (timeControl) => {
-        const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
-        
-        const tc = timeControl && timeControl.main !== undefined ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
+    socket.on('createGame', (data) => {
+		
+		const { playerName, timeControl } = data;
 
-        games[gameId] = {
-            id: gameId,
-            players: { white: socket.id, black: null },
-            boardState: getInitialBoard(),
-            whiteCaptured: [],
-            blackCaptured: [],
-            isWhiteTurn: true,
-            turnCount: 0,
-            bonusMoveInfo: null,
-            gameOver: false,
-            winner: null,
-            timeControl: tc,
-            whiteTimeLeft: tc.main,
-            blackTimeLeft: tc.main,
-            whiteByoyomiPeriodsLeft: tc.byoyomiPeriods,
-            blackByoyomiPeriodsLeft: tc.byoyomiPeriods,
-            lastMoveTimestamp: null
-        };
-        lobbyGames[gameId] = { id: gameId, white: socket.id, black: null };
-        socket.join(gameId);
-        socket.emit('gameCreated', { gameId, color: 'white' });
-        io.emit('lobbyUpdate', lobbyGames);
-        console.log(`Game created: ${gameId} by ${socket.id}`);
-    });
+		const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
+
+		
+		const tc = timeControl && timeControl.main !== undefined ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
+
+		
+		games[gameId] = {
+			id: gameId,
+			players: { white: socket.id, black: null },
+			boardState: getInitialBoard(),
+			whiteCaptured: [],
+			blackCaptured: [],
+			isWhiteTurn: true,
+			turnCount: 0,
+			bonusMoveInfo: null,
+			gameOver: false,
+			winner: null,
+			timeControl: tc,
+			whiteTimeLeft: tc.main,
+			blackTimeLeft: tc.main,
+			whiteByoyomiPeriodsLeft: tc.byoyomiPeriods,
+			blackByoyomiPeriodsLeft: tc.byoyomiPeriods,
+			lastMoveTimestamp: null
+		};
+		
+		
+		lobbyGames[gameId] = { 
+			id: gameId, 
+			white: socket.id, 
+			black: null,
+			creatorName: playerName,  
+			timeControl: tc         
+		};
+
+		socket.join(gameId);
+		socket.emit('gameCreated', { gameId, color: 'white' });
+		io.emit('lobbyUpdate', lobbyGames);
+		
+		// Updated console log to be more descriptive
+		console.log(`Game created: ${gameId} by ${playerName} (${socket.id})`);
+	});
 
     socket.on('joinGame', (gameId) => {
         const game = games[gameId];
