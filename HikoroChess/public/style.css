@@ -156,39 +156,7 @@ body {
     cursor: pointer;
 }
 
-.sanctuary-marker {
-  position: relative; /* This is the base class for any square with a dot */
-}
-
-/* This is the shared style for all dots */
-.sanctuary-marker::before {
-  content: '';
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background-color: gold;
-  border-radius: 50%;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
-  z-index: 1; /* Ensures dot is visible */
-}
-
-/* These classes position the dot in a specific corner */
-.sanctuary-top-left::before {
-  top: 4px;
-  left: 4px;
-}
-
-.sanctuary-top-right::before {
-  top: 4px;
-  right: 4px;
-}
-
-.sanctuary-bottom-left::before {
-  bottom: 4px;
-  left: 4px;
-}
-
-.sanctuary-bottom-right::before {
-  bottom: 4px;
-  right: 4px;
+.sanctuary-square.light,
+.sanctuary-square.dark {
+  background-color: #f8e473; /* A pleasant golden yellow */
 }

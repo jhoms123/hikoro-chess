@@ -27,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSquare = null;
     let isDroppingPiece = null;
     
+    // The 8 correct sanctuary squares in the center of the board
+    const sanctuarySquares = [
+        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+    ];
+
     const pieceNotation = {
         lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
         sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
@@ -100,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTurnIndicator();
     }
     
-    // MODIFIED: To add specific corner dots for sanctuary zones
     function renderBoard() {
         boardElement.innerHTML = '';
         for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -123,29 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLight = (x + y) % 2 === 0;
                 square.classList.add(isLight ? 'light' : 'dark');
 
-                // --- NEW LOGIC for placing corner dots ---
-                // White's Sanctuary Zone (bottom of logical board)
-                if (x === 0 && y === 1) square.classList.add('sanctuary-marker', 'sanctuary-top-left');
-                if (x === 1 && y === 1) square.classList.add('sanctuary-marker', 'sanctuary-top-right');
-                if (x === 0 && y === 0) square.classList.add('sanctuary-marker', 'sanctuary-bottom-left');
-                if (x === 1 && y === 0) square.classList.add('sanctuary-marker', 'sanctuary-bottom-right');
-
-                if (x === 8 && y === 1) square.classList.add('sanctuary-marker', 'sanctuary-top-left');
-                if (x === 9 && y === 1) square.classList.add('sanctuary-marker', 'sanctuary-top-right');
-                if (x === 8 && y === 0) square.classList.add('sanctuary-marker', 'sanctuary-bottom-left');
-                if (x === 9 && y === 0) square.classList.add('sanctuary-marker', 'sanctuary-bottom-right');
-
-                // Black's Sanctuary Zone (top of logical board)
-                if (x === 0 && y === 15) square.classList.add('sanctuary-marker', 'sanctuary-top-left');
-                if (x === 1 && y === 15) square.classList.add('sanctuary-marker', 'sanctuary-top-right');
-                if (x === 0 && y === 14) square.classList.add('sanctuary-marker', 'sanctuary-bottom-left');
-                if (x === 1 && y === 14) square.classList.add('sanctuary-marker', 'sanctuary-bottom-right');
-                
-                if (x === 8 && y === 15) square.classList.add('sanctuary-marker', 'sanctuary-top-left');
-                if (x === 9 && y === 15) square.classList.add('sanctuary-marker', 'sanctuary-top-right');
-                if (x === 8 && y === 14) square.classList.add('sanctuary-marker', 'sanctuary-bottom-left');
-                if (x === 9 && y === 14) square.classList.add('sanctuary-marker', 'sanctuary-bottom-right');
-                // --- END of new logic ---
+                // Check if this is a sanctuary square and add the class to color it
+                const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
+                if (isSanctuary) {
+                    square.classList.add('sanctuary-square');
+                }
 
                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (!isBoardValid) {
