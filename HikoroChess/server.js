@@ -31,8 +31,11 @@ io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
-    socket.on('createGame', () => {
+    socket.on('createGame', (settings) => {
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
+        const timeControl = parseInt(settings.timeControl, 10);
+        const byoyomi = parseInt(settings.byoyomi, 10);
+
         games[gameId] = {
             id: gameId,
             players: { white: socket.id, black: null },
@@ -43,13 +46,21 @@ io.on('connection', (socket) => {
             turnCount: 0,
             bonusMoveInfo: null,
             gameOver: false,
-            winner: null
+            winner: null,
+            // ADDED: Time control properties
+            timeControl: timeControl,
+            byoyomi: byoyomi,
+            whiteTime: timeControl,
+            blackTime: timeControl,
+            whiteInByoyomi: false,
+            blackInByoyomi: false,
+            timerId: null // To hold the setInterval ID
         };
         lobbyGames[gameId] = { id: gameId, white: socket.id, black: null };
         socket.join(gameId);
         socket.emit('gameCreated', { gameId, color: 'white' });
         io.emit('lobbyUpdate', lobbyGames);
-        console.log(`Game created: ${gameId} by ${socket.id}`);
+        console.log(`Game created: ${gameId} with time control ${timeControl}s and byoyomi ${byoyomi}s`);
     });
 
     socket.on('joinGame', (gameId) => {
@@ -62,6 +73,36 @@ io.on('connection', (socket) => {
             console.log(`${socket.id} joined game ${gameId} as black.`);
             io.to(gameId).emit('gameStart', game);
             io.emit('lobbyUpdate', lobbyGames);
+            
+            // ADDED: Start the game timer if time control is set
+            if (game.timeControl > 0) {
+                game.timerId = setInterval(() => {
+                    const activePlayer = game.isWhiteTurn ? 'white' : 'black';
+                    const opponent = game.isWhiteTurn ? 'black' : 'white';
+                    
+                    if (game[activePlayer + 'Time'] > 0) {
+                        game[activePlayer + 'Time']--;
+                    } else if (game.byoyomi > 0 && !game[activePlayer + 'InByoyomi']) {
+                        // Enter byoyomi period
+                        game[activePlayer + 'InByoyomi'] = true;
+                        game[activePlayer + 'Time'] = game.byoyomi -1; // -1 because this second counts
+                    } else {
+                        // Time ran out
+                        game.gameOver = true;
+                        game.winner = opponent;
+                        io.to(gameId).emit('gameStateUpdate', game);
+                        stopTimer(game);
+                        delete games[gameId];
+                    }
+
+                    if (!game.gameOver) {
+                       io.to(gameId).emit('timeUpdate', { 
+                           whiteTime: game.whiteTime, 
+                           blackTime: game.blackTime 
+                       });
+                    }
+                }, 1000);
+            }
         } else {
             socket.emit('errorMsg', 'Game is full or does not exist.');
         }
@@ -170,6 +211,11 @@ io.on('connection', (socket) => {
             checkForWinner(game);
 
             game.turnCount++;
+			
+			const playerColor = game.isWhiteTurn ? 'white' : 'black';
+            if (game[playerColor + 'InByoyomi']) {
+                game[playerColor + 'Time'] = game.byoyomi;
+            }
 
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
@@ -201,6 +247,14 @@ io.on('connection', (socket) => {
              const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
              if (pieceIndex > -1) {
                 capturedArray.splice(pieceIndex, 1);
+				
+				const playerColor = game.isWhiteTurn ? 'white' : 'black';
+				if (game[playerColor + 'InByoyomi']) {
+					
+					game[playerColor + 'Time'] = game.byoyomi;
+					
+				}
+			
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
                 game.turnCount++;
@@ -214,6 +268,8 @@ io.on('connection', (socket) => {
         for (const gameId in games) {
             const game = games[gameId];
             if (game.players.white === socket.id || game.players.black === socket.id) {
+				
+				stopTimer(game);
                 if(!game.gameOver) {
                     game.gameOver = true;
                     game.winner = game.players.white === socket.id ? 'black' : 'white';
@@ -285,6 +341,10 @@ function checkForWinner(game) {
     } else if (whiteLupaCount === 0) {
         game.gameOver = true;
         game.winner = 'black';
+    }
+	
+	if (game.gameOver) {
+        stopTimer(game);
     }
 }
 
