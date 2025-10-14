@@ -209,107 +209,108 @@ io.on('connection', (socket) => {
     });
 
     socket.on('makeMove', (data) => {
-        const { gameId, from, to } = data;
-        const game = games[gameId];
-        if (!game || game.gameOver) return;
+		const { gameId, from, to } = data;
+		const game = games[gameId];
+		if (!game || game.gameOver) return;
 
-        const playerColor = game.players.white === socket.id ? 'white' : 'black';
-        const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-        if (!isTurn) return;
-        
-        updateTimeOnMove(game);
-        if (game.gameOver) {
-            io.to(gameId).emit('gameStateUpdate', game);
-            return;
-        }
+		// --- START OF FIX ---
+		// Only perform the turn check if it's NOT a single-player game.
+		if (!game.isSinglePlayer) {
+			const playerColor = game.players.white === socket.id ? 'white' : 'black';
+			const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+			if (!isTurn) return;
+		}
+		// --- END OF FIX ---
+		
+		updateTimeOnMove(game);
+		if (game.gameOver) {
+			io.to(gameId).emit('gameStateUpdate', game);
+			return;
+		}
 
-        const piece = game.boardState[from.y][from.x];
-        if (!piece || piece.color !== playerColor) return;
-        
-        let bonusMoveActive = false;
-        if (game.bonusMoveInfo) {
-            if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
-                return;
-            }
-            bonusMoveActive = true;
-        }
-
-        const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
-        const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
-
-        if (isValidMove) {
-            const targetPiece = game.boardState[to.y][to.x];
-            const wasCapture = targetPiece !== null;
-            
-            if (piece.type === 'jotu') {
-                const dx = Math.sign(to.x - from.x);
-                const dy = Math.sign(to.y - from.y);
-                if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
-                    let cx = from.x + dx;
-                    let cy = from.y + dy;
-                    while (cx !== to.x || cy !== to.y) {
-                        const intermediatePiece = game.boardState[cy][cx];
-                        if (intermediatePiece && intermediatePiece.color === playerColor) {
-                                if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
-                                    let pieceForHand = { type: intermediatePiece.type, color: playerColor };
-                                    const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                                    if (capturedArray.length < 6) {
-                                        capturedArray.push(pieceForHand);
-                                    }
-                                }
-                                game.boardState[cy][cx] = null;
-                        }
-                        cx += dx;
-                        cy += dy;
-                    }
-                }
-            }
-
-            if (targetPiece !== null) {
-                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
-
-                if (targetPiece.type === 'neptune') {
-                    const losingPlayerColor = targetPiece.color;
-                    const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
-                    const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    if (capturedArray.length < 6) {
-                        capturedArray.push(pieceForHand);
-                    }
-                } else if (!indestructiblePieces.includes(targetPiece.type)) {
-                    let pieceForHand = { type: targetPiece.type, color: playerColor }; 
-                    if (targetPiece.type === 'lupa') {
-                        pieceForHand.type = 'sult';
-                    }
-                    const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    if (capturedArray.length < 6) {
-                        capturedArray.push(pieceForHand);
-                    }
-                }
-            }
-            
-            game.boardState[to.y][to.x] = piece;
-            game.boardState[from.y][from.x] = null;
-            
-            handlePromotion(piece, to.y, wasCapture);
-            checkForWinner(game);
-
-            game.turnCount++;
-
-            if (bonusMoveActive) {
-                game.bonusMoveInfo = null;
-                game.isWhiteTurn = !game.isWhiteTurn;
-            } else if (piece.type === 'greathorsegeneral' && !wasCapture) {
-                game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-            } else if (piece.type === 'cope' && wasCapture) {
-                game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-            } else {
-                game.bonusMoveInfo = null;
-                game.isWhiteTurn = !game.isWhiteTurn;
-            }
-
-            io.to(gameId).emit('gameStateUpdate', game);
-        }
-    });
+		const piece = game.boardState[from.y][from.x];
+		
+		// In single-player, we determine the moving piece's color directly from the piece itself
+		const movingPlayerColor = piece ? piece.color : null;
+		if (!piece) return;
+		
+		if (!game.isSinglePlayer && movingPlayerColor !== playerColor) return;
+		
+		let bonusMoveActive = false;
+		// ... the rest of the function is the same
+		if (game.bonusMoveInfo) {
+			if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
+				return;
+			}
+			bonusMoveActive = true;
+		}
+		const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
+		const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
+		if (isValidMove) {
+			const targetPiece = game.boardState[to.y][to.x];
+			const wasCapture = targetPiece !== null;
+			if (piece.type === 'jotu') {
+				const dx = Math.sign(to.x - from.x);
+				const dy = Math.sign(to.y - from.y);
+				if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
+					let cx = from.x + dx;
+					let cy = from.y + dy;
+					while (cx !== to.x || cy !== to.y) {
+						const intermediatePiece = game.boardState[cy][cx];
+						if (intermediatePiece && intermediatePiece.color === movingPlayerColor) {
+							if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
+								let pieceForHand = { type: intermediatePiece.type, color: movingPlayerColor };
+								const capturedArray = movingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+								if (capturedArray.length < 6) {
+									capturedArray.push(pieceForHand);
+								}
+							}
+							game.boardState[cy][cx] = null;
+						}
+						cx += dx;
+						cy += dy;
+					}
+				}
+			}
+			if (targetPiece !== null) {
+				const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
+				if (targetPiece.type === 'neptune') {
+					const losingPlayerColor = targetPiece.color;
+					const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
+					const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+					if (capturedArray.length < 6) {
+						capturedArray.push(pieceForHand);
+					}
+				} else if (!indestructiblePieces.includes(targetPiece.type)) {
+					let pieceForHand = { type: targetPiece.type, color: movingPlayerColor };
+					if (targetPiece.type === 'lupa') {
+						pieceForHand.type = 'sult';
+					}
+					const capturedArray = movingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+					if (capturedArray.length < 6) {
+						capturedArray.push(pieceForHand);
+					}
+				}
+			}
+			game.boardState[to.y][to.x] = piece;
+			game.boardState[from.y][from.x] = null;
+			handlePromotion(piece, to.y, wasCapture);
+			checkForWinner(game);
+			game.turnCount++;
+			if (bonusMoveActive) {
+				game.bonusMoveInfo = null;
+				game.isWhiteTurn = !game.isWhiteTurn;
+			} else if (piece.type === 'greathorsegeneral' && !wasCapture) {
+				game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+			} else if (piece.type === 'cope' && wasCapture) {
+				game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+			} else {
+				game.bonusMoveInfo = null;
+				game.isWhiteTurn = !game.isWhiteTurn;
+			}
+			io.to(gameId).emit('gameStateUpdate', game);
+		}
+	});
 	
 	socket.on('createSinglePlayerGame', () => {
         const gameId = `sp_game_${Math.random().toString(36).substr(2, 9)}`;
@@ -348,32 +349,43 @@ io.on('connection', (socket) => {
     });
     
     socket.on('makeDrop', (data) => {
-        const { gameId, piece, to } = data;
-        const game = games[gameId];
-        if (!game || game.gameOver) return;
-        const playerColor = game.players.white === socket.id ? 'white' : 'black';
-        const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-        if (!isTurn) return;
-        
-        updateTimeOnMove(game);
-        if (game.gameOver) {
-            io.to(gameId).emit('gameStateUpdate', game);
-            return;
-        }
+		const { gameId, piece, to } = data;
+		const game = games[gameId];
+		if (!game || game.gameOver) return;
 
-        if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
-             game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
-             const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-             const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
-             if (pieceIndex > -1) {
-                 capturedArray.splice(pieceIndex, 1);
-                 game.bonusMoveInfo = null;
-                 game.isWhiteTurn = !game.isWhiteTurn;
-                 game.turnCount++;
-                 io.to(gameId).emit('gameStateUpdate', game);
-             }
-        }
-    });
+		// --- START OF FIX ---
+		// Only perform the turn check if it's NOT a single-player game.
+		let playerColor;
+		if (!game.isSinglePlayer) {
+			playerColor = game.players.white === socket.id ? 'white' : 'black';
+			const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+			if (!isTurn) return;
+		} else {
+			// In single player, the color is determined by whose turn it is.
+			playerColor = game.isWhiteTurn ? 'white' : 'black';
+		}
+		// --- END OF FIX ---
+
+		updateTimeOnMove(game);
+		if (game.gameOver) {
+			io.to(gameId).emit('gameStateUpdate', game);
+			return;
+		}
+
+		if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
+			game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
+			const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+			// In single-player, piece.color from the client can be ambiguous, so we check against the current turn's color
+			const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
+			if (pieceIndex > -1) {
+				capturedArray.splice(pieceIndex, 1);
+				game.bonusMoveInfo = null;
+				game.isWhiteTurn = !game.isWhiteTurn;
+				game.turnCount++;
+				io.to(gameId).emit('gameStateUpdate', game);
+			}
+		}
+	});
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
