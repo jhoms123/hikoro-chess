@@ -146,17 +146,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLobby(games) {
 		gameListElement.innerHTML = '';
 		for (const id in games) {
-			const game = games[id]; // The game object from the server
+			const game = games[id]; 
 			const gameItem = document.createElement('div');
 			gameItem.classList.add('game-item');
 
-			// Create a span to hold the game info
 			const infoSpan = document.createElement('span');
-			const creatorName = game.creatorName || 'Player 1'; // Use name from server, or a fallback
-			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : ''; // Format the time
+			const creatorName = game.creatorName || 'Player 1';
+			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : ''; 
 			
 			infoSpan.textContent = `${creatorName}'s Game [${timeString}]`;
-			gameItem.appendChild(infoSpan);
+			
+			
+			gameItem.appendChild(infoSpan); 
+			
 			
 			const joinBtn = document.createElement('button');
 			joinBtn.textContent = 'Join';

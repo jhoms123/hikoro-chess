@@ -10,36 +10,39 @@
     <h1>Jasu Chess Variant</h1>
 
     <div id="lobby">
-        <h2>Game Lobby</h2>
-        <div id="time-controls">
-            <div>
-                <label for="time-control">Main Time:</label>
-                <select id="time-control">
-                    <option value="-1">Unlimited</option>
-                    <option value="0">Byoyomi Only</option> 
-                    <option value="300">5 Minutes</option>
-                    <option value="900">15 Minutes</option>
-                    <option value="1800">30 Minutes</option>
-                    <option value="3600">1 Hour</option>
-                </select>
-            </div>
-            <div>
-                <label for="byoyomi-control">Byoyomi (per move):</label>
-                <select id="byoyomi-control">
-                    <option value="0">None</option>
-                    <option value="15">15 Seconds</option>
-                    <option value="30" selected>30 Seconds</option> <option value="60">60 Seconds</option>
-                </select>
-            </div>
-        </div>
-        <button id="create-game-btn">Create New Game</button>
-        <h3>Available Games:</h3>
-        <div id="game-list"></div>
-		<div>
+		<h2>Game Lobby</h2>
+		<div id="time-controls">
+			<div>
+				<label for="time-control">Main Time:</label>
+				<select id="time-control">
+					<option value="-1">Unlimited</option>
+					<option value="0">Byoyomi Only</option> 
+					<option value="300">5 Minutes</option>
+					<option value="900">15 Minutes</option>
+					<option value="1800">30 Minutes</option>
+					<option value="3600">1 Hour</option>
+				</select>
+			</div>
+			<div>
+				<label for="byoyomi-control">Byoyomi (per move):</label>
+				<select id="byoyomi-control">
+					<option value="0">None</option>
+					<option value="15">15 Seconds</option>
+					<option value="30" selected>30 Seconds</option>
+					<option value="60">60 Seconds</option>
+				</select>
+			</div>
+		</div>
+		<button id="create-game-btn">Create New Game</button>
+
+		<div style="margin: 15px 0;">
 			<label for="player-name">Your Name:</label>
 			<input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
 		</div>
-    </div>
+
+		<h3>Available Games:</h3>
+		<div id="game-list"></div>
+	</div>
 
     <div id="game-container" style="display: none;">
         <div class="captured-area" id="black-captured-area">
