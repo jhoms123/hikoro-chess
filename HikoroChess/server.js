@@ -7,14 +7,12 @@ const socketIo = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// --- THIS BLOCK IS NEW AND MORE RELIABLE ---
 const io = socketIo(server, {
   cors: {
-    origin: ["https://hikoro-chess.onrender.com", "https://hikorochess.org", "https://www.hikorochess.org"],
+    origin: ["https://hikorochess.org", "https://www.hikorochess.org", "https://hikoro-chess.onrender.com"],
     methods: ["GET", "POST"]
   }
 });
-// --- END OF NEW BLOCK ---
 
 const PORT = process.env.PORT || 3000;
 
