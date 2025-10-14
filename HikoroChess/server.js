@@ -28,7 +28,6 @@ const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./g
 
 
 io.on('connection', (socket) => {
-    // ... (rest of connection logic is unchanged)
     console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
@@ -41,6 +40,7 @@ io.on('connection', (socket) => {
             whiteCaptured: [],
             blackCaptured: [],
             isWhiteTurn: true,
+            turnCount: 0,
             bonusMoveInfo: null,
             gameOver: false,
             winner: null
@@ -141,7 +141,7 @@ io.on('connection', (socket) => {
 
             if (targetPiece !== null) {
                 // Defines which pieces are destroyed on capture
-                const indestructiblePieces = ['greathorsegeneral', 'cthulhu']; // ADDED 'cthulhu'
+                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid']; // ADDED 'mermaid'
 
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
@@ -168,6 +168,8 @@ io.on('connection', (socket) => {
             
             handlePromotion(piece, to.y, wasCapture);
             checkForWinner(game);
+
+            game.turnCount++;
 
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
@@ -201,6 +203,7 @@ io.on('connection', (socket) => {
                 capturedArray.splice(pieceIndex, 1);
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
+                game.turnCount++;
                 io.to(gameId).emit('gameStateUpdate', game);
              }
         }
