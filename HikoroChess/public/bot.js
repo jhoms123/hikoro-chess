@@ -196,12 +196,35 @@ function getAllValidMoves(boardState, color, capturedPieces) {
                     allMoves.push({
                         type: 'board',
                         from: { x, y },
-                        to: { x: move.x, y: move.y }
+                        to: { x: move.x, y: move.y },
+                        isAttack: move.isAttack // <<< THIS WAS THE MISSING PIECE
                     });
                 }
             }
         }
     }
+
+    // 2. Get moves for dropping captured pieces
+    if (capturedPieces && capturedPieces.length > 0) {
+        const uniquePieceTypes = [...new Set(capturedPieces.map(p => p.type))];
+        for (const pieceType of uniquePieceTypes) {
+            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+                    if (isPositionValid(x, y) && boardState[y][x] === null) {
+                        allMoves.push({
+                            type: 'drop',
+                            pieceType: pieceType,
+                            to: { x, y },
+                            isAttack: false // Drops are never attacks
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    return allMoves;
+}
 
     // 2. Get moves for dropping captured pieces
     if (capturedPieces && capturedPieces.length > 0) {
@@ -226,17 +249,25 @@ function getAllValidMoves(boardState, color, capturedPieces) {
 
 // Main function that decides the move
 function findBestMove(boardState, capturedPieces) {
-    // Increase depth to 3 for a stronger bot, thanks to Alpha-Beta Pruning
     const depth = 3; 
     let bestMove = null;
     let bestValue = -Infinity;
 
     const moves = getAllValidMoves(boardState, 'black', capturedPieces);
     
+    // --- START OF IMPROVEMENT: Move Ordering ---
+    // This tells the bot to analyze capture moves before quiet moves.
+    // It makes the search more efficient and the bot more aggressive.
+    moves.sort((a, b) => {
+        const aIsCapture = a.isAttack;
+        const bIsCapture = b.isAttack;
+        return bIsCapture - aIsCapture; // Sorts true (1) before false (0)
+    });
+    // --- END OF IMPROVEMENT ---
+    
     for (const move of moves) {
         const tempBoard = JSON.parse(JSON.stringify(boardState));
         
-        // Apply the move to the temporary board
         if (move.type === 'drop') {
             tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
         } else {
@@ -245,7 +276,7 @@ function findBestMove(boardState, capturedPieces) {
             tempBoard[move.from.y][move.from.x] = null;
         }
 
-        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, false); // false for minimizing player (white)
+        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, false);
         
         if (boardValue > bestValue) {
             bestValue = boardValue;
