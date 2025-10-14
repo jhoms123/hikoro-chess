@@ -355,46 +355,60 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
     const moves = getAllValidMoves(boardState, 'black', capturedPieces);
     moves.sort((a, b) => b.isAttack - a.isAttack);
     
-    for (const move of moves) {
-        if (Date.now() - startTime >= timeLimit) {
+    try {
+        for (const move of moves) {
+            const tempBoard = copyBoard(boardState);
+            if (move.type === 'drop') {
+                tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
+            } else {
+                const piece = tempBoard[move.from.y][move.from.x];
+                tempBoard[move.to.y][move.to.x] = piece;
+                tempBoard[move.from.y][move.from.x] = null;
+            }
+
+            // Pass the timer into the first minimax call
+            let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, true, startTime, timeLimit); 
+            
+            if (boardValue < bestValue) {
+                bestValue = boardValue;
+                bestMove = move;
+            }
+        }
+    } catch (e) {
+        if (e.message === 'TimeLimitExceeded') {
+            // This is not a real error, just a signal that time is up.
+            // Return null to indicate this depth search did not complete.
             return null;
         }
-
-        const tempBoard = copyBoard(boardState); // USE FASTER COPY
-        if (move.type === 'drop') {
-            tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
-        } else {
-            const piece = tempBoard[move.from.y][move.from.x];
-            tempBoard[move.to.y][move.to.x] = piece;
-            tempBoard[move.from.y][move.from.x] = null;
-        }
-
-        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, true); 
-        
-        if (boardValue < bestValue) {
-            bestValue = boardValue;
-            bestMove = move;
-        }
+        // If it's a different error, we should see it
+        throw e;
     }
+    
     return bestMove;
 }
 
 
 // Minimax and Quiescence search functions remain the same as before
-function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
+function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
+    // Check the time at the beginning of every call
+    if (Date.now() - startTime >= timeLimit) {
+        throw new Error('TimeLimitExceeded');
+    }
+
     if (depth === 0) {
-        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer);
+        // Pass the timer down to quiescenceSearch
+        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
     }
     const color = isMaximizingPlayer ? 'white' : 'black';
     const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
         return evaluateBoard(boardState);
     }
+
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
-            const tempBoard = copyBoard(boardState); // USE FASTER COPY
-            // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+            const tempBoard = copyBoard(boardState);
             if (move.type === 'drop') {
                 tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
             } else {
@@ -402,7 +416,8 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
                 tempBoard[move.to.y][move.to.x] = piece;
                 tempBoard[move.from.y][move.from.x] = null;
             }
-            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false);
+            // Pass the timer down in the recursive call
+            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
             if (beta <= alpha) break;
@@ -411,8 +426,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     } else {
         let minEval = Infinity;
         for (const move of moves) {
-            const tempBoard = copyBoard(boardState); // USE FASTER COPY
-            // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+            const tempBoard = copyBoard(boardState);
             if (move.type === 'drop') {
                 tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
             } else {
@@ -420,7 +434,8 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
                 tempBoard[move.to.y][move.to.x] = piece;
                 tempBoard[move.from.y][move.from.x] = null;
             }
-            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true);
+             // Pass the timer down in the recursive call
+            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
             if (beta <= alpha) break;
@@ -429,7 +444,12 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     }
 }
 
-function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
+function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
+    // Check the time at the beginning of every call
+    if (Date.now() - startTime >= timeLimit) {
+        throw new Error('TimeLimitExceeded');
+    }
+    
     let stand_pat = evaluateBoard(boardState);
     if (isMaximizingPlayer) {
         if (stand_pat >= beta) return beta;
@@ -441,8 +461,7 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
     const color = isMaximizingPlayer ? 'white' : 'black';
     const captureMoves = getAllValidMoves(boardState, color, []).filter(move => move.isAttack);
     for (const move of captureMoves) {
-        const tempBoard = copyBoard(boardState); // USE FASTER COPY
-        // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+        const tempBoard = copyBoard(boardState);
         if (move.type === 'drop') {
              tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
         } else {
@@ -450,7 +469,8 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
             tempBoard[move.to.y][move.to.x] = piece;
             tempBoard[move.from.y][move.from.x] = null;
         }
-        let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer);
+        // Pass the timer down in the recursive call
+        let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
         if (isMaximizingPlayer) {
             alpha = Math.max(alpha, score);
             if (beta <= alpha) break;
