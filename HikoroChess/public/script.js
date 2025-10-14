@@ -215,18 +215,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if it's the bot's turn to move
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
-            setTimeout(() => {
-                console.log("Bot is thinking...");
-                const bestMove = findBestMove(gameState.boardState);
-                
-                if (bestMove) {
-                    console.log("Bot chose move:", bestMove);
-                    socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
-                } else {
-                    console.log("Bot has no valid moves!");
-                }
-            }, 500); // 0.5 second delay
-        }
+			setTimeout(() => {
+				console.log("Bot is thinking...");
+				// MODIFIED LINE: Pass the bot's captured pieces to its brain.
+				const bestMove = findBestMove(gameState.boardState, gameState.blackCaptured);
+				
+				if (bestMove) {
+					console.log("Bot chose move:", bestMove);
+					// The bot can now return 'drop' moves as well as 'board' moves
+					if (bestMove.type === 'drop') {
+						socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
+					} else {
+						socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
+					}
+				} else {
+					console.log("Bot has no moves!");
+				}
+			}, 500);
+		}
     }
 
     function renderAll() {

@@ -1,8 +1,5 @@
-// This file contains all the logic for the AI bot.
-
 // ===================================================================
-// Step 1: Game Logic for the Bot (copied from gamelogic.js)
-// The bot needs its own understanding of the game's rules.
+// Step 1: Game Logic for the Bot (Unchanged)
 // ===================================================================
 
 const BOT_BOARD_WIDTH = 10;
@@ -15,6 +12,8 @@ function isPositionValid(x, y) {
     return true;
 }
 
+// ... (Paste the rest of your existing game logic functions here: isProtected, getValidMovesForPiece, etc.)
+// (The actual move generation rules do not need to change)
 const isProtected = (targetPiece, targetX, targetY, board) => {
     const protectingColor = targetPiece.color;
     const inFrontDir = protectingColor === 'white' ? 1 : -1;
@@ -46,7 +45,6 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
     }
     return false;
 };
-
 function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
     if (!piece) return [];
     const moves = [];
@@ -126,16 +124,39 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
     return moves;
 }
 
+
 // ===================================================================
-// Step 2: Bot's "Brain"
+// Step 2: Bot's Upgraded "Brain"
 // ===================================================================
 
 const pieceValues = {
-    'pawn': 10, 'sult': 10, 'pilut': 20, 'fin': 30, 'cope': 40, 'chair': 50,
-    'greatshield': 60, 'finor': 70, 'jotu': 80, 'mermaid': 90, 'neptune': 100,
-    'greathorsegeneral': 120, 'cthulhu': 150, 'lupa': 9999
+    'pawn': 100, 'sult': 100, 'pilut': 150, 'fin': 300, 'cope': 320, 'chair': 500,
+    'greatshield': 400, 'finor': 550, 'jotu': 800, 'mermaid': 850, 'neptune': 1000,
+    'greathorsegeneral': 1200, 'cthulhu': 1500, 'lupa': 20000
 };
 
+// IMPROVEMENT: Piece-Square Tables add value based on piece position
+// This encourages the bot to move pieces to better squares.
+const pawnPositionValue = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    [10,10,10,10,10,10,10,10,10,10],
+    [20,20,20,20,20,20,20,20,20,20],
+    [30,30,30,30,30,30,30,30,30,30],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+];
+
+// NEW: A smarter evaluation function
 function evaluateBoard(boardState) {
     let totalScore = 0;
     for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
@@ -143,10 +164,17 @@ function evaluateBoard(boardState) {
             const piece = boardState[y][x];
             if (piece) {
                 const value = pieceValues[piece.type] || 0;
+                let positionValue = 0;
+                
+                // Add position score for pawns/sults
+                if (piece.type === 'pawn' || piece.type === 'sult') {
+                    positionValue = (piece.color === 'white') ? pawnPositionValue[y][x] : pawnPositionValue[BOT_BOARD_HEIGHT - 1 - y][x];
+                }
+
                 if (piece.color === 'white') {
-                    totalScore += value;
+                    totalScore += (value + positionValue);
                 } else {
-                    totalScore -= value;
+                    totalScore -= (value + positionValue);
                 }
             }
         }
@@ -154,8 +182,11 @@ function evaluateBoard(boardState) {
     return totalScore;
 }
 
-function getAllValidMoves(boardState, color) {
+// NEW: Move generation now includes drops
+function getAllValidMoves(boardState, color, capturedPieces) {
     const allMoves = [];
+    
+    // 1. Get moves for pieces on the board
     for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
         for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
             const piece = boardState[y][x];
@@ -163,43 +194,59 @@ function getAllValidMoves(boardState, color) {
                 const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
                 for (const move of validMoves) {
                     allMoves.push({
+                        type: 'board',
                         from: { x, y },
-                        to: { x: move.x, y: move.y },
-                        isAttack: move.isAttack
+                        to: { x: move.x, y: move.y }
                     });
                 }
             }
         }
     }
+
+    // 2. Get moves for dropping captured pieces
+    if (capturedPieces && capturedPieces.length > 0) {
+        const uniquePieceTypes = [...new Set(capturedPieces.map(p => p.type))];
+        for (const pieceType of uniquePieceTypes) {
+            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+                    if (isPositionValid(x, y) && boardState[y][x] === null) {
+                        allMoves.push({
+                            type: 'drop',
+                            pieceType: pieceType,
+                            to: { x, y }
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
     return allMoves;
 }
 
-function findBestMove(boardState) {
+// Main function that decides the move
+function findBestMove(boardState, capturedPieces) {
+    // Increase depth to 3 for a stronger bot, thanks to Alpha-Beta Pruning
+    const depth = 3; 
     let bestMove = null;
     let bestValue = -Infinity;
-    
-    // The bot is always black, the maximizing player.
-    const moves = getAllValidMoves(boardState, 'black');
-    
-    // Simple strategy: prefer captures
-    moves.sort((a, b) => (b.isAttack ? 1 : 0) - (a.isAttack ? 1 : 0));
 
+    const moves = getAllValidMoves(boardState, 'black', capturedPieces);
+    
     for (const move of moves) {
         const tempBoard = JSON.parse(JSON.stringify(boardState));
-        const piece = tempBoard[move.from.y][move.from.x];
         
-        // Simulate capture
-        const targetPiece = tempBoard[move.to.y][move.to.x];
-        
-        tempBoard[move.to.y][move.to.x] = piece;
-        tempBoard[move.from.y][move.from.x] = null;
-        
-        // Minimax at depth 1 (looks one move ahead for the opponent)
-        let boardValue = minimax(tempBoard, 1, false); // Pass 'false' for minimizing player (white's turn)
-        
-        // Add a small random factor to avoid repetitive moves
-        boardValue += Math.random() * 0.1;
+        // Apply the move to the temporary board
+        if (move.type === 'drop') {
+            tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
+        } else {
+            const piece = tempBoard[move.from.y][move.from.x];
+            tempBoard[move.to.y][move.to.x] = piece;
+            tempBoard[move.from.y][move.from.x] = null;
+        }
 
+        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, false); // false for minimizing player (white)
+        
         if (boardValue > bestValue) {
             bestValue = boardValue;
             bestMove = move;
@@ -208,24 +255,47 @@ function findBestMove(boardState) {
     return bestMove;
 }
 
-function minimax(boardState, depth, isMaximizingPlayer) {
+// NEW: Minimax with Alpha-Beta Pruning for a much faster search
+function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     if (depth === 0) {
         return evaluateBoard(boardState);
     }
     
     const color = isMaximizingPlayer ? 'black' : 'white';
-    const moves = getAllValidMoves(boardState, color);
-    let bestValue = isMaximizingPlayer ? -Infinity : Infinity;
+    // Note: The recursive search doesn't simulate drops for simplicity, but could be added later.
+    const moves = getAllValidMoves(boardState, color, []); 
+    
+    if (isMaximizingPlayer) {
+        let maxEval = -Infinity;
+        for (const move of moves) {
+            const tempBoard = JSON.parse(JSON.stringify(boardState));
+            const piece = tempBoard[move.from.y][move.from.x];
+            tempBoard[move.to.y][move.to.x] = piece;
+            tempBoard[move.from.y][move.from.x] = null;
 
-    for (const move of moves) {
-        const tempBoard = JSON.parse(JSON.stringify(boardState));
-        const piece = tempBoard[move.from.y][move.from.x];
-        tempBoard[move.to.y][move.to.x] = piece;
-        tempBoard[move.from.y][move.from.x] = null;
+            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false);
+            maxEval = Math.max(maxEval, evaluation);
+            alpha = Math.max(alpha, evaluation);
+            if (beta <= alpha) {
+                break; // Beta cutoff
+            }
+        }
+        return maxEval;
+    } else { // Minimizing player
+        let minEval = Infinity;
+        for (const move of moves) {
+            const tempBoard = JSON.parse(JSON.stringify(boardState));
+            const piece = tempBoard[move.from.y][move.from.x];
+            tempBoard[move.to.y][move.to.x] = piece;
+            tempBoard[move.from.y][move.from.x] = null;
 
-        const value = minimax(tempBoard, depth - 1, !isMaximizingPlayer);
-        bestValue = isMaximizingPlayer ? Math.max(bestValue, value) : Math.min(bestValue, value);
+            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true);
+            minEval = Math.min(minEval, evaluation);
+            beta = Math.min(beta, evaluation);
+            if (beta <= alpha) {
+                break; // Alpha cutoff
+            }
+        }
+        return minEval;
     }
-
-    return bestValue;
 }
