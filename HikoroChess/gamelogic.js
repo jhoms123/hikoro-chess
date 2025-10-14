@@ -45,12 +45,7 @@ function isPositionValid(x, y) {
 
 const isProtected = (targetPiece, targetX, targetY, board) => {
     const protectingColor = targetPiece.color;
-
-    // --- 1. Check for Pilut protection (CORRECTED LOGIC) ---
-    // A Pilut protects the square directly behind itself.
-    // So, from the perspective of the piece being attacked (the target), we must
-    // check the square IN FRONT of it to find the protecting Pilut.
-    const inFrontDir = protectingColor === 'white' ? 1 : -1; // For white piece, "in front" is y+1. For black, y-1.
+    const inFrontDir = protectingColor === 'white' ? 1 : -1;
     const pilutProtectorY = targetY + inFrontDir;
     if (isPositionValid(targetX, pilutProtectorY)) {
         const potentialProtector = board[pilutProtectorY][targetX];
@@ -58,8 +53,6 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
             return true;
         }
     }
-
-    // --- 2. Check for Great Shield protection ---
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
@@ -79,7 +72,6 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
             }
         }
     }
-
     return false;
 };
 
@@ -132,6 +124,51 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             cx += dx; cy += dy;
         }
     };
+    
+    // --- NEW JOTU-SPECIFIC MOVE LOGIC ---
+    const generateJotuLineMoves = (dx, dy) => {
+        // First, check if there is an enemy anywhere on this path.
+        let pathHasEnemy = false;
+        let checkX = x + dx;
+        let checkY = y + dy;
+        while (isPositionValid(checkX, checkY)) {
+            const target = boardState[checkY][checkX];
+            if (target && target.color !== piece.color) {
+                pathHasEnemy = true;
+                break;
+            }
+            checkX += dx;
+            checkY += dy;
+        }
+
+        // Now, generate moves based on whether an enemy was found.
+        let cx = x + dx;
+        let cy = y + dy;
+        while (isPositionValid(cx, cy)) {
+            const target = boardState[cy][cx];
+            if (target === null) {
+                moves.push({ x: cx, y: cy, isAttack: false }); // Move to empty square
+            } else {
+                if (target.color !== piece.color) { // It's an enemy piece
+                    if (!isProtected(target, cx, cy, boardState)) {
+                        moves.push({ x: cx, y: cy, isAttack: true });
+                    }
+                    break; // Stop at the first enemy
+                } else { // It's a friendly piece
+                    if (pathHasEnemy) {
+                        // Can only capture friendly pieces if an enemy is on the path
+                        moves.push({ x: cx, y: cy, isAttack: true });
+                    } else {
+                        // No enemy on the path, so the friendly piece blocks movement
+                        break;
+                    }
+                }
+            }
+            cx += dx;
+            cy += dy;
+        }
+    };
+    // --- END OF NEW JOTU LOGIC ---
 
     switch (piece.type) {
         case 'lupa':
@@ -197,10 +234,18 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
             generateLineMoves(0, 1); generateLineMoves(0, -1);
             break;
+        // MODIFIED: Jotu now uses its special move generation
         case 'jotu':
-            generateLineMoves(1, 0); generateLineMoves(-1, 0);
-            if (piece.color === 'white') { generateLineMoves(0, 1); addMove(x, y - 1); }
-            else { generateLineMoves(0, -1); addMove(x, y + 1); }
+            generateJotuLineMoves(1, 0); 
+            generateJotuLineMoves(-1, 0);
+            if (piece.color === 'white') { 
+                generateJotuLineMoves(0, 1); 
+                addMove(x, y - 1); // Standard one-step move backward
+            }
+            else { 
+                generateJotuLineMoves(0, -1); 
+                addMove(x, y + 1); // Standard one-step move backward
+            }
             break;
         case 'kor':
             addMove(x - 1, y - 1); addMove(x - 1, y + 1); addMove(x + 1, y + 1); addMove(x + 1, y - 1);
