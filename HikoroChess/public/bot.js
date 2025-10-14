@@ -396,9 +396,9 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     }
 
     if (depth === 0) {
-        // Pass the timer down to quiescenceSearch
-        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
-    }
+    // Bypassing the slow function solves the problem
+    return evaluateBoard(boardState);
+}
     const color = isMaximizingPlayer ? 'white' : 'black';
     const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
