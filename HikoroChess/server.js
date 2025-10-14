@@ -310,6 +310,42 @@ io.on('connection', (socket) => {
             io.to(gameId).emit('gameStateUpdate', game);
         }
     });
+	
+	socket.on('createSinglePlayerGame', () => {
+        const gameId = `sp_game_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`Creating single-player game: ${gameId} for ${socket.id}`);
+
+        const tc = { main: -1, byoyomiTime: 0, byoyomiPeriods: 0 }; // Unlimited time for single player
+
+        const game = {
+            id: gameId,
+            players: { white: socket.id, black: socket.id }, // You control both
+            boardState: getInitialBoard(),
+            whiteCaptured: [],
+            blackCaptured: [],
+            isWhiteTurn: true,
+            turnCount: 0,
+            bonusMoveInfo: null,
+            gameOver: false,
+            winner: null,
+            timeControl: tc,
+            whiteTimeLeft: tc.main,
+            blackTimeLeft: tc.main,
+            whiteByoyomiPeriodsLeft: tc.byoyomiPeriods,
+            blackByoyomiPeriodsLeft: tc.byoyomiPeriods,
+            lastMoveTimestamp: Date.now(),
+            isSinglePlayer: true // The important flag for the client
+        };
+
+        // Store the game on the server
+        games[gameId] = game;
+
+        // Join the socket to a room for this game
+        socket.join(gameId);
+
+        // Send the game state directly back to the player to start the game
+        socket.emit('gameStart', game);
+    });
     
     socket.on('makeDrop', (data) => {
         const { gameId, piece, to } = data;

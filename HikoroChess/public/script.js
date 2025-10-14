@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
+	const singlePlayerBtn = document.getElementById('single-player-btn');
 
     let whiteTimerEl, blackTimerEl;
 
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameId = null;
     let selectedSquare = null;
     let isDroppingPiece = null;
+	let isSinglePlayer = false;
     
     const sanctuarySquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
@@ -52,6 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		console.log("Sending 'createGame' event with data:", dataToSend);
 
 		socket.emit('createGame', dataToSend);
+	});
+	
+	
+
+	singlePlayerBtn.addEventListener('click', () => {
+		socket.emit('createSinglePlayerGame');
 	});
 
 
@@ -184,13 +192,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
-        if (!myColor) myColor = 'black';
-        gameId = initialGameState.id;
-        lobbyElement.style.display = 'none';
-        gameContainerElement.style.display = 'flex';
-        setupTimerElements();
-        updateLocalState(initialGameState);
-    }
+	
+		isSinglePlayer = initialGameState.isSinglePlayer || false;
+
+		if (isSinglePlayer) {
+			myColor = 'white';
+		} else if (!myColor) {
+			myColor = 'black'; 
+		}
+
+		gameId = initialGameState.id;
+		lobbyElement.style.display = 'none';
+		gameContainerElement.style.display = 'flex';
+		setupTimerElements();
+		updateLocalState(initialGameState);
+	}
 
     function updateLocalState(newGameState) {
         const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
@@ -337,20 +353,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTurnIndicator() {
-        if (gameState.gameOver) {
-            turnIndicator.textContent = '';
-            if(!winnerText.textContent) {
-                winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
-            }
-            return;
-        }
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
-    }
+		if (gameState.gameOver) {
+			turnIndicator.textContent = '';
+			if(!winnerText.textContent) {
+				winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
+			}
+			return;
+		}
+
+		if (isSinglePlayer) {
+			// New logic for single-player mode
+			turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
+			document.querySelector('#white-captured-area .hand-label').textContent = "White's Hand";
+			document.querySelector('#black-captured-area .hand-label').textContent = "Black's Hand";
+		} else {
+			// Original logic for multiplayer
+			const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+			turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
+			document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
+			document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
+		}
+	}
 
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+        const isMyTurn = isSinglePlayer || (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
