@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
     
-    // UI Elements
     const lobbyElement = document.getElementById('lobby');
     const gameContainerElement = document.getElementById('game-container');
     const createGameBtn = document.getElementById('create-game-btn');
@@ -18,10 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
 
-    // NEW: Timer display elements
     let whiteTimerEl, blackTimerEl;
 
-    // Client State
     let gameState = {};
     let myColor = null;
     let gameId = null;
@@ -34,35 +31,30 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     
-
-    // --- Lobby Listeners ---
     createGameBtn.addEventListener('click', () => {
-		const mainTime = parseInt(document.getElementById('time-control').value, 10);
-		let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+        const mainTime = parseInt(document.getElementById('time-control').value, 10);
+        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
 
-		// FIX: If user selects "Byoyomi Only" but forgets to select a byoyomi time,
-		// default to 15 seconds to prevent an instant 0s/0s game.
-		if (mainTime === 0 && byoyomiTime === 0) {
-			byoyomiTime = 15; 
-		}
+        if (mainTime === 0 && byoyomiTime === 0) {
+            byoyomiTime = 15; 
+        }
 
-		const timeControl = {
-			main: mainTime,
-			byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
-			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
-		};
-		
-		socket.emit('createGame', timeControl);
-	});
+        const timeControl = {
+            main: mainTime,
+            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
+            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
+        };
+        
+        socket.emit('createGame', timeControl);
+    });
 
 
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
     socket.on('gameStart', onGameStart);
     
-    // --- Game Listeners ---
     socket.on('gameStateUpdate', updateLocalState);
-    socket.on('timeUpdate', updateTimerDisplay); // NEW
+    socket.on('timeUpdate', updateTimerDisplay);
     socket.on('validMoves', drawHighlights);
     socket.on('errorMsg', (message) => alert(message));
     socket.on('connect_error', (err) => {
@@ -70,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
 
-    // ----- NEW: Timer Functions -----
     function setupTimerElements() {
         const whiteArea = document.getElementById('white-captured-area');
         const blackArea = document.getElementById('black-captured-area');
@@ -95,48 +86,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatTime(seconds, periods, inByoyomi) {
-    // Handle unlimited time
-		if (seconds === -1) {
-			return "∞";
-		}
-		
-		if (inByoyomi) {
-			// Since we are using endless byoyomi, we don't show the period count
-			return `B: ${Math.ceil(seconds)}s`;
-		}
-		const mins = Math.floor(seconds / 60);
-		const secs = Math.floor(seconds % 60);
-		const paddedSecs = secs < 10 ? `0${secs}` : secs;
-		const paddedMins = mins < 10 ? `0${mins}` : mins;
-		return `${paddedMins}:${paddedSecs}`;
-	}
+        if (seconds === -1) {
+            return "∞";
+        }
+        
+        if (inByoyomi) {
+            return `B: ${Math.ceil(seconds)}s`;
+        }
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        const paddedSecs = secs < 10 ? `0${secs}` : secs;
+        const paddedMins = mins < 10 ? `0${mins}` : mins;
+        return `${paddedMins}:${paddedSecs}`;
+    }
 
     function updateTimerDisplay(times) {
         const whiteTimerEl = document.getElementById('white-time');
-		const blackTimerEl = document.getElementById('black-time');
+        const blackTimerEl = document.getElementById('black-time');
 
-		if (!whiteTimerEl || !blackTimerEl || !gameState.timeControl) return;
+        if (!whiteTimerEl || !blackTimerEl || !gameState.timeControl) return;
 
-		const { whiteTime, blackTime, whiteByoyomi, blackByoyomi, isInByoyomiWhite, isInByoyomiBlack } = times;
+        const { whiteTime, blackTime, whiteByoyomi, blackByoyomi, isInByoyomiWhite, isInByoyomiBlack } = times;
 
-		// Update the textContent of the spans
-		whiteTimerEl.textContent = formatTime(whiteTime, whiteByoyomi, isInByoyomiWhite);
-		blackTimerEl.textContent = formatTime(blackTime, blackByoyomi, isInByoyomiBlack);
-		
-		if (gameState.gameOver) {
-			whiteTimerEl.classList.remove('active');
-			blackTimerEl.classList.remove('active');
-			return;
-		}
+        whiteTimerEl.textContent = formatTime(whiteTime, whiteByoyomi, isInByoyomiWhite);
+        blackTimerEl.textContent = formatTime(blackTime, blackByoyomi, isInByoyomiBlack);
+        
+        if (gameState.gameOver) {
+            whiteTimerEl.classList.remove('active');
+            blackTimerEl.classList.remove('active');
+            return;
+        }
 
-		// Toggle the 'active' class for styling
-		if (gameState.isWhiteTurn) {
-			whiteTimerEl.classList.add('active');
-			blackTimerEl.classList.remove('active');
-		} else {
-			blackTimerEl.classList.add('active');
-			whiteTimerEl.classList.remove('active');
-		}
+        if (gameState.isWhiteTurn) {
+            whiteTimerEl.classList.add('active');
+            blackTimerEl.classList.remove('active');
+        } else {
+            blackTimerEl.classList.add('active');
+            whiteTimerEl.classList.remove('active');
+        }
     }
 
 
@@ -161,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        setupTimerElements(); // Setup timers early
+        setupTimerElements();
     }
 
     function onGameStart(initialGameState) {
@@ -169,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameId = initialGameState.id;
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        setupTimerElements(); // Ensure timer divs are ready
+        setupTimerElements();
         updateLocalState(initialGameState);
     }
 
@@ -178,13 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gameState = newGameState;
 
         if (isNewGameOver && newGameState.winner) {
-             const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
-             winnerText.textContent = `${winnerName} Wins!`;
-             // Add a reason if it's a timeout
-             const losingPlayer = newGameState.winner === 'white' ? 'black' : 'white';
-             if (newGameState[`${losingPlayer}TimeLeft`] <= 0 && newGameState[`${losingPlayer}ByoyomiPeriodsLeft`] < 0) {
-                 winnerText.textContent += " (on time)";
-             }
+                const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+                winnerText.textContent = `${winnerName} Wins!`;
+                const losingPlayer = newGameState.winner === 'white' ? 'black' : 'white';
+                if (newGameState[`${losingPlayer}TimeLeft`] <= 0 && newGameState[`${losingPlayer}ByoyomiPeriodsLeft`] < 0) {
+                    winnerText.textContent += " (on time)";
+                }
         }
         
         renderAll();
@@ -277,35 +263,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
-		const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
-		const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
-		const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
-		
-		// FIX: Target the new '.hand-label' spans to avoid deleting the timer spans
-		document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
-		document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
+        const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
+        const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
+        const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
+        
+        document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
+        document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
 
-		myCapturedEl.innerHTML = '';
-		oppCapturedEl.innerHTML = '';
+        myCapturedEl.innerHTML = '';
+        oppCapturedEl.innerHTML = '';
 
-		const createCapturedPieceElement = (piece, isMyPiece) => {
-			const el = document.createElement('div');
-			el.classList.add('captured-piece', piece.color);
+        const createCapturedPieceElement = (piece, isMyPiece) => {
+            const el = document.createElement('div');
+            el.classList.add('captured-piece', piece.color);
 
-			const pieceElement = document.createElement('div');
-			pieceElement.classList.add('piece');
-			
-			const spriteImg = document.createElement('img');
-			spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-			spriteImg.alt = `${piece.color} ${piece.type}`;
+            const pieceElement = document.createElement('div');
+            pieceElement.classList.add('piece');
+            
+            const spriteImg = document.createElement('img');
+            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+            spriteImg.alt = `${piece.color} ${piece.type}`;
 
-			pieceElement.appendChild(spriteImg);
-			el.appendChild(pieceElement);
+            pieceElement.appendChild(spriteImg);
+            el.appendChild(pieceElement);
 
-			if (isMyPiece) {
-				el.addEventListener('click', () => onCapturedClick(piece));
-			}
-			return el;
+            if (isMyPiece) {
+                el.addEventListener('click', () => onCapturedClick(piece));
+            }
+            return el;
         };
 
         myCaptured.forEach((piece) => {
@@ -322,8 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTurnIndicator() {
         if (gameState.gameOver) {
             turnIndicator.textContent = '';
-            if(!winnerText.textContent) { // Only set if not already set by timeout
-                 winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
+            if(!winnerText.textContent) {
+                winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
             }
             return;
         }
@@ -414,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearHighlights();
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+                    const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (gameState.boardState[y][x] === null && isBoardValid) {
                     const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
                     const plate = document.createElement('div');
