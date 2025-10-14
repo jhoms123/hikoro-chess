@@ -1,6 +1,7 @@
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
+
 const pieceNotation = {
     lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
