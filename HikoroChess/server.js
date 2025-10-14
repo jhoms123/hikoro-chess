@@ -131,7 +131,7 @@ io.on('connection', (socket) => {
             handlePromotion(piece, to.y, wasCapture);
             
             // This now checks for both win conditions
-            checkForWinner(game, piece, to.x, to.y);
+            checkForWinner(game);
 
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
@@ -203,7 +203,6 @@ function handlePromotion(piece, y, wasCapture) {
     }
 }
 
-// MODIFIED: To check for both Lupa Sanctuary and Lupa Capture win conditions
 function checkForWinner(game) {
     // --- 1. Lupa Sanctuary Win Condition ---
     const winSquares = [
@@ -220,7 +219,8 @@ function checkForWinner(game) {
         }
     }
 
-    // --- 2. Lupa Capture Win Condition ---
+    // --- 2. Lupa Capture Win Condition (Corrected Logic) ---
+    // This condition is met only when a player has ZERO Lupas left.
     let whiteLupaCount = 0;
     let blackLupaCount = 0;
     for (let y = 0; y < 16; y++) {
@@ -233,11 +233,10 @@ function checkForWinner(game) {
         }
     }
 
-    if (blackLupaCount < 2) {
+    if (blackLupaCount === 0) {
         game.gameOver = true;
         game.winner = 'white';
-    }
-    if (whiteLupaCount < 2) {
+    } else if (whiteLupaCount === 0) {
         game.gameOver = true;
         game.winner = 'black';
     }
