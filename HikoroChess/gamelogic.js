@@ -45,9 +45,11 @@ function isPositionValid(x, y) {
 
 const isProtected = (targetPiece, targetX, targetY, board) => {
     const protectingColor = targetPiece.color;
-    const behindDir = protectingColor === 'white' ? -1 : 1;
-
-    // 1. Check for Pilut protection (directly behind the target)
+    
+    // 1. Check for Pilut protection.
+    // The rule is a Pilut protects the piece directly IN FRONT of it.
+    // So, from the target piece's perspective, we check the square BEHIND it for a friendly Pilut.
+    const behindDir = protectingColor === 'white' ? -1 : 1; // For a white piece, behind is y-1. For black, y+1.
     const pilutProtectorY = targetY + behindDir;
     if (isPositionValid(targetX, pilutProtectorY)) {
         const potentialProtector = board[pilutProtectorY][targetX];
@@ -60,10 +62,8 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
-
             const gsX = targetX + dx;
             const gsY = targetY + dy;
-
             if (isPositionValid(gsX, gsY)) {
                 const potentialProtector = board[gsY][gsX];
                 if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
@@ -71,7 +71,6 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
                     const isTargetInFrontStraight = (targetX === gsX && targetY === gsY + gsForwardDir);
                     const isTargetInFrontDiagLeft = (targetX === gsX - 1 && targetY === gsY + gsForwardDir);
                     const isTargetInFrontDiagRight = (targetX === gsX + 1 && targetY === gsY + gsForwardDir);
-
                     if (!(isTargetInFrontStraight || isTargetInFrontDiagLeft || isTargetInFrontDiagRight)) {
                         return true;
                     }

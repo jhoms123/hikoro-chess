@@ -1,4 +1,4 @@
-// public/script.js (Universal Version)
+// public/script.js
 
 document.addEventListener('DOMContentLoaded', () => {
    
@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
    const socket = io(serverUrl);
     
-
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
     
@@ -44,12 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('validMoves', drawHighlights);
     socket.on('errorMsg', (message) => alert(message));
-    // Add a listener to see if we even connect
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
-
 
     function updateLobby(games) {
         gameListElement.innerHTML = '';
@@ -82,9 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLocalState(initialGameState);
     }
 
+    // MODIFIED: To automatically show bonus moves
     function updateLocalState(newGameState) {
         gameState = newGameState;
         renderAll();
+
+        // Check if a bonus move was just granted to the current player
+        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+        if (isMyTurn && gameState.bonusMoveInfo) {
+            // A bonus move is active for me. Automatically select the piece and show its moves.
+            const bonusPieceSquare = { 
+                x: gameState.bonusMoveInfo.pieceX, 
+                y: gameState.bonusMoveInfo.pieceY 
+            };
+            selectedSquare = bonusPieceSquare;
+            socket.emit('getValidMoves', { gameId, square: bonusPieceSquare });
+        }
     }
 
     function renderAll() {
@@ -100,22 +110,18 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 const square = document.createElement('div');
                 square.classList.add('square');
-                
                 let displayX = x, displayY = y;
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else { 
                     displayX = BOARD_WIDTH - 1 - x;
                 }
-                
                 square.dataset.logicalX = x;
                 square.dataset.logicalY = y;
                 square.style.gridRowStart = displayY + 1;
                 square.style.gridColumnStart = displayX + 1;
-
                 const isLight = (x + y) % 2 === 0;
                 square.classList.add(isLight ? 'light' : 'dark');
-
                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (!isBoardValid) {
                     square.classList.add('invalid');
@@ -127,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         onSquareClick(logicalX, logicalY);
                     });
                 }
-
                 const piece = gameState.boardState[y][x];
                 if (piece) {
                     const pieceElement = document.createElement('div');
@@ -145,12 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
         const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
         const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
-        
         document.querySelector(myColor === 'white' ? '#white-captured-area h3' : '#black-captured-area h3').textContent = "Your Hand";
         document.querySelector(myColor === 'white' ? '#black-captured-area h3' : '#white-captured-area h3').textContent = "Opponent's Hand";
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
-
         myCaptured.forEach((piece) => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', myColor);
@@ -158,7 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('click', () => onCapturedClick(piece));
             myCapturedEl.appendChild(el);
         });
-
         oppCaptured.forEach((piece) => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', piece.color);
@@ -180,14 +182,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
             isDroppingPiece = null;
             clearHighlights();
             return;
         }
-        
         if (selectedSquare) {
             if (selectedSquare.x === x && selectedSquare.y === y) {
                  selectedSquare = null;
@@ -200,6 +200,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isMyTurn) {
             const piece = gameState.boardState[y][x];
             if (piece && piece.color === myColor) {
+                // ADDED: Prevent selecting another piece during a bonus move
+                if (gameState.bonusMoveInfo && (gameState.bonusMoveInfo.pieceX !== x || gameState.bonusMoveInfo.pieceY !== y)) {
+                    return; // Can only select the bonus move piece
+                }
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
@@ -209,10 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function drawHighlights(moves) {
         clearHighlights();
         if (!selectedSquare) return;
-        
         const selectedSquareElement = document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
         if(selectedSquareElement) selectedSquareElement.classList.add('selected');
-
         moves.forEach(move => {
             const moveSquare = document.querySelector(`[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
             if (moveSquare) {
@@ -226,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onCapturedClick(piece) {
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn || gameState.gameOver) return;
+        if (!isMyTurn || gameState.gameOver || gameState.bonusMoveInfo) return; // Cannot drop during bonus move
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();
