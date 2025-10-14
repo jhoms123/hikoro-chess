@@ -1,325 +1,180 @@
-const BOARD_WIDTH = 10;
-const BOARD_HEIGHT = 16;
+// server.js (Robust CORS Version)
 
-const pieceNotation = {
-    lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
-    sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
-    finor: "F+", greatshield: "GS", greathorsegeneral: "GH"
-};
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
 
-class Game {
-    constructor() {
-        this.boardState = this.getInitialBoard();
-        this.currentPlayer = 'white';
-        this.selectedPiece = null;
-        this.greatHorseGeneralSecondMove = false;
-        this.copeBonusMove = false;
-    }
+const app = express();
+const server = http.createServer(app);
 
-    getInitialBoard() {
-        let boardState = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(null));
-        const setup = [
-            { y: 5, x: 0, type: 'pilut' }, { y: 5, x: 1, type: 'pilut' },
-            { y: 5, x: 2, type: 'sult' }, { y: 5, x: 3, type: 'pilut' },
-            { y: 5, x: 4, type: 'pilut' }, { y: 5, x: 5, type: 'pilut' },
-            { y: 5, x: 6, type: 'pilut' }, { y: 5, x: 7, type: 'sult' },
-            { y: 5, x: 8, type: 'pilut' }, { y: 5, x: 9, type: 'pilut' },
-            { y: 4, x: 0, type: 'cope' }, { y: 4, x: 1, type: 'greathorsegeneral' },
-            { y: 4, x: 2, type: 'kor' }, { y: 4, x: 3, type: 'fin' },
-            { y: 4, x: 4, type: 'yoli' }, { y: 4, x: 5, type: 'yoli' },
-            { y: 4, x: 6, type: 'fin' }, { y: 4, x: 7, type: 'kor' },
-            { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' },
-            { y: 3, x: 1, type: 'cope' }, { y: 3, x: 2, type: 'jotu' },
-            { y: 3, x: 3, type: 'pawn' }, { y: 3, x: 6, type: 'pawn' },
-            { y: 3, x: 7, type: 'jotu' }, { y: 3, x: 8, type: 'cope' },
-            { y: 2, x: 4, type: 'cope' }, { y: 2, x: 5, type: 'cope' },
-            { y: 1, x: 2, type: 'chair' }, { y: 1, x: 3, type: 'kota' },
-            { y: 1, x: 6, type: 'kota' }, { y: 1, x: 7, type: 'chair' },
-            { y: 0, x: 2, type: 'lupa' }, { y: 0, x: 4, type: 'pawn' },
-            { y: 0, x: 5, type: 'pawn' }, { y: 0, x: 7, type: 'lupa' },
-        ];
-        setup.forEach(p => boardState[p.y][p.x] = { type: p.type, color: 'white' });
-        setup.forEach(p => boardState[BOARD_HEIGHT - 1 - p.y][p.x] = { type: p.type, color: 'black' });
-        return boardState;
-    }
+const io = socketIo(server, {
+  cors: {
+    origin: ["https://hikorochess.org", "https://www.hikorochess.org", "https://hikoro-chess.onrender.com"],
+    methods: ["GET", "POST"]
+  }
+});
 
-    isPositionValid(x, y) {
-        if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
-        if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
-        if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
-        return true;
-    }
+const PORT = process.env.PORT || 3000;
 
-    isProtected(targetPiece, targetX, targetY) {
-        const protectingColor = targetPiece.color;
-        
-        // Pilut Protection from behind
-        const pilutDir = protectingColor === 'white' ? -1 : 1;
-        const potentialPilutY = targetY + pilutDir;
-        if (this.isPositionValid(targetX, potentialPilutY)) {
-            const protector = this.boardState[potentialPilutY][targetX];
-            if (protector && protector.type === 'pilut' && protector.color === protectingColor) {
-                return true;
-            }
-        }
+app.use(express.static('public'));
 
-        // Great Shield Protection (sides, back-diagonals, straight back)
-        const gsDir = protectingColor === 'white' ? -1 : 1;
-        const positionsToCheck = [
-            { dx: 0, dy: gsDir },    // Straight behind
-            { dx: -1, dy: gsDir },   // Back-diagonal left
-            { dx: 1, dy: gsDir },    // Back-diagonal right
-            { dx: -1, dy: 0 },       // Side left
-            { dx: 1, dy: 0 }         // Side right
-        ];
-        
-        for (let pos of positionsToCheck) {
-            const protectorX = targetX + pos.dx;
-            const protectorY = targetY + pos.dy;
-            if (this.isPositionValid(protectorX, protectorY)) {
-                const protector = this.boardState[protectorY][protectorX];
-                if (protector && protector.type === 'greatshield' && protector.color === protectingColor) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+let games = {};
+let lobbyGames = {};
 
-    getValidMovesForPiece(piece, x, y) {
-        if (!piece || piece.color !== this.currentPlayer) return [];
-        
-        const moves = [];
+const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./gamelogic');
 
-        const addMove = (toX, toY) => {
-            if (!this.isPositionValid(toX, toY)) return;
-            const target = this.boardState[toY][toX];
-            if (target === null) {
-                moves.push({ x: toX, y: toY, isAttack: false });
-            } else if (target.color !== piece.color) {
-                if (!this.isProtected(target, toX, toY)) {
-                    moves.push({ x: toX, y: toY, isAttack: true });
-                }
-            }
+
+io.on('connection', (socket) => {
+    console.log('A user connected:', socket.id); // You should see this message!
+    socket.emit('lobbyUpdate', lobbyGames);
+
+    socket.on('createGame', () => {
+        const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
+        games[gameId] = {
+            id: gameId,
+            players: { white: socket.id, black: null },
+            boardState: getInitialBoard(),
+            whiteCaptured: [],
+            blackCaptured: [],
+            isWhiteTurn: true,
+            gameOver: false,
+            winner: null
         };
+        lobbyGames[gameId] = { id: gameId, white: socket.id, black: null };
+        socket.join(gameId);
+        socket.emit('gameCreated', { gameId, color: 'white' });
+        io.emit('lobbyUpdate', lobbyGames);
+        console.log(`Game created: ${gameId} by ${socket.id}`);
+    });
 
-        const addNonCaptureMove = (toX, toY) => {
-            if (!this.isPositionValid(toX, toY)) return;
-            const target = this.boardState[toY][toX];
-            if (target === null) {
-                moves.push({ x: toX, y: toY, isAttack: false });
-            }
-        };
-
-        const generateLineMoves = (dx, dy) => {
-            let cx = x + dx, cy = y + dy;
-            while (this.isPositionValid(cx, cy)) {
-                const target = this.boardState[cy][cx];
-                if (target === null) {
-                    moves.push({ x: cx, y: cy, isAttack: false });
-                } else {
-                    if (target.color !== piece.color) {
-                        if (!this.isProtected(target, cx, cy)) {
-                            moves.push({ x: cx, y: cy, isAttack: true });
-                        }
-                    }
-                    break;
-                }
-                cx += dx; cy += dy;
-            }
-        };
-
-        const generateNonCaptureLineMoves = (dx, dy) => {
-            let cx = x + dx, cy = y + dy;
-            while (this.isPositionValid(cx, cy) && this.boardState[cy][cx] === null) {
-                moves.push({ x: cx, y: cy, isAttack: false });
-                cx += dx; cy += dy;
-            }
-        };
-
-        let moveList = [];
-        let isSpecialMoveTurn = false;
-
-        // Check for special move states
-        if (this.greatHorseGeneralSecondMove) {
-            if (piece.type === 'greathorsegeneral') {
-                isSpecialMoveTurn = true;
-            } else {
-                return []; // Only the GHG can move on its second turn.
-            }
-        } else if (this.copeBonusMove) {
-            if (piece.type === 'cope') {
-                isSpecialMoveTurn = true;
-            } else {
-                return []; // Only the Cope can move on its bonus turn.
-            }
+    socket.on('joinGame', (gameId) => {
+        const game = games[gameId];
+        if (game && !game.players.black) {
+            game.players.black = socket.id;
+            lobbyGames[gameId].black = socket.id;
+            socket.join(gameId);
+            delete lobbyGames[gameId];
+            console.log(`${socket.id} joined game ${gameId} as black.`);
+            io.to(gameId).emit('gameStart', game);
+            io.emit('lobbyUpdate', lobbyGames);
+        } else {
+            socket.emit('errorMsg', 'Game is full or does not exist.');
         }
-
-        switch (piece.type) {
-            case 'lupa':
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        addMove(x + dx, y + dy);
-                    }
-                }
-                break;
-            case 'zur':
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        generateLineMoves(dx, dy);
-                    }
-                }
-                break;
-            case 'kota':
-                generateLineMoves(1, 0); generateLineMoves(-1, 0);
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        addMove(x + dx, y + dy);
-                    }
-                }
-                break;
-            case 'fin':
-                generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-                addNonCaptureMove(x + 1, y);
-                addNonCaptureMove(x - 1, y);
-                break;
-            case 'yoli':
-                [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
-                addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
-            case 'pilut':
-                const dir = piece.color === 'white' ? 1 : -1;
-                if (this.isPositionValid(x, y + dir) && !this.boardState[y + dir][x]) {
-                    moves.push({ x: x, y: y + dir, isAttack: false });
-                    if (this.isPositionValid(x, y + 2 * dir) && !this.boardState[y + 2 * dir][x]) {
-                        moves.push({ x: x, y: y + 2 * dir, isAttack: false });
-                    }
-                }
-                break;
-            case 'sult':
-                const fwd = piece.color === 'white' ? 1 : -1;
-                addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd);
-                addMove(x, y + fwd); addMove(x, y + 2 * fwd); break;
-            case 'pawn':
-                addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y);
-                addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
-            case 'cope':
-                const fwdDir = piece.color === 'white' ? 1 : -1;
-                if (this.copeBonusMove) {
-                    addNonCaptureMove(x + 2, y + 2 * fwdDir);
-                    addNonCaptureMove(x - 2, y + 2 * fwdDir);
-                    addNonCaptureMove(x, y + 1 * fwdDir);
-                    addNonCaptureMove(x, y + 2 * fwdDir);
-                    addNonCaptureMove(x, y - 1 * fwdDir);
-                    addNonCaptureMove(x, y - 2 * fwdDir);
-                } else {
-                    addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
-                    addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
-                    addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
-                }
-                break;
-            case 'chair':
-                generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-                generateLineMoves(0, 1); generateLineMoves(0, -1); break;
-            case 'jotu':
-                generateLineMoves(1, 0); generateLineMoves(-1, 0);
-                if (piece.color === 'white') { generateLineMoves(0, 1); addMove(x, y - 1); }
-                else { generateLineMoves(0, -1); addMove(x, y + 1); } break;
-            case 'kor':
-                addMove(x - 1, y - 1); addMove(x - 1, y + 1); addMove(x + 1, y + 1); addMove(x + 1, y - 1);
-                [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) + Math.abs(dy) === 3) addMove(x + dx, y + dy); }));
-                break;
-            case 'finor':
-                generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-                [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) + Math.abs(dy) === 3) addMove(x + dx, y + dy); }));
-                break;
-            case 'greatshield':
-                const gsDir = piece.color === 'white' ? 1 : -1;
-                addNonCaptureMove(x, y + gsDir);
-                addNonCaptureMove(x - 1, y + gsDir);
-                addNonCaptureMove(x + 1, y + gsDir);
-                addNonCaptureMove(x, y - gsDir);
-                break;
-            case 'greathorsegeneral':
-                const ghgDir = piece.color === 'white' ? 1 : -1;
-                if (this.greatHorseGeneralSecondMove) {
-                    // Second move: non-capture only
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dy = -1; dy <= 1; dy++) {
-                            if (dx === 0 && dy === 0) continue;
-                            addNonCaptureMove(x + dx, y + dy);
-                        }
-                    }
-                    [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addNonCaptureMove(x + dx, y + dy); }));
-                    generateNonCaptureLineMoves(-1, ghgDir);
-                    generateNonCaptureLineMoves(1, ghgDir);
-                    generateNonCaptureLineMoves(0, -ghgDir);
-                } else {
-                    // First move: captures allowed
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dy = -1; dy <= 1; dy++) {
-                            if (dx === 0 && dy === 0) continue;
-                            addMove(x + dx, y + dy);
-                        }
-                    }
-                    [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
-                    generateLineMoves(-1, ghgDir);
-                    generateLineMoves(1, ghgDir);
-                    generateLineMoves(0, -ghgDir);
-                }
-                break;
-        }
-        return moves;
-    }
-
-    makeMove(fromX, fromY, toX, toY) {
-        const piece = this.boardState[fromY][fromX];
-        if (!piece) return false;
-
-        const moves = this.getValidMovesForPiece(piece, fromX, fromY);
-        const validMove = moves.find(m => m.x === toX && m.y === toY);
-
-        if (validMove) {
-            // Check for special move conditions and update game state
-            if (piece.type === 'greathorsegeneral') {
-                if (validMove.isAttack) {
-                    this.greatHorseGeneralSecondMove = false; // Capture ends the turn
-                } else {
-                    this.greatHorseGeneralSecondMove = true; // Non-capture grants a second move
-                }
-            } else if (piece.type === 'cope' && validMove.isAttack) {
-                this.copeBonusMove = true;
-            } else {
-                this.greatHorseGeneralSecondMove = false;
-                this.copeBonusMove = false;
-                this.switchPlayer();
-            }
-            
-            this.boardState[toY][toX] = piece;
-            this.boardState[fromY][fromX] = null;
-            return true;
-        }
-
-        return false;
-    }
+    });
     
-    switchPlayer() {
-        if (!this.greatHorseGeneralSecondMove && !this.copeBonusMove) {
-            this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+    socket.on('getValidMoves', (data) => {
+        const { gameId, square } = data;
+        const game = games[gameId];
+        if (!game || !square) return;
+
+        const piece = game.boardState[square.y][square.x];
+        if (piece) {
+            const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState);
+            socket.emit('validMoves', validMoves);
         }
-        // Special moves don't change the player
-        if(this.greatHorseGeneralSecondMove || this.copeBonusMove) {
-            // Need a way to end the turn after the bonus move.
-            // This is likely handled by your UI logic after the second move is made.
+    });
+
+
+    socket.on('makeMove', (data) => {
+        const { gameId, from, to } = data;
+        const game = games[gameId];
+        if (!game || game.gameOver) return;
+
+        const playerColor = game.players.white === socket.id ? 'white' : 'black';
+        const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+
+        if (!isTurn) return;
+
+        const piece = game.boardState[from.y][from.x];
+        if (!piece || piece.color !== playerColor) return;
+        
+        const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState);
+        const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
+
+        if (isValidMove) {
+            const targetPiece = game.boardState[to.y][to.x];
+            if (targetPiece !== null) {
+                let pieceForHand = { type: targetPiece.type, color: targetPiece.color };
+                if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
+                if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
+                if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
+
+                if (playerColor === 'white' && game.whiteCaptured.length < 6) game.whiteCaptured.push(pieceForHand);
+                else if (playerColor === 'black' && game.blackCaptured.length < 6) game.blackCaptured.push(pieceForHand);
+            }
+            game.boardState[to.y][to.x] = piece;
+            game.boardState[from.y][from.x] = null;
+            handlePromotion(piece, to.y, targetPiece !== null);
+            checkForWinner(game);
+            game.isWhiteTurn = !game.isWhiteTurn;
+            io.to(gameId).emit('gameStateUpdate', game);
+        }
+    });
+    
+    socket.on('makeDrop', (data) => {
+        const { gameId, piece, to } = data;
+        const game = games[gameId];
+        if (!game || game.gameOver) return;
+        const playerColor = game.players.white === socket.id ? 'white' : 'black';
+        const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+        if (!isTurn) return;
+        
+        if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
+             game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
+             const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+             const pieceIndex = capturedArray.findIndex(p => p.type === piece.type);
+             if (pieceIndex > -1) capturedArray.splice(pieceIndex, 1);
+             game.isWhiteTurn = !game.isWhiteTurn;
+             io.to(gameId).emit('gameStateUpdate', game);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        for (const gameId in games) {
+            const game = games[gameId];
+            if (game.players.white === socket.id || game.players.black === socket.id) {
+                if(!game.gameOver) {
+                    game.gameOver = true;
+                    game.winner = game.players.white === socket.id ? 'black' : 'white';
+                    io.to(gameId).emit('gameStateUpdate', game);
+                }
+                delete games[gameId];
+                delete lobbyGames[gameId];
+                io.emit('lobbyUpdate', lobbyGames);
+                console.log(`Game ${gameId} removed due to disconnect.`);
+                break;
+            }
+        }
+    });
+});
+
+function handlePromotion(piece, y, wasCapture) {
+    const color = piece.color;
+    if (piece.type === 'fin' && wasCapture) piece.type = 'finor';
+    const promotablePawns = ['sult', 'pawn', 'pilut'];
+    if (promotablePawns.includes(piece.type)) {
+        const inPromotionZone = (color === 'white' && y > 8) || (color === 'black' && y < 7);
+        if (inPromotionZone) {
+            if (piece.type === 'pilut') piece.type = 'greatshield';
+            else piece.type = 'chair';
         }
     }
 }
 
-module.exports = {
-    Game,
-    pieceNotation,
-    BOARD_WIDTH,
-    BOARD_HEIGHT
-};
+function checkForWinner(game) {
+    let whiteLupaCount = 0, blackLupaCount = 0;
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 10; x++) {
+            const piece = game.boardState[y][x];
+            if (piece && piece.type === 'lupa') {
+                if (piece.color === 'white') whiteLupaCount++;
+                else blackLupaCount++;
+            }
+        }
+    }
+    if (blackLupaCount < 2) { game.gameOver = true; game.winner = 'white'; }
+    if (whiteLupaCount < 2) { game.gameOver = true; game.winner = 'black'; }
+}
+
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
