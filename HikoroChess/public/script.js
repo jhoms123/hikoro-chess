@@ -1,12 +1,10 @@
-// public/script.js
-
 document.addEventListener('DOMContentLoaded', () => {
-   
-   const productionUrl = 'https://HikoroChess.org';
-   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-   const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
+    
+    const productionUrl = 'https://HikoroChess.org';
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
 
-   const socket = io(serverUrl);
+    const socket = io(serverUrl);
     
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
@@ -20,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
 
+    // NEW: Timer display elements
+    let whiteTimerEl, blackTimerEl;
+
     // Client State
     let gameState = {};
     let myColor = null;
@@ -32,20 +33,108 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
+    
+
     // --- Lobby Listeners ---
-    createGameBtn.addEventListener('click', () => socket.emit('createGame'));
+    createGameBtn.addEventListener('click', () => {
+		const mainTime = parseInt(document.getElementById('time-control').value, 10);
+		const byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+
+		// If main time is unlimited, byoyomi is disabled
+		// The server handles main: -1 as unlimited
+		const timeControl = {
+			main: mainTime,
+			byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
+			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0) // Treat byoyomi as endless periods
+		};
+		
+		socket.emit('createGame', timeControl);
+	});
+
+
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
     socket.on('gameStart', onGameStart);
     
     // --- Game Listeners ---
     socket.on('gameStateUpdate', updateLocalState);
+    socket.on('timeUpdate', updateTimerDisplay); // NEW
     socket.on('validMoves', drawHighlights);
     socket.on('errorMsg', (message) => alert(message));
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
+
+    // ----- NEW: Timer Functions -----
+    function setupTimerElements() {
+        const whiteArea = document.getElementById('white-captured-area');
+        const blackArea = document.getElementById('black-captured-area');
+
+        if (whiteArea && !document.getElementById('white-timer')) {
+            whiteTimerEl = document.createElement('div');
+            whiteTimerEl.id = 'white-timer';
+            whiteTimerEl.className = 'timer';
+            whiteArea.appendChild(whiteTimerEl);
+        } else {
+            whiteTimerEl = document.getElementById('white-timer');
+        }
+
+        if (blackArea && !document.getElementById('black-timer')) {
+            blackTimerEl = document.createElement('div');
+            blackTimerEl.id = 'black-timer';
+            blackTimerEl.className = 'timer';
+            blackArea.appendChild(blackTimerEl);
+        } else {
+            blackTimerEl = document.getElementById('black-timer');
+        }
+    }
+
+    function formatTime(seconds, periods, inByoyomi) {
+    // Handle unlimited time
+		if (seconds === -1) {
+			return "∞";
+		}
+		
+		if (inByoyomi) {
+			// Since we are using endless byoyomi, we don't show the period count
+			return `B: ${Math.ceil(seconds)}s`;
+		}
+		const mins = Math.floor(seconds / 60);
+		const secs = Math.floor(seconds % 60);
+		const paddedSecs = secs < 10 ? `0${secs}` : secs;
+		const paddedMins = mins < 10 ? `0${mins}` : mins;
+		return `${paddedMins}:${paddedSecs}`;
+	}
+
+    function updateTimerDisplay(times) {
+        const whiteTimerEl = document.getElementById('white-time');
+		const blackTimerEl = document.getElementById('black-time');
+
+		if (!whiteTimerEl || !blackTimerEl || !gameState.timeControl) return;
+
+		const { whiteTime, blackTime, whiteByoyomi, blackByoyomi, isInByoyomiWhite, isInByoyomiBlack } = times;
+
+		// Update the textContent of the spans
+		whiteTimerEl.textContent = formatTime(whiteTime, whiteByoyomi, isInByoyomiWhite);
+		blackTimerEl.textContent = formatTime(blackTime, blackByoyomi, isInByoyomiBlack);
+		
+		if (gameState.gameOver) {
+			whiteTimerEl.classList.remove('active');
+			blackTimerEl.classList.remove('active');
+			return;
+		}
+
+		// Toggle the 'active' class for styling
+		if (gameState.isWhiteTurn) {
+			whiteTimerEl.classList.add('active');
+			blackTimerEl.classList.remove('active');
+		} else {
+			blackTimerEl.classList.add('active');
+			whiteTimerEl.classList.remove('active');
+		}
+    }
+
 
     function updateLobby(games) {
         gameListElement.innerHTML = '';
@@ -68,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
+        setupTimerElements(); // Setup timers early
     }
 
     function onGameStart(initialGameState) {
@@ -75,12 +165,38 @@ document.addEventListener('DOMContentLoaded', () => {
         gameId = initialGameState.id;
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
+        setupTimerElements(); // Ensure timer divs are ready
         updateLocalState(initialGameState);
     }
 
     function updateLocalState(newGameState) {
+        const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
         gameState = newGameState;
+
+        if (isNewGameOver && newGameState.winner) {
+             const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+             winnerText.textContent = `${winnerName} Wins!`;
+             // Add a reason if it's a timeout
+             const losingPlayer = newGameState.winner === 'white' ? 'black' : 'white';
+             if (newGameState[`${losingPlayer}TimeLeft`] <= 0 && newGameState[`${losingPlayer}ByoyomiPeriodsLeft`] < 0) {
+                 winnerText.textContent += " (on time)";
+             }
+        }
+        
         renderAll();
+
+        if (gameState.timeControl) {
+            const times = {
+                whiteTime: gameState.whiteTimeLeft,
+                blackTime: gameState.blackTimeLeft,
+                whiteByoyomi: gameState.whiteByoyomiPeriodsLeft,
+                blackByoyomi: gameState.blackByoyomiPeriodsLeft,
+                isInByoyomiWhite: gameState.whiteTimeLeft <= 0,
+                isInByoyomiBlack: gameState.blackTimeLeft <= 0
+            };
+            updateTimerDisplay(times);
+        }
+
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         if (isMyTurn && gameState.bonusMoveInfo) {
             const bonusPieceSquare = { 
@@ -155,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // THIS FUNCTION CONTAINS THE FIX
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
         const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
@@ -166,10 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
 
-        // Helper function to create a piece element to avoid repetition
         const createCapturedPieceElement = (piece, isMyPiece) => {
             const el = document.createElement('div');
-            // The class for the background/border should be the color of the piece's CURRENT owner
             el.classList.add('captured-piece', piece.color);
 
             const pieceElement = document.createElement('div');
@@ -199,11 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     function updateTurnIndicator() {
         if (gameState.gameOver) {
             turnIndicator.textContent = '';
-            winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
+            if(!winnerText.textContent) { // Only set if not already set by timeout
+                 winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
+            }
             return;
         }
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
@@ -214,7 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         
-        // This check must come first to handle drops
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
             isDroppingPiece = null;
@@ -237,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedSquare = null;
                 clearHighlights();
             } else {
-                isDroppingPiece = null; // Cancel any drop selection
+                isDroppingPiece = null;
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
@@ -279,14 +392,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!isMyTurn || gameState.gameOver) return;
 
-        // If you click the same piece you're already trying to drop, cancel the drop.
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();
             return;
         }
         
-        selectedSquare = null; // Clear any board selection when selecting from hand
+        selectedSquare = null;
         isDroppingPiece = piece;
         highlightDropSquares();
     }

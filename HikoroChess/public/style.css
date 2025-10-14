@@ -1,5 +1,3 @@
-/* style.css (Complete updated file) */
-
 :root {
     /* Define a variable for square size. On desktop, it's based on viewport height. */
     --square-size: min(4.5vh, 40px);
@@ -118,6 +116,8 @@ body {
 .captured-area {
     width: calc(var(--square-size) * 4); /* Adjust width relative to square size */
     text-align: center;
+    display: flex;
+    flex-direction: column;
 }
 
 .captured-pieces-box {
@@ -129,6 +129,7 @@ body {
     flex-wrap: wrap;
     gap: 5px;
     align-content: flex-start;
+    flex-grow: 1;
 }
 
 .captured-piece {
@@ -192,6 +193,57 @@ body {
     cursor: pointer;
 }
 
+/* ----- NEW STYLES ----- */
+
+#time-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+#time-controls div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+#time-controls label {
+    font-weight: bold;
+}
+#time-controls select {
+    padding: 5px;
+    background-color: #555;
+    color: #eee;
+    border: 1px solid #777;
+}
+
+/* Timer Display Styling in Game */
+.captured-area h3 {
+    font-weight: normal; /* Make the "Your Hand" text less bold */
+}
+
+#white-time, #black-time {
+    font-size: 1.2em;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #222;
+    color: #ddd;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 2px solid #555;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#white-time.active, #black-time.active {
+    background-color: #4a2a00;
+    color: #fff;
+    border-color: #ff9800;
+}
+
 
 /* =================================== */
 /* == MOBILE RESPONSIVE STYLES HERE == */
@@ -229,5 +281,12 @@ body {
         flex-wrap: nowrap; /* Don't wrap pieces to the next line */
         overflow-x: auto; /* Allow horizontal scrolling if many pieces */
         justify-content: flex-start;
+    }
+
+    .timer {
+        margin-top: 0;
+        margin-bottom: 5px; /* Add space below timer on mobile */
+        font-size: 1.5em;
+        padding: 5px;
     }
 }
