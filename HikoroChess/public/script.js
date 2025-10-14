@@ -217,12 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
 			setTimeout(() => {
 				console.log("Bot is thinking...");
-				// MODIFIED LINE: Pass the bot's captured pieces to its brain.
-				const bestMove = findBestMove(gameState.boardState, gameState.blackCaptured);
+				// MODIFIED LINE: Call the new time-managed function
+				const bestMove = findBestMoveWithTimeLimit(gameState.boardState, gameState.blackCaptured);
 				
 				if (bestMove) {
 					console.log("Bot chose move:", bestMove);
-					// The bot can now return 'drop' moves as well as 'board' moves
 					if (bestMove.type === 'drop') {
 						socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
 					} else {
@@ -231,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				} else {
 					console.log("Bot has no moves!");
 				}
-			}, 500);
+			}, 100); // Reduced delay
 		}
     }
 
