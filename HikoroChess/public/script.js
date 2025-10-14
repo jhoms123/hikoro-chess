@@ -207,14 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
     }
 
-    // REFACTORED: To allow selecting pieces on opponent's turn
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
 
-        // This part handles making a move, which can only happen if it's your turn.
         if (isMyTurn && selectedSquare) {
-            // Check if the click is a move attempt (not on the selected square itself)
             if (selectedSquare.x !== x || selectedSquare.y !== y) {
                 socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
                 selectedSquare = null;
@@ -223,25 +220,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // This part handles selecting/deselecting a piece, which can happen anytime.
         const piece = gameState.boardState[y][x];
         if (piece && piece.color === myColor) {
-            // If clicking the same piece again, deselect it.
             if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
                 selectedSquare = null;
                 clearHighlights();
-            } else { // Otherwise, select the new piece.
+            } else {
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
         } else {
-            // If you click an empty square or an enemy piece, just clear any selection.
             selectedSquare = null;
             clearHighlights();
         }
     }
     
-    // REFACTORED: To draw gray dots for previews
     function drawHighlights(moves) {
         clearHighlights();
         if (!selectedSquare) return;
@@ -250,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedSquareElement = document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
 
         if (selectedSquareElement) {
-            // Use 'selected' class for your turn, 'preview-selected' for opponent's turn
             selectedSquareElement.classList.add(isMyTurn ? 'selected' : 'preview-selected');
         }
 
@@ -259,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (moveSquare) {
                 const plate = document.createElement('div');
                 plate.classList.add('move-plate');
-                // If it's not your turn, add the 'preview' class to make it gray
                 if (!isMyTurn) {
                     plate.classList.add('preview');
                 }
@@ -271,9 +262,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // THIS FUNCTION CONTAINS THE FIX
     function onCapturedClick(piece) {
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn || gameState.gameOver || gameState.bonusMoveInfo) return;
+        
+        // THE BUG WAS HERE: The check for `gameState.bonusMoveInfo` was too restrictive. It's now removed.
+        // A player is always allowed to try and drop a piece on their turn.
+        if (!isMyTurn || gameState.gameOver) return;
+
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();
