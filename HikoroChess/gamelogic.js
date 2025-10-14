@@ -41,52 +41,130 @@ function isPositionValid(x, y) {
     return true;
 }
 
-function getValidMovesForPiece(piece, x, y, boardState) {
+function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
     if (!piece) return [];
     const moves = [];
-    
+
     const addMove = (toX, toY) => {
         if (!isPositionValid(toX, toY)) return;
         const target = boardState[toY][toX];
-        if (target === null) moves.push({ x: toX, y: toY, isAttack: false });
-        else if (target.color !== piece.color) moves.push({ x: toX, y: toY, isAttack: true });
+        if (target === null) {
+            moves.push({ x: toX, y: toY, isAttack: false });
+        } else if (target.color !== piece.color) {
+            // Check for Pilut and Great Shield protection
+            if (!isProtected(target, toX, toY, boardState)) {
+                moves.push({ x: toX, y: toY, isAttack: true });
+            }
+        }
+    };
+
+    const addNonCaptureMove = (toX, toY) => {
+        if (!isPositionValid(toX, toY)) return;
+        const target = boardState[toY][toX];
+        if (target === null) {
+            moves.push({ x: toX, y: toY, isAttack: false });
+        }
     };
 
     const generateLineMoves = (dx, dy) => {
         let cx = x + dx, cy = y + dy;
         while (isPositionValid(cx, cy)) {
             const target = boardState[cy][cx];
-            if (target === null) moves.push({ x: cx, y: cy, isAttack: false });
-            else {
-                if (target.color !== piece.color) moves.push({ x: cx, y: cy, isAttack: true });
+            if (target === null) {
+                moves.push({ x: cx, y: cy, isAttack: false });
+            } else {
+                if (target.color !== piece.color) {
+                    if (!isProtected(target, cx, cy, boardState)) {
+                        moves.push({ x: cx, y: cy, isAttack: true });
+                    }
+                }
                 break;
             }
             cx += dx; cy += dy;
         }
     };
 
-    // This switch statement is the same as in your original JS file
+    const generateNonCaptureLineMoves = (dx, dy) => {
+        let cx = x + dx, cy = y + dy;
+        while (isPositionValid(cx, cy) && boardState[cy][cx] === null) {
+            moves.push({ x: cx, y: cy, isAttack: false });
+            cx += dx; cy += dy;
+        }
+    };
+
+    const isProtected = (targetPiece, targetX, targetY, board) => {
+        const protectingColor = targetPiece.color;
+        // Check for Pilut protection from behind
+        const pilutDir = protectingColor === 'white' ? -1 : 1;
+        const potentialPilutY = targetY + pilutDir;
+        if (isPositionValid(targetX, potentialPilutY)) {
+            const potentialProtector = board[potentialPilutY][targetX];
+            if (potentialProtector && potentialProtector.type === 'pilut' && potentialProtector.color === protectingColor) {
+                return true;
+            }
+        }
+
+        // Check for Great Shield protection (sides, back-diagonals, straight back)
+        const gsDir = protectingColor === 'white' ? -1 : 1;
+        const potentialGSY = targetY + gsDir;
+        const potentialGSX = targetX;
+        const potentialGSXLeft = targetX - 1;
+        const potentialGSXRight = targetX + 1;
+
+        if (isPositionValid(potentialGSX, potentialGSY)) {
+            const potentialProtector = board[potentialGSY][potentialGSX];
+            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
+                return true;
+            }
+        }
+        if (isPositionValid(potentialGSXLeft, potentialGSY)) {
+            const potentialProtector = board[potentialGSY][potentialGSXLeft];
+            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
+                return true;
+            }
+        }
+        if (isPositionValid(potentialGSXRight, potentialGSY)) {
+            const potentialProtector = board[potentialGSY][potentialGSXRight];
+            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     switch (piece.type) {
         case 'lupa':
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy);
-            } break;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
+                }
+            }
+            break;
         case 'zur':
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue; generateLineMoves(dx, dy);
-            } break;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    generateLineMoves(dx, dy);
+                }
+            }
+            break;
         case 'kota':
             generateLineMoves(1, 0); generateLineMoves(-1, 0);
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy);
-            } break;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
+                }
+            }
+            break;
         case 'fin':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-            if (isPositionValid(x + 1, y) && !boardState[y][x + 1]) moves.push({x: x + 1, y: y, isAttack: false});
-            if (isPositionValid(x - 1, y) && !boardState[y][x - 1]) moves.push({x: x - 1, y: y, isAttack: false});
+            addNonCaptureMove(x + 1, y);
+            addNonCaptureMove(x - 1, y);
             break;
         case 'yoli':
-             [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
+            [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
             addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
         case 'pilut':
             const dir = piece.color === 'white' ? 1 : -1;
@@ -95,7 +173,8 @@ function getValidMovesForPiece(piece, x, y, boardState) {
                 if (isPositionValid(x, y + 2 * dir) && !boardState[y + 2 * dir][x]) {
                     moves.push({ x: x, y: y + 2 * dir, isAttack: false });
                 }
-            } break;
+            }
+            break;
         case 'sult':
             const fwd = piece.color === 'white' ? 1 : -1;
             addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd);
@@ -105,9 +184,20 @@ function getValidMovesForPiece(piece, x, y, boardState) {
             addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
         case 'cope':
             const fwdDir = piece.color === 'white' ? 1 : -1;
+            // Original moves
             addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
             addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
-            addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir); break;
+            addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
+            
+            // Add a special property to moves after a capture
+            if (piece.isBerserker) {
+              const bonusMoves = [];
+              addNonCaptureMove(x + 2, y + 2 * fwdDir); addNonCaptureMove(x - 2, y + 2 * fwdDir);
+              addNonCaptureMove(x, y + 1 * fwdDir); addNonCaptureMove(x, y + 2 * fwdDir);
+              addNonCaptureMove(x, y - 1 * fwdDir); addNonCaptureMove(x, y - 2 * fwdDir);
+              moves.push(...bonusMoves.filter(m => !moves.some(e => e.x === m.x && e.y === m.y)));
+            }
+            break;
         case 'chair':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
             generateLineMoves(0, 1); generateLineMoves(0, -1); break;
@@ -125,14 +215,39 @@ function getValidMovesForPiece(piece, x, y, boardState) {
             break;
         case 'greatshield':
             const gsDir = piece.color === 'white' ? 1 : -1;
-            [{dx:0,dy:gsDir},{dx:-1,dy:gsDir},{dx:1,dy:gsDir},{dx:0,dy:-gsDir}].forEach(m => {
-                if (isPositionValid(x + m.dx, y + m.dy) && !boardState[y + m.dy][x + m.dx]) moves.push({x: x + m.dx, y: y + m.dy, isAttack: false});
-            }); break;
+            addNonCaptureMove(x, y + gsDir);
+            addNonCaptureMove(x - 1, y + gsDir);
+            addNonCaptureMove(x + 1, y + gsDir);
+            addNonCaptureMove(x, y - gsDir);
+            break;
         case 'greathorsegeneral':
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); }
-            [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
             const ghgDir = piece.color === 'white' ? 1 : -1;
-            generateLineMoves(-1, ghgDir); generateLineMoves(1, ghgDir); generateLineMoves(0, -ghgDir); break;
+            if (isSecondMove) {
+                // Second move: non-capture only
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        addNonCaptureMove(x + dx, y + dy);
+                    }
+                }
+                [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addNonCaptureMove(x + dx, y + dy); }));
+                generateNonCaptureLineMoves(-1, ghgDir);
+                generateNonCaptureLineMoves(1, ghgDir);
+                generateNonCaptureLineMoves(0, -ghgDir);
+            } else {
+                // First move: captures allowed
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        addMove(x + dx, y + dy);
+                    }
+                }
+                [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
+                generateLineMoves(-1, ghgDir);
+                generateLineMoves(1, ghgDir);
+                generateLineMoves(0, -ghgDir);
+            }
+            break;
     }
     return moves;
 }
