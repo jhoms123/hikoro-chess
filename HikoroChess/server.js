@@ -24,12 +24,17 @@ let lobbyGames = {};
 
 const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./gamelogic');
 
-// ----- NEW: Global Timer Tick -----
+
 function gameTimerTick() {
     const now = Date.now();
     for (const gameId in games) {
         const game = games[gameId];
-        // Game must be active and not over
+        
+        // FIX: Skip timer logic for unlimited games
+        if (game && game.timeControl && game.timeControl.main === -1) {
+            continue;
+        }
+
         if (!game || game.gameOver || !game.players.black || !game.lastMoveTimestamp) {
             continue;
         }
@@ -54,16 +59,14 @@ function gameTimerTick() {
             displayByoyomi -= periodsUsed;
 
             if (displayByoyomi < 0) {
-                // Player has run out of time
                 game.gameOver = true;
                 game.winner = opponentColor;
                 io.to(gameId).emit('gameStateUpdate', game);
-                continue; // Move to the next game
+                continue; 
             }
-            // Calculate time left in the current byoyomi period
             displayTime = byoyomiTime - (byoyomiTimeUsed % byoyomiTime);
             if (byoyomiTimeUsed % byoyomiTime === 0 && byoyomiTimeUsed > 0) {
-                displayTime = 0; // Exactly at the end of a period
+                displayTime = 0;
             }
         }
 
@@ -80,12 +83,14 @@ function gameTimerTick() {
     }
 }
 
-setInterval(gameTimerTick, 1000); // Run the timer tick every second
+setInterval(gameTimerTick, 1000);
 
 
-// ----- NEW: Time Update on Move -----
 function updateTimeOnMove(game) {
-    if (!game.lastMoveTimestamp) return;
+    // FIX: Skip timer logic for unlimited games
+    if (!game.lastMoveTimestamp || (game.timeControl && game.timeControl.main === -1)) {
+        return;
+    }
 
     const now = Date.now();
     const timeSpent = (now - game.lastMoveTimestamp) / 1000;
@@ -99,7 +104,6 @@ function updateTimeOnMove(game) {
     timeLeft -= timeSpent;
 
     if (timeLeft < 0) {
-        // Entered byoyomi or used byoyomi time
         const byoyomiTimeUsed = Math.abs(timeLeft);
         const periodsUsed = Math.floor(byoyomiTimeUsed / byoyomiTime) + 1;
         byoyomiPeriodsLeft -= periodsUsed;
@@ -109,13 +113,12 @@ function updateTimeOnMove(game) {
              game.winner = opponentColor;
         }
         
-        timeLeft = 0; // Main time is depleted
+        timeLeft = 0;
     }
     
     game[`${activePlayerColor}TimeLeft`] = timeLeft;
     game[`${activePlayerColor}ByoyomiPeriodsLeft`] = byoyomiPeriodsLeft;
 
-    // Reset timestamp for the next player's turn
     game.lastMoveTimestamp = now;
 }
 
@@ -127,7 +130,7 @@ io.on('connection', (socket) => {
     socket.on('createGame', (timeControl) => {
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
         
-        const tc = timeControl && timeControl.main ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
+        const tc = timeControl && timeControl.main !== undefined ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
 
         games[gameId] = {
             id: gameId,
@@ -140,7 +143,6 @@ io.on('connection', (socket) => {
             bonusMoveInfo: null,
             gameOver: false,
             winner: null,
-            // NEW: Time properties
             timeControl: tc,
             whiteTimeLeft: tc.main,
             blackTimeLeft: tc.main,
@@ -164,7 +166,7 @@ io.on('connection', (socket) => {
             delete lobbyGames[gameId];
             console.log(`${socket.id} joined game ${gameId} as black.`);
             
-            game.lastMoveTimestamp = Date.now(); // START THE CLOCK
+            game.lastMoveTimestamp = Date.now();
 
             io.to(gameId).emit('gameStart', game);
             io.emit('lobbyUpdate', lobbyGames);
@@ -268,7 +270,7 @@ io.on('connection', (socket) => {
                     }
                     const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
                     if (capturedArray.length < 6) {
-                        capturedArray.push(pieceForhand);
+                        capturedArray.push(pieceForHand);
                     }
                 }
             }
@@ -369,7 +371,7 @@ function handlePromotion(piece, y, wasCapture) {
 }
 
 function checkForWinner(game) {
-    if (game.gameOver) return; // Don't check if game is already over (e.g., by time)
+    if (game.gameOver) return;
 
     const winSquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
@@ -397,7 +399,7 @@ function checkForWinner(game) {
         }
     }
 
-    if (blackLupaCount < 2 && game.turnCount > 1) { // Check win condition
+    if (blackLupaCount < 2 && game.turnCount > 1) {
         game.gameOver = true;
         game.winner = 'white';
     } else if (whiteLupaCount < 2 && game.turnCount > 1) {

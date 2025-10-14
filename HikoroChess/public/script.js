@@ -273,32 +273,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
-        const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
-        const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
-        const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
-        document.querySelector(myColor === 'white' ? '#white-captured-area h3' : '#black-captured-area h3').textContent = "Your Hand";
-        document.querySelector(myColor === 'white' ? '#black-captured-area h3' : '#white-captured-area h3').textContent = "Opponent's Hand";
-        myCapturedEl.innerHTML = '';
-        oppCapturedEl.innerHTML = '';
+		const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
+		const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
+		const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
+		
+		// FIX: Target the new '.hand-label' spans to avoid deleting the timer spans
+		document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
+		document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
 
-        const createCapturedPieceElement = (piece, isMyPiece) => {
-            const el = document.createElement('div');
-            el.classList.add('captured-piece', piece.color);
+		myCapturedEl.innerHTML = '';
+		oppCapturedEl.innerHTML = '';
 
-            const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece');
-            
-            const spriteImg = document.createElement('img');
-            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-            spriteImg.alt = `${piece.color} ${piece.type}`;
+		const createCapturedPieceElement = (piece, isMyPiece) => {
+			const el = document.createElement('div');
+			el.classList.add('captured-piece', piece.color);
 
-            pieceElement.appendChild(spriteImg);
-            el.appendChild(pieceElement);
+			const pieceElement = document.createElement('div');
+			pieceElement.classList.add('piece');
+			
+			const spriteImg = document.createElement('img');
+			spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+			spriteImg.alt = `${piece.color} ${piece.type}`;
 
-            if (isMyPiece) {
-                el.addEventListener('click', () => onCapturedClick(piece));
-            }
-            return el;
+			pieceElement.appendChild(spriteImg);
+			el.appendChild(pieceElement);
+
+			if (isMyPiece) {
+				el.addEventListener('click', () => onCapturedClick(piece));
+			}
+			return el;
         };
 
         myCaptured.forEach((piece) => {
