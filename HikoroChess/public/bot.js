@@ -5,6 +5,14 @@
 const BOT_BOARD_WIDTH = 10;
 const BOT_BOARD_HEIGHT = 16;
 
+function copyBoard(boardState) {
+    const newBoard = [];
+    for (let i = 0; i < boardState.length; i++) {
+        newBoard.push([...boardState[i]]);
+    }
+    return newBoard;
+}
+
 
 function isPositionValid(x, y) {
     if (x < 0 || y < 0 || x >= BOT_BOARD_WIDTH || y >= BOT_BOARD_HEIGHT) return false;
@@ -343,18 +351,17 @@ function findBestMoveWithTimeLimit(boardState, capturedPieces) {
 // This function performs the actual search for a given depth
 function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit) {
     let bestMove = null;
-    let bestValue = Infinity; // FIX 1: Start with infinity
+    let bestValue = Infinity;
 
     const moves = getAllValidMoves(boardState, 'black', capturedPieces);
-    moves.sort((a, b) => b.isAttack - a.isAttack); // Prioritize captures
+    moves.sort((a, b) => b.isAttack - a.isAttack);
     
     for (const move of moves) {
-        // IMPORTANT: Check the time before analyzing each new move
         if (Date.now() - startTime >= timeLimit) {
-            return null; // Signal that the search should be aborted
+            return null;
         }
 
-        const tempBoard = JSON.parse(JSON.stringify(boardState));
+        const tempBoard = copyBoard(boardState); // USE FASTER COPY
         if (move.type === 'drop') {
             tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
         } else {
@@ -363,10 +370,8 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
             tempBoard[move.from.y][move.from.x] = null;
         }
 
-        // FIX 2: After black moves, it's the maximizer's (white's) turn -> true
         let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, true); 
         
-        // FIX 3: Look for the lowest score
         if (boardValue < bestValue) {
             bestValue = boardValue;
             bestMove = move;
@@ -389,10 +394,15 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
-            const tempBoard = JSON.parse(JSON.stringify(boardState));
-            const piece = tempBoard[move.from.y][move.from.x];
-            tempBoard[move.to.y][move.to.x] = piece;
-            tempBoard[move.from.y][move.from.x] = null;
+            const tempBoard = copyBoard(boardState); // USE FASTER COPY
+            // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+            if (move.type === 'drop') {
+                tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
+            } else {
+                const piece = tempBoard[move.from.y][move.from.x];
+                tempBoard[move.to.y][move.to.x] = piece;
+                tempBoard[move.from.y][move.from.x] = null;
+            }
             const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false);
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
@@ -402,10 +412,15 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     } else {
         let minEval = Infinity;
         for (const move of moves) {
-            const tempBoard = JSON.parse(JSON.stringify(boardState));
-            const piece = tempBoard[move.from.y][move.from.x];
-            tempBoard[move.to.y][move.to.x] = piece;
-            tempBoard[move.from.y][move.from.x] = null;
+            const tempBoard = copyBoard(boardState); // USE FASTER COPY
+            // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+            if (move.type === 'drop') {
+                tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
+            } else {
+                const piece = tempBoard[move.from.y][move.from.x];
+                tempBoard[move.to.y][move.to.x] = piece;
+                tempBoard[move.from.y][move.from.x] = null;
+            }
             const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true);
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
@@ -427,10 +442,15 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
     const color = isMaximizingPlayer ? 'white' : 'black';
     const captureMoves = getAllValidMoves(boardState, color, []).filter(move => move.isAttack);
     for (const move of captureMoves) {
-        const tempBoard = JSON.parse(JSON.stringify(boardState));
-        const piece = tempBoard[move.from.y][move.from.x];
-        tempBoard[move.to.y][move.to.x] = piece;
-        tempBoard[move.from.y][move.from.x] = null;
+        const tempBoard = copyBoard(boardState); // USE FASTER COPY
+        // CORRECTLY SIMULATE ANY MOVE TYPE (BOARD OR DROP)
+        if (move.type === 'drop') {
+             tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
+        } else {
+            const piece = tempBoard[move.from.y][move.from.x];
+            tempBoard[move.to.y][move.to.x] = piece;
+            tempBoard[move.from.y][move.from.x] = null;
+        }
         let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer);
         if (isMaximizingPlayer) {
             alpha = Math.max(alpha, score);
