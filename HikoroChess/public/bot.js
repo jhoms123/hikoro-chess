@@ -343,7 +343,7 @@ function findBestMoveWithTimeLimit(boardState, capturedPieces) {
 // This function performs the actual search for a given depth
 function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit) {
     let bestMove = null;
-    let bestValue = -Infinity;
+    let bestValue = Infinity; // FIX 1: Start with infinity
 
     const moves = getAllValidMoves(boardState, 'black', capturedPieces);
     moves.sort((a, b) => b.isAttack - a.isAttack); // Prioritize captures
@@ -363,9 +363,11 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
             tempBoard[move.from.y][move.from.x] = null;
         }
 
-        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, false); // false for minimizing player (white)
+        // FIX 2: After black moves, it's the maximizer's (white's) turn -> true
+        let boardValue = minimax(tempBoard, depth - 1, -Infinity, Infinity, true); 
         
-        if (boardValue > bestValue) {
+        // FIX 3: Look for the lowest score
+        if (boardValue < bestValue) {
             bestValue = boardValue;
             bestMove = move;
         }
@@ -379,7 +381,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     if (depth === 0) {
         return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer);
     }
-    const color = isMaximizingPlayer ? 'black' : 'white';
+    const color = isMaximizingPlayer ? 'white' : 'black';
     const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
         return evaluateBoard(boardState);
@@ -422,7 +424,7 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
         if (stand_pat <= alpha) return alpha;
         beta = Math.min(beta, stand_pat);
     }
-    const color = isMaximizingPlayer ? 'black' : 'white';
+    const color = isMaximizingPlayer ? 'white' : 'black';
     const captureMoves = getAllValidMoves(boardState, color, []).filter(move => move.isAttack);
     for (const move of captureMoves) {
         const tempBoard = JSON.parse(JSON.stringify(boardState));
