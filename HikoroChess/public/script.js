@@ -38,14 +38,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lobby Listeners ---
     createGameBtn.addEventListener('click', () => {
 		const mainTime = parseInt(document.getElementById('time-control').value, 10);
-		const byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+		let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
 
-		// If main time is unlimited, byoyomi is disabled
-		// The server handles main: -1 as unlimited
+		// FIX: If user selects "Byoyomi Only" but forgets to select a byoyomi time,
+		// default to 15 seconds to prevent an instant 0s/0s game.
+		if (mainTime === 0 && byoyomiTime === 0) {
+			byoyomiTime = 15; 
+		}
+
 		const timeControl = {
 			main: mainTime,
 			byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
-			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0) // Treat byoyomi as endless periods
+			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
 		};
 		
 		socket.emit('createGame', timeControl);
