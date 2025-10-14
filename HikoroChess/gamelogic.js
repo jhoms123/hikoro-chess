@@ -1,3 +1,5 @@
+// gamelogic.js
+
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
@@ -41,20 +43,11 @@ function isPositionValid(x, y) {
     return true;
 }
 
-/**
- * Checks if a piece at a given position is protected by a friendly Pilut or Great Shield.
- * @param {object} targetPiece - The piece being attacked.
- * @param {number} targetX - The x-coordinate of the piece being attacked.
- * @param {number} targetY - The y-coordinate of the piece being attacked.
- * @param {Array<Array<object>>} board - The current board state.
- * @returns {boolean} - True if the piece is protected.
- */
 const isProtected = (targetPiece, targetX, targetY, board) => {
     const protectingColor = targetPiece.color;
-    // Direction towards the friendly side of the board for the targetPiece
     const behindDir = protectingColor === 'white' ? -1 : 1;
 
-    // 1. Check for Pilut protection (must be directly behind the target)
+    // 1. Check for Pilut protection (directly behind the target)
     const pilutProtectorY = targetY + behindDir;
     if (isPositionValid(targetX, pilutProtectorY)) {
         const potentialProtector = board[pilutProtectorY][targetX];
@@ -63,11 +56,10 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
         }
     }
 
-    // 2. Check for Great Shield protection (sides, back, back-diagonals)
-    // Iterate through the 8 squares around the target to find a friendly Great Shield.
+    // 2. Check for Great Shield protection
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
-            if (dx === 0 && dy === 0) continue; // Skip the target's own square
+            if (dx === 0 && dy === 0) continue;
 
             const gsX = targetX + dx;
             const gsY = targetY + dy;
@@ -75,26 +67,20 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
             if (isPositionValid(gsX, gsY)) {
                 const potentialProtector = board[gsY][gsX];
                 if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
-                    // Found a friendly GS. A GS does NOT protect its forward three squares.
                     const gsForwardDir = potentialProtector.color === 'white' ? 1 : -1;
-
-                    // Check if the target is in the GS's UNPROTECTED forward zone relative to the GS.
                     const isTargetInFrontStraight = (targetX === gsX && targetY === gsY + gsForwardDir);
                     const isTargetInFrontDiagLeft = (targetX === gsX - 1 && targetY === gsY + gsForwardDir);
                     const isTargetInFrontDiagRight = (targetX === gsX + 1 && targetY === gsY + gsForwardDir);
 
                     if (!(isTargetInFrontStraight || isTargetInFrontDiagLeft || isTargetInFrontDiagRight)) {
-                        // The target is not in the GS's front arc, so it is protected.
                         return true;
                     }
                 }
             }
         }
     }
-
-    return false; // Not protected by any piece
+    return false;
 };
-
 
 function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
     if (!piece) return [];
@@ -106,7 +92,6 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         if (target === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
         } else if (target.color !== piece.color) {
-            // Check for protection before adding an attack move
             if (!isProtected(target, toX, toY, boardState)) {
                 moves.push({ x: toX, y: toY, isAttack: true });
             }
@@ -148,38 +133,32 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
 
     switch (piece.type) {
         case 'lupa':
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
-                }
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                addMove(x + dx, y + dy);
             }
             break;
         case 'zur':
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    generateLineMoves(dx, dy);
-                }
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                generateLineMoves(dx, dy);
             }
             break;
         case 'kota':
             generateLineMoves(1, 0); generateLineMoves(-1, 0);
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
-                }
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                addMove(x + dx, y + dy);
             }
             break;
         case 'fin':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-            addNonCaptureMove(x + 1, y);
-            addNonCaptureMove(x - 1, y);
+            addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y);
             break;
         case 'yoli':
             [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
-            addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
+            addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1);
+            break;
         case 'pilut':
             const dir = piece.color === 'white' ? 1 : -1;
             if (isPositionValid(x, y + dir) && !boardState[y + dir][x]) {
@@ -192,10 +171,12 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         case 'sult':
             const fwd = piece.color === 'white' ? 1 : -1;
             addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd);
-            addMove(x, y + fwd); addMove(x, y + 2 * fwd); break;
+            addMove(x, y + fwd); addMove(x, y + 2 * fwd);
+            break;
         case 'pawn':
             addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y);
-            addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
+            addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2);
+            break;
         case 'cope': {
             const fwdDir = piece.color === 'white' ? 1 : -1;
             const generateCopeMoves = (moveFunc) => {
@@ -203,8 +184,6 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 moveFunc(x, y + 1 * fwdDir); moveFunc(x, y + 2 * fwdDir);
                 moveFunc(x, y - 1 * fwdDir); moveFunc(x, y - 2 * fwdDir);
             };
-
-            // If it's a bonus move (after a capture), only non-capture moves are allowed.
             if (bonusMoveActive) {
                 generateCopeMoves(addNonCaptureMove);
             } else {
@@ -214,11 +193,13 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         }
         case 'chair':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
-            generateLineMoves(0, 1); generateLineMoves(0, -1); break;
+            generateLineMoves(0, 1); generateLineMoves(0, -1);
+            break;
         case 'jotu':
             generateLineMoves(1, 0); generateLineMoves(-1, 0);
             if (piece.color === 'white') { generateLineMoves(0, 1); addMove(x, y - 1); }
-            else { generateLineMoves(0, -1); addMove(x, y + 1); } break;
+            else { generateLineMoves(0, -1); addMove(x, y + 1); }
+            break;
         case 'kor':
             addMove(x - 1, y - 1); addMove(x - 1, y + 1); addMove(x + 1, y + 1); addMove(x + 1, y - 1);
             [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) + Math.abs(dy) === 3) addMove(x + dx, y + dy); }));
@@ -236,26 +217,19 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             break;
         case 'greathorsegeneral': {
             const ghgDir = piece.color === 'white' ? 1 : -1;
-
             if (bonusMoveActive) {
-                // Second move (non-capture only)
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        addNonCaptureMove(x + dx, y + dy);
-                    }
+                for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addNonCaptureMove(x + dx, y + dy);
                 }
                 [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addNonCaptureMove(x + dx, y + dy); }));
                 generateNonCaptureLineMoves(-1, ghgDir);
                 generateNonCaptureLineMoves(1, ghgDir);
                 generateNonCaptureLineMoves(0, -ghgDir);
             } else {
-                // First move (captures allowed)
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        addMove(x + dx, y + dy);
-                    }
+                for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
                 }
                 [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
                 generateLineMoves(-1, ghgDir);

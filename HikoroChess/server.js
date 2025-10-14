@@ -1,4 +1,4 @@
-// server.js (Robust CORS Version)
+// server.js
 
 const express = require('express');
 const http = require('http');
@@ -25,7 +25,7 @@ const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./g
 
 
 io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id); // You should see this message!
+    console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
     socket.on('createGame', () => {
@@ -37,6 +37,7 @@ io.on('connection', (socket) => {
             whiteCaptured: [],
             blackCaptured: [],
             isWhiteTurn: true,
+            bonusMoveInfo: null, // ADDED: To track bonus moves {pieceX, pieceY}
             gameOver: false,
             winner: null
         };
@@ -62,19 +63,32 @@ io.on('connection', (socket) => {
         }
     });
     
+    // MODIFIED: To handle bonus move state
     socket.on('getValidMoves', (data) => {
         const { gameId, square } = data;
         const game = games[gameId];
         if (!game || !square) return;
 
+        let bonusMoveActive = false;
+        // Check if a bonus move is active
+        if (game.bonusMoveInfo) {
+            // If so, only the piece at bonusMoveInfo's location can move.
+            if (square.x !== game.bonusMoveInfo.pieceX || square.y !== game.bonusMoveInfo.pieceY) {
+                socket.emit('validMoves', []); // Return no moves for any other piece
+                return;
+            }
+            bonusMoveActive = true;
+        }
+
         const piece = game.boardState[square.y][square.x];
         if (piece) {
-            const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState);
+            // Pass the bonus move status to the logic function
+            const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState, bonusMoveActive);
             socket.emit('validMoves', validMoves);
         }
     });
 
-
+    // MODIFIED: To handle earning and using bonus moves
     socket.on('makeMove', (data) => {
         const { gameId, from, to } = data;
         const game = games[gameId];
@@ -88,11 +102,21 @@ io.on('connection', (socket) => {
         const piece = game.boardState[from.y][from.x];
         if (!piece || piece.color !== playerColor) return;
         
-        const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState);
+        let bonusMoveActive = false;
+        if (game.bonusMoveInfo) {
+            if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
+                return; // Trying to move the wrong piece during a bonus move
+            }
+            bonusMoveActive = true;
+        }
+
+        const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
         const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
 
         if (isValidMove) {
             const targetPiece = game.boardState[to.y][to.x];
+            const wasCapture = targetPiece !== null;
+
             if (targetPiece !== null) {
                 let pieceForHand = { type: targetPiece.type, color: targetPiece.color };
                 if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
@@ -102,15 +126,38 @@ io.on('connection', (socket) => {
                 if (playerColor === 'white' && game.whiteCaptured.length < 6) game.whiteCaptured.push(pieceForHand);
                 else if (playerColor === 'black' && game.blackCaptured.length < 6) game.blackCaptured.push(pieceForHand);
             }
+            
             game.boardState[to.y][to.x] = piece;
             game.boardState[from.y][from.x] = null;
-            handlePromotion(piece, to.y, targetPiece !== null);
+            
+            handlePromotion(piece, to.y, wasCapture);
             checkForWinner(game);
-            game.isWhiteTurn = !game.isWhiteTurn;
+
+            // --- REBUILT TURN AND BONUS MOVE LOGIC ---
+            if (bonusMoveActive) {
+                // This was the bonus move, so end the turn.
+                game.bonusMoveInfo = null;
+                game.isWhiteTurn = !game.isWhiteTurn;
+            } else if (piece.type === 'greathorsegeneral' && !wasCapture) {
+                // GHG moved without capturing, earns a bonus move.
+                game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+                // DO NOT switch turns.
+            } else if (piece.type === 'cope' && wasCapture) {
+                // Cope captured, earns a bonus move.
+                game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+                // DO NOT switch turns.
+            } else {
+                // This was a normal move, end the turn.
+                game.bonusMoveInfo = null;
+                game.isWhiteTurn = !game.isWhiteTurn;
+            }
+            // --- END OF NEW LOGIC ---
+
             io.to(gameId).emit('gameStateUpdate', game);
         }
     });
     
+    // MODIFIED: To reset bonus move state if a player drops instead
     socket.on('makeDrop', (data) => {
         const { gameId, piece, to } = data;
         const game = games[gameId];
@@ -123,9 +170,12 @@ io.on('connection', (socket) => {
              game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
              const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
              const pieceIndex = capturedArray.findIndex(p => p.type === piece.type);
-             if (pieceIndex > -1) capturedArray.splice(pieceIndex, 1);
-             game.isWhiteTurn = !game.isWhiteTurn;
-             io.to(gameId).emit('gameStateUpdate', game);
+             if (pieceIndex > -1) {
+                capturedArray.splice(pieceIndex, 1);
+                game.bonusMoveInfo = null; // A drop forfeits any pending bonus moves
+                game.isWhiteTurn = !game.isWhiteTurn;
+                io.to(gameId).emit('gameStateUpdate', game);
+             }
         }
     });
 
