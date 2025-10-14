@@ -140,57 +140,71 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderBoard() {
-        boardElement.innerHTML = '';
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                const square = document.createElement('div');
-                square.classList.add('square');
-                
-                // This logic flips the board if you are black
-                let displayX = x, displayY = y;
-                if (myColor === 'black') {
-                    displayY = BOARD_HEIGHT - 1 - y;
-                    displayX = BOARD_WIDTH - 1 - x;
-                }
-                
-                square.dataset.logicalX = x;
-                square.dataset.logicalY = y;
-                square.style.gridRowStart = displayY + 1;
-                square.style.gridColumnStart = displayX + 1;
+		boardElement.innerHTML = '';
+		const BOARD_HEIGHT = 16;
+		const BOARD_WIDTH = 10;
 
-                const isLight = (x + y) % 2 === 0;
-                square.classList.add(isLight ? 'light' : 'dark');
+		for (let y = 0; y < BOARD_HEIGHT; y++) {
+			for (let x = 0; x < BOARD_WIDTH; x++) {
+				const square = document.createElement('div');
+				square.classList.add('square');
+				
+				// --- START OF THE FIX ---
+				// This logic flips the board perspective correctly for each player.
+				let displayX = x;
+				let displayY = y;
+				
+				if (myColor === 'white') {
+					// For white, we only flip the Y-axis. White's pieces (rows 0-5)
+					// will now appear at the bottom of the screen (CSS grid rows 11-16).
+					displayY = BOARD_HEIGHT - 1 - y;
+				} else if (myColor === 'black') {
+					// For black, we flip BOTH axes for a full 180-degree rotation.
+					// Black's pieces (rows 10-15) will now also appear at the bottom.
+					displayY = BOARD_HEIGHT - 1 - y;
+					displayX = BOARD_WIDTH - 1 - x;
+				}
+				// --- END OF THE FIX ---
+				
+				square.dataset.logicalX = x;
+				square.dataset.logicalY = y;
+				// CSS Grid is 1-indexed, so we add 1.
+				square.style.gridRowStart = displayY + 1;
+				square.style.gridColumnStart = displayX + 1;
 
-                if (sanctuarySquares.some(sq => sq.x === x && sq.y === y)) {
-                    square.classList.add('sanctuary-square');
-                }
+				const isLight = (x + y) % 2 === 0;
+				square.classList.add(isLight ? 'light' : 'dark');
 
-                const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-                if (!isBoardValid) {
-                    square.classList.add('invalid');
-                } else {
-                    square.addEventListener('click', (event) => {
-                        const clickedSquare = event.currentTarget;
-                        const logicalX = parseInt(clickedSquare.dataset.logicalX);
-                        const logicalY = parseInt(clickedSquare.dataset.logicalY);
-                        onSquareClick(logicalX, logicalY);
-                    });
-                }
+				if (sanctuarySquares.some(sq => sq.x === x && sq.y === y)) {
+					square.classList.add('sanctuary-square');
+				}
 
-                const piece = gameState.boardState[y][x];
-                if (piece) {
-                    const pieceElement = document.createElement('div');
-                    pieceElement.classList.add('piece', piece.color);
-                    const spriteImg = document.createElement('img');
-                    spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-                    spriteImg.alt = `${piece.color} ${piece.type}`;
-                    pieceElement.appendChild(spriteImg);
-                    square.appendChild(pieceElement);
-                }
-                boardElement.appendChild(square);
-            }
-        }
-    }
+				const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+				if (!isBoardValid) {
+					square.classList.add('invalid');
+				} else {
+					square.addEventListener('click', (event) => {
+						const clickedSquare = event.currentTarget;
+						const logicalX = parseInt(clickedSquare.dataset.logicalX);
+						const logicalY = parseInt(clickedSquare.dataset.logicalY);
+						onSquareClick(logicalX, logicalY);
+					});
+				}
+
+				const piece = gameState.boardState[y][x];
+				if (piece) {
+					const pieceElement = document.createElement('div');
+					pieceElement.classList.add('piece', piece.color);
+					const spriteImg = document.createElement('img');
+					spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+					spriteImg.alt = `${piece.color} ${piece.type}`;
+					pieceElement.appendChild(spriteImg);
+					square.appendChild(pieceElement);
+				}
+				boardElement.appendChild(square);
+			}
+		}
+	}
 
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;

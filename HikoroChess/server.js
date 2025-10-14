@@ -1,4 +1,4 @@
-// server.js
+// server.js (Corrected)
 
 const express = require('express');
 const http = require('http');
@@ -12,7 +12,6 @@ const io = socketIo(server, {
     origin: ["https://hikorochess.org", "https://www.hikorochess.org", "https://hikoro-chess.onrender.com"],
     methods: ["GET", "POST"]
   },
-  
   pingInterval: 25000,
   pingTimeout: 20000 
 });
@@ -26,6 +25,13 @@ let lobbyGames = {};
 
 const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./gamelogic');
 
+// ADDED: The missing stopTimer function that was causing the server to crash.
+function stopTimer(game) {
+    if (game && game.timerId) {
+        clearInterval(game.timerId);
+        game.timerId = null;
+    }
+}
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -47,14 +53,13 @@ io.on('connection', (socket) => {
             bonusMoveInfo: null,
             gameOver: false,
             winner: null,
-            // ADDED: Time control properties
             timeControl: timeControl,
             byoyomi: byoyomi,
             whiteTime: timeControl,
             blackTime: timeControl,
             whiteInByoyomi: false,
             blackInByoyomi: false,
-            timerId: null // To hold the setInterval ID
+            timerId: null
         };
         lobbyGames[gameId] = { id: gameId, white: socket.id, black: null };
         socket.join(gameId);
@@ -74,20 +79,21 @@ io.on('connection', (socket) => {
             io.to(gameId).emit('gameStart', game);
             io.emit('lobbyUpdate', lobbyGames);
             
-            // ADDED: Start the game timer if time control is set
             if (game.timeControl > 0) {
                 game.timerId = setInterval(() => {
+                    if (!games[gameId]) { // Ensure game still exists
+                        stopTimer(game);
+                        return;
+                    }
                     const activePlayer = game.isWhiteTurn ? 'white' : 'black';
                     const opponent = game.isWhiteTurn ? 'black' : 'white';
                     
                     if (game[activePlayer + 'Time'] > 0) {
                         game[activePlayer + 'Time']--;
                     } else if (game.byoyomi > 0 && !game[activePlayer + 'InByoyomi']) {
-                        // Enter byoyomi period
                         game[activePlayer + 'InByoyomi'] = true;
-                        game[activePlayer + 'Time'] = game.byoyomi -1; // -1 because this second counts
+                        game[activePlayer + 'Time'] = game.byoyomi - 1;
                     } else {
-                        // Time ran out
                         game.gameOver = true;
                         game.winner = opponent;
                         io.to(gameId).emit('gameStateUpdate', game);
@@ -95,7 +101,7 @@ io.on('connection', (socket) => {
                         delete games[gameId];
                     }
 
-                    if (!game.gameOver) {
+                    if (games[gameId] && !game.gameOver) {
                        io.to(gameId).emit('timeUpdate', { 
                            whiteTime: game.whiteTime, 
                            blackTime: game.blackTime 
@@ -153,6 +159,7 @@ io.on('connection', (socket) => {
         const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
 
         if (isValidMove) {
+            // ... (All piece movement and capture logic remains the same)
             const targetPiece = game.boardState[to.y][to.x];
             const wasCapture = targetPiece !== null;
             
@@ -166,11 +173,11 @@ io.on('connection', (socket) => {
                         const intermediatePiece = game.boardState[cy][cx];
                         if (intermediatePiece && intermediatePiece.color === playerColor) {
                              if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
-                                let pieceForHand = { type: intermediatePiece.type, color: playerColor };
-                                const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                                if (capturedArray.length < 6) {
-                                    capturedArray.push(pieceForHand);
-                                }
+                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
+                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                                 if (capturedArray.length < 6) {
+                                     capturedArray.push(pieceForHand);
+                                 }
                             }
                             game.boardState[cy][cx] = null;
                         }
@@ -181,9 +188,7 @@ io.on('connection', (socket) => {
             }
 
             if (targetPiece !== null) {
-                // Defines which pieces are destroyed on capture
-                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid']; // ADDED 'mermaid'
-
+                const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
@@ -192,7 +197,6 @@ io.on('connection', (socket) => {
                         capturedArray.push(pieceForHand);
                     }
                 } else if (!indestructiblePieces.includes(targetPiece.type)) {
-                    // Standard capture logic for all other pieces
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
                     if (targetPiece.type === 'lupa') {
                         pieceForHand.type = 'sult';
@@ -211,8 +215,8 @@ io.on('connection', (socket) => {
             checkForWinner(game);
 
             game.turnCount++;
-			
-			const playerColor = game.isWhiteTurn ? 'white' : 'black';
+            
+            // FIXED: Byoyomi logic now uses the correct 'playerColor' variable.
             if (game[playerColor + 'InByoyomi']) {
                 game[playerColor + 'Time'] = game.byoyomi;
             }
@@ -247,14 +251,12 @@ io.on('connection', (socket) => {
              const pieceIndex = capturedArray.findIndex(p => p.type === piece.type && p.color === playerColor);
              if (pieceIndex > -1) {
                 capturedArray.splice(pieceIndex, 1);
-				
-				const playerColor = game.isWhiteTurn ? 'white' : 'black';
-				if (game[playerColor + 'InByoyomi']) {
-					
-					game[playerColor + 'Time'] = game.byoyomi;
-					
-				}
-			
+                
+                // FIXED: Byoyomi logic now uses the correct 'playerColor' variable.
+                if (game[playerColor + 'InByoyomi']) {
+                    game[playerColor + 'Time'] = game.byoyomi;
+                }
+            
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
                 game.turnCount++;
@@ -268,8 +270,7 @@ io.on('connection', (socket) => {
         for (const gameId in games) {
             const game = games[gameId];
             if (game.players.white === socket.id || game.players.black === socket.id) {
-				
-				stopTimer(game);
+                stopTimer(game);
                 if(!game.gameOver) {
                     game.gameOver = true;
                     game.winner = game.players.white === socket.id ? 'black' : 'white';
@@ -286,18 +287,11 @@ io.on('connection', (socket) => {
 });
 
 function handlePromotion(piece, y, wasCapture) {
+    // ... (This function is correct, no changes needed)
     const color = piece.color;
-    
-    if (piece.type === 'greathorsegeneral' && wasCapture) {
-        piece.type = 'cthulhu';
-    }
-
-    if (piece.type === 'mermaid' && wasCapture) {
-        piece.type = 'neptune';
-    }
-    
+    if (piece.type === 'greathorsegeneral' && wasCapture) piece.type = 'cthulhu';
+    if (piece.type === 'mermaid' && wasCapture) piece.type = 'neptune';
     if (piece.type === 'fin' && wasCapture) piece.type = 'finor';
-
     const promotablePawns = ['sult', 'pawn', 'pilut'];
     if (promotablePawns.includes(piece.type)) {
         const inPromotionZone = (color === 'white' && y > 8) || (color === 'black' && y < 7);
@@ -309,20 +303,18 @@ function handlePromotion(piece, y, wasCapture) {
 }
 
 function checkForWinner(game) {
+    // ... (Win condition logic is correct)
     const winSquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
-
     for (const square of winSquares) {
         const pieceOnSquare = game.boardState[square.y][square.x];
         if (pieceOnSquare && pieceOnSquare.type === 'lupa') {
             game.gameOver = true;
             game.winner = pieceOnSquare.color;
-            return;
         }
     }
-
     let whiteLupaCount = 0;
     let blackLupaCount = 0;
     for (let y = 0; y < 16; y++) {
@@ -334,7 +326,6 @@ function checkForWinner(game) {
             }
         }
     }
-
     if (blackLupaCount === 0) {
         game.gameOver = true;
         game.winner = 'white';
@@ -342,8 +333,9 @@ function checkForWinner(game) {
         game.gameOver = true;
         game.winner = 'black';
     }
-	
-	if (game.gameOver) {
+    
+    // This call is correct.
+    if (game.gameOver) {
         stopTimer(game);
     }
 }
