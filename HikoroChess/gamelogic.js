@@ -4,9 +4,11 @@ const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
 const pieceNotation = {
-    lupa: "L", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
+    lupa: "L",              // zur: "Zr", // Replaced by Neptune
+    kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
-    finor: "F+", greatshield: "GS", greathorsegeneral: "GH"
+    finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
+    neptune: "Np", mermaid: "Mm" // Added new pieces
 };
 
 function getInitialBoard() {
@@ -17,15 +19,16 @@ function getInitialBoard() {
         { y: 5, x: 4, type: 'pilut' }, { y: 5, x: 5, type: 'pilut' },
         { y: 5, x: 6, type: 'pilut' }, { y: 5, x: 7, type: 'sult' },
         { y: 5, x: 8, type: 'pilut' }, { y: 5, x: 9, type: 'pilut' },
-        { y: 4, x: 0, type: 'cope' }, { y: 4, x: 1, type: 'greathorsegeneral' },
+        { y: 4, x: 0, type: 'cope' }, { y: 4, x: 1, type: 'zur' },
         { y: 4, x: 2, type: 'kor' }, { y: 4, x: 3, type: 'fin' },
         { y: 4, x: 4, type: 'yoli' }, { y: 4, x: 5, type: 'yoli' },
         { y: 4, x: 6, type: 'fin' }, { y: 4, x: 7, type: 'kor' },
-        { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' },
+        { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' }, // Replaced Zur with Neptune
         { y: 3, x: 1, type: 'cope' }, { y: 3, x: 2, type: 'jotu' },
         { y: 3, x: 3, type: 'pawn' }, { y: 3, x: 6, type: 'pawn' },
         { y: 3, x: 7, type: 'jotu' }, { y: 3, x: 8, type: 'cope' },
-        { y: 2, x: 4, type: 'cope' }, { y: 2, x: 5, type: 'cope' },
+        { y: 2, x: 2, type: 'sult' }, { y: 2, x: 4, type: 'neptune' },
+		{ y: 2, x: 5, type: 'greathorsegeneral' }, { y: 2, x: 5, type: 'sult' },
         { y: 1, x: 2, type: 'chair' }, { y: 1, x: 3, type: 'kota' },
         { y: 1, x: 6, type: 'kota' }, { y: 1, x: 7, type: 'chair' },
         { y: 0, x: 2, type: 'lupa' }, { y: 0, x: 4, type: 'pawn' },
@@ -98,14 +101,12 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             moves.push({ x: toX, y: toY, isAttack: false });
         }
     };
-
-    // --- NEW JOTU JUMP-CAPTURE LOGIC ---
+    
     const generateJotuJumpMoves = (dx, dy) => {
         let cx = x + dx;
         let cy = y + dy;
         let pathHasEnemy = false;
         
-        // First, see if there is an enemy on this line at all
         let checkX = cx, checkY = cy;
         while(isPositionValid(checkX, checkY)) {
             const checkTarget = boardState[checkY][checkX];
@@ -116,40 +117,35 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             checkX += dx; checkY += dy;
         }
 
-        // If there's no enemy on the line, Jotu moves like a normal rook.
         if (!pathHasEnemy) {
             while (isPositionValid(cx, cy)) {
                 const target = boardState[cy][cx];
                 if (target === null) {
                     moves.push({ x: cx, y: cy, isAttack: false });
                 } else {
-                    break; // Blocked by a friendly piece with no enemy behind it.
+                    break;
                 }
                 cx += dx; cy += dy;
             }
             return;
         }
 
-        // If an enemy DOES exist, the Jotu can jump over friendlies to get to it.
-        cx = x + dx; // Reset position
+        cx = x + dx;
         cy = y + dy;
         while (isPositionValid(cx, cy)) {
             const target = boardState[cy][cx];
             if (target === null) {
-                moves.push({ x: cx, y: cy, isAttack: false }); // Can stop on any empty square
+                moves.push({ x: cx, y: cy, isAttack: false });
             } else if (target.color !== piece.color) {
-                // Found the enemy. This is a valid capture.
                 if (!isProtected(target, cx, cy, boardState)) {
                     moves.push({ x: cx, y: cy, isAttack: true });
                 }
-                break; // Stop at the first enemy.
+                break;
             }
-            // If it's a friendly piece, we just continue the loop, "jumping" over it.
             cx += dx;
             cy += dy;
         }
     };
-    // --- END OF JOTU LOGIC ---
 
     const generateLineMoves = (dx, dy) => {
         let cx = x + dx, cy = y + dy;
@@ -182,12 +178,6 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
                 if (dx === 0 && dy === 0) continue;
                 addMove(x + dx, y + dy);
-            }
-            break;
-        case 'zur':
-            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                generateLineMoves(dx, dy);
             }
             break;
         case 'kota':
@@ -241,17 +231,16 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
             generateLineMoves(0, 1); generateLineMoves(0, -1);
             break;
-        // MODIFIED: Jotu now uses its special move generation
         case 'jotu':
             generateJotuJumpMoves(1, 0); 
             generateJotuJumpMoves(-1, 0);
             if (piece.color === 'white') { 
                 generateJotuJumpMoves(0, 1); 
-                addMove(x, y - 1); // Standard one-step move backward
+                addMove(x, y - 1);
             }
             else { 
                 generateJotuJumpMoves(0, -1); 
-                addMove(x, y + 1); // Standard one-step move backward
+                addMove(x, y + 1);
             }
             break;
         case 'kor':
@@ -289,6 +278,65 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 generateLineMoves(-1, ghgDir);
                 generateLineMoves(1, ghgDir);
                 generateLineMoves(0, -ghgDir);
+            }
+            break;
+        }
+        // --- NEW PIECE LOGIC STARTS HERE ---
+        case 'neptune': {
+            const fwdDir = piece.color === 'white' ? 1 : -1;
+            
+            // 1. Cannon-like jump move
+            const directions = [
+                {dx: 1, dy: 1*fwdDir}, {dx: -1, dy: 1*fwdDir}, // Forward Diagonals
+                {dx: 0, dy: 1*fwdDir}, // Forward
+                {dx: 0, dy: -1*fwdDir} // Backward
+            ];
+
+            directions.forEach(({dx, dy}) => {
+                let cx = x + dx;
+                let cy = y + dy;
+                let screenFound = false;
+
+                while (isPositionValid(cx, cy)) {
+                    const target = boardState[cy][cx];
+                    if (!screenFound) {
+                        if (target !== null) {
+                            screenFound = true; // Found the piece to jump over
+                        }
+                    } else { // After the screen
+                        if (target === null) {
+                           moves.push({ x: cx, y: cy, isAttack: false }); // Can land on empty squares
+                        } else {
+                            if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) {
+                                moves.push({ x: cx, y: cy, isAttack: true }); // Can capture first piece after screen
+                            }
+                            break; // Path is blocked by the second piece
+                        }
+                    }
+                    cx += dx;
+                    cy += dy;
+                }
+            });
+
+            // 2. Lupa's moveset
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                addMove(x + dx, y + dy);
+            }
+
+            // 3. Cope's moveset
+            addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
+            addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
+            addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
+            break;
+        }
+        case 'mermaid': {
+            // Jumps to any location in a 2-tile radius (5x5 square)
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
+                }
             }
             break;
         }

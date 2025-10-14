@@ -114,49 +114,49 @@ io.on('connection', (socket) => {
             const targetPiece = game.boardState[to.y][to.x];
             const wasCapture = targetPiece !== null;
             
-            // --- NEW JOTU COLLATERAL CAPTURE LOGIC ---
             if (piece.type === 'jotu') {
                 const dx = Math.sign(to.x - from.x);
                 const dy = Math.sign(to.y - from.y);
-                // Check if it was a sliding move (not a single step)
                 if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
                     let cx = from.x + dx;
                     let cy = from.y + dy;
-                    // Iterate over the squares the Jotu jumped
                     while (cx !== to.x || cy !== to.y) {
                         const intermediatePiece = game.boardState[cy][cx];
                         if (intermediatePiece && intermediatePiece.color === playerColor) {
-                            // Capture the friendly piece it jumped over
                              if (intermediatePiece.type !== 'greathorsegeneral') {
                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
-                                // Handle demotions
-                                if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
-                                if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
-                                if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
-                                
                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
                                 if (capturedArray.length < 6) {
                                     capturedArray.push(pieceForHand);
                                 }
                             }
-                            game.boardState[cy][cx] = null; // Remove from board
+                            game.boardState[cy][cx] = null;
                         }
                         cx += dx;
                         cy += dy;
                     }
                 }
             }
-            // --- END OF JOTU LOGIC ---
 
             if (targetPiece !== null) {
-                if (targetPiece.type !== 'greathorsegeneral') {
+                // If a Neptune is captured, the LOSING player gets a Mermaid
+                if (targetPiece.type === 'neptune') {
+                    const losingPlayerColor = targetPiece.color;
+                    const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
+                    const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                    if (capturedArray.length < 6) {
+                        capturedArray.push(pieceForHand);
+                    }
+                } else if (targetPiece.type !== 'greathorsegeneral') {
+                    // Standard capture logic for all other pieces
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
-                    if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
-                    if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
-                    if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
-
-                    if (playerColor === 'white' && game.whiteCaptured.length < 6) game.whiteCaptured.push(pieceForHand);
-                    else if (playerColor === 'black' && game.blackCaptured.length < 6) game.blackCaptured.push(pieceForHand);
+                    if (targetPiece.type === 'lupa') {
+                        pieceForHand.type = 'sult';
+                    }
+                    const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                    if (capturedArray.length < 6) {
+                        capturedArray.push(pieceForHand);
+                    }
                 }
             }
             
@@ -223,8 +223,16 @@ io.on('connection', (socket) => {
     });
 });
 
+// MODIFIED: Added Mermaid promotion rule
 function handlePromotion(piece, y, wasCapture) {
     const color = piece.color;
+    
+    // Mermaid promotes back to Neptune on capture
+    if (piece.type === 'mermaid' && wasCapture) {
+        piece.type = 'neptune';
+    }
+    
+    // Existing promotion rules
     if (piece.type === 'fin' && wasCapture) piece.type = 'finor';
     const promotablePawns = ['sult', 'pawn', 'pilut'];
     if (promotablePawns.includes(piece.type)) {
