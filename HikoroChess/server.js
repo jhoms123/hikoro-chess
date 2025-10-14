@@ -30,7 +30,6 @@ function gameTimerTick() {
     for (const gameId in games) {
         const game = games[gameId];
         
-        // FIX: Skip timer logic for unlimited games
         if (game && game.timeControl && game.timeControl.main === -1) {
             continue;
         }
@@ -55,18 +54,18 @@ function gameTimerTick() {
         if (displayTime < 0) {
             isInByoyomi = true;
             const byoyomiTimeUsed = Math.abs(displayTime);
-            const periodsUsed = Math.floor(byoyomiTimeUsed / byoyomiTime) + 1;
-            displayByoyomi -= periodsUsed;
 
-            if (displayByoyomi < 0) {
+            // CORE FIX: Check if the time used this turn exceeds the byoyomi allowance.
+            if (byoyomiTime > 0 && byoyomiTimeUsed > byoyomiTime) {
                 game.gameOver = true;
                 game.winner = opponentColor;
                 io.to(gameId).emit('gameStateUpdate', game);
-                continue; 
+                continue;
             }
-            displayTime = byoyomiTime - (byoyomiTimeUsed % byoyomiTime);
-            if (byoyomiTimeUsed % byoyomiTime === 0 && byoyomiTimeUsed > 0) {
-                displayTime = 0;
+            
+            // Calculate time left in the current byoyomi period for the live display
+            if (byoyomiTime > 0) {
+                displayTime = byoyomiTime - byoyomiTimeUsed;
             }
         }
 
@@ -87,7 +86,6 @@ setInterval(gameTimerTick, 1000);
 
 
 function updateTimeOnMove(game) {
-    // FIX: Skip timer logic for unlimited games
     if (!game.lastMoveTimestamp || (game.timeControl && game.timeControl.main === -1)) {
         return;
     }
@@ -98,27 +96,23 @@ function updateTimeOnMove(game) {
     const opponentColor = game.isWhiteTurn ? 'black' : 'white';
     
     let timeLeft = game[`${activePlayerColor}TimeLeft`];
-    let byoyomiPeriodsLeft = game[`${activePlayerColor}ByoyomiPeriodsLeft`];
     const { byoyomiTime } = game.timeControl;
 
     timeLeft -= timeSpent;
 
     if (timeLeft < 0) {
         const byoyomiTimeUsed = Math.abs(timeLeft);
-        const periodsUsed = Math.floor(byoyomiTimeUsed / byoyomiTime) + 1;
-        byoyomiPeriodsLeft -= periodsUsed;
         
-        if (byoyomiPeriodsLeft < 0) {
-             game.gameOver = true;
-             game.winner = opponentColor;
+        // CORE FIX: Check if the time used this turn exceeds the byoyomi allowance.
+        if (byoyomiTime > 0 && byoyomiTimeUsed > byoyomiTime) {
+            game.gameOver = true;
+            game.winner = opponentColor;
         }
         
-        timeLeft = 0;
+        timeLeft = 0; // Main time is now considered 0.
     }
     
     game[`${activePlayerColor}TimeLeft`] = timeLeft;
-    game[`${activePlayerColor}ByoyomiPeriodsLeft`] = byoyomiPeriodsLeft;
-
     game.lastMoveTimestamp = now;
 }
 
