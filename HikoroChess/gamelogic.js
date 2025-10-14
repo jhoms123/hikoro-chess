@@ -99,6 +99,58 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         }
     };
 
+    // --- NEW JOTU JUMP-CAPTURE LOGIC ---
+    const generateJotuJumpMoves = (dx, dy) => {
+        let cx = x + dx;
+        let cy = y + dy;
+        let pathHasEnemy = false;
+        
+        // First, see if there is an enemy on this line at all
+        let checkX = cx, checkY = cy;
+        while(isPositionValid(checkX, checkY)) {
+            const checkTarget = boardState[checkY][checkX];
+            if (checkTarget && checkTarget.color !== piece.color) {
+                pathHasEnemy = true;
+                break;
+            }
+            checkX += dx; checkY += dy;
+        }
+
+        // If there's no enemy on the line, Jotu moves like a normal rook.
+        if (!pathHasEnemy) {
+            while (isPositionValid(cx, cy)) {
+                const target = boardState[cy][cx];
+                if (target === null) {
+                    moves.push({ x: cx, y: cy, isAttack: false });
+                } else {
+                    break; // Blocked by a friendly piece with no enemy behind it.
+                }
+                cx += dx; cy += dy;
+            }
+            return;
+        }
+
+        // If an enemy DOES exist, the Jotu can jump over friendlies to get to it.
+        cx = x + dx; // Reset position
+        cy = y + dy;
+        while (isPositionValid(cx, cy)) {
+            const target = boardState[cy][cx];
+            if (target === null) {
+                moves.push({ x: cx, y: cy, isAttack: false }); // Can stop on any empty square
+            } else if (target.color !== piece.color) {
+                // Found the enemy. This is a valid capture.
+                if (!isProtected(target, cx, cy, boardState)) {
+                    moves.push({ x: cx, y: cy, isAttack: true });
+                }
+                break; // Stop at the first enemy.
+            }
+            // If it's a friendly piece, we just continue the loop, "jumping" over it.
+            cx += dx;
+            cy += dy;
+        }
+    };
+    // --- END OF JOTU LOGIC ---
+
     const generateLineMoves = (dx, dy) => {
         let cx = x + dx, cy = y + dy;
         while (isPositionValid(cx, cy)) {
@@ -124,54 +176,6 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             cx += dx; cy += dy;
         }
     };
-    
-    // --- REWRITTEN JOTU-SPECIFIC MOVE LOGIC ---
-    const generateJotuLineMoves = (dx, dy) => {
-        // First, check if there is an enemy anywhere on this path.
-        let pathHasEnemy = false;
-        let checkX = x + dx;
-        let checkY = y + dy;
-        while (isPositionValid(checkX, checkY)) {
-            const target = boardState[checkY][checkX];
-            if (target && target.color !== piece.color) {
-                pathHasEnemy = true;
-                break;
-            }
-            // If we hit a friendly piece first, we can't see the enemy, so stop checking.
-            if (target && target.color === piece.color) {
-                break;
-            }
-            checkX += dx;
-            checkY += dy;
-        }
-
-        // Now, generate moves. The Jotu is stopped by the FIRST piece it hits.
-        let cx = x + dx;
-        let cy = y + dy;
-        while (isPositionValid(cx, cy)) {
-            const target = boardState[cy][cx];
-            if (target === null) {
-                moves.push({ x: cx, y: cy, isAttack: false }); // Move to empty square
-            } else {
-                // The path is blocked. Check if the blocking piece is a valid target.
-                if (target.color !== piece.color) { // It's an enemy piece
-                    if (!isProtected(target, cx, cy, boardState)) {
-                        moves.push({ x: cx, y: cy, isAttack: true });
-                    }
-                } else { // It's a friendly piece
-                    if (pathHasEnemy) {
-                        // Can only capture the friendly piece if an enemy was visible down the line
-                        moves.push({ x: cx, y: cy, isAttack: true });
-                    }
-                }
-                // IMPORTANT: Break the loop after hitting the first piece, regardless of what it is.
-                break; 
-            }
-            cx += dx;
-            cy += dy;
-        }
-    };
-    // --- END OF NEW JOTU LOGIC ---
 
     switch (piece.type) {
         case 'lupa':
@@ -239,14 +243,14 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             break;
         // MODIFIED: Jotu now uses its special move generation
         case 'jotu':
-            generateJotuLineMoves(1, 0); 
-            generateJotuLineMoves(-1, 0);
+            generateJotuJumpMoves(1, 0); 
+            generateJotuJumpMoves(-1, 0);
             if (piece.color === 'white') { 
-                generateJotuLineMoves(0, 1); 
+                generateJotuJumpMoves(0, 1); 
                 addMove(x, y - 1); // Standard one-step move backward
             }
             else { 
-                generateJotuLineMoves(0, -1); 
+                generateJotuJumpMoves(0, -1); 
                 addMove(x, y + 1); // Standard one-step move backward
             }
             break;

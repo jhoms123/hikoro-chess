@@ -13,8 +13,8 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   },
   
-  pingInterval: 25000, // Sends a ping every 25 seconds
-  pingTimeout: 20000   // Will disconnect if no response in 20 seconds
+  pingInterval: 25000,
+  pingTimeout: 20000 
 });
 
 const PORT = process.env.PORT || 3000;
@@ -113,14 +113,44 @@ io.on('connection', (socket) => {
         if (isValidMove) {
             const targetPiece = game.boardState[to.y][to.x];
             const wasCapture = targetPiece !== null;
+            
+            // --- NEW JOTU COLLATERAL CAPTURE LOGIC ---
+            if (piece.type === 'jotu') {
+                const dx = Math.sign(to.x - from.x);
+                const dy = Math.sign(to.y - from.y);
+                // Check if it was a sliding move (not a single step)
+                if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
+                    let cx = from.x + dx;
+                    let cy = from.y + dy;
+                    // Iterate over the squares the Jotu jumped
+                    while (cx !== to.x || cy !== to.y) {
+                        const intermediatePiece = game.boardState[cy][cx];
+                        if (intermediatePiece && intermediatePiece.color === playerColor) {
+                            // Capture the friendly piece it jumped over
+                             if (intermediatePiece.type !== 'greathorsegeneral') {
+                                let pieceForHand = { type: intermediatePiece.type, color: playerColor };
+                                // Handle demotions
+                                if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
+                                if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
+                                if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
+                                
+                                const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                                if (capturedArray.length < 6) {
+                                    capturedArray.push(pieceForHand);
+                                }
+                            }
+                            game.boardState[cy][cx] = null; // Remove from board
+                        }
+                        cx += dx;
+                        cy += dy;
+                    }
+                }
+            }
+            // --- END OF JOTU LOGIC ---
 
             if (targetPiece !== null) {
                 if (targetPiece.type !== 'greathorsegeneral') {
-                    // --- THIS IS THE ONLY LINE THAT CHANGED ---
-                    // The piece in hand now gets the capturing player's color.
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
-                    // --- END OF CHANGE ---
-                    
                     if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
                     if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
                     if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
