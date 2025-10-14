@@ -155,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // THIS FUNCTION CONTAINS ONE OF THE FIXES
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
         const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
@@ -193,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
 
+            // BUG FIX: Opponent's pieces are not clickable, so the event listener was removed.
             oppCapturedEl.appendChild(el);
         });
     }
@@ -207,10 +209,20 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
     }
 
+    // THIS FUNCTION CONTAINS THE OTHER FIX
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
 
+        // BUG FIX: The check for dropping a piece must come first.
+        if (isDroppingPiece) {
+            socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        // This part handles making a move, which can only happen if it's your turn.
         if (isMyTurn && selectedSquare) {
             if (selectedSquare.x !== x || selectedSquare.y !== y) {
                 socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
@@ -220,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // This part handles selecting/deselecting a piece, which can happen anytime.
         const piece = gameState.boardState[y][x];
         if (piece && piece.color === myColor) {
             if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
@@ -262,12 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // THIS FUNCTION CONTAINS THE FIX
     function onCapturedClick(piece) {
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         
-        // THE BUG WAS HERE: The check for `gameState.bonusMoveInfo` was too restrictive. It's now removed.
-        // A player is always allowed to try and drop a piece on their turn.
         if (!isMyTurn || gameState.gameOver) return;
 
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
@@ -275,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearHighlights();
             return;
         }
+        selectedSquare = null; // Clear any board selection
         isDroppingPiece = piece;
         highlightDropSquares();
     }
