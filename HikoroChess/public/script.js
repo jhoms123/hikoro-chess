@@ -376,40 +376,54 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
     function onSquareClick(x, y) {
-        if (gameState.gameOver) return;
-        const isMyTurn = isSinglePlayer || (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        
-        if (isDroppingPiece) {
-            socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
-        }
+		if (gameState.gameOver) return;
 
-        if (isMyTurn && selectedSquare) {
-            if (selectedSquare.x !== x || selectedSquare.y !== y) {
-                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
-                selectedSquare = null;
-                clearHighlights();
-                return;
-            }
-        }
-        
-        const piece = gameState.boardState[y][x];
-        if (piece && piece.color === myColor) {
-            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                selectedSquare = null;
-                clearHighlights();
-            } else {
-                isDroppingPiece = null;
-                selectedSquare = { x, y };
-                socket.emit('getValidMoves', { gameId, square: { x, y } });
-            }
-        } else {
-            selectedSquare = null;
-            clearHighlights();
-        }
-    }
+		// This check is now correct for both modes
+		const isMyTurn = isSinglePlayer || (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+		
+		if (isDroppingPiece) {
+			// Drop logic is fine, no changes needed here
+			socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+			isDroppingPiece = null;
+			clearHighlights();
+			return;
+		}
+
+		if (isMyTurn && selectedSquare) {
+			if (selectedSquare.x !== x || selectedSquare.y !== y) {
+				// Move logic is fine, no changes needed here
+				socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
+				selectedSquare = null;
+				clearHighlights();
+				return;
+			}
+		}
+		
+		const piece = gameState.boardState[y][x];
+		if (piece) {
+			// --- START OF FIX ---
+			// In single player, allow selecting a piece if its color matches the current turn.
+			// In multiplayer, it must match your assigned color.
+			const canSelectPiece = isSinglePlayer ? 
+				(piece.color === (gameState.isWhiteTurn ? 'white' : 'black')) : 
+				(piece.color === myColor);
+
+			if (canSelectPiece) {
+			// --- END OF FIX ---
+				if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+					selectedSquare = null;
+					clearHighlights();
+				} else {
+					isDroppingPiece = null;
+					selectedSquare = { x, y };
+					socket.emit('getValidMoves', { gameId, square: { x, y } });
+				}
+			}
+		} else {
+			selectedSquare = null;
+			clearHighlights();
+		}
+	}
     
     function drawHighlights(moves) {
         clearHighlights();
