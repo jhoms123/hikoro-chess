@@ -42,16 +42,20 @@ body {
 .square.invalid { background-color: #555; } /* For invalid corners */
 
 .piece {
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-    line-height: 1;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  /* This is now just a container, no text styles needed */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.piece.white { color: #ffffff; }
-.piece.black { color: #1e1e1e; }
+.piece img {
+  /* This styles the actual sprite image */
+  width: 90%;
+  height: 90%;
+  object-fit: contain; /* Prevents the image from stretching */
+}
 
 /* Selection Highlight */
 .square.selected {

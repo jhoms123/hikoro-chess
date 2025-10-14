@@ -27,17 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSquare = null;
     let isDroppingPiece = null;
     
-    // The 8 correct sanctuary squares in the center of the board
     const sanctuarySquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
-    const pieceNotation = {
-        lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
-        sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
-        finor: "F+", greatshield: "GS", greathorsegeneral: "GH"
-    };
+    // NOTE: The pieceNotation object is no longer needed and has been removed.
 
     // --- Lobby Listeners ---
     createGameBtn.addEventListener('click', () => socket.emit('createGame'));
@@ -128,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLight = (x + y) % 2 === 0;
                 square.classList.add(isLight ? 'light' : 'dark');
 
-                // Check if this is a sanctuary square and add the class to color it
                 const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
                 if (isSanctuary) {
                     square.classList.add('sanctuary-square');
@@ -148,10 +142,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const piece = gameState.boardState[y][x];
                 if (piece) {
+                    // --- MODIFIED PIECE RENDERING LOGIC ---
                     const pieceElement = document.createElement('div');
                     pieceElement.classList.add('piece', piece.color);
-                    pieceElement.textContent = pieceNotation[piece.type] || '?';
+
+                    const spriteImg = document.createElement('img');
+                    spriteImg.src = `sprites/${piece.type}_${piece.color}.png`; // Constructs the image path
+                    spriteImg.alt = `${piece.color} ${piece.type}`; // For accessibility
+
+                    pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
+                    // --- END OF MODIFICATION ---
                 }
                 boardElement.appendChild(square);
             }
@@ -167,17 +168,39 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector(myColor === 'white' ? '#black-captured-area h3' : '#white-captured-area h3').textContent = "Opponent's Hand";
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
+
         myCaptured.forEach((piece) => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', myColor);
-            el.innerHTML = `<div class="piece ${myColor}">${pieceNotation[piece.type] || '?'}</div>`;
+
+            // --- MODIFIED CAPTURED PIECE RENDERING ---
+            const pieceElement = document.createElement('div');
+            pieceElement.classList.add('piece', myColor);
+            const spriteImg = document.createElement('img');
+            spriteImg.src = `sprites/${piece.type}_${myColor}.png`;
+            spriteImg.alt = `${myColor} ${piece.type}`;
+            pieceElement.appendChild(spriteImg);
+            el.appendChild(pieceElement);
+            // --- END OF MODIFICATION ---
+
             el.addEventListener('click', () => onCapturedClick(piece));
             myCapturedEl.appendChild(el);
         });
+
         oppCaptured.forEach((piece) => {
             const el = document.createElement('div');
             el.classList.add('captured-piece', piece.color);
-            el.innerHTML = `<div class="piece ${piece.color}">${pieceNotation[piece.type] || '?'}</div>`;
+            
+             // --- MODIFIED CAPTURED PIECE RENDERING ---
+            const pieceElement = document.createElement('div');
+            pieceElement.classList.add('piece', piece.color);
+            const spriteImg = document.createElement('img');
+            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+            spriteImg.alt = `${piece.color} ${piece.type}`;
+            pieceElement.appendChild(spriteImg);
+            el.appendChild(pieceElement);
+            // --- END OF MODIFICATION ---
+
             oppCapturedEl.appendChild(el);
         });
     }
