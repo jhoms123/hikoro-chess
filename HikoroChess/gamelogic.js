@@ -4,11 +4,11 @@ const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
 const pieceNotation = {
-    lupa: "L",              // zur: "Zr", // Replaced by Neptune
+    lupa: "L", zur: "Zr",
     kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
     finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
-    neptune: "Np", mermaid: "Mm" // Added new pieces
+    neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
 };
 
 function getInitialBoard() {
@@ -338,6 +338,27 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                     addMove(x + dx, y + dy);
                 }
             }
+            break;
+        }
+		case 'cthulhu': {
+            // 1. Mermaid's 5x5 jump area (this includes the Lupa's 3x3 area)
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
+                }
+            }
+            
+            // 2. Great Horse General's extended knight move
+            [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { 
+                if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); 
+            }));
+                
+            // 3. Great Horse General's line moves
+            const ghgDir = piece.color === 'white' ? 1 : -1;
+            generateLineMoves(-1, ghgDir);
+            generateLineMoves(1, ghgDir);
+            generateLineMoves(0, -ghgDir);
             break;
         }
     }

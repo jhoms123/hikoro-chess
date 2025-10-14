@@ -28,6 +28,7 @@ const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./g
 
 
 io.on('connection', (socket) => {
+    // ... (rest of connection logic is unchanged)
     console.log('A user connected:', socket.id);
     socket.emit('lobbyUpdate', lobbyGames);
 
@@ -139,7 +140,6 @@ io.on('connection', (socket) => {
             }
 
             if (targetPiece !== null) {
-                // If a Neptune is captured, the LOSING player gets a Mermaid
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
@@ -148,7 +148,6 @@ io.on('connection', (socket) => {
                         capturedArray.push(pieceForHand);
                     }
                 } else if (targetPiece.type !== 'greathorsegeneral') {
-                    // Standard capture logic for all other pieces
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
                     if (targetPiece.type === 'lupa') {
                         pieceForHand.type = 'sult';
@@ -223,17 +222,22 @@ io.on('connection', (socket) => {
     });
 });
 
-// MODIFIED: Added Mermaid promotion rule
+// MODIFIED: Added Cthulhu promotion rule
 function handlePromotion(piece, y, wasCapture) {
     const color = piece.color;
     
+    // NEW: Great Horse General promotes to Cthulhu on capture
+    if (piece.type === 'greathorsegeneral' && wasCapture) {
+        piece.type = 'cthulhu';
+    }
+
     // Mermaid promotes back to Neptune on capture
     if (piece.type === 'mermaid' && wasCapture) {
         piece.type = 'neptune';
     }
     
-    // Existing promotion rules
     if (piece.type === 'fin' && wasCapture) piece.type = 'finor';
+
     const promotablePawns = ['sult', 'pawn', 'pilut'];
     if (promotablePawns.includes(piece.type)) {
         const inPromotionZone = (color === 'white' && y > 8) || (color === 'black' && y < 7);
