@@ -167,17 +167,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         myCaptured.forEach((piece) => {
             const el = document.createElement('div');
-            el.classList.add('captured-piece', myColor);
+            el.classList.add('captured-piece', piece.color);
 
-            // --- BUG FIX: Use the piece's ORIGINAL color, not your color ---
             const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece', piece.color); // Use piece.color
+            pieceElement.classList.add('piece', piece.color);
             const spriteImg = document.createElement('img');
-            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`; // Use piece.color
-            spriteImg.alt = `${piece.color} ${piece.type}`; // Use piece.color
+            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+            spriteImg.alt = `${piece.color} ${piece.type}`;
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
-            // --- END OF FIX ---
 
             el.addEventListener('click', () => onCapturedClick(piece));
             myCapturedEl.appendChild(el);
@@ -209,47 +207,65 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
     }
 
+    // REFACTORED: To allow selecting pieces on opponent's turn
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (isDroppingPiece) {
-            socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
-        }
-        if (selectedSquare) {
-            if (selectedSquare.x === x && selectedSquare.y === y) {
-                 selectedSquare = null;
-                 clearHighlights();
-            } else {
+
+        // This part handles making a move, which can only happen if it's your turn.
+        if (isMyTurn && selectedSquare) {
+            // Check if the click is a move attempt (not on the selected square itself)
+            if (selectedSquare.x !== x || selectedSquare.y !== y) {
                 socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
                 selectedSquare = null;
                 clearHighlights();
+                return;
             }
-        } else if (isMyTurn) {
-            const piece = gameState.boardState[y][x];
-            if (piece && piece.color === myColor) {
-                if (gameState.bonusMoveInfo && (gameState.bonusMoveInfo.pieceX !== x || gameState.bonusMoveInfo.pieceY !== y)) {
-                    return;
-                }
+        }
+        
+        // This part handles selecting/deselecting a piece, which can happen anytime.
+        const piece = gameState.boardState[y][x];
+        if (piece && piece.color === myColor) {
+            // If clicking the same piece again, deselect it.
+            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                selectedSquare = null;
+                clearHighlights();
+            } else { // Otherwise, select the new piece.
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
+        } else {
+            // If you click an empty square or an enemy piece, just clear any selection.
+            selectedSquare = null;
+            clearHighlights();
         }
     }
     
+    // REFACTORED: To draw gray dots for previews
     function drawHighlights(moves) {
         clearHighlights();
         if (!selectedSquare) return;
+
+        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         const selectedSquareElement = document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
-        if(selectedSquareElement) selectedSquareElement.classList.add('selected');
+
+        if (selectedSquareElement) {
+            // Use 'selected' class for your turn, 'preview-selected' for opponent's turn
+            selectedSquareElement.classList.add(isMyTurn ? 'selected' : 'preview-selected');
+        }
+
         moves.forEach(move => {
             const moveSquare = document.querySelector(`[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
             if (moveSquare) {
                 const plate = document.createElement('div');
                 plate.classList.add('move-plate');
-                if (move.isAttack) plate.classList.add('attack');
+                // If it's not your turn, add the 'preview' class to make it gray
+                if (!isMyTurn) {
+                    plate.classList.add('preview');
+                }
+                if (move.isAttack) {
+                    plate.classList.add('attack');
+                }
                 moveSquare.appendChild(plate);
             }
         });
@@ -284,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function clearHighlights() {
         document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
+        document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
     }
 });

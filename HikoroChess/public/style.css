@@ -170,3 +170,19 @@ body {
 .sanctuary-square.dark {
   background-color: #f8e473; /* A pleasant golden yellow */
 }
+
+.square.preview-selected {
+  background-color: rgba(150, 150, 150, 0.5);
+}
+
+/* Styles the preview move dots to be gray */
+.move-plate.preview {
+  background-color: rgba(128, 128, 128, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Styles preview capture dots to be a darker gray */
+.move-plate.preview.attack {
+   background-color: rgba(80, 80, 80, 0.7);
+   border: 1px solid rgba(255, 255, 255, 0.4);
+}
