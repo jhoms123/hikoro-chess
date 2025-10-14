@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // THIS FUNCTION CONTAINS ONE OF THE FIXES
+    // THIS FUNCTION CONTAINS THE FIX
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
         const oppCaptured = myColor === 'white' ? gameState.blackCaptured : gameState.whiteCaptured;
@@ -166,38 +166,39 @@ document.addEventListener('DOMContentLoaded', () => {
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
 
-        myCaptured.forEach((piece) => {
+        // Helper function to create a piece element to avoid repetition
+        const createCapturedPieceElement = (piece, isMyPiece) => {
             const el = document.createElement('div');
+            // The class for the background/border should be the color of the piece's CURRENT owner
             el.classList.add('captured-piece', piece.color);
 
             const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece', piece.color);
+            pieceElement.classList.add('piece');
+            
             const spriteImg = document.createElement('img');
             spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
             spriteImg.alt = `${piece.color} ${piece.type}`;
+
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
 
-            el.addEventListener('click', () => onCapturedClick(piece));
-            myCapturedEl.appendChild(el);
+            if (isMyPiece) {
+                el.addEventListener('click', () => onCapturedClick(piece));
+            }
+            return el;
+        };
+
+        myCaptured.forEach((piece) => {
+            const pieceEl = createCapturedPieceElement(piece, true);
+            myCapturedEl.appendChild(pieceEl);
         });
 
         oppCaptured.forEach((piece) => {
-            const el = document.createElement('div');
-            el.classList.add('captured-piece', piece.color);
-            
-            const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece', piece.color);
-            const spriteImg = document.createElement('img');
-            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-            spriteImg.alt = `${piece.color} ${piece.type}`;
-            pieceElement.appendChild(spriteImg);
-            el.appendChild(pieceElement);
-
-            // BUG FIX: Opponent's pieces are not clickable, so the event listener was removed.
-            oppCapturedEl.appendChild(el);
+            const pieceEl = createCapturedPieceElement(piece, false);
+            oppCapturedEl.appendChild(pieceEl);
         });
     }
+
 
     function updateTurnIndicator() {
         if (gameState.gameOver) {
@@ -209,12 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
     }
 
-    // THIS FUNCTION CONTAINS THE OTHER FIX
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-
-        // BUG FIX: The check for dropping a piece must come first.
+        
+        // This check must come first to handle drops
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
             isDroppingPiece = null;
@@ -222,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // This part handles making a move, which can only happen if it's your turn.
         if (isMyTurn && selectedSquare) {
             if (selectedSquare.x !== x || selectedSquare.y !== y) {
                 socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
@@ -232,13 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // This part handles selecting/deselecting a piece, which can happen anytime.
         const piece = gameState.boardState[y][x];
         if (piece && piece.color === myColor) {
             if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
                 selectedSquare = null;
                 clearHighlights();
             } else {
+                isDroppingPiece = null; // Cancel any drop selection
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
@@ -280,12 +279,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!isMyTurn || gameState.gameOver) return;
 
+        // If you click the same piece you're already trying to drop, cancel the drop.
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();
             return;
         }
-        selectedSquare = null; // Clear any board selection
+        
+        selectedSquare = null; // Clear any board selection when selecting from hand
         isDroppingPiece = piece;
         highlightDropSquares();
     }
