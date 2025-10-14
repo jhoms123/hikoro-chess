@@ -1,7 +1,6 @@
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
-
 const pieceNotation = {
     lupa: "L", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
@@ -42,7 +41,62 @@ function isPositionValid(x, y) {
     return true;
 }
 
-function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
+/**
+ * Checks if a piece at a given position is protected by a friendly Pilut or Great Shield.
+ * @param {object} targetPiece - The piece being attacked.
+ * @param {number} targetX - The x-coordinate of the piece being attacked.
+ * @param {number} targetY - The y-coordinate of the piece being attacked.
+ * @param {Array<Array<object>>} board - The current board state.
+ * @returns {boolean} - True if the piece is protected.
+ */
+const isProtected = (targetPiece, targetX, targetY, board) => {
+    const protectingColor = targetPiece.color;
+    // Direction towards the friendly side of the board for the targetPiece
+    const behindDir = protectingColor === 'white' ? -1 : 1;
+
+    // 1. Check for Pilut protection (must be directly behind the target)
+    const pilutProtectorY = targetY + behindDir;
+    if (isPositionValid(targetX, pilutProtectorY)) {
+        const potentialProtector = board[pilutProtectorY][targetX];
+        if (potentialProtector && potentialProtector.type === 'pilut' && potentialProtector.color === protectingColor) {
+            return true;
+        }
+    }
+
+    // 2. Check for Great Shield protection (sides, back, back-diagonals)
+    // Iterate through the 8 squares around the target to find a friendly Great Shield.
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue; // Skip the target's own square
+
+            const gsX = targetX + dx;
+            const gsY = targetY + dy;
+
+            if (isPositionValid(gsX, gsY)) {
+                const potentialProtector = board[gsY][gsX];
+                if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
+                    // Found a friendly GS. A GS does NOT protect its forward three squares.
+                    const gsForwardDir = potentialProtector.color === 'white' ? 1 : -1;
+
+                    // Check if the target is in the GS's UNPROTECTED forward zone relative to the GS.
+                    const isTargetInFrontStraight = (targetX === gsX && targetY === gsY + gsForwardDir);
+                    const isTargetInFrontDiagLeft = (targetX === gsX - 1 && targetY === gsY + gsForwardDir);
+                    const isTargetInFrontDiagRight = (targetX === gsX + 1 && targetY === gsY + gsForwardDir);
+
+                    if (!(isTargetInFrontStraight || isTargetInFrontDiagLeft || isTargetInFrontDiagRight)) {
+                        // The target is not in the GS's front arc, so it is protected.
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false; // Not protected by any piece
+};
+
+
+function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
     if (!piece) return [];
     const moves = [];
 
@@ -52,7 +106,7 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
         if (target === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
         } else if (target.color !== piece.color) {
-            // Check for Pilut and Great Shield protection
+            // Check for protection before adding an attack move
             if (!isProtected(target, toX, toY, boardState)) {
                 moves.push({ x: toX, y: toY, isAttack: true });
             }
@@ -61,8 +115,7 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
 
     const addNonCaptureMove = (toX, toY) => {
         if (!isPositionValid(toX, toY)) return;
-        const target = boardState[toY][toX];
-        if (target === null) {
+        if (boardState[toY][toX] === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
         }
     };
@@ -91,46 +144,6 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
             moves.push({ x: cx, y: cy, isAttack: false });
             cx += dx; cy += dy;
         }
-    };
-
-    const isProtected = (targetPiece, targetX, targetY, board) => {
-        const protectingColor = targetPiece.color;
-        // Check for Pilut protection from behind
-        const pilutDir = protectingColor === 'white' ? -1 : 1;
-        const potentialPilutY = targetY + pilutDir;
-        if (isPositionValid(targetX, potentialPilutY)) {
-            const potentialProtector = board[potentialPilutY][targetX];
-            if (potentialProtector && potentialProtector.type === 'pilut' && potentialProtector.color === protectingColor) {
-                return true;
-            }
-        }
-
-        // Check for Great Shield protection (sides, back-diagonals, straight back)
-        const gsDir = protectingColor === 'white' ? -1 : 1;
-        const potentialGSY = targetY + gsDir;
-        const potentialGSX = targetX;
-        const potentialGSXLeft = targetX - 1;
-        const potentialGSXRight = targetX + 1;
-
-        if (isPositionValid(potentialGSX, potentialGSY)) {
-            const potentialProtector = board[potentialGSY][potentialGSX];
-            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
-                return true;
-            }
-        }
-        if (isPositionValid(potentialGSXLeft, potentialGSY)) {
-            const potentialProtector = board[potentialGSY][potentialGSXLeft];
-            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
-                return true;
-            }
-        }
-        if (isPositionValid(potentialGSXRight, potentialGSY)) {
-            const potentialProtector = board[potentialGSY][potentialGSXRight];
-            if (potentialProtector && potentialProtector.type === 'greatshield' && potentialProtector.color === protectingColor) {
-                return true;
-            }
-        }
-        return false;
     };
 
     switch (piece.type) {
@@ -183,22 +196,22 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
         case 'pawn':
             addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y);
             addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
-        case 'cope':
+        case 'cope': {
             const fwdDir = piece.color === 'white' ? 1 : -1;
-            // Original moves
-            addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
-            addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
-            addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
-            
-            // Add a special property to moves after a capture
-            if (piece.isBerserker) {
-              const bonusMoves = [];
-              addNonCaptureMove(x + 2, y + 2 * fwdDir); addNonCaptureMove(x - 2, y + 2 * fwdDir);
-              addNonCaptureMove(x, y + 1 * fwdDir); addNonCaptureMove(x, y + 2 * fwdDir);
-              addNonCaptureMove(x, y - 1 * fwdDir); addNonCaptureMove(x, y - 2 * fwdDir);
-              moves.push(...bonusMoves.filter(m => !moves.some(e => e.x === m.x && e.y === m.y)));
+            const generateCopeMoves = (moveFunc) => {
+                moveFunc(x + 2, y + 2 * fwdDir); moveFunc(x - 2, y + 2 * fwdDir);
+                moveFunc(x, y + 1 * fwdDir); moveFunc(x, y + 2 * fwdDir);
+                moveFunc(x, y - 1 * fwdDir); moveFunc(x, y - 2 * fwdDir);
+            };
+
+            // If it's a bonus move (after a capture), only non-capture moves are allowed.
+            if (bonusMoveActive) {
+                generateCopeMoves(addNonCaptureMove);
+            } else {
+                generateCopeMoves(addMove);
             }
             break;
+        }
         case 'chair':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
             generateLineMoves(0, 1); generateLineMoves(0, -1); break;
@@ -221,10 +234,11 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
             addNonCaptureMove(x + 1, y + gsDir);
             addNonCaptureMove(x, y - gsDir);
             break;
-        case 'greathorsegeneral':
+        case 'greathorsegeneral': {
             const ghgDir = piece.color === 'white' ? 1 : -1;
-            if (isSecondMove) {
-                // Second move: non-capture only
+
+            if (bonusMoveActive) {
+                // Second move (non-capture only)
                 for (let dx = -1; dx <= 1; dx++) {
                     for (let dy = -1; dy <= 1; dy++) {
                         if (dx === 0 && dy === 0) continue;
@@ -236,7 +250,7 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
                 generateNonCaptureLineMoves(1, ghgDir);
                 generateNonCaptureLineMoves(0, -ghgDir);
             } else {
-                // First move: captures allowed
+                // First move (captures allowed)
                 for (let dx = -1; dx <= 1; dx++) {
                     for (let dy = -1; dy <= 1; dy++) {
                         if (dx === 0 && dy === 0) continue;
@@ -249,6 +263,7 @@ function getValidMovesForPiece(piece, x, y, boardState, isSecondMove = false) {
                 generateLineMoves(0, -ghgDir);
             }
             break;
+        }
     }
     return moves;
 }
