@@ -16,16 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
-	const singlePlayerBtn = document.getElementById('single-player-btn');
-
-    let whiteTimerEl, blackTimerEl;
+    const singlePlayerBtn = document.getElementById('single-player-btn');
+    const playBotBtn = document.getElementById('play-bot-btn');
 
     let gameState = {};
     let myColor = null;
     let gameId = null;
     let selectedSquare = null;
     let isDroppingPiece = null;
-	let isSinglePlayer = false;
+    let isSinglePlayer = false;
+    let isBotGame = false;
     
     const sanctuarySquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
@@ -34,34 +34,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     createGameBtn.addEventListener('click', () => {
-		const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
-		const mainTime = parseInt(document.getElementById('time-control').value, 10);
-		let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+        const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
+        const mainTime = parseInt(document.getElementById('time-control').value, 10);
+        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
 
-		if (mainTime === 0 && byoyomiTime === 0) {
-			byoyomiTime = 15; 
-		}
+        if (mainTime === 0 && byoyomiTime === 0) {
+            byoyomiTime = 15; 
+        }
 
-		const timeControl = {
-			main: mainTime,
-			byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
-			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
-		};
-		
-		const dataToSend = { playerName, timeControl };
+        const timeControl = {
+            main: mainTime,
+            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime, 
+            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
+        };
+        
+        const dataToSend = { playerName, timeControl };
+        socket.emit('createGame', dataToSend);
+    });
+    
+    singlePlayerBtn.addEventListener('click', () => {
+        isSinglePlayer = true;
+        isBotGame = false;
+        socket.emit('createSinglePlayerGame');
+    });
 
-		// LOG 2: See what data you are about to send to the server
-		console.log("Sending 'createGame' event with data:", dataToSend);
-
-		socket.emit('createGame', dataToSend);
-	});
-	
-	
-
-	singlePlayerBtn.addEventListener('click', () => {
-		socket.emit('createSinglePlayerGame');
-	});
-
+    playBotBtn.addEventListener('click', () => {
+        isSinglePlayer = true; // Bot game is a type of single player game
+        isBotGame = true;
+        socket.emit('createSinglePlayerGame');
+    });
 
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
@@ -100,16 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 	
 	function formatTimeControl(tc) {
-		if (!tc || tc.main === -1) {
-			return 'Unlimited';
-		}
-		const mainMinutes = Math.floor(tc.main / 60);
-		let formattedString = `${mainMinutes} min`;
-		if (tc.byoyomiTime > 0) {
-			formattedString += ` + ${tc.byoyomiTime}s`;
-		}
-		return formattedString;
-	}
+        if (!tc || tc.main === -1) { return 'Unlimited'; }
+        const mainMinutes = Math.floor(tc.main / 60);
+        let formattedString = `${mainMinutes} min`;
+        if (tc.byoyomiTime > 0) { formattedString += ` + ${tc.byoyomiTime}s`; }
+        return formattedString;
+    }
 
     function formatTime(seconds, periods, inByoyomi) {
         if (seconds === -1) {
@@ -154,95 +151,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function updateLobby(games) {
-    
-		console.log("Received lobby update. Data:", games); 
-
-		gameListElement.innerHTML = '';
-		for (const id in games) {
-			const game = games[id];
-			const gameItem = document.createElement('div');
-			gameItem.classList.add('game-item');
-
-			const infoSpan = document.createElement('span');
-			
-			// Use the data from the server, with a fallback just in case
-			const creatorName = game.creatorName || 'Player 1'; 
-			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
-			
-			infoSpan.textContent = `${creatorName}'s Game [${timeString}]`;
-			gameItem.appendChild(infoSpan);
-			
-			const joinBtn = document.createElement('button');
-			joinBtn.textContent = 'Join';
-			joinBtn.classList.add('join-btn');
-			joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
-			gameItem.appendChild(joinBtn);
-			
-			gameListElement.appendChild(gameItem);
-		}
-	}
+        gameListElement.innerHTML = '';
+        for (const id in games) {
+            const game = games[id];
+            const gameItem = document.createElement('div');
+            gameItem.classList.add('game-item');
+            const infoSpan = document.createElement('span');
+            const creatorName = game.creatorName || 'Player 1'; 
+            const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
+            infoSpan.textContent = `${creatorName}'s Game [${timeString}]`;
+            gameItem.appendChild(infoSpan);
+            const joinBtn = document.createElement('button');
+            joinBtn.textContent = 'Join';
+            joinBtn.classList.add('join-btn');
+            joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
+            gameItem.appendChild(joinBtn);
+            gameListElement.appendChild(gameItem);
+        }
+    }
 
     function onGameCreated(data) {
         gameId = data.gameId;
         myColor = data.color;
+        isSinglePlayer = false;
+        isBotGame = false;
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        setupTimerElements();
+        // setupTimerElements();
     }
 
     function onGameStart(initialGameState) {
-	
-		isSinglePlayer = initialGameState.isSinglePlayer || false;
+        gameId = initialGameState.id;
 
-		if (isSinglePlayer) {
-			myColor = 'white';
-		} else if (!myColor) {
-			myColor = 'black'; 
-		}
+        if (initialGameState.isSinglePlayer) {
+            isSinglePlayer = true;
+            myColor = 'white'; // Lock view for single player modes
+        } else if (!myColor) {
+            myColor = 'black';
+            isSinglePlayer = false;
+        }
+        isBotGame = isBotGame && isSinglePlayer; // Ensure bot flag is consistent
 
-		gameId = initialGameState.id;
-		lobbyElement.style.display = 'none';
-		gameContainerElement.style.display = 'flex';
-		setupTimerElements();
-		updateLocalState(initialGameState);
-	}
+        lobbyElement.style.display = 'none';
+        gameContainerElement.style.display = 'flex';
+        // setupTimerElements();
+        updateLocalState(initialGameState);
+    }
 
     function updateLocalState(newGameState) {
         const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
         gameState = newGameState;
 
         if (isNewGameOver && newGameState.winner) {
-                const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
-                winnerText.textContent = `${winnerName} Wins!`;
-                const losingPlayer = newGameState.winner === 'white' ? 'black' : 'white';
-                if (newGameState[`${losingPlayer}TimeLeft`] <= 0 && newGameState[`${losingPlayer}ByoyomiPeriodsLeft`] < 0) {
-                    winnerText.textContent += " (on time)";
-                }
+            const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+            winnerText.textContent = `${winnerName} Wins!`;
+            if (newGameState.reason) {
+                winnerText.textContent += ` (${newGameState.reason})`;
+            }
         }
         
         renderAll();
 
-        if (gameState.timeControl) {
-            const times = {
-                whiteTime: gameState.whiteTimeLeft,
-                blackTime: gameState.blackTimeLeft,
-                whiteByoyomi: gameState.whiteByoyomiPeriodsLeft,
-                blackByoyomi: gameState.blackByoyomiPeriodsLeft,
-                isInByoyomiWhite: gameState.whiteTimeLeft <= 0,
-                isInByoyomiBlack: gameState.blackTimeLeft <= 0
-            };
-            updateTimerDisplay(times);
-        }
-
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (isMyTurn && gameState.bonusMoveInfo) {
-            const bonusPieceSquare = { 
-                x: gameState.bonusMoveInfo.pieceX, 
-                y: gameState.bonusMoveInfo.pieceY 
-            };
-            selectedSquare = bonusPieceSquare;
-            socket.emit('getValidMoves', { gameId, square: bonusPieceSquare });
+        // Check if it's the bot's turn to move
+        if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
+            setTimeout(() => {
+                console.log("Bot is thinking...");
+                const bestMove = findBestMove(gameState.boardState);
+                
+                if (bestMove) {
+                    console.log("Bot chose move:", bestMove);
+                    socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
+                } else {
+                    console.log("Bot has no valid moves!");
+                }
+            }, 500); // 0.5 second delay
         }
     }
 
@@ -353,77 +336,74 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTurnIndicator() {
-		if (gameState.gameOver) {
-			turnIndicator.textContent = '';
-			if(!winnerText.textContent) {
-				winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
-			}
-			return;
-		}
+        if (gameState.gameOver) {
+            turnIndicator.textContent = '';
+            if(!winnerText.textContent) {
+                winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
+            }
+            return;
+        }
 
-		if (isSinglePlayer) {
-			// New logic for single-player mode
-			turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
-			document.querySelector('#white-captured-area .hand-label').textContent = "White's Hand";
-			document.querySelector('#black-captured-area .hand-label').textContent = "Black's Hand";
-		} else {
-			// Original logic for multiplayer
-			const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-			turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
-			document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
-			document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
-		}
-	}
+        if (isSinglePlayer) {
+            turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
+            const whiteLabel = isBotGame ? "Your Hand" : "White's Hand";
+            const blackLabel = isBotGame ? "Bot's Hand" : "Black's Hand";
+            document.querySelector('#white-captured-area .hand-label').textContent = whiteLabel;
+            document.querySelector('#black-captured-area .hand-label').textContent = blackLabel;
+        } else {
+            const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+            turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
+            document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
+            document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
+        }
+    }
 
     function onSquareClick(x, y) {
-		if (gameState.gameOver) return;
+        if (gameState.gameOver) return;
 
-		// This check is now correct for both modes
-		const isMyTurn = isSinglePlayer || (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-		
-		if (isDroppingPiece) {
-			// Drop logic is fine, no changes needed here
-			socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-			isDroppingPiece = null;
-			clearHighlights();
-			return;
-		}
+        const isMyTurn = (isSinglePlayer && !isBotGame) || 
+                         (isBotGame && gameState.isWhiteTurn) || 
+                         (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-		if (isMyTurn && selectedSquare) {
-			if (selectedSquare.x !== x || selectedSquare.y !== y) {
-				// Move logic is fine, no changes needed here
-				socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
-				selectedSquare = null;
-				clearHighlights();
-				return;
-			}
-		}
-		
-		const piece = gameState.boardState[y][x];
-		if (piece) {
-			// --- START OF FIX ---
-			// In single player, allow selecting a piece if its color matches the current turn.
-			// In multiplayer, it must match your assigned color.
-			const canSelectPiece = isSinglePlayer ? 
-				(piece.color === (gameState.isWhiteTurn ? 'white' : 'black')) : 
-				(piece.color === myColor);
+        if (!isMyTurn) return;
 
-			if (canSelectPiece) {
-			// --- END OF FIX ---
-				if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-					selectedSquare = null;
-					clearHighlights();
-				} else {
-					isDroppingPiece = null;
-					selectedSquare = { x, y };
-					socket.emit('getValidMoves', { gameId, square: { x, y } });
-				}
-			}
-		} else {
-			selectedSquare = null;
-			clearHighlights();
-		}
-	}
+        if (isDroppingPiece) {
+            socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        if (selectedSquare) {
+            if (selectedSquare.x !== x || selectedSquare.y !== y) {
+                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
+                selectedSquare = null;
+                clearHighlights();
+                return;
+            }
+        }
+        
+        const piece = gameState.boardState[y][x];
+        if (piece) {
+            const canSelectPiece = isSinglePlayer ? 
+                (piece.color === (gameState.isWhiteTurn ? 'white' : 'black')) : 
+                (piece.color === myColor);
+
+            if (canSelectPiece) {
+                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                    selectedSquare = null;
+                    clearHighlights();
+                } else {
+                    isDroppingPiece = null;
+                    selectedSquare = { x, y };
+                    socket.emit('getValidMoves', { gameId, square: { x, y } });
+                }
+            }
+        } else {
+            selectedSquare = null;
+            clearHighlights();
+        }
+    }
     
     function drawHighlights(moves) {
         clearHighlights();
