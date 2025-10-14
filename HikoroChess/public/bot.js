@@ -258,12 +258,17 @@ function findBestMove(boardState, capturedPieces) {
 // NEW: Minimax with Alpha-Beta Pruning for a much faster search
 function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
     if (depth === 0) {
-        return evaluateBoard(boardState);
+        // Instead of just evaluating, we now start a quiescence search
+        // to make sure the position is "quiet" before scoring it.
+        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer);
     }
     
     const color = isMaximizingPlayer ? 'black' : 'white';
-    // Note: The recursive search doesn't simulate drops for simplicity, but could be added later.
     const moves = getAllValidMoves(boardState, color, []); 
+    
+    if (moves.length === 0) {
+        return evaluateBoard(boardState); // No moves, return static evaluation
+    }
     
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
@@ -298,4 +303,47 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer) {
         }
         return minEval;
     }
+}
+
+
+function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer) {
+    let stand_pat = evaluateBoard(boardState);
+
+    if (isMaximizingPlayer) {
+        if (stand_pat >= beta) {
+            return beta;
+        }
+        alpha = Math.max(alpha, stand_pat);
+    } else {
+        if (stand_pat <= alpha) {
+            return alpha;
+        }
+        beta = Math.min(beta, stand_pat);
+    }
+
+    const color = isMaximizingPlayer ? 'black' : 'white';
+    // We only generate and look at moves that are captures
+    const captureMoves = getAllValidMoves(boardState, color, []).filter(move => move.isAttack);
+
+    for (const move of captureMoves) {
+        const tempBoard = JSON.parse(JSON.stringify(boardState));
+        const piece = tempBoard[move.from.y][move.from.x];
+        tempBoard[move.to.y][move.to.x] = piece;
+        tempBoard[move.from.y][move.from.x] = null;
+
+        let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer);
+
+        if (isMaximizingPlayer) {
+            alpha = Math.max(alpha, score);
+            if (beta <= alpha) {
+                break; // Beta cutoff
+            }
+        } else {
+            beta = Math.min(beta, score);
+            if (beta <= alpha) {
+                break; // Alpha cutoff
+            }
+        }
+    }
+    return isMaximizingPlayer ? alpha : beta;
 }
