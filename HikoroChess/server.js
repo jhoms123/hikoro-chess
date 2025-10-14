@@ -11,7 +11,10 @@ const io = socketIo(server, {
   cors: {
     origin: ["https://hikorochess.org", "https://www.hikorochess.org", "https://hikoro-chess.onrender.com"],
     methods: ["GET", "POST"]
-  }
+  },
+  
+  pingInterval: 25000, // Sends a ping every 25 seconds
+  pingTimeout: 20000   // Will disconnect if no response in 20 seconds
 });
 
 const PORT = process.env.PORT || 3000;
