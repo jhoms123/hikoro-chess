@@ -37,7 +37,7 @@ io.on('connection', (socket) => {
             whiteCaptured: [],
             blackCaptured: [],
             isWhiteTurn: true,
-            bonusMoveInfo: null, // ADDED: To track bonus moves {pieceX, pieceY}
+            bonusMoveInfo: null,
             gameOver: false,
             winner: null
         };
@@ -63,18 +63,15 @@ io.on('connection', (socket) => {
         }
     });
     
-    // MODIFIED: To handle bonus move state
     socket.on('getValidMoves', (data) => {
         const { gameId, square } = data;
         const game = games[gameId];
         if (!game || !square) return;
 
         let bonusMoveActive = false;
-        // Check if a bonus move is active
         if (game.bonusMoveInfo) {
-            // If so, only the piece at bonusMoveInfo's location can move.
             if (square.x !== game.bonusMoveInfo.pieceX || square.y !== game.bonusMoveInfo.pieceY) {
-                socket.emit('validMoves', []); // Return no moves for any other piece
+                socket.emit('validMoves', []); 
                 return;
             }
             bonusMoveActive = true;
@@ -82,13 +79,12 @@ io.on('connection', (socket) => {
 
         const piece = game.boardState[square.y][square.x];
         if (piece) {
-            // Pass the bonus move status to the logic function
             const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState, bonusMoveActive);
             socket.emit('validMoves', validMoves);
         }
     });
 
-    // MODIFIED: To handle earning and using bonus moves
+    // MODIFIED: To handle Great Horse General captures
     socket.on('makeMove', (data) => {
         const { gameId, from, to } = data;
         const game = games[gameId];
@@ -96,7 +92,6 @@ io.on('connection', (socket) => {
 
         const playerColor = game.players.white === socket.id ? 'white' : 'black';
         const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-
         if (!isTurn) return;
 
         const piece = game.boardState[from.y][from.x];
@@ -105,7 +100,7 @@ io.on('connection', (socket) => {
         let bonusMoveActive = false;
         if (game.bonusMoveInfo) {
             if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
-                return; // Trying to move the wrong piece during a bonus move
+                return;
             }
             bonusMoveActive = true;
         }
@@ -118,46 +113,42 @@ io.on('connection', (socket) => {
             const wasCapture = targetPiece !== null;
 
             if (targetPiece !== null) {
-                let pieceForHand = { type: targetPiece.type, color: targetPiece.color };
-                if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
-                if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
-                if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
+                // ADDED: GHG is permanently lost when captured
+                if (targetPiece.type !== 'greathorsegeneral') {
+                    let pieceForHand = { type: targetPiece.type, color: targetPiece.color };
+                    if (pieceForHand.type === 'finor') pieceForHand.type = 'fin';
+                    if (pieceForHand.type === 'greatshield') pieceForHand.type = 'pilut';
+                    if (pieceForHand.type === 'chair') pieceForHand.type = 'pawn'; 
 
-                if (playerColor === 'white' && game.whiteCaptured.length < 6) game.whiteCaptured.push(pieceForHand);
-                else if (playerColor === 'black' && game.blackCaptured.length < 6) game.blackCaptured.push(pieceForHand);
+                    if (playerColor === 'white' && game.whiteCaptured.length < 6) game.whiteCaptured.push(pieceForHand);
+                    else if (playerColor === 'black' && game.blackCaptured.length < 6) game.blackCaptured.push(pieceForHand);
+                }
             }
             
             game.boardState[to.y][to.x] = piece;
             game.boardState[from.y][from.x] = null;
             
             handlePromotion(piece, to.y, wasCapture);
-            checkForWinner(game);
+            
+            // This now checks for both win conditions
+            checkForWinner(game, piece, to.x, to.y);
 
-            // --- REBUILT TURN AND BONUS MOVE LOGIC ---
             if (bonusMoveActive) {
-                // This was the bonus move, so end the turn.
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
             } else if (piece.type === 'greathorsegeneral' && !wasCapture) {
-                // GHG moved without capturing, earns a bonus move.
                 game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-                // DO NOT switch turns.
             } else if (piece.type === 'cope' && wasCapture) {
-                // Cope captured, earns a bonus move.
                 game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-                // DO NOT switch turns.
             } else {
-                // This was a normal move, end the turn.
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
             }
-            // --- END OF NEW LOGIC ---
 
             io.to(gameId).emit('gameStateUpdate', game);
         }
     });
     
-    // MODIFIED: To reset bonus move state if a player drops instead
     socket.on('makeDrop', (data) => {
         const { gameId, piece, to } = data;
         const game = games[gameId];
@@ -172,7 +163,7 @@ io.on('connection', (socket) => {
              const pieceIndex = capturedArray.findIndex(p => p.type === piece.type);
              if (pieceIndex > -1) {
                 capturedArray.splice(pieceIndex, 1);
-                game.bonusMoveInfo = null; // A drop forfeits any pending bonus moves
+                game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
                 io.to(gameId).emit('gameStateUpdate', game);
              }
@@ -212,8 +203,26 @@ function handlePromotion(piece, y, wasCapture) {
     }
 }
 
+// MODIFIED: To check for both Lupa Sanctuary and Lupa Capture win conditions
 function checkForWinner(game) {
-    let whiteLupaCount = 0, blackLupaCount = 0;
+    // --- 1. Lupa Sanctuary Win Condition ---
+    const winSquares = [
+        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+    ];
+
+    for (const square of winSquares) {
+        const pieceOnSquare = game.boardState[square.y][square.x];
+        if (pieceOnSquare && pieceOnSquare.type === 'lupa') {
+            game.gameOver = true;
+            game.winner = pieceOnSquare.color;
+            return; // Game is over, no need to check further
+        }
+    }
+
+    // --- 2. Lupa Capture Win Condition ---
+    let whiteLupaCount = 0;
+    let blackLupaCount = 0;
     for (let y = 0; y < 16; y++) {
         for (let x = 0; x < 10; x++) {
             const piece = game.boardState[y][x];
@@ -223,8 +232,16 @@ function checkForWinner(game) {
             }
         }
     }
-    if (blackLupaCount < 2) { game.gameOver = true; game.winner = 'white'; }
-    if (whiteLupaCount < 2) { game.gameOver = true; game.winner = 'black'; }
+
+    if (blackLupaCount < 2) {
+        game.gameOver = true;
+        game.winner = 'white';
+    }
+    if (whiteLupaCount < 2) {
+        game.gameOver = true;
+        game.winner = 'black';
+    }
 }
+
 
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
