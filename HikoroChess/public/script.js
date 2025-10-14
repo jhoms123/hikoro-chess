@@ -1,12 +1,12 @@
 // public/script.js (Universal Version)
 
 document.addEventListener('DOMContentLoaded', () => {
+   
+   const productionUrl = 'https://HikoroChess.org';
+   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+   const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
 
-    const productionUrl = 'https://HikoroChess.org';
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
-
-    const socket = io(serverUrl);
+   const socket = io(serverUrl);
     
 
     const BOARD_WIDTH = 10;
@@ -27,9 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameId = null;
     let selectedSquare = null;
     let isDroppingPiece = null;
-    // --- NEW: Special move states for client-side logic ---
-    let isGHGSecondMove = false;
-    let isCopeBonusMove = false;
     
     const pieceNotation = {
         lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
@@ -51,17 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
-    });
-    // --- NEW: Custom socket events for special moves ---
-    socket.on('ghgSecondMove', () => {
-        isGHGSecondMove = true;
-    });
-    socket.on('copeBonusMove', () => {
-        isCopeBonusMove = true;
-    });
-    socket.on('endSpecialMove', () => {
-        isGHGSecondMove = false;
-        isCopeBonusMove = false;
     });
 
 
@@ -98,12 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLocalState(newGameState) {
         gameState = newGameState;
-        // Reset special move flags if it's not our turn
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn) {
-            isGHGSecondMove = false;
-            isCopeBonusMove = false;
-        }
         renderAll();
     }
 
@@ -200,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn && !isGHGSecondMove && !isCopeBonusMove) return;
 
         if (isDroppingPiece) {
             socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
@@ -210,47 +189,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (selectedSquare) {
-            // Check if the move is a special second move
-            const fromPiece = gameState.boardState[selectedSquare.y][selectedSquare.x];
-            let isSpecialMove = false;
-            if (isGHGSecondMove && fromPiece.type === 'greathorsegeneral') {
-                isSpecialMove = true;
-            } else if (isCopeBonusMove && fromPiece.type === 'cope') {
-                isSpecialMove = true;
-            }
-
             if (selectedSquare.x === x && selectedSquare.y === y) {
-                selectedSquare = null;
-                clearHighlights();
+                 selectedSquare = null;
+                 clearHighlights();
             } else {
-                // Send the move to the server, including the special move state
-                socket.emit('makeMove', { 
-                    gameId, 
-                    from: selectedSquare, 
-                    to: { x, y },
-                    isSpecialMove: isSpecialMove
-                });
+                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
                 selectedSquare = null;
                 clearHighlights();
             }
-        } else {
-            // New piece selection logic
+        } else if (isMyTurn) {
             const piece = gameState.boardState[y][x];
-            
-            // Check if it's a special move turn and the piece matches
-            const canSelectPiece = 
-                (isGHGSecondMove && piece && piece.type === 'greathorsegeneral' && piece.color === myColor) ||
-                (isCopeBonusMove && piece && piece.type === 'cope' && piece.color === myColor) ||
-                (!isGHGSecondMove && !isCopeBonusMove && piece && piece.color === myColor);
-
-            if (canSelectPiece) {
+            if (piece && piece.color === myColor) {
                 selectedSquare = { x, y };
-                // Send the special move state to the server to get correct moves
-                socket.emit('getValidMoves', { 
-                    gameId, 
-                    square: { x, y },
-                    isSpecialMove: isGHGSecondMove || isCopeBonusMove
-                });
+                socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
         }
     }
@@ -276,13 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function onCapturedClick(piece) {
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         if (!isMyTurn || gameState.gameOver) return;
-        
-        // Prevent dropping a piece during a special move turn
-        if (isGHGSecondMove || isCopeBonusMove) {
-            alert("You can't drop a piece during a special move turn!");
-            return;
-        }
-        
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();
@@ -296,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearHighlights();
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (gameState.boardState[y][x] === null && isBoardValid) {
                     const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
                     const plate = document.createElement('div');
