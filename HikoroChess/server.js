@@ -123,15 +123,16 @@ io.on('connection', (socket) => {
 
     socket.on('createGame', (data) => {
 		
-		const { playerName, timeControl } = data;
+		console.log(`'createGame' event received from ${socket.id} with data:`, data);
+		
+		
+		const { playerName, timeControl } = data || {}; 
 
 		const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
-
-		
 		const tc = timeControl && timeControl.main !== undefined ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
 
-		
 		games[gameId] = {
+			
 			id: gameId,
 			players: { white: socket.id, black: null },
 			boardState: getInitialBoard(),
@@ -150,20 +151,21 @@ io.on('connection', (socket) => {
 			lastMoveTimestamp: null
 		};
 		
-		
 		lobbyGames[gameId] = { 
 			id: gameId, 
 			white: socket.id, 
 			black: null,
-			creatorName: playerName,  
-			timeControl: tc         
+			creatorName: playerName || 'Anonymous', 
+			timeControl: tc          
 		};
 
 		socket.join(gameId);
 		socket.emit('gameCreated', { gameId, color: 'white' });
-		io.emit('lobbyUpdate', lobbyGames);
 		
-		// Updated console log to be more descriptive
+		
+		console.log("Broadcasting 'lobbyUpdate' with data:", lobbyGames);
+
+		io.emit('lobbyUpdate', lobbyGames);
 		console.log(`Game created: ${gameId} by ${playerName} (${socket.id})`);
 	});
 

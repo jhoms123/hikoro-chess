@@ -32,9 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     createGameBtn.addEventListener('click', () => {
-   
 		const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
-		
 		const mainTime = parseInt(document.getElementById('time-control').value, 10);
 		let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
 
@@ -48,8 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
 		};
 		
-		// Send both playerName and timeControl to the server
-		socket.emit('createGame', { playerName, timeControl });
+		const dataToSend = { playerName, timeControl };
+
+		// LOG 2: See what data you are about to send to the server
+		console.log("Sending 'createGame' event with data:", dataToSend);
+
+		socket.emit('createGame', dataToSend);
 	});
 
 
@@ -144,21 +146,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function updateLobby(games) {
+    
+		console.log("Received lobby update. Data:", games); 
+
 		gameListElement.innerHTML = '';
 		for (const id in games) {
-			const game = games[id]; 
+			const game = games[id];
 			const gameItem = document.createElement('div');
 			gameItem.classList.add('game-item');
 
 			const infoSpan = document.createElement('span');
-			const creatorName = game.creatorName || 'Player 1';
-			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : ''; 
+			
+			// Use the data from the server, with a fallback just in case
+			const creatorName = game.creatorName || 'Player 1'; 
+			const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
 			
 			infoSpan.textContent = `${creatorName}'s Game [${timeString}]`;
-			
-			
-			gameItem.appendChild(infoSpan); 
-			
+			gameItem.appendChild(infoSpan);
 			
 			const joinBtn = document.createElement('button');
 			joinBtn.textContent = 'Join';
