@@ -325,18 +325,17 @@ function findBestMoveWithTimeLimit(boardState, capturedPieces) {
     let bestMoveFound = null;
 
     // Iterative Deepening: Search at depth 1, then 2, then 3, and so on.
-    for (let depth = 1; depth <= 10; depth++) { // Search up to a max depth of 10
-        console.log(`Searching at depth: ${depth}`);
-        const result = findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit);
+    for (let depth = 1; depth <= 4; depth++) { 
+		console.log(`Searching at depth: ${depth}`);
+		const result = findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit);
 
-        if (Date.now() - startTime >= timeLimit) {
-            console.log(`Time limit reached during depth ${depth}. Using best move from depth ${depth - 1}.`);
-            break; // Time is up, break out of the loop
-        }
+		if (Date.now() - startTime >= timeLimit) {
+			console.log(`Time limit reached during depth ${depth}. Using best move from depth ${depth - 1}.`);
+			break;
+		}
 
-        // A full depth search completed in time, so we can trust this result
-        bestMoveFound = result;
-    }
+		bestMoveFound = result;
+	}
     
     // If no move was ever found (e.g., time runs out on depth 1), pick a random one
     if (!bestMoveFound) {
