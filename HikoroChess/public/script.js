@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
     const socket = io(serverUrl);
     
-    // --- Constants ---
     const BOARD_WIDTH = 10;
     const BOARD_HEIGHT = 16;
     const sanctuarySquares = [
@@ -15,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
-    // --- UI Elements ---
     const lobbyElement = document.getElementById('lobby');
     const gameContainerElement = document.getElementById('game-container');
     const createGameBtn = document.getElementById('create-game-btn');
@@ -24,15 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const turnIndicator = document.getElementById('turn-indicator');
     const winnerText = document.getElementById('winner-text');
 
-    // --- Client State ---
     let gameState = {};
     let myColor = null;
     let gameId = null;
     let selectedSquare = null;
     let isDroppingPiece = null;
     
-    // --- Lobby Listeners ---
-    // FIXED: Removed the duplicate event listener. This is the only one you need.
     createGameBtn.addEventListener('click', () => {
         const timeControl = document.getElementById('time-control').value;
         const byoyomi = document.getElementById('byoyomi-control').value;
@@ -42,44 +37,29 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
     socket.on('gameStart', onGameStart);
-    
-    // --- Game Listeners ---
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('validMoves', drawHighlights);
     socket.on('errorMsg', (message) => alert(message));
-    
-    // ADDED: Listener for real-time clock updates from the server.
     socket.on('timeUpdate', (data) => {
-        updateClocks(data.whiteTime, data.blackTime, myColor);
+        updateClocks(data.whiteTime, data.blackTime);
     });
 
-    socket.on('connect_error', (err) => {
-        console.error("Connection failed:", err.message);
-        alert("Failed to connect to the server. Check the developer console (F12) for more info.");
-    });
-    
-    // --- Helper Functions ---
     function formatTime(seconds) {
         if (seconds < 0) return "00:00";
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        const formattedMinutes = String(minutes).padStart(2, '0');
-        const formattedSeconds = String(remainingSeconds).padStart(2, '0');
-        return `${formattedMinutes}:${formattedSeconds}`;
+        return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
     }
 
-    function updateClocks(whiteTime, blackTime, playerColor) {
-        if (!playerColor) return;
-        
-        // This logic ensures "Your Hand" always shows your time, regardless of your color.
-        const myTimeEl = document.getElementById(`${playerColor}-time`);
-        const oppTimeEl = document.getElementById(playerColor === 'white' ? 'black-time' : 'white-time');
+    function updateClocks(whiteTime, blackTime) {
+        if (!myColor) return;
+        const yourTime = myColor === 'white' ? whiteTime : blackTime;
+        const opponentTime = myColor === 'white' ? blackTime : whiteTime;
 
-        if (myTimeEl) myTimeEl.textContent = formatTime(playerColor === 'white' ? whiteTime : blackTime);
-        if (oppTimeEl) oppTimeEl.textContent = formatTime(playerColor === 'white' ? blackTime : whiteTime);
+        document.getElementById(`${myColor}-time`).textContent = formatTime(yourTime);
+        document.getElementById(myColor === 'white' ? 'black-time' : 'white-time').textContent = formatTime(opponentTime);
     }
 
-    // --- Lobby and Game Setup ---
     function updateLobby(games) {
         gameListElement.innerHTML = '';
         for (const id in games) {
@@ -88,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gameItem.innerHTML = `<span>Game by Player 1</span>`;
             const joinBtn = document.createElement('button');
             joinBtn.textContent = 'Join';
-            joinBtn.classList.add('join-btn');
             joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
             gameItem.appendChild(joinBtn);
             gameListElement.appendChild(gameItem);
@@ -108,30 +87,22 @@ document.addEventListener('DOMContentLoaded', () => {
         gameId = initialGameState.id;
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        updateLocalState(initialGameState); // This function will handle rendering and clock setup
+        updateLocalState(initialGameState);
     }
 
     function updateLocalState(newGameState) {
         gameState = newGameState;
         renderAll();
-        
-        // ADDED: Initialize or sync the clocks every time the state is updated.
         if (gameState.timeControl > 0) {
-            updateClocks(gameState.whiteTime, gameState.blackTime, myColor);
+            updateClocks(gameState.whiteTime, gameState.blackTime);
         }
-
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         if (isMyTurn && gameState.bonusMoveInfo) {
-            const bonusPieceSquare = { 
-                x: gameState.bonusMoveInfo.pieceX, 
-                y: gameState.bonusMoveInfo.pieceY 
-            };
-            selectedSquare = bonusPieceSquare;
-            socket.emit('getValidMoves', { gameId, square: bonusPieceSquare });
+            selectedSquare = { x: gameState.bonusMoveInfo.pieceX, y: gameState.bonusMoveInfo.pieceY };
+            socket.emit('getValidMoves', { gameId, square: selectedSquare });
         }
     }
 
-    // --- Rendering Functions ---
     function renderAll() {
         if (!gameState.boardState) return;
         renderBoard();
@@ -140,71 +111,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderBoard() {
-		boardElement.innerHTML = '';
-		const BOARD_HEIGHT = 16;
-		const BOARD_WIDTH = 10;
+        boardElement.innerHTML = '';
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                const square = document.createElement('div');
+                square.classList.add('square');
+                
+                // THIS IS THE CORRECTED BOARD FLIPPING LOGIC
+                let displayX = x;
+                let displayY = y;
+                if (myColor === 'white') {
+                    displayY = BOARD_HEIGHT - 1 - y;
+                } else if (myColor === 'black') {
+                    displayY = BOARD_HEIGHT - 1 - y;
+                    displayX = BOARD_WIDTH - 1 - x;
+                }
+                
+                square.dataset.logicalX = x;
+                square.dataset.logicalY = y;
+                square.style.gridRowStart = displayY + 1;
+                square.style.gridColumnStart = displayX + 1;
 
-		for (let y = 0; y < BOARD_HEIGHT; y++) {
-			for (let x = 0; x < BOARD_WIDTH; x++) {
-				const square = document.createElement('div');
-				square.classList.add('square');
-				
-				// --- START OF THE FIX ---
-				// This logic flips the board perspective correctly for each player.
-				let displayX = x;
-				let displayY = y;
-				
-				if (myColor === 'white') {
-					// For white, we only flip the Y-axis. White's pieces (rows 0-5)
-					// will now appear at the bottom of the screen (CSS grid rows 11-16).
-					displayY = BOARD_HEIGHT - 1 - y;
-				} else if (myColor === 'black') {
-					// For black, we flip BOTH axes for a full 180-degree rotation.
-					// Black's pieces (rows 10-15) will now also appear at the bottom.
-					displayY = BOARD_HEIGHT - 1 - y;
-					displayX = BOARD_WIDTH - 1 - x;
-				}
-				// --- END OF THE FIX ---
-				
-				square.dataset.logicalX = x;
-				square.dataset.logicalY = y;
-				// CSS Grid is 1-indexed, so we add 1.
-				square.style.gridRowStart = displayY + 1;
-				square.style.gridColumnStart = displayX + 1;
+                square.classList.add((x + y) % 2 === 0 ? 'light' : 'dark');
 
-				const isLight = (x + y) % 2 === 0;
-				square.classList.add(isLight ? 'light' : 'dark');
+                if (sanctuarySquares.some(sq => sq.x === x && sq.y === y)) {
+                    square.classList.add('sanctuary-square');
+                }
 
-				if (sanctuarySquares.some(sq => sq.x === x && sq.y === y)) {
-					square.classList.add('sanctuary-square');
-				}
+                const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+                if (!isBoardValid) {
+                    square.classList.add('invalid');
+                } else {
+                    square.addEventListener('click', () => onSquareClick(x, y));
+                }
 
-				const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-				if (!isBoardValid) {
-					square.classList.add('invalid');
-				} else {
-					square.addEventListener('click', (event) => {
-						const clickedSquare = event.currentTarget;
-						const logicalX = parseInt(clickedSquare.dataset.logicalX);
-						const logicalY = parseInt(clickedSquare.dataset.logicalY);
-						onSquareClick(logicalX, logicalY);
-					});
-				}
-
-				const piece = gameState.boardState[y][x];
-				if (piece) {
-					const pieceElement = document.createElement('div');
-					pieceElement.classList.add('piece', piece.color);
-					const spriteImg = document.createElement('img');
-					spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-					spriteImg.alt = `${piece.color} ${piece.type}`;
-					pieceElement.appendChild(spriteImg);
-					square.appendChild(pieceElement);
-				}
-				boardElement.appendChild(square);
-			}
-		}
-	}
+                const piece = gameState.boardState[y][x];
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.classList.add('piece');
+                    const spriteImg = document.createElement('img');
+                    spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
+                    pieceElement.appendChild(spriteImg);
+                    square.appendChild(pieceElement);
+                }
+                boardElement.appendChild(square);
+            }
+        }
+    }
 
     function renderCaptured() {
         const myCaptured = myColor === 'white' ? gameState.whiteCaptured : gameState.blackCaptured;
