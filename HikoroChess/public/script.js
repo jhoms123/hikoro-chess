@@ -27,6 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedSquare = null;
     let isDroppingPiece = null;
     
+    // ADDED: Coordinates for sanctuary squares for easy reference
+    const sanctuarySquares = [
+        {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+        {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+    ];
+
     const pieceNotation = {
         lupa: "Lp", zur: "Zr", kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
         sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
@@ -79,15 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLocalState(initialGameState);
     }
 
-    // MODIFIED: To automatically show bonus moves
     function updateLocalState(newGameState) {
         gameState = newGameState;
         renderAll();
-
-        // Check if a bonus move was just granted to the current player
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
         if (isMyTurn && gameState.bonusMoveInfo) {
-            // A bonus move is active for me. Automatically select the piece and show its moves.
             const bonusPieceSquare = { 
                 x: gameState.bonusMoveInfo.pieceX, 
                 y: gameState.bonusMoveInfo.pieceY 
@@ -104,24 +106,35 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTurnIndicator();
     }
     
+    // MODIFIED: To add a class to sanctuary squares
     function renderBoard() {
         boardElement.innerHTML = '';
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 const square = document.createElement('div');
                 square.classList.add('square');
+                
                 let displayX = x, displayY = y;
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else { 
                     displayX = BOARD_WIDTH - 1 - x;
                 }
+                
                 square.dataset.logicalX = x;
                 square.dataset.logicalY = y;
                 square.style.gridRowStart = displayY + 1;
                 square.style.gridColumnStart = displayX + 1;
+
                 const isLight = (x + y) % 2 === 0;
                 square.classList.add(isLight ? 'light' : 'dark');
+
+                // ADDED: Check if this is a sanctuary square and add the class if so
+                const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
+                if (isSanctuary) {
+                    square.classList.add('sanctuary-square');
+                }
+
                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (!isBoardValid) {
                     square.classList.add('invalid');
@@ -133,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         onSquareClick(logicalX, logicalY);
                     });
                 }
+
                 const piece = gameState.boardState[y][x];
                 if (piece) {
                     const pieceElement = document.createElement('div');
@@ -200,9 +214,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isMyTurn) {
             const piece = gameState.boardState[y][x];
             if (piece && piece.color === myColor) {
-                // ADDED: Prevent selecting another piece during a bonus move
                 if (gameState.bonusMoveInfo && (gameState.bonusMoveInfo.pieceX !== x || gameState.bonusMoveInfo.pieceY !== y)) {
-                    return; // Can only select the bonus move piece
+                    return;
                 }
                 selectedSquare = { x, y };
                 socket.emit('getValidMoves', { gameId, square: { x, y } });
@@ -228,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onCapturedClick(piece) {
         const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        if (!isMyTurn || gameState.gameOver || gameState.bonusMoveInfo) return; // Cannot drop during bonus move
+        if (!isMyTurn || gameState.gameOver || gameState.bonusMoveInfo) return;
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             clearHighlights();

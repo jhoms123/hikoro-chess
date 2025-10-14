@@ -155,3 +155,19 @@ body {
     padding: 5px 10px;
     cursor: pointer;
 }
+
+.sanctuary-square {
+  position: relative; /* Required to position the dot inside the square */
+}
+
+.sanctuary-square::before {
+  content: '';
+  position: absolute;
+  top: 4px;   /* Offset from the top edge */
+  left: 4px;  /* Offset from the left edge */
+  width: 8px;
+  height: 8px;
+  background-color: gold;
+  border-radius: 50%; /* Makes it a circle */
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6); /* Adds a subtle glow */
+}
