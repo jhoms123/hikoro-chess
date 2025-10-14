@@ -124,7 +124,7 @@ io.on('connection', (socket) => {
                     while (cx !== to.x || cy !== to.y) {
                         const intermediatePiece = game.boardState[cy][cx];
                         if (intermediatePiece && intermediatePiece.color === playerColor) {
-                             if (intermediatePiece.type !== 'greathorsegeneral') {
+                             if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
                                 if (capturedArray.length < 6) {
@@ -140,6 +140,9 @@ io.on('connection', (socket) => {
             }
 
             if (targetPiece !== null) {
+                // Defines which pieces are destroyed on capture
+                const indestructiblePieces = ['greathorsegeneral', 'cthulhu'];
+
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
@@ -147,7 +150,8 @@ io.on('connection', (socket) => {
                     if (capturedArray.length < 6) {
                         capturedArray.push(pieceForHand);
                     }
-                } else if (targetPiece.type !== 'greathorsegeneral') {
+                } else if (!indestructiblePieces.includes(targetPiece.type)) {
+                    // Standard capture logic for all other pieces
                     let pieceForHand = { type: targetPiece.type, color: playerColor }; 
                     if (targetPiece.type === 'lupa') {
                         pieceForHand.type = 'sult';
@@ -222,16 +226,13 @@ io.on('connection', (socket) => {
     });
 });
 
-// MODIFIED: Added Cthulhu promotion rule
 function handlePromotion(piece, y, wasCapture) {
     const color = piece.color;
     
-    // NEW: Great Horse General promotes to Cthulhu on capture
     if (piece.type === 'greathorsegeneral' && wasCapture) {
         piece.type = 'cthulhu';
     }
 
-    // Mermaid promotes back to Neptune on capture
     if (piece.type === 'mermaid' && wasCapture) {
         piece.type = 'neptune';
     }

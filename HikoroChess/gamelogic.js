@@ -8,7 +8,7 @@ const pieceNotation = {
     kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
     finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
-    neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
+    neptune: "Np", mermaid: "Mm", cathulhu: "Ct"
 };
 
 function getInitialBoard() {
@@ -187,6 +187,12 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 addMove(x + dx, y + dy);
             }
             break;
+		case 'zur': 
+			for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { 
+				if (dx === 0 && dy === 0) continue; 
+				generateLineMoves(dx, dy); 
+			} 
+			break;
         case 'fin':
             generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1);
             addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y);
@@ -340,7 +346,7 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             }
             break;
         }
-		case 'cthulhu': {
+		case 'cathulhu': {
             // 1. Mermaid's 5x5 jump area (this includes the Lupa's 3x3 area)
             for (let dx = -2; dx <= 2; dx++) {
                 for (let dy = -2; dy <= 2; dy++) {
