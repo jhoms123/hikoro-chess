@@ -125,7 +125,7 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         }
     };
     
-    // --- NEW JOTU-SPECIFIC MOVE LOGIC ---
+    // --- REWRITTEN JOTU-SPECIFIC MOVE LOGIC ---
     const generateJotuLineMoves = (dx, dy) => {
         // First, check if there is an enemy anywhere on this path.
         let pathHasEnemy = false;
@@ -137,11 +137,15 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 pathHasEnemy = true;
                 break;
             }
+            // If we hit a friendly piece first, we can't see the enemy, so stop checking.
+            if (target && target.color === piece.color) {
+                break;
+            }
             checkX += dx;
             checkY += dy;
         }
 
-        // Now, generate moves based on whether an enemy was found.
+        // Now, generate moves. The Jotu is stopped by the FIRST piece it hits.
         let cx = x + dx;
         let cy = y + dy;
         while (isPositionValid(cx, cy)) {
@@ -149,20 +153,19 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             if (target === null) {
                 moves.push({ x: cx, y: cy, isAttack: false }); // Move to empty square
             } else {
+                // The path is blocked. Check if the blocking piece is a valid target.
                 if (target.color !== piece.color) { // It's an enemy piece
                     if (!isProtected(target, cx, cy, boardState)) {
                         moves.push({ x: cx, y: cy, isAttack: true });
                     }
-                    break; // Stop at the first enemy
                 } else { // It's a friendly piece
                     if (pathHasEnemy) {
-                        // Can only capture friendly pieces if an enemy is on the path
+                        // Can only capture the friendly piece if an enemy was visible down the line
                         moves.push({ x: cx, y: cy, isAttack: true });
-                    } else {
-                        // No enemy on the path, so the friendly piece blocks movement
-                        break;
                     }
                 }
+                // IMPORTANT: Break the loop after hitting the first piece, regardless of what it is.
+                break; 
             }
             cx += dx;
             cy += dy;
