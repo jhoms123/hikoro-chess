@@ -377,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
 			}
 			selectedSquare = null;
+			isDroppingPiece = null;
 			clearHighlights();
 			return;
 		}
@@ -386,6 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (isMyTurn) {
 				socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
 			}
+			selectedSquare = null;
 			isDroppingPiece = null;
 			clearHighlights();
 			return;
@@ -405,14 +407,17 @@ document.addEventListener('DOMContentLoaded', () => {
 				// If we clicked the same piece again, deselect it.
 				if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
 					selectedSquare = null;
+					isDroppingPiece = null;
 					clearHighlights();
 				} else { // Otherwise, select the new piece.
 					selectedSquare = { x, y };
+					isDroppingPiece = null; 
 					socket.emit('getValidMoves', { gameId, square: { x, y } });
 				}
 			}
 		} else { // Case 4: Clicking an empty square with nothing selected clears highlights.
 			selectedSquare = null;
+			isDroppingPiece = null;
 			clearHighlights();
 		}
 	}
