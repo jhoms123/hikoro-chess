@@ -193,11 +193,44 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             break;
         }
         case 'mermaid': { for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break; }
-        case 'cthulhu': { for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } } [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); const ghgDir = piece.color === 'white' ? 1 : -1; generateLineMoves(-1, ghgDir); generateLineMoves(1, ghgDir); generateLineMoves(0, -ghgDir); break; }
+        case 'cthulhu': {
+			const ghgDir = piece.color === 'white' ? 1 : -1;
+			// Check if we are in a bonus move situation
+			if (bonusMoveActive) {
+				// Only allow non-capture moves for the second move
+				for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addNonCaptureMove(x + dx, y + dy); } }
+				[-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addNonCaptureMove(x + dx, y + dy); }));
+				generateNonCaptureLineMoves(-1, ghgDir);
+				generateNonCaptureLineMoves(1, ghgDir);
+				generateNonCaptureLineMoves(0, -ghgDir);
+			} else {
+				// Allow all moves for the first move
+				for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } }
+				[-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); }));
+				generateLineMoves(-1, ghgDir);
+				generateLineMoves(1, ghgDir);
+				generateLineMoves(0, -ghgDir);
+			}
+			break;
+		}
     }
     return moves;
 }
 
+function getBonusMoves(piece, toX, toY, boardState) {
+    if (!piece) return [];
+    
+    // Call the main move generator with bonusMoveActive = true
+    const bonusMovesRaw = getValidMovesForPiece(piece, toX, toY, boardState, true);
+    
+    // Format them correctly for the search algorithm
+    return bonusMovesRaw.map(move => ({
+        type: 'board',
+        from: { x: toX, y: toY },
+        to: { x: move.x, y: move.y },
+        isAttack: false // Bonus moves are never attacks for these pieces
+    }));
+}
 // ===================================================================
 // Section 3: Evaluation, Piece Values, and Piece-Square Tables
 // ===================================================================
@@ -474,7 +507,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     }
     
     const color = isMaximizingPlayer ? 'white' : 'black';
-    const moves = getAllValidMoves(boardState, color, []); // No drops inside search
+    const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
         return evaluateBoard(boardState);
     }
@@ -484,24 +517,82 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
             const piece = tempBoard[move.from.y][move.from.x];
+            
+            // Apply the first move
             tempBoard[move.to.y][move.to.x] = piece;
             tempBoard[move.from.y][move.from.x] = null;
-            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
-            maxEval = Math.max(maxEval, evaluation);
-            alpha = Math.max(alpha, evaluation);
+            
+            // --- NEW: BONUS MOVE LOGIC ---
+            const isCopeBonus = piece.type === 'cope' && move.isAttack;
+            const isGHGBonus = (piece.type === 'greathorsegeneral' || piece.type === 'cthulhu') && !move.isAttack;
+
+            if (isCopeBonus || isGHGBonus) {
+                // This player gets a second move. Search again from this new position FOR THE SAME PLAYER.
+                const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, tempBoard);
+                if (bonusMoves.length > 0) {
+                    let bestBonusEval = -Infinity;
+                    for (const bonusMove of bonusMoves) {
+                        const bonusBoard = copyBoard(tempBoard);
+                        const bonusPiece = bonusBoard[bonusMove.from.y][bonusMove.from.x];
+                        bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
+                        bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
+                        
+                        // After the bonus move, it's the opponent's turn.
+                        const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
+                        bestBonusEval = Math.max(bestBonusEval, evaluation);
+                    }
+                    maxEval = Math.max(maxEval, bestBonusEval);
+                } else {
+                    // No bonus moves available, so it's the opponent's turn.
+                    maxEval = Math.max(maxEval, minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit));
+                }
+            } else {
+                // Standard move, pass the turn to the opponent.
+                maxEval = Math.max(maxEval, minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit));
+            }
+            // --- END BONUS MOVE LOGIC ---
+
+            alpha = Math.max(alpha, maxEval);
             if (beta <= alpha) break;
         }
         return maxEval;
-    } else {
+    } else { // Minimizing Player (Bot)
         let minEval = Infinity;
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
             const piece = tempBoard[move.from.y][move.from.x];
+
+            // Apply the first move
             tempBoard[move.to.y][move.to.x] = piece;
             tempBoard[move.from.y][move.from.x] = null;
-            const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
-            minEval = Math.min(minEval, evaluation);
-            beta = Math.min(beta, evaluation);
+            
+            // --- NEW: BONUS MOVE LOGIC ---
+            const isCopeBonus = piece.type === 'cope' && move.isAttack;
+            const isGHGBonus = (piece.type === 'greathorsegeneral' || piece.type === 'cthulhu') && !move.isAttack;
+
+            if (isCopeBonus || isGHGBonus) {
+                const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, tempBoard);
+                 if (bonusMoves.length > 0) {
+                    let bestBonusEval = Infinity;
+                    for (const bonusMove of bonusMoves) {
+                        const bonusBoard = copyBoard(tempBoard);
+                        const bonusPiece = bonusBoard[bonusMove.from.y][bonusMove.from.x];
+                        bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
+                        bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
+                        
+                        const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
+                        bestBonusEval = Math.min(bestBonusEval, evaluation);
+                    }
+                    minEval = Math.min(minEval, bestBonusEval);
+                } else {
+                    minEval = Math.min(minEval, minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit));
+                }
+            } else {
+                minEval = Math.min(minEval, minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit));
+            }
+            // --- END BONUS MOVE LOGIC ---
+
+            beta = Math.min(beta, minEval);
             if (beta <= alpha) break;
         }
         return minEval;
