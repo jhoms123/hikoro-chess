@@ -237,6 +237,7 @@ io.on('connection', (socket) => {
         if (isValidMove) {
             const targetPiece = game.boardState[to.y][to.x];
             const wasCapture = targetPiece !== null;
+            
             if (piece.type === 'jotu') {
                 const dx = Math.sign(to.x - from.x);
                 const dy = Math.sign(to.y - from.y);
@@ -249,7 +250,10 @@ io.on('connection', (socket) => {
                             if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                                capturedArray.push(pieceForHand);
+                                // *** ADDED HAND LIMIT CHECK ***
+                                if (capturedArray.length < 6) {
+                                    capturedArray.push(pieceForHand);
+                                }
                             }
                             game.boardState[cy][cx] = null;
                         }
@@ -258,22 +262,30 @@ io.on('connection', (socket) => {
                     }
                 }
             }
+
             if (targetPiece !== null) {
                 const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
                 if (targetPiece.type === 'neptune') {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
                     const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    capturedArray.push(pieceForHand);
+                    // *** ADDED HAND LIMIT CHECK ***
+                    if (capturedArray.length < 6) {
+                        capturedArray.push(pieceForHand);
+                    }
                 } else if (!indestructiblePieces.includes(targetPiece.type)) {
                     let pieceForHand = { type: targetPiece.type, color: playerColor };
                     if (targetPiece.type === 'lupa') {
                         pieceForHand.type = 'sult';
                     }
                     const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    capturedArray.push(pieceForHand);
+                    // *** ADDED HAND LIMIT CHECK ***
+                    if (capturedArray.length < 6) {
+                        capturedArray.push(pieceForHand);
+                    }
                 }
             }
+
             game.boardState[to.y][to.x] = piece;
             game.boardState[from.y][from.x] = null;
             handlePromotion(piece, to.y, wasCapture);
@@ -430,11 +442,12 @@ function checkForWinner(game) {
         }
     }
 
-    if (blackLupaCount < 2 && game.turnCount > 1) {
+    // *** CORRECTED LUPA WIN CONDITION ***
+    if (blackLupaCount === 0 && game.turnCount > 0) {
         game.gameOver = true;
         game.winner = 'white';
         game.reason = "Lupa Capture";
-    } else if (whiteLupaCount < 2 && game.turnCount > 1) {
+    } else if (whiteLupaCount === 0 && game.turnCount > 0) {
         game.gameOver = true;
         game.winner = 'black';
         game.reason = "Lupa Capture";
