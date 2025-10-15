@@ -156,7 +156,24 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         case 'pilut': { const dir = piece.color === 'white' ? 1 : -1; if (isPositionValid(x, y + dir) && !boardState[y + dir][x]) { moves.push({ x: x, y: y + dir, isAttack: false }); if (isPositionValid(x, y + 2 * dir) && !boardState[y + 2 * dir][x]) { moves.push({ x: x, y: y + 2 * dir, isAttack: false }); } } break; }
         case 'sult': { const fwd = piece.color === 'white' ? 1 : -1; addMove(x - 1, y + fwd); addMove(x + 1, y + fwd); addMove(x, y - fwd); addMove(x, y + fwd); addMove(x, y + 2 * fwd); break; }
         case 'pawn': addMove(x, y + 1); addMove(x, y - 1); addMove(x + 1, y); addMove(x - 1, y); addMove(x + 2, y + 2); addMove(x - 2, y + 2); addMove(x + 2, y - 2); addMove(x - 2, y - 2); break;
-        case 'cope': { const fwdDir = piece.color === 'white' ? 1 : -1; const generateCpeMoves = (moveFunc) => { moveFunc(x + 2, y + 2 * fwdDir); moveFunc(x - 2, y + 2 * fwdDir); moveFunc(x, y + 1 * fwdDir); moveFunc(x, y + 2 * fwdDir); moveFunc(x, y - 1 * fwdDir); moveFunc(x, y - 2 * fwdDir); }; if (bonusMoveActive) { generateCpeMoves(addNonCaptureMove); } else { generateCpeMoves(addMove); } break; }
+        case 'cope': {
+			const fwdDir = piece.color === 'white' ? 1 : -1;
+			// CORRECTED FUNCTION NAME: generateCopeMoves
+			const generateCopeMoves = (moveFunc) => {
+				moveFunc(x + 2, y + 2 * fwdDir);
+				moveFunc(x - 2, y + 2 * fwdDir);
+				moveFunc(x, y + 1 * fwdDir);
+				moveFunc(x, y + 2 * fwdDir);
+				moveFunc(x, y - 1 * fwdDir);
+				moveFunc(x, y - 2 * fwdDir);
+			};
+			if (bonusMoveActive) {
+				generateCopeMoves(addNonCaptureMove);
+			} else {
+				generateCopeMoves(addMove);
+			}
+			break;
+		}
         case 'chair': generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1); generateLineMoves(0, 1); generateLineMoves(0, -1); break;
         case 'jotu': generateJotuJumpMoves(1, 0); generateJotuJumpMoves(-1, 0); if (piece.color === 'white') { generateJotuJumpMoves(0, 1); addMove(x, y - 1); } else { generateJotuJumpMoves(0, -1); addMove(x, y + 1); } break;
         case 'kor': addMove(x - 1, y - 1); addMove(x - 1, y + 1); addMove(x + 1, y + 1); addMove(x + 1, y - 1); [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) + Math.abs(dy) === 3) addMove(x + dx, y + dy); })); break;
@@ -230,6 +247,41 @@ function getBonusMoves(piece, toX, toY, boardState) {
         to: { x: move.x, y: move.y },
         isAttack: false // Bonus moves are never attacks for these pieces
     }));
+}
+
+function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
+    const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, board);
+
+    // If there are no bonus moves possible, the turn ends.
+    if (bonusMoves.length === 0) {
+        return minimax(board, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
+    }
+
+    let bestBonusEval = isMaximizingPlayer ? -Infinity : Infinity;
+
+    // Explore each possible bonus move.
+    for (const bonusMove of bonusMoves) {
+        const bonusBoard = copyBoard(board);
+        const bonusPiece = bonusBoard[bonusMove.from.y][bonusMove.from.x];
+        bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
+        bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
+        
+        // After the bonus move, the turn passes to the opponent.
+        const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
+
+        if (isMaximizingPlayer) {
+            bestBonusEval = Math.max(bestBonusEval, evaluation);
+            alpha = Math.max(alpha, bestBonusEval);
+        } else {
+            bestBonusEval = Math.min(bestBonusEval, evaluation);
+            beta = Math.min(beta, bestBonusEval);
+        }
+        // Pruning is important inside the bonus loop too!
+        if (beta <= alpha) {
+            break;
+        }
+    }
+    return bestBonusEval;
 }
 // ===================================================================
 // Section 3: Evaluation, Piece Values, and Piece-Square Tables
@@ -505,94 +557,59 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     if (depth === 0) {
         return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
     }
-    
+
     const color = isMaximizingPlayer ? 'white' : 'black';
     const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
         return evaluateBoard(boardState);
     }
 
+    // Maximizing Player (Human)
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
             const piece = tempBoard[move.from.y][move.from.x];
-            
-            // Apply the first move
             tempBoard[move.to.y][move.to.x] = piece;
             tempBoard[move.from.y][move.from.x] = null;
-            
-            // --- NEW: BONUS MOVE LOGIC ---
+
             const isCopeBonus = piece.type === 'cope' && move.isAttack;
             const isGHGBonus = (piece.type === 'greathorsegeneral' || piece.type === 'cthulhu') && !move.isAttack;
-
+            
+            let eval;
             if (isCopeBonus || isGHGBonus) {
-                // This player gets a second move. Search again from this new position FOR THE SAME PLAYER.
-                const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, tempBoard);
-                if (bonusMoves.length > 0) {
-                    let bestBonusEval = -Infinity;
-                    for (const bonusMove of bonusMoves) {
-                        const bonusBoard = copyBoard(tempBoard);
-                        const bonusPiece = bonusBoard[bonusMove.from.y][bonusMove.from.x];
-                        bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
-                        bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
-                        
-                        // After the bonus move, it's the opponent's turn.
-                        const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
-                        bestBonusEval = Math.max(bestBonusEval, evaluation);
-                    }
-                    maxEval = Math.max(maxEval, bestBonusEval);
-                } else {
-                    // No bonus moves available, so it's the opponent's turn.
-                    maxEval = Math.max(maxEval, minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit));
-                }
+                eval = handleBonusTurn(tempBoard, piece, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
             } else {
-                // Standard move, pass the turn to the opponent.
-                maxEval = Math.max(maxEval, minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit));
+                eval = minimax(tempBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
             }
-            // --- END BONUS MOVE LOGIC ---
-
-            alpha = Math.max(alpha, maxEval);
+            
+            maxEval = Math.max(maxEval, eval);
+            alpha = Math.max(alpha, eval);
             if (beta <= alpha) break;
         }
         return maxEval;
-    } else { // Minimizing Player (Bot)
+    } 
+    // Minimizing Player (Bot)
+    else {
         let minEval = Infinity;
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
             const piece = tempBoard[move.from.y][move.from.x];
-
-            // Apply the first move
             tempBoard[move.to.y][move.to.x] = piece;
             tempBoard[move.from.y][move.from.x] = null;
             
-            // --- NEW: BONUS MOVE LOGIC ---
             const isCopeBonus = piece.type === 'cope' && move.isAttack;
             const isGHGBonus = (piece.type === 'greathorsegeneral' || piece.type === 'cthulhu') && !move.isAttack;
 
+            let eval;
             if (isCopeBonus || isGHGBonus) {
-                const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, tempBoard);
-                 if (bonusMoves.length > 0) {
-                    let bestBonusEval = Infinity;
-                    for (const bonusMove of bonusMoves) {
-                        const bonusBoard = copyBoard(tempBoard);
-                        const bonusPiece = bonusBoard[bonusMove.from.y][bonusMove.from.x];
-                        bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
-                        bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
-                        
-                        const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
-                        bestBonusEval = Math.min(bestBonusEval, evaluation);
-                    }
-                    minEval = Math.min(minEval, bestBonusEval);
-                } else {
-                    minEval = Math.min(minEval, minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit));
-                }
+                eval = handleBonusTurn(tempBoard, piece, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
             } else {
-                minEval = Math.min(minEval, minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit));
+                eval = minimax(tempBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
             }
-            // --- END BONUS MOVE LOGIC ---
 
-            beta = Math.min(beta, minEval);
+            minEval = Math.min(minEval, eval);
+            beta = Math.min(beta, eval);
             if (beta <= alpha) break;
         }
         return minEval;
