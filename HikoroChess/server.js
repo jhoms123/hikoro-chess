@@ -250,7 +250,6 @@ io.on('connection', (socket) => {
                             if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
                                 let pieceForHand = { type: intermediatePiece.type, color: playerColor };
                                 const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                                // *** ADDED HAND LIMIT CHECK ***
                                 if (capturedArray.length < 6) {
                                     capturedArray.push(pieceForHand);
                                 }
@@ -269,7 +268,6 @@ io.on('connection', (socket) => {
                     const losingPlayerColor = targetPiece.color;
                     const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
                     const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    // *** ADDED HAND LIMIT CHECK ***
                     if (capturedArray.length < 6) {
                         capturedArray.push(pieceForHand);
                     }
@@ -279,7 +277,6 @@ io.on('connection', (socket) => {
                         pieceForHand.type = 'sult';
                     }
                     const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-                    // *** ADDED HAND LIMIT CHECK ***
                     if (capturedArray.length < 6) {
                         capturedArray.push(pieceForHand);
                     }
@@ -294,7 +291,7 @@ io.on('connection', (socket) => {
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
-            } else if (piece.type === 'greathorsegeneral' && !wasCapture) {
+            } else if (['greathorsegeneral', 'cthulhu'].includes(piece.type) && !wasCapture) { // *** UPDATED LOGIC HERE ***
                 game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
             } else if (piece.type === 'cope' && wasCapture) {
                 game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
@@ -442,7 +439,6 @@ function checkForWinner(game) {
         }
     }
 
-    // *** CORRECTED LUPA WIN CONDITION ***
     if (blackLupaCount === 0 && game.turnCount > 0) {
         game.gameOver = true;
         game.winner = 'white';

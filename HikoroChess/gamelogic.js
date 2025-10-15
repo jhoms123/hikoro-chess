@@ -1,5 +1,3 @@
-// gamelogic.js
-
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
@@ -8,7 +6,7 @@ const pieceNotation = {
     kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
     finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
-    neptune: "Np", mermaid: "Mm", cthulhu: "Ct" // Corrected spelling
+    neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
 };
 
 function getInitialBoard() {
@@ -264,20 +262,24 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             }
             break;
         }
-		case 'cthulhu': { // Corrected spelling
+		case 'cthulhu': {
+            const cthulhuDir = piece.color === 'white' ? 1 : -1;
+            const moveGenerator = bonusMoveActive ? addNonCaptureMove : addMove;
+            const lineGenerator = bonusMoveActive ? generateNonCaptureLineMoves : generateLineMoves;
+
             for (let dx = -2; dx <= 2; dx++) {
                 for (let dy = -2; dy <= 2; dy++) {
                     if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
+                    moveGenerator(x + dx, y + dy);
                 }
             }
             [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { 
-                if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); 
+                if (Math.abs(dx) !== Math.abs(dy)) moveGenerator(x + dx, y + dy); 
             }));
-            const ghgDir = piece.color === 'white' ? 1 : -1;
-            generateLineMoves(-1, ghgDir);
-            generateLineMoves(1, ghgDir);
-            generateLineMoves(0, -ghgDir);
+            
+            lineGenerator(-1, cthulhuDir);
+            lineGenerator(1, cthulhuDir);
+            lineGenerator(0, -cthulhuDir);
             break;
         }
     }
