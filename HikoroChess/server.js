@@ -1,3 +1,5 @@
+//server.js
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -81,6 +83,8 @@ function gameTimerTick() {
         io.to(gameId).emit('timeUpdate', timeUpdatePayload);
     }
 }
+
+
 
 setInterval(gameTimerTick, 1000);
 
@@ -186,6 +190,31 @@ io.on('connection', (socket) => {
             socket.emit('errorMsg', 'Game is full or does not exist.');
         }
     });
+	
+	socket.on('getValidMoves', (data) => {
+    const { gameId, square } = data;
+    const game = games[gameId];
+    if (!game || !square) return;
+
+    // Check if the game is in a bonus move state
+    let bonusMoveActive = false;
+    if (game.bonusMoveInfo) {
+        // If a bonus move is active, only the piece that earned it can be selected.
+        if (square.x !== game.bonusMoveInfo.pieceX || square.y !== game.bonusMoveInfo.pieceY) {
+            socket.emit('validMoves', []); // Send back empty array if wrong piece is clicked
+            return;
+        }
+        bonusMoveActive = true;
+    }
+
+    const piece = game.boardState[square.y][square.x];
+    if (piece) {
+        const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState, bonusMoveActive);
+        socket.emit('validMoves', validMoves);
+    } else {
+        socket.emit('validMoves', []); // No piece on the square, so no valid moves
+    }
+});
     
     socket.on('makeMove', (data) => {
     const { gameId, from, to } = data;

@@ -1,3 +1,4 @@
+//script.js
 document.addEventListener('DOMContentLoaded', () => {
     
     const productionUrl = 'https://HikoroChess.org';
