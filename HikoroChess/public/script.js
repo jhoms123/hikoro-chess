@@ -365,28 +365,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onSquareClick(x, y) {
-    if (gameState.gameOver) return;
+		if (gameState.gameOver) return;
 
-    const isMyTurn = (isSinglePlayer && !isBotGame) || 
-                     (isBotGame && gameState.isWhiteTurn) || 
-                     (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+		const isMyTurn = (isSinglePlayer && !isBotGame) || 
+						 (isBotGame && gameState.isWhiteTurn) || 
+						 (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-    // If a piece is already selected (from board or hand) and the user clicks a square...
-    if (selectedSquare || isDroppingPiece) {
-        // ONLY attempt to make a move or drop if it's the player's turn.
-        if (isMyTurn) {
-            if (isDroppingPiece) {
-                socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-            } else if (selectedSquare.x !== x || selectedSquare.y !== y) {
-                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
-            }
-        }
-        // Always clear the selection after clicking a destination square, regardless of turn.
-        selectedSquare = null;
-        isDroppingPiece = null;
-        clearHighlights();
-        return;
-    }
+		// Case 1: A piece is selected, and we're clicking a new square to move.
+		if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+			if (isMyTurn) {
+				socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
+			}
+			selectedSquare = null;
+			clearHighlights();
+			return;
+		}
+
+		// Case 2: A captured piece is selected for dropping.
+		if (isDroppingPiece) {
+			if (isMyTurn) {
+				socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+			}
+			isDroppingPiece = null;
+			clearHighlights();
+			return;
+		}
+
+		// Case 3: We are selecting/deselecting a piece on the board.
+		const piece = gameState.boardState[y][x];
+		if (piece) {
+			let canSelectPiece;
+			if (isSinglePlayer) {
+				canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
+			} else {
+				canSelectPiece = piece.color === myColor; // Allows selecting your own pieces for preview
+			}
+
+			if (canSelectPiece) {
+				// If we clicked the same piece again, deselect it.
+				if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+					selectedSquare = null;
+					clearHighlights();
+				} else { // Otherwise, select the new piece.
+					selectedSquare = { x, y };
+					socket.emit('getValidMoves', { gameId, square: { x, y } });
+				}
+			}
+		} else { // Case 4: Clicking an empty square with nothing selected clears highlights.
+			selectedSquare = null;
+			clearHighlights();
+		}
+	}
+
     
     // If no piece is selected, check if the user is trying to select one.
     const piece = gameState.boardState[y][x];
@@ -422,31 +452,35 @@ document.addEventListener('DOMContentLoaded', () => {
 }
     
     function drawHighlights(moves) {
-        clearHighlights();
-        if (!selectedSquare) return;
+		clearHighlights();
+		if (!selectedSquare) return;
 
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        const selectedSquareElement = document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
+		// This comprehensive check ensures highlights work in all game modes
+		const isMyTurn = (isSinglePlayer && !isBotGame) || 
+						 (isBotGame && gameState.isWhiteTurn) || 
+						 (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-        if (selectedSquareElement) {
-            selectedSquareElement.classList.add(isMyTurn ? 'selected' : 'preview-selected');
-        }
+		const selectedSquareElement = document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
 
-        moves.forEach(move => {
-            const moveSquare = document.querySelector(`[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
-            if (moveSquare) {
-                const plate = document.createElement('div');
-                plate.classList.add('move-plate');
-                if (!isMyTurn) {
-                    plate.classList.add('preview');
-                }
-                if (move.isAttack) {
-                    plate.classList.add('attack');
-                }
-                moveSquare.appendChild(plate);
-            }
-        });
-    }
+		if (selectedSquareElement) {
+			selectedSquareElement.classList.add(isMyTurn ? 'selected' : 'preview-selected');
+		}
+
+		moves.forEach(move => {
+			const moveSquare = document.querySelector(`[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
+			if (moveSquare) {
+				const plate = document.createElement('div');
+				plate.classList.add('move-plate');
+				if (!isMyTurn) {
+					plate.classList.add('preview');
+				}
+				if (move.isAttack) {
+					plate.classList.add('attack');
+				}
+				moveSquare.appendChild(plate);
+			}
+		});
+	}
 
     function onCapturedClick(piece) {
     // Game over check is still needed, but the turn check is removed.
