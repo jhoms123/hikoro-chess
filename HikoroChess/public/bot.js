@@ -165,8 +165,36 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
         case 'greatshield': { const gsDir = piece.color === 'white' ? 1 : -1; addNonCaptureMove(x, y + gsDir); addNonCaptureMove(x - 1, y + gsDir); addNonCaptureMove(x + 1, y + gsDir); addNonCaptureMove(x, y - gsDir); break; }
         case 'greathorsegeneral': { const ghgDir = piece.color === 'white' ? 1 : -1; if (bonusMoveActive) { for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addNonCaptureMove(x + dx, y + dy); } [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addNonCaptureMove(x + dx, y + dy); })); generateNonCaptureLineMoves(-1, ghgDir); generateNonCaptureLineMoves(1, ghgDir); generateNonCaptureLineMoves(0, -ghgDir); } else { for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); generateLineMoves(-1, ghgDir); generateLineMoves(1, ghgDir); generateLineMoves(0, -ghgDir); } break; }
         case 'neptune': { const fwdDir = piece.color === 'white' ? 1 : -1; const directions = [{dx: 1, dy: fwdDir}, {dx: -1, dy: fwdDir}, {dx: 0, dy: fwdDir}, {dx: 0, dy: -fwdDir}]; directions.forEach(({dx, dy}) => { let cx = x + dx; let cy = y + dy; let screenFound = false; while (isPositionValid(cx, cy)) { const target = boardState[cy][cx]; if (!screenFound) { if (target !== null) { screenFound = true; } } else { if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); } else { if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); } break; } } cx += dx; cy += dy; } }); for (let dx = -1; dx <= 1; dy++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir); addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir); addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir); break; }
-        case 'mermaid': { for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break; }
-        case 'cthulhu': { for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } } [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); const ghgDir = piece.color === 'white' ? 1 : -1; generateLineMoves(-1, ghgDir); generateLineMoves(1, ghgDir); generateLineMoves(0, -ghgDir); break; }
+        case 'neptune': {
+			const fwdDir = piece.color === 'white' ? 1 : -1;
+			const directions = [
+				{dx: 1, dy: fwdDir}, {dx: -1, dy: fwdDir}, {dx: 0, dy: fwdDir}, {dx: 0, dy: -fwdDir}
+			];
+			directions.forEach(({dx, dy}) => {
+				let cx = x + dx; let cy = y + dy; let screenFound = false;
+				while (isPositionValid(cx, cy)) {
+					const target = boardState[cy][cx];
+					if (!screenFound) { if (target !== null) { screenFound = true; } } 
+					else {
+						if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); } 
+						else { if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); } break; }
+					}
+					cx += dx; cy += dy;
+				}
+			});
+			// The typo was here (dy++ changed to dx++)
+			for (let dx = -1; dx <= 1; dx++) { 
+				for (let dy = -1; dy <= 1; dy++) { 
+					if (dx === 0 && dy === 0) continue; 
+					addMove(x + dx, y + dy); 
+				}
+			}
+			addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
+			addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
+			addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
+			break;
+		}
+		case 'cthulhu': { for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } } [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); const ghgDir = piece.color === 'white' ? 1 : -1; generateLineMoves(-1, ghgDir); generateLineMoves(1, ghgDir); generateLineMoves(0, -ghgDir); break; }
     }
     return moves;
 }
