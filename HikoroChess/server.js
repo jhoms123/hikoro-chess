@@ -187,130 +187,122 @@ io.on('connection', (socket) => {
         }
     });
     
-    socket.on('getValidMoves', (data) => {
-        const { gameId, square } = data;
-        const game = games[gameId];
-        if (!game || !square) return;
-
-        let bonusMoveActive = false;
-        if (game.bonusMoveInfo) {
-            if (square.x !== game.bonusMoveInfo.pieceX || square.y !== game.bonusMoveInfo.pieceY) {
-                socket.emit('validMoves', []); 
-                return;
-            }
-            bonusMoveActive = true;
-        }
-
-        const piece = game.boardState[square.y][square.x];
-        if (piece) {
-            const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState, bonusMoveActive);
-            socket.emit('validMoves', validMoves);
-        }
-    });
-
     socket.on('makeMove', (data) => {
-		const { gameId, from, to } = data;
-		const game = games[gameId];
-		if (!game || game.gameOver) return;
+    const { gameId, from, to } = data;
+    const game = games[gameId];
+    if (!game || game.gameOver) return;
 
-		// --- START OF FIX ---
-		// Only perform the turn check if it's NOT a single-player game.
-		if (!game.isSinglePlayer) {
-			const playerColor = game.players.white === socket.id ? 'white' : 'black';
-			const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-			if (!isTurn) return;
-		}
-		// --- END OF FIX ---
-		
-		updateTimeOnMove(game);
-		if (game.gameOver) {
-			io.to(gameId).emit('gameStateUpdate', game);
-			return;
-		}
+    // --- START OF CORRECTED LOGIC ---
+    let playerColor; // Declare playerColor in the function's scope
+    let isTurn = false;
 
-		const piece = game.boardState[from.y][from.x];
-		
-		// In single-player, we determine the moving piece's color directly from the piece itself
-		const movingPlayerColor = piece ? piece.color : null;
-		if (!piece) return;
-		
-		if (!game.isSinglePlayer && movingPlayerColor !== playerColor) return;
-		
-		let bonusMoveActive = false;
-		// ... the rest of the function is the same
-		if (game.bonusMoveInfo) {
-			if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
-				return;
-			}
-			bonusMoveActive = true;
-		}
-		const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
-		const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
-		if (isValidMove) {
-			const targetPiece = game.boardState[to.y][to.x];
-			const wasCapture = targetPiece !== null;
-			if (piece.type === 'jotu') {
-				const dx = Math.sign(to.x - from.x);
-				const dy = Math.sign(to.y - from.y);
-				if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
-					let cx = from.x + dx;
-					let cy = from.y + dy;
-					while (cx !== to.x || cy !== to.y) {
-						const intermediatePiece = game.boardState[cy][cx];
-						if (intermediatePiece && intermediatePiece.color === movingPlayerColor) {
-							if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
-								let pieceForHand = { type: intermediatePiece.type, color: movingPlayerColor };
-								const capturedArray = movingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-								if (capturedArray.length < 6) {
-									capturedArray.push(pieceForHand);
-								}
-							}
-							game.boardState[cy][cx] = null;
-						}
-						cx += dx;
-						cy += dy;
-					}
-				}
-			}
-			if (targetPiece !== null) {
-				const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
-				if (targetPiece.type === 'neptune') {
-					const losingPlayerColor = targetPiece.color;
-					const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
-					const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-					if (capturedArray.length < 6) {
-						capturedArray.push(pieceForHand);
-					}
-				} else if (!indestructiblePieces.includes(targetPiece.type)) {
-					let pieceForHand = { type: targetPiece.type, color: movingPlayerColor };
-					if (targetPiece.type === 'lupa') {
-						pieceForHand.type = 'sult';
-					}
-					const capturedArray = movingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
-					if (capturedArray.length < 6) {
-						capturedArray.push(pieceForHand);
-					}
-				}
-			}
-			game.boardState[to.y][to.x] = piece;
-			game.boardState[from.y][from.x] = null;
-			handlePromotion(piece, to.y, wasCapture);
-			checkForWinner(game);
-			game.turnCount++;
-			if (bonusMoveActive) {
-				game.bonusMoveInfo = null;
-				game.isWhiteTurn = !game.isWhiteTurn;
-			} else if (piece.type === 'greathorsegeneral' && !wasCapture) {
-				game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-			} else if (piece.type === 'cope' && wasCapture) {
-				game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-			} else {
-				game.bonusMoveInfo = null;
-				game.isWhiteTurn = !game.isWhiteTurn;
-			}
-			io.to(gameId).emit('gameStateUpdate', game);
-		}
-	});
+    // Determine the active player's color and check if it's their turn
+    if (game.isSinglePlayer) {
+        // In single-player/bot games, any move is allowed, but we track the turn color
+        playerColor = game.isWhiteTurn ? 'white' : 'black';
+        isTurn = true; 
+    } else {
+        // In a two-player game, verify the move comes from the correct player
+        playerColor = game.players.white === socket.id ? 'white' : 'black';
+        isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+    }
+    
+    if (!isTurn) {
+        // Silently ignore moves from the wrong player in a two-player game
+        return;
+    }
+    // --- END OF CORRECTED LOGIC ---
+
+    updateTimeOnMove(game);
+    if (game.gameOver) { // This handles game over by timeout
+        io.to(gameId).emit('gameStateUpdate', game);
+        return;
+    }
+
+    const piece = game.boardState[from.y][from.x];
+    
+    // Validate that the piece exists and belongs to the current player
+    if (!piece || piece.color !== playerColor) {
+        return;
+    }
+
+    let bonusMoveActive = false;
+    if (game.bonusMoveInfo) {
+        if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
+            return; // Trying to move a different piece during a bonus move
+        }
+        bonusMoveActive = true;
+    }
+
+    const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
+    const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
+
+    if (isValidMove) {
+        // ---- The rest of your move logic remains the same ---- //
+        const targetPiece = game.boardState[to.y][to.x];
+        const wasCapture = targetPiece !== null;
+        if (piece.type === 'jotu') {
+            const dx = Math.sign(to.x - from.x);
+            const dy = Math.sign(to.y - from.y);
+            if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
+                let cx = from.x + dx;
+                let cy = from.y + dy;
+                while (cx !== to.x || cy !== to.y) {
+                    const intermediatePiece = game.boardState[cy][cx];
+                    if (intermediatePiece && intermediatePiece.color === playerColor) {
+                        if (intermediatePiece.type !== 'greathorsegeneral' && intermediatePiece.type !== 'cthulhu') {
+                            let pieceForHand = { type: intermediatePiece.type, color: playerColor };
+                            const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                            if (capturedArray.length < 6) {
+                                capturedArray.push(pieceForHand);
+                            }
+                        }
+                        game.boardState[cy][cx] = null;
+                    }
+                    cx += dx;
+                    cy += dy;
+                }
+            }
+        }
+        if (targetPiece !== null) {
+            const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
+            if (targetPiece.type === 'neptune') {
+                const losingPlayerColor = targetPiece.color;
+                const pieceForHand = { type: 'mermaid', color: losingPlayerColor };
+                const capturedArray = losingPlayerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                if (capturedArray.length < 6) {
+                    capturedArray.push(pieceForHand);
+                }
+            } else if (!indestructiblePieces.includes(targetPiece.type)) {
+                let pieceForHand = { type: targetPiece.type, color: playerColor };
+                if (targetPiece.type === 'lupa') {
+                    pieceForHand.type = 'sult';
+                }
+                const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
+                if (capturedArray.length < 6) {
+                    capturedArray.push(pieceForHand);
+                }
+            }
+        }
+        game.boardState[to.y][to.x] = piece;
+        game.boardState[from.y][from.x] = null;
+        handlePromotion(piece, to.y, wasCapture);
+        checkForWinner(game);
+        game.turnCount++;
+        if (bonusMoveActive) {
+            game.bonusMoveInfo = null;
+            game.isWhiteTurn = !game.isWhiteTurn;
+        } else if (piece.type === 'greathorsegeneral' && !wasCapture) {
+            game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+        } else if (piece.type === 'cope' && wasCapture) {
+            game.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+        } else {
+            game.bonusMoveInfo = null;
+            game.isWhiteTurn = !game.isWhiteTurn;
+        }
+        io.to(gameId).emit('gameStateUpdate', game);
+    }
+});
 	
 	socket.on('createSinglePlayerGame', () => {
         const gameId = `sp_game_${Math.random().toString(36).substr(2, 9)}`;
