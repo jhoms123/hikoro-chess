@@ -395,20 +395,30 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         throw new Error('TimeLimitExceeded');
     }
 
+    //
+    // --- CHANGE IS HERE ---
+    //
     if (depth === 0) {
-    // Bypassing the slow function solves the problem
-    return evaluateBoard(boardState);
-}
+        // Instead of just evaluating, start a quiescence search to avoid the horizon effect
+        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
+    }
+    //
+    // --- END CHANGE ---
+    //
+
     const color = isMaximizingPlayer ? 'white' : 'black';
-    const moves = getAllValidMoves(boardState, color, []);
+    // Note: We don't need capturedPieces for minimax, only for the root move generation
+    const moves = getAllValidMoves(boardState, color, []); 
     if (moves.length === 0) {
         return evaluateBoard(boardState);
     }
 
+    // ... the rest of your minimax function remains the same ...
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
+            // (logic for applying the move)
             if (move.type === 'drop') {
                 tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
             } else {
@@ -416,7 +426,6 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
                 tempBoard[move.to.y][move.to.x] = piece;
                 tempBoard[move.from.y][move.from.x] = null;
             }
-            // Pass the timer down in the recursive call
             const evaluation = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
@@ -427,6 +436,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         let minEval = Infinity;
         for (const move of moves) {
             const tempBoard = copyBoard(boardState);
+            // (logic for applying the move)
             if (move.type === 'drop') {
                 tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
             } else {
@@ -434,7 +444,6 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
                 tempBoard[move.to.y][move.to.x] = piece;
                 tempBoard[move.from.y][move.from.x] = null;
             }
-             // Pass the timer down in the recursive call
             const evaluation = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
