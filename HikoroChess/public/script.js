@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isDroppingPiece = null;
         clearHighlights();
     }
-}
+
     
     function drawHighlights(moves) {
 		clearHighlights();
