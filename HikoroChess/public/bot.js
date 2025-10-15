@@ -292,6 +292,8 @@ function evaluateBoard(boardState) {
 
 function getAllValidMoves(boardState, color, capturedPieces) {
     const allMoves = [];
+    const opponentColor = color === 'white' ? 'black' : 'white'; // Determine opponent's color
+
     for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
         for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
             const piece = boardState[y][x];
@@ -303,19 +305,41 @@ function getAllValidMoves(boardState, color, capturedPieces) {
             }
         }
     }
+
     if (capturedPieces && capturedPieces.length > 0) {
         const uniquePieceTypes = [...new Set(capturedPieces.map(p => p.type))];
         for (const pieceType of uniquePieceTypes) {
             for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
                 for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-                    if (isPositionValid(x, y) && boardState[y][x] === null) {
+                    // --- CHANGE IS HERE ---
+                    // Check if the square is valid, empty, AND not attacked by the opponent.
+                    if (isPositionValid(x, y) && boardState[y][x] === null && !isSquareAttackedBy(x, y, boardState, opponentColor)) {
                         allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
                     }
+                    // --- END CHANGE ---
                 }
             }
         }
     }
     return allMoves;
+}
+
+function getCaptureMoves(boardState, color) {
+    const captureMoves = [];
+    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+            const piece = boardState[y][x];
+            if (piece && piece.color === color) {
+                const allPieceMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of allPieceMoves) {
+                    if (move.isAttack) {
+                        captureMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: true });
+                    }
+                }
+            }
+        }
+    }
+    return captureMoves;
 }
 
 // NEW: Main entry point for the bot with a time limit
@@ -395,16 +419,11 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         throw new Error('TimeLimitExceeded');
     }
 
-    //
-    // --- CHANGE IS HERE ---
-    //
     if (depth === 0) {
-        // Instead of just evaluating, start a quiescence search to avoid the horizon effect
-        return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
-    }
-    //
-    // --- END CHANGE ---
-    //
+    // This call is now safe and efficient.
+		return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
+	}
+    
 
     const color = isMaximizingPlayer ? 'white' : 'black';
     // Note: We don't need capturedPieces for minimax, only for the root move generation
@@ -453,12 +472,36 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     }
 }
 
-function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
+function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
+    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+            const piece = boardState[y][x];
+            if (piece && piece.color === attackingColor) {
+                // We only care about attacks, so we don't need bonus moves for this check
+                const moves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of moves) {
+                    if (move.x === targetX && move.y === targetY && move.isAttack) {
+                        return true; // Found an attacking piece
+                    }
+                }
+            }
+        }
+    }
+    return false; // Square is safe
+}
+
+
+function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit, depth = 8) { // Added depth
     // Check the time at the beginning of every call
     if (Date.now() - startTime >= timeLimit) {
         throw new Error('TimeLimitExceeded');
     }
     
+    // --- CHANGE 1: Safety depth limit ---
+    if (depth === 0) {
+        return evaluateBoard(boardState); // Stop searching if we go too deep
+    }
+
     let stand_pat = evaluateBoard(boardState);
     if (isMaximizingPlayer) {
         if (stand_pat >= beta) return beta;
@@ -467,19 +510,20 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime
         if (stand_pat <= alpha) return alpha;
         beta = Math.min(beta, stand_pat);
     }
+    
     const color = isMaximizingPlayer ? 'white' : 'black';
-    const captureMoves = getAllValidMoves(boardState, color, []).filter(move => move.isAttack);
+    // --- CHANGE 2: Use the fast function ---
+    const captureMoves = getCaptureMoves(boardState, color);
+
     for (const move of captureMoves) {
         const tempBoard = copyBoard(boardState);
-        if (move.type === 'drop') {
-             tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
-        } else {
-            const piece = tempBoard[move.from.y][move.from.x];
-            tempBoard[move.to.y][move.to.x] = piece;
-            tempBoard[move.from.y][move.from.x] = null;
-        }
-        // Pass the timer down in the recursive call
-        let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
+        const piece = tempBoard[move.from.y][move.from.x];
+        tempBoard[move.to.y][move.to.x] = piece;
+        tempBoard[move.from.y][move.from.x] = null;
+        
+        // Pass timer and DECREMENTED DEPTH in the recursive call
+        let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, depth - 1);
+        
         if (isMaximizingPlayer) {
             alpha = Math.max(alpha, score);
             if (beta <= alpha) break;
