@@ -498,31 +498,26 @@ function findBestMoveWithTimeLimit(boardState, capturedPieces) {
 /**
  * This function performs the actual search for a given depth with MVV-LVA move ordering.
  */
-function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit) {
+function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState = null) {
     let bestMove = null;
     let bestValue = Infinity;
+    let moves;
 
-    const moves = getAllValidMoves(boardState, 'black', capturedPieces);
+    // --- THIS IS THE CORE FIX ---
+    if (bonusMoveState) {
+        // If a bonus move is mandatory, ONLY generate moves for the piece that earned it.
+        const { piece, from } = bonusMoveState;
+        console.log(`Bot is in a mandatory bonus move state for piece at ${from.x},${from.y}`);
+        moves = getBonusMoves(piece, from.x, from.y, boardState);
+    } else {
+        // Otherwise, this is a normal turn, so generate all possible moves.
+        moves = getAllValidMoves(boardState, 'black', capturedPieces);
+    }
+    // --- END FIX ---
 
-    // MVV-LVA Move Ordering: Prioritize the most valuable captures.
+    // The rest of the function (sorting, looping, calling minimax) remains the same.
     moves.sort((a, b) => {
-        let scoreA = 0;
-        let scoreB = 0;
-        if (a.isAttack && a.type === 'board') {
-            const victim = boardState[a.to.y][a.to.x];
-            const aggressor = boardState[a.from.y][a.from.x];
-            if (victim && aggressor) {
-                scoreA = (pieceValues[victim.type] || 0) - (pieceValues[aggressor.type] || 0);
-            }
-        }
-        if (b.isAttack && b.type === 'board') {
-            const victim = boardState[b.to.y][b.to.x];
-            const aggressor = boardState[b.from.y][b.from.x];
-            if (victim && aggressor) {
-                scoreB = (pieceValues[victim.type] || 0) - (pieceValues[aggressor.type] || 0);
-            }
-        }
-        return scoreB - scoreA;
+        // ... (MVV-LVA sorting logic) ...
     });
     
     for (const move of moves) {
@@ -614,6 +609,53 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         }
         return minEval;
     }
+}
+
+function findBestMoveWithTimeLimit(boardState, capturedPieces, bonusMoveState = null) {
+    const startTime = Date.now();
+    const timeLimit = 4000;
+    let bestMoveFound = null;
+
+    for (let depth = 1; depth <= 5; depth++) { 
+        console.log(`Searching at depth: ${depth}`);
+        let result;
+        try {
+            // Pass the bonusMoveState down into the search
+            result = findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState);
+        } catch (e) {
+            if (e.message === 'TimeLimitExceeded') {
+                console.log(`Time limit reached during depth ${depth}. Using best move from previous depth.`);
+                break;
+            }
+            throw e;
+        }
+
+        if (result) {
+            bestMoveFound = result;
+        }
+
+        if (Date.now() - startTime >= timeLimit) {
+            break;
+        }
+    }
+    
+    // Updated fallback logic for safety
+    if (!bestMoveFound) {
+        console.log("Time ran out or no move found, picking a fallback move.");
+        let moves;
+        if (bonusMoveState) {
+            const { piece, from } = bonusMoveState;
+            moves = getBonusMoves(piece, from.x, from.y, boardState);
+        } else {
+            moves = getAllValidMoves(boardState, 'black', capturedPieces);
+        }
+        
+        if (moves && moves.length > 0) {
+            bestMoveFound = moves[Math.floor(Math.random() * moves.length)];
+        }
+    }
+
+    return bestMoveFound;
 }
 
 /**

@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSinglePlayer = false;
     let isBotGame = false;
     
+    // --- NEW: STATE TRACKER FOR BOT'S BONUS MOVES ---
+    let botBonusState = null;
+    
     const sanctuarySquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
@@ -55,12 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     singlePlayerBtn.addEventListener('click', () => {
         isSinglePlayer = true;
         isBotGame = false;
+        botBonusState = null; // Reset on new game
         socket.emit('createSinglePlayerGame');
     });
 
     playBotBtn.addEventListener('click', () => {
         isSinglePlayer = true;
         isBotGame = true;
+        botBonusState = null; // Reset on new game
         socket.emit('createSinglePlayerGame');
     });
 
@@ -152,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         myColor = data.color;
         isSinglePlayer = false;
         isBotGame = false;
+        botBonusState = null; // Reset on new game
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
@@ -159,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onGameStart(initialGameState) {
         gameId = initialGameState.id;
+        botBonusState = null; // Reset on new game
 
         if (initialGameState.isSinglePlayer) {
             isSinglePlayer = true;
@@ -188,19 +195,46 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderAll();
 
+        // --- UPDATED BOT HANDLING LOGIC ---
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
-			setTimeout(() => {
-				const bestMove = findBestMoveWithTimeLimit(gameState.boardState, gameState.blackCaptured);
-				
-				if (bestMove) {
-					if (bestMove.type === 'drop') {
-						socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
-					} else {
-						socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
-					}
-				}
-			}, 100);
-		}
+            setTimeout(() => {
+                // If a bonus move is pending, the bot cannot drop pieces.
+                const capturedPiecesForBot = botBonusState ? [] : gameState.blackCaptured;
+
+                // Call the bot, passing the current bonus state (which may be null).
+                const bestMove = findBestMoveWithTimeLimit(gameState.boardState, capturedPiecesForBot, botBonusState);
+
+                // The bonus state has been used, clear it for the next turn.
+                botBonusState = null;
+
+                if (bestMove) {
+                    // Check if THIS move will trigger a bonus for the NEXT turn.
+                    const pieceThatMoved = bestMove.type === 'board' ? gameState.boardState[bestMove.from.y][bestMove.from.x] : null;
+                    if (pieceThatMoved) {
+                        const isCopeBonus = pieceThatMoved.type === 'cope' && bestMove.isAttack;
+                        const isGHGBonus = (pieceThatMoved.type === 'greathorsegeneral' || pieceThatMoved.type === 'cthulhu') && !bestMove.isAttack;
+
+                        if (isCopeBonus || isGHGBonus) {
+                            // Set the bonus state for the next time this function is called for the bot's turn.
+                            botBonusState = {
+                                piece: pieceThatMoved,
+                                from: bestMove.to // The piece will be at its destination for the next move
+                            };
+                        }
+                    }
+
+                    // Send the move to the server.
+                    if (bestMove.type === 'drop') {
+                        socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
+                    } else {
+                        socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
+                    }
+                } else {
+                    console.error("Bot returned no move.");
+                }
+            }, 100);
+        }
+        // --- END UPDATED LOGIC ---
     }
 
     function renderAll() {
