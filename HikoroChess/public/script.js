@@ -1,4 +1,3 @@
-//script.js
 document.addEventListener('DOMContentLoaded', () => {
     
     const productionUrl = 'https://HikoroChess.org';
@@ -60,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playBotBtn.addEventListener('click', () => {
-        isSinglePlayer = true; // Bot game is a type of single player game
+        isSinglePlayer = true;
         isBotGame = true;
         socket.emit('createSinglePlayerGame');
     });
@@ -77,29 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Connection failed:", err.message);
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
-
-    function setupTimerElements() {
-        const whiteArea = document.getElementById('white-captured-area');
-        const blackArea = document.getElementById('black-captured-area');
-
-        if (whiteArea && !document.getElementById('white-timer')) {
-            whiteTimerEl = document.createElement('div');
-            whiteTimerEl.id = 'white-timer';
-            whiteTimerEl.className = 'timer';
-            whiteArea.appendChild(whiteTimerEl);
-        } else {
-            whiteTimerEl = document.getElementById('white-timer');
-        }
-
-        if (blackArea && !document.getElementById('black-timer')) {
-            blackTimerEl = document.createElement('div');
-            blackTimerEl.id = 'black-timer';
-            blackTimerEl.className = 'timer';
-            blackArea.appendChild(blackTimerEl);
-        } else {
-            blackTimerEl = document.getElementById('black-timer');
-        }
-    }
 	
 	function formatTimeControl(tc) {
         if (!tc || tc.main === -1) { return 'Unlimited'; }
@@ -130,10 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!whiteTimerEl || !blackTimerEl || !gameState.timeControl) return;
 
-        const { whiteTime, blackTime, whiteByoyomi, blackByoyomi, isInByoyomiWhite, isInByoyomiBlack } = times;
+        const { whiteTime, blackTime, isInByoyomiWhite, isInByoyomiBlack } = times;
 
-        whiteTimerEl.textContent = formatTime(whiteTime, whiteByoyomi, isInByoyomiWhite);
-        blackTimerEl.textContent = formatTime(blackTime, blackByoyomi, isInByoyomiBlack);
+        whiteTimerEl.textContent = formatTime(whiteTime, 0, isInByoyomiWhite);
+        blackTimerEl.textContent = formatTime(blackTime, 0, isInByoyomiBlack);
         
         if (gameState.gameOver) {
             whiteTimerEl.classList.remove('active');
@@ -179,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        // setupTimerElements();
     }
 
     function onGameStart(initialGameState) {
@@ -187,16 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (initialGameState.isSinglePlayer) {
             isSinglePlayer = true;
-            myColor = 'white'; // Lock view for single player modes
+            myColor = 'white';
         } else if (!myColor) {
             myColor = 'black';
             isSinglePlayer = false;
         }
-        isBotGame = isBotGame && isSinglePlayer; // Ensure bot flag is consistent
+        isBotGame = isBotGame && isSinglePlayer;
 
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        // setupTimerElements();
         updateLocalState(initialGameState);
     }
 
@@ -214,24 +188,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderAll();
 
-        // Check if it's the bot's turn to move
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
 			setTimeout(() => {
-				console.log("Bot is thinking...");
-				// MODIFIED LINE: Call the new time-managed function
 				const bestMove = findBestMoveWithTimeLimit(gameState.boardState, gameState.blackCaptured);
 				
 				if (bestMove) {
-					console.log("Bot chose move:", bestMove);
 					if (bestMove.type === 'drop') {
 						socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
 					} else {
 						socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
 					}
-				} else {
-					console.log("Bot has no moves!");
 				}
-			}, 100); // Reduced delay
+			}, 100);
 		}
     }
 
@@ -252,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let displayX = x, displayY = y;
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
-                } else { 
+                } else if (myColor === 'black') { 
                     displayX = BOARD_WIDTH - 1 - x;
                 }
                 
@@ -304,8 +272,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
         const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
         
-        document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
-        document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
+        if (isSinglePlayer) {
+            document.querySelector('#white-captured-area .hand-label').textContent = isBotGame ? "Your Hand" : "White's Hand";
+            document.querySelector('#black-captured-area .hand-label').textContent = isBotGame ? "Bot's Hand" : "Black's Hand";
+        } else {
+            document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
+            document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
+        }
 
         myCapturedEl.innerHTML = '';
         oppCapturedEl.innerHTML = '';
@@ -318,8 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
             pieceElement.classList.add('piece');
             
             const spriteImg = document.createElement('img');
-            spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
-            spriteImg.alt = `${piece.color} ${piece.type}`;
+            spriteImg.src = `sprites/${piece.type}_${isMyPiece ? myColor : (myColor === 'white' ? 'black' : 'white')}.png`;
+            spriteImg.alt = `${isMyPiece ? myColor : (myColor === 'white' ? 'black' : 'white')} ${piece.type}`;
 
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
@@ -352,115 +325,79 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isSinglePlayer) {
             turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
-            const whiteLabel = isBotGame ? "Your Hand" : "White's Hand";
-            const blackLabel = isBotGame ? "Bot's Hand" : "Black's Hand";
-            document.querySelector('#white-captured-area .hand-label').textContent = whiteLabel;
-            document.querySelector('#black-captured-area .hand-label').textContent = blackLabel;
         } else {
             const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
             turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
-            document.querySelector(myColor === 'white' ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label').textContent = "Your Hand";
-            document.querySelector(myColor === 'white' ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label').textContent = "Opponent's Hand";
         }
     }
 
     function onSquareClick(x, y) {
-		if (gameState.gameOver) return;
+        if (gameState.gameOver) return;
 
-		const isMyTurn = (isSinglePlayer && !isBotGame) || 
-						 (isBotGame && gameState.isWhiteTurn) || 
-						 (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+        const isMyTurn = (isSinglePlayer && !isBotGame) || 
+                         (isBotGame && gameState.isWhiteTurn) || 
+                         (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-		// Case 1: A piece is selected, and we're clicking a new square to move.
-		if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
-			if (isMyTurn) {
-				socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
-			}
-			selectedSquare = null;
-			isDroppingPiece = null;
-			clearHighlights();
-			return;
-		}
-
-		// Case 2: A captured piece is selected for dropping.
-		if (isDroppingPiece) {
-			if (isMyTurn) {
-				socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-			}
-			selectedSquare = null;
-			isDroppingPiece = null;
-			clearHighlights();
-			return;
-		}
-
-		// Case 3: We are selecting/deselecting a piece on the board.
-		const piece = gameState.boardState[y][x];
-		if (piece) {
-			let canSelectPiece;
-			if (isSinglePlayer) {
-				canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
-			} else {
-				canSelectPiece = piece.color === myColor; // Allows selecting your own pieces for preview
-			}
-
-			if (canSelectPiece) {
-				// If we clicked the same piece again, deselect it.
-				if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-					selectedSquare = null;
-					isDroppingPiece = null;
-					clearHighlights();
-				} else { // Otherwise, select the new piece.
-					selectedSquare = { x, y };
-					isDroppingPiece = null; 
-					socket.emit('getValidMoves', { gameId, square: { x, y } });
-				}
-			}
-		} else { // Case 4: Clicking an empty square with nothing selected clears highlights.
-			selectedSquare = null;
-			isDroppingPiece = null;
-			clearHighlights();
-		}
-	}
-
-    
-    // If no piece is selected, check if the user is trying to select one.
-    const piece = gameState.boardState[y][x];
-    if (piece) {
-        // Determine if the clicked piece can be selected by the current user.
-        let canSelectPiece;
-        if (isSinglePlayer) {
-            // In single-player, you can only select the pieces of the current turn's color.
-            canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
-        } else {
-            // In multiplayer, you can only select your own pieces (for moving or previewing).
-            canSelectPiece = piece.color === myColor;
-        }
-
-        if (canSelectPiece) {
-            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                // Deselect if clicking the same piece again.
-                selectedSquare = null;
-                clearHighlights();
-            } else {
-                // Select the new piece and request its valid moves for display/preview.
-                isDroppingPiece = null;
-                selectedSquare = { x, y };
-                socket.emit('getValidMoves', { gameId, square: { x, y } });
+        // Case 1: A piece is selected, and we're clicking a new square to move.
+        if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+            if (isMyTurn) {
+                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
             }
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
         }
-    } else {
-        // Clicking an empty square with nothing selected does nothing and clears highlights.
-        selectedSquare = null;
-        isDroppingPiece = null;
-        clearHighlights();
-    }
 
+        // Case 2: A captured piece is selected for dropping.
+        if (isDroppingPiece) {
+            if (isMyTurn) {
+                socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+            }
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        // Case 3: We are selecting/deselecting a piece on the board.
+        const piece = gameState.boardState[y][x];
+        if (piece) {
+            let canSelectPiece;
+            if (isSinglePlayer) {
+                canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
+            } else {
+                canSelectPiece = piece.color === myColor;
+            }
+
+            if (canSelectPiece) {
+                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                    selectedSquare = null;
+                    isDroppingPiece = null;
+                    clearHighlights();
+                } else { 
+                    selectedSquare = { x, y };
+                    isDroppingPiece = null; 
+                    socket.emit('getValidMoves', { gameId, square: { x, y } });
+                }
+            }
+        } else { // Case 4: Clicking an empty square with nothing selected.
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+        }
+    }
+    
+    function clearHighlights() {
+        document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
+        document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
+        document.querySelectorAll('.move-plate').forEach(p => p.remove());
+    }
     
     function drawHighlights(moves) {
 		clearHighlights();
 		if (!selectedSquare) return;
 
-		// This comprehensive check ensures highlights work in all game modes
 		const isMyTurn = (isSinglePlayer && !isBotGame) || 
 						 (isBotGame && gameState.isWhiteTurn) || 
 						 (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
@@ -488,47 +425,42 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
     function onCapturedClick(piece) {
-    // Game over check is still needed, but the turn check is removed.
-    if (gameState.gameOver) return;
+        if (gameState.gameOver) return;
 
-    // If the same piece is already selected for dropping, this click deselects it.
-    if (isDroppingPiece && isDroppingPiece.type === piece.type) {
-        isDroppingPiece = null;
-        clearHighlights();
-        return;
+        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+        
+        selectedSquare = null;
+        isDroppingPiece = piece;
+        highlightDropSquares();
     }
-    
-    // Otherwise, select this piece for a potential drop.
-    selectedSquare = null; // Clear any board selection.
-    isDroppingPiece = piece;
-    highlightDropSquares(); // Show valid drop locations.
-}
 
     function highlightDropSquares() {
-    clearHighlights();
+        clearHighlights();
 
-    // We need to check the turn status here to apply the correct style.
-    const isMyTurn = (isSinglePlayer && !isBotGame) || 
-                     (isBotGame && gameState.isWhiteTurn) || 
-                     (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+        const isMyTurn = (isSinglePlayer && !isBotGame) || 
+                         (isBotGame && gameState.isWhiteTurn) || 
+                         (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-    for (let y = 0; y < BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-            if (gameState.boardState[y][x] === null && isBoardValid) {
-                const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
-                if (square) {
-                    const plate = document.createElement('div');
-                    plate.classList.add('move-plate', 'drop');
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+                if (gameState.boardState[y][x] === null && isBoardValid) {
+                    const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
+                    if (square) {
+                        const plate = document.createElement('div');
+                        plate.classList.add('move-plate', 'drop');
 
-                    // Add the preview class if it's not the player's turn to move.
-                    if (!isMyTurn) {
-                        plate.classList.add('preview');
+                        if (!isMyTurn) {
+                            plate.classList.add('preview');
+                        }
+                        square.appendChild(plate);
                     }
-                    square.appendChild(plate);
                 }
             }
         }
     }
-}
 });
