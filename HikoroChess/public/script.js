@@ -364,51 +364,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onSquareClick(x, y) {
-        if (gameState.gameOver) return;
+    if (gameState.gameOver) return;
 
-        const isMyTurn = (isSinglePlayer && !isBotGame) || 
-                         (isBotGame && gameState.isWhiteTurn) || 
-                         (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+    const isMyTurn = (isSinglePlayer && !isBotGame) || 
+                     (isBotGame && gameState.isWhiteTurn) || 
+                     (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-        if (!isMyTurn) return;
-
-        if (isDroppingPiece) {
-            socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
+    // If a piece is already selected (from board or hand) and the user clicks a square...
+    if (selectedSquare || isDroppingPiece) {
+        // ONLY attempt to make a move or drop if it's the player's turn.
+        if (isMyTurn) {
+            if (isDroppingPiece) {
+                socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
+            } else if (selectedSquare.x !== x || selectedSquare.y !== y) {
+                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
+            }
+        }
+        // Always clear the selection after clicking a destination square, regardless of turn.
+        selectedSquare = null;
+        isDroppingPiece = null;
+        clearHighlights();
+        return;
+    }
+    
+    // If no piece is selected, check if the user is trying to select one.
+    const piece = gameState.boardState[y][x];
+    if (piece) {
+        // Determine if the clicked piece can be selected by the current user.
+        let canSelectPiece;
+        if (isSinglePlayer) {
+            // In single-player, you can only select the pieces of the current turn's color.
+            canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
+        } else {
+            // In multiplayer, you can only select your own pieces (for moving or previewing).
+            canSelectPiece = piece.color === myColor;
         }
 
-        if (selectedSquare) {
-            if (selectedSquare.x !== x || selectedSquare.y !== y) {
-                socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
+        if (canSelectPiece) {
+            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                // Deselect if clicking the same piece again.
                 selectedSquare = null;
                 clearHighlights();
-                return;
+            } else {
+                // Select the new piece and request its valid moves for display/preview.
+                isDroppingPiece = null;
+                selectedSquare = { x, y };
+                socket.emit('getValidMoves', { gameId, square: { x, y } });
             }
         }
-        
-        const piece = gameState.boardState[y][x];
-        if (piece) {
-            const canSelectPiece = isSinglePlayer ? 
-                (piece.color === (gameState.isWhiteTurn ? 'white' : 'black')) : 
-                (piece.color === myColor);
-
-            if (canSelectPiece) {
-                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                    selectedSquare = null;
-                    clearHighlights();
-                } else {
-                    isDroppingPiece = null;
-                    selectedSquare = { x, y };
-                    socket.emit('getValidMoves', { gameId, square: { x, y } });
-                }
-            }
-        } else {
-            selectedSquare = null;
-            clearHighlights();
-        }
+    } else {
+        // Clicking an empty square with nothing selected does nothing and clears highlights.
+        selectedSquare = null;
+        isDroppingPiece = null;
+        clearHighlights();
     }
+}
     
     function drawHighlights(moves) {
         clearHighlights();
@@ -438,39 +448,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onCapturedClick(piece) {
-        const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-        
-        if (!isMyTurn || gameState.gameOver) return;
+    // Game over check is still needed, but the turn check is removed.
+    if (gameState.gameOver) return;
 
-        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
-        }
-        
-        selectedSquare = null;
-        isDroppingPiece = piece;
-        highlightDropSquares();
+    // If the same piece is already selected for dropping, this click deselects it.
+    if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+        isDroppingPiece = null;
+        clearHighlights();
+        return;
     }
+    
+    // Otherwise, select this piece for a potential drop.
+    selectedSquare = null; // Clear any board selection.
+    isDroppingPiece = piece;
+    highlightDropSquares(); // Show valid drop locations.
+}
 
     function highlightDropSquares() {
-        clearHighlights();
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                    const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-                if (gameState.boardState[y][x] === null && isBoardValid) {
-                    const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
+    clearHighlights();
+
+    // We need to check the turn status here to apply the correct style.
+    const isMyTurn = (isSinglePlayer && !isBotGame) || 
+                     (isBotGame && gameState.isWhiteTurn) || 
+                     (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+
+    for (let y = 0; y < BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
+            if (gameState.boardState[y][x] === null && isBoardValid) {
+                const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
+                if (square) {
                     const plate = document.createElement('div');
                     plate.classList.add('move-plate', 'drop');
-                    if(square) square.appendChild(plate);
+
+                    // Add the preview class if it's not the player's turn to move.
+                    if (!isMyTurn) {
+                        plate.classList.add('preview');
+                    }
+                    square.appendChild(plate);
                 }
             }
         }
     }
-    
-    function clearHighlights() {
-        document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
-        document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
-        document.querySelectorAll('.move-plate').forEach(p => p.remove());
-    }
+}
 });
