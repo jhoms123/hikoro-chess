@@ -497,4 +497,99 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+	
+	const rulesBtn = document.getElementById('rules-btn');
+    const rulesModal = document.getElementById('rules-modal');
+    const closeRulesBtn = document.getElementById('close-rules-btn');
+    const rulesBody = document.getElementById('rules-body');
+
+    const pieceInfo = [
+        // Core Pieces
+        { name: 'Lupa (King)', desc: "The main objective. Moves one square in any direction. You must capture both of the opponent's Lupa to win." },
+        { name: 'Zur (Queen)', desc: 'Moves any number of squares along a rank, file, or diagonal.' },
+        { name: 'Kota (Rook+)', desc: 'Moves like a standard Rook (any number of squares horizontally or vertically) AND one square in any direction (like a Lupa).' },
+        { name: 'Fin (Bishop+)', desc: 'Moves any number of squares diagonally. It can also move one square horizontally (non-capture only).' },
+        { name: 'Yoli (Knight+)', desc: 'Moves in an "L" shape (two squares in one direction, then one perpendicularly). It can also move one square horizontally or vertically.' },
+        { name: 'Kor (Knight-Hybrid)', desc: 'Moves like a standard Knight OR one square diagonally.' },
+
+        // Pawns & Shielding
+        { name: 'Pilut (Pawn/Shield)', desc: "Moves one or two squares forward to an empty square. It **shields** the piece directly behind it, preventing that piece from being captured.", special: 'Promotes to Greatshield.' },
+        { name: 'Sult (Pawn)', desc: 'Moves one step diagonally forward, one step straight forward, or one step straight backward. It can also move two steps straight forward.' },
+        { name: 'Pawn', desc: 'Moves one square orthogonally (forwards, backwards, sideways) OR two squares diagonally in any direction.' },
+        
+        // Unique Mechanics
+        { name: 'Cope (Bonus Mover)', desc: "Has a unique forward jump and backward moves. **Special Ability:** After making a capture, the Cope gets a second, non-capture move during the same turn.", special: 'Bonus Move' },
+        { name: 'Chair (Bishop/Rook)', desc: 'Moves any number of squares diagonally or vertically (but not horizontally).' },
+        { name: 'Jotu (Jumper)', desc: 'Moves like a Rook, but it can **jump over friendly pieces** along its path. When it does, any jumped friendly pieces (except GHG and Cthulhu) are returned to your hand. It captures the first enemy piece it encounters and stops.' },
+        
+        // Promoted & Elite Pieces
+        { name: 'Finor (Promoted Fin)', desc: 'Moves like a Bishop or a Knight. Acquired by capturing with a Fin.' },
+        { name: 'Greatshield (Promoted Pilut)', desc: 'Can only make non-capture moves one square forward (diagonally or straight) or straight backward. **Special Ability:** It **shields all adjacent friendly pieces** (except those directly in front) from capture.', special: 'Promotes from Pilut.' },
+        { name: 'Greathorse General', desc: "**Special Ability:** After making a non-capture move, it gets a second, non-capture move during the same turn.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
+        { name: 'Neptune', desc: 'Can move like a Lupa or Cope. It can also "jump" over the first piece it sees (friendly or enemy) in a straight line, and can then continue moving and capturing like a Rook from that point.' , special: 'Demotes to Mermaid upon being captured.' },
+        { name: 'Mermaid', desc: 'Moves exactly two squares in any direction, jumping over any intervening pieces.' },
+        { name: 'Cthulhu (Promoted GHG)', desc: "An extremely powerful piece with the combined moves of a Greathorse General and a Mermaid. **Special Ability:** Retains the Greathorse General's bonus non-capture move." }
+    ];
+
+    function populateRulesModal() {
+        rulesBody.innerHTML = `
+            <h2>Winning the Game</h2>
+            <p>There are two ways to achieve victory in Hikoro Chess:</p>
+            <ul>
+                <li><strong>Lupa Capture:</strong> The primary objective. Capture both of the opponent's <strong>Lupa</strong> pieces.</li>
+                <li><strong>Sanctuary Victory:</strong> Move one of your own <strong>Lupa</strong> pieces onto one of the eight golden "Sanctuary" squares on the opponent's side of the board.</li>
+            </ul>
+
+            <h2>Special Mechanics</h2>
+            <h3><span style="color: #4CAF50;">🛡️</span> Piece Protection</h3>
+            <p>Some pieces can shield others from being captured. A protected piece cannot be taken.</p>
+            <ul>
+                <li><strong>Pilut:</strong> Protects the single friendly piece directly behind it.</li>
+                <li><strong>Greatshield:</strong> Protects all 8 adjacent friendly pieces (except those in its forward path).</li>
+            </ul>
+             <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
+            <p>Certain pieces can move twice in one turn under specific conditions.</p>
+            <ul>
+                <li><strong>Cope:</strong> After making a <strong>capture</strong>, it gets a second, non-capture move.</li>
+                <li><strong>Greathorse General / Cthulhu:</strong> After making a <strong>non-capture</strong> move, it gets a second, non-capture move.</li>
+            </ul>
+            <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
+            <p>When you capture an opponent's piece (with some exceptions), it goes into your "Hand" (captured pieces area). On your turn, instead of moving a piece on the board, you can "drop" a piece from your hand onto any empty square. You cannot have more than 6 pieces in your hand.</p>
+
+            <h2>Piece Movesets</h2>
+            <div class="piece-list" id="piece-list-container"></div>
+        `;
+
+        const pieceListContainer = document.getElementById('piece-list-container');
+        pieceInfo.forEach(p => {
+            const pieceType = p.name.split(' ')[0].toLowerCase().replace('(', '');
+            const entry = document.createElement('div');
+            entry.className = 'piece-entry';
+            entry.innerHTML = `
+                <div class="piece-header">
+                    <img src="sprites/${pieceType}_white.png" alt="${p.name}">
+                    <span>${p.name}</span>
+                </div>
+                <p>${p.desc}</p>
+                ${p.special ? `<p><em><strong>Note:</strong> ${p.special}</em></p>` : ''}
+            `;
+            pieceListContainer.appendChild(entry);
+        });
+    }
+
+
+    rulesBtn.addEventListener('click', () => {
+        populateRulesModal(); // Populate with fresh content each time
+        rulesModal.style.display = 'block';
+    });
+
+    closeRulesBtn.addEventListener('click', () => {
+        rulesModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target == rulesModal) {
+            rulesModal.style.display = 'none';
+        }
+    });
 });
