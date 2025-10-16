@@ -364,6 +364,24 @@ io.on('connection', (socket) => {
 			}
 		}
 	});
+	
+	socket.on('leaveGame', (gameId) => {
+        const game = games[gameId];
+        if (game) {
+            console.log(`Player ${socket.id} is leaving game ${gameId}`);
+            // If it's a multiplayer game and not over, notify the other player
+            if (!game.isSinglePlayer && !game.gameOver) {
+                game.gameOver = true;
+                game.winner = game.players.white === socket.id ? 'black' : 'white';
+                game.reason = "Opponent Forfeited";
+                io.to(gameId).emit('gameStateUpdate', game);
+            }
+            // Clean up the game from server memory
+            delete games[gameId];
+            delete lobbyGames[gameId];
+            io.emit('lobbyUpdate', lobbyGames); // Update lobby for everyone
+        }
+    });
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);

@@ -387,3 +387,35 @@ body {
     width: 40px;
     height: 40px;
 }
+
+#game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+#main-menu-btn,
+#rules-btn-ingame {
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    background-color: #555;
+    color: #eee;
+    border: 1px solid #777;
+}
+
+#main-menu-btn:hover,
+#rules-btn-ingame:hover {
+    background-color: #666;
+}
+
+#main-menu-btn {
+    background-color: #a13a3a; /* A reddish color to signify leaving */
+}
+
+#main-menu-btn:hover {
+    background-color: #c04848;
+}

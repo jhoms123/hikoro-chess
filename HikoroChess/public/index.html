@@ -36,7 +36,8 @@
         <button id="create-game-btn">Create New Game</button>
         <button id="single-player-btn">Single Player (Pass & Play)</button>
         <button id="play-bot-btn">Play Against Bot</button>
-        <button id="rules-btn">Rules & Movesets</button> <div style="margin: 15px 0;">
+        <button id="rules-btn">Rules & Movesets</button> 
+        <div style="margin: 15px 0;">
             <label for="player-name">Your Name:</label>
             <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
         </div>
@@ -62,6 +63,11 @@
     <div id="turn-indicator-container">
         <h2 id="turn-indicator"></h2>
         <p id="winner-text"></p>
+        
+        <div id="game-controls" style="display: none;">
+             <button id="rules-btn-ingame">Rules & Movesets</button>
+             <button id="main-menu-btn">Back to Main Menu</button>
+        </div>
     </div>
 
     <div id="rules-modal" class="modal">
