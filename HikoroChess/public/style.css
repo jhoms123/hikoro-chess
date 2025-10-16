@@ -1,3 +1,296 @@
+:root {
+    /* Define a variable for square size. On desktop, it's based on viewport height. */
+    --square-size: min(4.5vh, 40px);
+}
+
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #333;
+    color: #eee;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+    min-height: 100vh;
+}
+
+#game-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+}
+
+#board-container {
+    border: 5px solid #4a2a00;
+}
+
+#game-board {
+    display: grid;
+    /* Use the CSS variable to set the size dynamically */
+    grid-template-columns: repeat(10, var(--square-size));
+    grid-template-rows: repeat(16, var(--square-size));
+    width: calc(var(--square-size) * 10);
+    height: calc(var(--square-size) * 16);
+    background-color: #888;
+}
+
+.square {
+    width: var(--square-size);
+    height: var(--square-size);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+/* Checkerboard pattern */
+.square.light { background-color: #f0d9b5; }
+.square.dark { background-color: #b58863; }
+.square.invalid { background-color: #555; } /* For invalid corners */
+.sanctuary-square.light,
+.sanctuary-square.dark {
+  background-color: #f8e473; /* A pleasant golden yellow */
+}
+
+.piece {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.piece img {
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Selection and Move Highlights */
+.square.selected {
+    background-color: #6a9cff !important;
+}
+
+.square.preview-selected {
+  background-color: rgba(150, 150, 150, 0.5);
+}
+
+.move-plate {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+    background-color: rgba(4, 255, 0, 0.4);
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.move-plate.attack {
+    background-color: rgba(255, 20, 20, 0.5);
+}
+
+.move-plate.drop {
+    background-color: rgba(255, 242, 0, 0.4);
+}
+
+.move-plate.preview {
+    background-color: rgba(128, 128, 128, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+  
+.move-plate.preview.attack {
+    background-color: rgba(80, 80, 80, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Captured Pieces Area */
+.captured-area {
+    width: calc(var(--square-size) * 4); /* Adjust width relative to square size */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.captured-pieces-box {
+    background-color: #4a4a4a;
+    border: 2px solid #888;
+    min-height: calc(var(--square-size) * 5);
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start;
+    flex-grow: 1;
+}
+
+.captured-piece {
+    width: var(--square-size);
+    height: var(--square-size);
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.captured-piece.white { background-color: #f0d9b5; }
+.captured-piece.black { background-color: #b58863; }
+
+/* Turn Indicator & Winner Text */
+#turn-indicator-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#winner-text {
+    font-size: 1.5em;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+/* Lobby Styles */
+#lobby {
+    background-color: #444;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#create-game-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+#game-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.game-item {
+    background-color: #555;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.join-btn {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+/* ----- NEW STYLES ----- */
+
+#time-controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+#time-controls div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+#time-controls label {
+    font-weight: bold;
+}
+#time-controls select {
+    padding: 5px;
+    background-color: #555;
+    color: #eee;
+    border: 1px solid #777;
+}
+
+/* Timer Display Styling in Game */
+.captured-area h3 {
+    font-weight: normal; /* Make the "Your Hand" text less bold */
+}
+
+#white-time, #black-time {
+    font-size: 1.2em;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #222;
+    color: #ddd;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 2px solid #555;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#white-time.active, #black-time.active {
+    background-color: #4a2a00;
+    color: #fff;
+    border-color: #ff9800;
+}
+
+
+/* =================================== */
+/* == MOBILE RESPONSIVE STYLES HERE == */
+/* =================================== */
+@media (orientation: portrait) {
+    :root {
+        /* On mobile, base the square size on the screen width */
+        --square-size: 9vw;
+    }
+
+    body {
+        justify-content: flex-start; /* Align content to the top */
+    }
+
+    #game-container {
+        /* Change to a vertical layout */
+        flex-direction: column;
+        align-items: center; /* Center the items vertically */
+        gap: 10px;
+    }
+
+    /* Use CSS order property to rearrange elements for mobile */
+    #black-captured-area { order: 1; }
+    #board-container { order: 2; }
+    #white-captured-area { order: 3; }
+    
+    .captured-area {
+        /* Make the captured area wider on mobile */
+        width: 90vw;
+    }
+
+    .captured-pieces-box {
+        /* Let the box grow as needed and align pieces in a row */
+        min-height: auto;
+        flex-wrap: nowrap; /* Don't wrap pieces to the next line */
+        overflow-x: auto; /* Allow horizontal scrolling if many pieces */
+        justify-content: flex-start;
+    }
+
+    .timer {
+        margin-top: 0;
+        margin-bottom: 5px; /* Add space below timer on mobile */
+        font-size: 1.5em;
+        padding: 5px;
+    }
+}
+
 /* =================================== */
 /* ==       RULES MODAL STYLES      == */
 /* =================================== */
