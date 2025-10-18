@@ -26,6 +26,7 @@ body {
 }
 
 #board-container {
+    /* Kept for outer border, but will be less pronounced with the new square borders */
     border: 5px solid #4a2a00;
 }
 
@@ -36,7 +37,10 @@ body {
     grid-template-rows: repeat(16, var(--square-size));
     width: calc(var(--square-size) * 10);
     height: calc(var(--square-size) * 16);
-    background-color: #888;
+    /* * [CHANGE 1] 
+     * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
+     */
+    background-color: #f9d892; /* A light, wood-like color */
 }
 
 .square {
@@ -46,16 +50,35 @@ body {
     justify-content: center;
     align-items: center;
     position: relative;
+    /* * [CHANGE 2] 
+     * Apply a border to all four sides to create the grid outline. 
+     * This border will appear *inside* the main #game-board color due to the grid layout.
+     */
+    border: 1px solid #4a2a00; /* Darker brown for the grid lines */
+    box-sizing: border-box; /* Ensures the border is included in the square's dimensions */
+    /* * [CHANGE 3] 
+     * Set a uniform background for all squares. 
+     * This will match the main board color from #game-board, making the border the visual separator.
+     */
+    background-color: #f9d892; 
 }
 
-/* Checkerboard pattern */
-.square.light { background-color: #ab9f8c; }
-.square.dark { background-color: #b58863; }
-.square.invalid { background-color: #555; } /* For invalid corners */
-.sanctuary-square.light,
-.sanctuary-square.dark {
-  background-color: #f8e473; /* A pleasant golden yellow */
+/* * [CHANGE 4] 
+ * REMOVE the checkerboard pattern (light/dark) styles 
+ */
+/* .square.light { background-color: #f0d9b5; } */
+/* .square.dark { background-color: #b58863; } */
+
+.square.invalid { 
+    /* The invalid corners can still have a distinct background if needed */
+    background-color: #555; 
+    border-color: #555; /* Hide the grid line on invalid squares */
+} 
+.sanctuary-square {
+    /* Still apply a distinct background for sanctuary squares */
+    background-color: #e5b045 !important; /* A slightly darker golden yellow */
 }
+
 
 .piece {
     width: 100%;
@@ -76,12 +99,13 @@ body {
 }
 
 /* Selection and Move Highlights */
+/* NOTE: The !important is often needed to override the single square background from .square. */
 .square.selected {
     background-color: #6a9cff !important;
 }
 
 .square.preview-selected {
-  background-color: rgba(150, 150, 150, 0.5);
+    background-color: rgba(150, 150, 150, 0.5) !important;
 }
 
 .move-plate {
