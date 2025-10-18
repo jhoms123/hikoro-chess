@@ -40,7 +40,7 @@ body {
     /* * [CHANGE 1] 
      * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
      */
-    background-color: #f9d892; /* A light, wood-like color */
+    background-color: #d6b36b; /* A light, wood-like color */
 }
 
 .square {
