@@ -49,7 +49,7 @@ body {
 }
 
 /* Checkerboard pattern */
-.square.light { background-color: #f0d9b5; }
+.square.light { background-color: #ab9f8c; }
 .square.dark { background-color: #b58863; }
 .square.invalid { background-color: #555; } /* For invalid corners */
 .sanctuary-square.light,
