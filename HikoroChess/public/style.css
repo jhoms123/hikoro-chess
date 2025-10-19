@@ -98,6 +98,18 @@ body {
     image-rendering: crisp-edges;
 }
 
+#create-game-btn, 
+#single-player-btn, 
+#play-bot-btn {
+    /* Use the same sizing properties as the original #create-game-btn */
+    padding: 10px 20px;
+    font-size: 16px;
+    /* Optional: Ensure they all have the same width for uniformity */
+    min-width: 200px; /* Adjust this value as needed */
+    box-sizing: border-box; /* Necessary if you set a width */
+    margin: 5px 0; /* Add a bit of vertical spacing between the buttons */
+}
+
 /* Selection and Move Highlights */
 /* NOTE: The !important is often needed to override the single square background from .square. */
 .square.selected {
@@ -190,12 +202,7 @@ body {
     margin-bottom: 20px;
 }
 
-#create-game-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-bottom: 20px;
-}
+
 
 #game-list {
     max-height: 200px;
