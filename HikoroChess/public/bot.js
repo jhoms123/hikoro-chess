@@ -288,10 +288,17 @@ function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPla
 // ===================================================================
 
 const pieceValues = {
-    'pawn': 100, 'sult': 100, 'pilut': 150, 'fin': 300, 'cope': 320, 'kor': 330, 'yoli': 340, 'chair': 500,
-    'greatshield': 400, 'finor': 550, 'jotu': 800, 'mermaid': 850, 'neptune': 1000, 'kota': 1050,
+    'pawn': 200, 'sult': 150, 'pilut': 100, 'fin': 320, 'cope': 300, 'kor': 330, 'yoli': 330, 'chair': 600,
+    'greatshield': 300, 'finor': 550, 'jotu': 400, 'mermaid': 850, 'neptune': 1000, 'kota': 300,
     'greathorsegeneral': 1200, 'zur': 1100, 'cthulhu': 1500, 'lupa': 20000
 };
+
+const SANCTUARY_THREAT_PENALTY_BASE = 300;
+
+const botSanctuarySquares = [
+    {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
+    {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
+];
 
 // Helper function to create a mirrored board for black pieces
 function mirrorPST(table) {
@@ -364,8 +371,9 @@ function evaluateBoard(boardState) {
                 
                 const table = piecePST[piece.type];
                 if (table) {
+                    // Ensure PST access is safe, handle potential undefined rows
                     const pst = (piece.color === 'white') ? table : mirrorPST(table);
-                    positionValue = pst[y] ? (pst[y][x] || 0) : 0;
+                    positionValue = (pst[y] && pst[y][x] !== undefined) ? pst[y][x] : 0;
                 }
 
                 totalScore += (piece.color === 'white') ? (value + positionValue) : -(value + positionValue);
@@ -381,15 +389,53 @@ function evaluateBoard(boardState) {
     // Lupa Safety Check: Apply a heavy penalty if a Lupa is attacked.
     for (const pos of whiteLupaPositions) {
         if (isSquareAttackedBy(pos.x, pos.y, boardState, 'black')) {
-            totalScore -= 500;
+            totalScore -= 500; // Bad for black (bot) if white Lupa is attacked
         }
     }
     for (const pos of blackLupaPositions) {
         if (isSquareAttackedBy(pos.x, pos.y, boardState, 'white')) {
-            totalScore += 500;
+            totalScore += 500; // Good for black (bot) if its Lupa is attacked
         }
     }
+
+    // --- [NEW] Sanctuary Threat Evaluation ---
+    for (const lupaPos of whiteLupaPositions) {
+        let minDistanceToSanctuary = Infinity;
+
+        for (const sanctuarySq of botSanctuarySquares) {
+            // Calculate Chebyshev distance (max of x/y difference - king moves)
+            const dist = Math.max(Math.abs(lupaPos.x - sanctuarySq.x), Math.abs(lupaPos.y - sanctuarySq.y));
+            minDistanceToSanctuary = Math.min(minDistanceToSanctuary, dist);
+        }
+
+        // Apply penalty if Lupa is close (e.g., 3 or fewer moves away)
+        // The closer it is, the larger the penalty
+        if (minDistanceToSanctuary <= 3) {
+            // Penalty increases quadratically as distance decreases:
+            // dist 3 -> penalty = base * 1
+            // dist 2 -> penalty = base * 4
+            // dist 1 -> penalty = base * 9
+            // dist 0 -> Lupa is ON sanctuary (should be game over, but add penalty just in case)
+            const proximityFactor = Math.pow(4 - minDistanceToSanctuary, 2);
+            const penalty = SANCTUARY_THREAT_PENALTY_BASE * proximityFactor;
+            
+            // Add penalty to score (positive score is good for white, bad for bot)
+            totalScore += penalty;
+            // console.log(`White Lupa at ${lupaPos.x},${lupaPos.y} is ${minDistanceToSanctuary} moves from sanctuary. Penalty: ${penalty}`);
+        }
+    }
+    // --- [END NEW] ---
     
+    // Check for immediate win/loss conditions (should override other evaluations)
+    for(const sq of botSanctuarySquares) {
+        const piece = boardState[sq.y][sq.x];
+        if (piece && piece.type === 'lupa') {
+            return piece.color === 'white' ? Infinity : -Infinity; // Game over
+        }
+    }
+    if (whiteLupaPositions.length === 0) return -Infinity; // White has no Lupa, black wins
+    if (blackLupaPositions.length === 0) return Infinity;  // Black has no Lupa, white wins
+
     return totalScore;
 }
 
