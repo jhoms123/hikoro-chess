@@ -174,16 +174,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (initialGameState.isSinglePlayer) {
             isSinglePlayer = true;
-            myColor = 'white';
+            myColor = 'white'; // Default to white for SP
         } else if (!myColor) {
-            myColor = 'black';
+            myColor = 'black'; // Must be joining as black
             isSinglePlayer = false;
         }
-        isBotGame = isBotGame && isSinglePlayer;
+        isBotGame = isBotGame && isSinglePlayer; // Can only be bot game if it's also SP
 
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
         gameControls.style.display = 'flex';
+
+        // [NEW] Render notation markers *before* first board render
+        renderNotationMarkers(); 
+        
         updateLocalState(initialGameState);
     }
     
@@ -213,7 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        renderAll();
+        // [MODIFIED] Removed renderAll() and call functions directly
+        renderBoard();
+        renderCaptured();
+        updateTurnIndicator();
+        renderMoveHistory(gameState.moveList); // [NEW]
 
         // --- UPDATED BOT HANDLING LOGIC ---
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
@@ -260,21 +268,80 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- END UPDATED LOGIC ---
     }
 
-    function renderAll() {
-        if (!gameState.boardState) return;
-        renderBoard();
-        renderCaptured();
-        updateTurnIndicator();
+    // [REMOVED] renderAll() function is no longer needed
+
+    // [NEW] Renders the file/rank markers around the board
+    function renderNotationMarkers() {
+        const filesTop = document.querySelector('.notation-files-top');
+        const filesBottom = document.querySelector('.notation-files-bottom');
+        const ranksLeft = document.querySelector('.notation-ranks-left');
+        const ranksRight = document.querySelector('.notation-ranks-right');
+        
+        if (!filesTop || !filesBottom || !ranksLeft || !ranksRight) return;
+
+        filesTop.innerHTML = '';
+        filesBottom.innerHTML = '';
+        ranksLeft.innerHTML = '';
+        ranksRight.innerHTML = '';
+
+        const files = Array.from({length: 10}, (_, i) => String.fromCharCode('a'.charCodeAt(0) + i));
+        // Ranks go from 1 (White's side) to 16 (Black's side)
+        const ranks = Array.from({length: 16}, (_, i) => i + 1);
+
+        // Player-dependent orientation
+        const displayFiles = (myColor === 'black') ? [...files].reverse() : files;
+        // White wants 16 at the top, 1 at the bottom. Black wants 1 at the top, 16 at the bottom.
+        const displayRanks = (myColor === 'white') ? [...ranks].reverse() : ranks;
+
+        displayFiles.forEach(file => {
+            const fileElTop = document.createElement('div');
+            fileElTop.textContent = file;
+            filesTop.appendChild(fileElTop);
+            
+            const fileElBottom = document.createElement('div');
+            fileElBottom.textContent = file;
+            filesBottom.appendChild(fileElBottom);
+        });
+
+        displayRanks.forEach(rank => {
+            const rankElLeft = document.createElement('div');
+            rankElLeft.textContent = rank;
+            ranksLeft.appendChild(rankElLeft);
+
+            const rankElRight = document.createElement('div');
+            rankElRight.textContent = rank;
+            ranksRight.appendChild(rankElRight);
+        });
     }
+
+    // [NEW] Renders the move history list
+    function renderMoveHistory(moves) {
+        const moveHistoryElement = document.getElementById('move-history');
+        if (!moveHistoryElement) return;
+        moveHistoryElement.innerHTML = '';
+        if (!moves) return;
+
+        moves.forEach(moveString => {
+            const moveEl = document.createElement('div');
+            moveEl.textContent = moveString;
+            moveHistoryElement.appendChild(moveEl);
+        });
+        // Auto-scroll to bottom
+        moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
+    }
+
     
     function renderBoard() {
         boardElement.innerHTML = '';
+        if (!gameState.boardState) return; // Guard clause
+
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 const square = document.createElement('div');
                 square.classList.add('square');
                 
                 let displayX = x, displayY = y;
+                // Board orientation
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else if (myColor === 'black') { 
@@ -288,6 +355,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const isLight = (x + y) % 2 === 0;
                 square.classList.add(isLight ? 'light' : 'dark');
+                
+                // --- [NEW] Last Move Highlighting ---
+                if (gameState.lastMove) {
+                    // Use optional chaining for 'from' in case it was a drop
+                    if (x === gameState.lastMove.from?.x && y === gameState.lastMove.from?.y) {
+                        square.classList.add('last-move-from');
+                    }
+                    if (x === gameState.lastMove.to.x && y === gameState.lastMove.to.y) {
+                        square.classList.add('last-move-to');
+                    }
+                }
+                // --- [END NEW] ---
 
                 const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
                 if (isSanctuary) {

@@ -1,9 +1,10 @@
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
+// [MODIFIED] Using your custom abbreviations (C for Clam, D for Dolphin, etc.)
 const pieceNotation = {
-    lupa: "L", zur: "Zr",
-    kota: "Kt", fin: "Fn", yoli: "Yl", pilut: "Pl",
+    lupa: "C", zur: "D",
+    kota: "H", fin: "Fn", yoli: "Yl", pilut: "Pl",
     sult: "Sl", pawn: "P", cope: "Cp", chair: "Ch", jotu: "Jt", kor: "Kr",
     finor: "F+", greatshield: "GS", greathorsegeneral: "GH",
     neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
@@ -286,8 +287,10 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
     return moves;
 }
 
+// [MODIFIED] Added pieceNotation to exports
 module.exports = {
     getInitialBoard,
     getValidMovesForPiece,
-    isPositionValid
+    isPositionValid,
+    pieceNotation 
 };

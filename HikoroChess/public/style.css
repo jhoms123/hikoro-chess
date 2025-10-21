@@ -1,6 +1,8 @@
 :root {
     /* Define a variable for square size. On desktop, it's based on viewport height. */
     --square-size: min(4.5vh, 40px);
+    /* [NEW] Size for the notation markers */
+    --notation-size: calc(var(--square-size) * 0.75);
 }
 
 body {
@@ -26,7 +28,10 @@ body {
 }
 
 #board-container {
-    /* Kept for outer border, but will be less pronounced with the new square borders */
+    /* [MODIFIED] Changed to a grid to hold notation markers */
+    display: grid;
+    grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
+    grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
     border: 5px solid #4a2a00;
 }
 
@@ -37,6 +42,9 @@ body {
     grid-template-rows: repeat(16, var(--square-size));
     width: calc(var(--square-size) * 10);
     height: calc(var(--square-size) * 16);
+    /* [MODIFIED] Position in the new grid */
+    grid-column: 2;
+    grid-row: 2;
     /* * [CHANGE 1] 
      * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
      */
@@ -119,6 +127,16 @@ body {
 .square.preview-selected {
     background-color: rgba(150, 150, 150, 0.5) !important;
 }
+
+/* --- [NEW] Last Move Highlighting --- */
+.square.last-move-from {
+    background-color: rgba(255, 255, 0, 0.3) !important;
+}
+.square.last-move-to {
+    background-color: rgba(255, 255, 0, 0.6) !important;
+}
+/* --- [END NEW] --- */
+
 
 .move-plate {
     position: absolute;
@@ -275,6 +293,79 @@ body {
     border-color: #ff9800;
 }
 
+/* --- [NEW] Board Notation Styles --- */
+.notation-files {
+    grid-column: 2;
+    display: flex;
+    background-color: #d6b36b; /* Match board color */
+}
+.notation-files-top { grid-row: 1; }
+.notation-files-bottom { grid-row: 3; }
+
+.notation-ranks {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    background-color: #d6b36b; /* Match board color */
+}
+.notation-ranks-left { grid-column: 1; }
+.notation-ranks-right { grid-column: 3; }
+
+.notation-files > div {
+    width: var(--square-size);
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--notation-size) * 0.7);
+    color: #4a2a00;
+    font-weight: bold;
+    box-sizing: border-box;
+}
+.notation-ranks > div {
+    width: 100%;
+    height: var(--square-size);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--notation-size) * 0.7);
+    color: #4a2a00;
+    font-weight: bold;
+    box-sizing: border-box;
+}
+
+/* --- [NEW] Move History Styles --- */
+#move-history-container {
+    width: 200px; 
+    height: calc(var(--square-size) * 16 + var(--notation-size) * 2); /* Match board height + notation */
+    display: flex;
+    flex-direction: column;
+    background-color: #444;
+    border: 2px solid #888;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+#move-history-container h3 {
+    text-align: center;
+    margin: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #777;
+}
+#move-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 5px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+}
+#move-history div {
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+#move-history div:nth-child(even) {
+    background-color: #3a3a3a;
+}
+
 
 /* =================================== */
 /* == MOBILE RESPONSIVE STYLES HERE == */
@@ -283,6 +374,8 @@ body {
     :root {
         /* On mobile, base the square size on the screen width */
         --square-size: 9vw;
+        /* [MODIFIED] Re-declare notation size for mobile */
+        --notation-size: calc(var(--square-size) * 0.75);
     }
 
     body {
@@ -300,10 +393,23 @@ body {
     #black-captured-area { order: 1; }
     #board-container { order: 2; }
     #white-captured-area { order: 3; }
+    #move-history-container { order: 4; } /* [NEW] */
     
     .captured-area {
         /* Make the captured area wider on mobile */
         width: 90vw;
+    }
+    
+    /* [NEW] Resize move history for mobile */
+    #move-history-container {
+        width: 90vw;
+        height: 150px; /* Fixed height for mobile */
+    }
+    
+    /* [MODIFIED] Re-declare grid for mobile var size */
+    #board-container {
+        grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
+        grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
     }
 
     .captured-pieces-box {
@@ -323,7 +429,7 @@ body {
 }
 
 /* =================================== */
-/* ==       RULES MODAL STYLES      == */
+/* ==     RULES MODAL STYLES      == */
 /* =================================== */
 
 #rules-btn {

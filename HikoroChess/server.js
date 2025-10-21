@@ -22,7 +22,55 @@ app.use(express.static('public'));
 let games = {};
 let lobbyGames = {};
 
-const { getInitialBoard, getValidMovesForPiece, isPositionValid } = require('./gamelogic');
+// [MODIFIED] Import pieceNotation
+const { getInitialBoard, getValidMovesForPiece, isPositionValid, pieceNotation } = require('./gamelogic');
+
+// --- [NEW] Notation Helper Functions ---
+
+/**
+ * Converts (x, y) coordinates to algebraic notation (e.g., a1, j16)
+ */
+function toAlgebraic(x, y) {
+    const file = String.fromCharCode('a'.charCodeAt(0) + x);
+    const rank = y + 1; // y=0 is rank 1, y=15 is rank 16
+    return `${file}${rank}`;
+}
+
+/**
+ * Generates the notation string for a single move.
+ */
+function generateNotation(piece, to, wasCapture, wasDrop) {
+    const pieceAbbr = pieceNotation[piece.type] || '?';
+    const coord = toAlgebraic(to.x, to.y);
+
+    if (wasDrop) {
+        return `${pieceAbbr}*${coord}`;
+    }
+    if (wasCapture) {
+        return `${pieceAbbr}x${coord}`;
+    }
+    return `${pieceAbbr}${coord}`;
+}
+
+/**
+ * Updates the game's moveList array with the new notation.
+ */
+function updateMoveList(game, notationString) {
+    const turnNum = Math.floor(game.turnCount / 2) + 1;
+    
+    // game.isWhiteTurn is TRUE before the move, so it reflects the player who *made* the move.
+    if (game.isWhiteTurn) {
+        game.moveList.push(`${turnNum}. ${notationString}`);
+    } else {
+        if (game.moveList.length > 0) {
+            game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+        } else {
+            // Should not happen, but as a fallback
+            game.moveList.push(`${turnNum}... ${notationString}`);
+        }
+    }
+}
+// --- [END NEW] ---
 
 
 function gameTimerTick() {
@@ -137,7 +185,10 @@ io.on('connection', (socket) => {
 			timeControl: tc,
 			whiteTimeLeft: tc.main,
 			blackTimeLeft: tc.main,
-			lastMoveTimestamp: null
+			lastMoveTimestamp: null,
+            // [NEW]
+            moveList: [],
+            lastMove: null
 		};
 		
 		lobbyGames[gameId] = { 
@@ -238,6 +289,9 @@ io.on('connection', (socket) => {
             const targetPiece = game.boardState[to.y][to.x];
             const wasCapture = targetPiece !== null;
             
+            // --- [NEW] Generate notation *before* piece is moved/transformed
+            const notationString = generateNotation(piece, to, wasCapture, false);
+            
             if (piece.type === 'jotu') {
                 const dx = Math.sign(to.x - from.x);
                 const dy = Math.sign(to.y - from.y);
@@ -286,8 +340,14 @@ io.on('connection', (socket) => {
             game.boardState[to.y][to.x] = piece;
             game.boardState[from.y][from.x] = null;
             handlePromotion(piece, to.y, wasCapture);
+            
+            // --- [NEW] Update move list and last move
+            updateMoveList(game, notationString);
+            game.lastMove = { from, to };
+            
             checkForWinner(game);
             game.turnCount++;
+            
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
@@ -323,7 +383,10 @@ io.on('connection', (socket) => {
             whiteTimeLeft: tc.main,
             blackTimeLeft: tc.main,
             lastMoveTimestamp: Date.now(),
-            isSinglePlayer: true
+            isSinglePlayer: true,
+            // [NEW]
+            moveList: [],
+            lastMove: null
         };
 
         games[gameId] = game;
@@ -352,11 +415,22 @@ io.on('connection', (socket) => {
 		}
 
 		if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
-			game.boardState[to.y][to.x] = { type: piece.type, color: playerColor };
+            // [MODIFIED] Create a *copy* of the piece for notation, as the original `piece` object
+            // from the client might not be the full piece object.
+            const droppedPiece = { type: piece.type, color: playerColor };
+            const notationString = generateNotation(droppedPiece, to, false, true);
+
+			game.boardState[to.y][to.x] = droppedPiece;
 			const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
 			const pieceIndex = capturedArray.findIndex(p => p.type === piece.type);
-			if (pieceIndex > -1) {
+			
+            if (pieceIndex > -1) {
 				capturedArray.splice(pieceIndex, 1);
+                
+                // [NEW] Update move list and last move for drop
+                updateMoveList(game, notationString);
+                game.lastMove = { from: null, to }; // 'from' is null for a drop
+                
 				game.bonusMoveInfo = null;
 				game.isWhiteTurn = !game.isWhiteTurn;
 				game.turnCount++;
