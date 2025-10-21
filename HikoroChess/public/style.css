@@ -240,7 +240,7 @@ body {
     
     /* --- [NEW] --- */
     /* Make sure you use the correct file extension (e.g., .png, .jpg) */
-    background-image: url('sprites/lobby_background.png');
+    background-image: url('sprites/lobby_background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
