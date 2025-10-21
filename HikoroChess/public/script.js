@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainMenuBtn = document.getElementById('main-menu-btn');
     const rulesBtnIngame = document.getElementById('rules-btn-ingame');
 
+    // --- [NEW] ---
+    const ANIMATION_DURATION = 250; // ms, must match CSS
 
     let gameState = {};
     let myColor = null;
@@ -467,6 +469,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- [NEW] Animation function for piece moves ---
+    function animateMove(from, to, pieceImgSrc) {
+        const fromSquareEl = document.querySelector(`[data-logical-x='${from.x}'][data-logical-y='${from.y}']`);
+        const toSquareEl = document.querySelector(`[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
+        
+        if (!fromSquareEl || !toSquareEl) return;
+
+        const boardRect = boardElement.getBoundingClientRect();
+        const fromRect = fromSquareEl.getBoundingClientRect();
+        const toRect = toSquareEl.getBoundingClientRect();
+
+        // Calculate positions relative to the game board
+        const fromTop = fromRect.top - boardRect.top;
+        const fromLeft = fromRect.left - boardRect.left;
+        const toTop = toRect.top - boardRect.top;
+        const toLeft = toRect.left - boardRect.left;
+
+        // Create the clone
+        const clone = document.createElement('div');
+        clone.className = 'piece flying-piece';
+        clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
+
+        // Set start position
+        clone.style.top = `${fromTop}px`;
+        clone.style.left = `${fromLeft}px`;
+        clone.style.width = `${fromRect.width}px`;
+        clone.style.height = `${fromRect.height}px`;
+
+        boardElement.appendChild(clone);
+
+        // Force browser to register the start state
+        void clone.offsetWidth;
+
+        // Set end state to trigger transition
+        clone.style.top = `${toTop}px`;
+        clone.style.left = `${toLeft}px`;
+
+        // Clean up the clone after animation
+        setTimeout(() => {
+            clone.remove();
+        }, ANIMATION_DURATION);
+    }
+
+    // --- [NEW] Animation function for piece drops ---
+    function animateDrop(to, pieceImgSrc) {
+        const toSquareEl = document.querySelector(`[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
+        if (!toSquareEl) return;
+
+        const boardRect = boardElement.getBoundingClientRect();
+        const toRect = toSquareEl.getBoundingClientRect();
+
+        const toTop = toRect.top - boardRect.top;
+        const toLeft = toRect.left - boardRect.left;
+
+        const clone = document.createElement('div');
+        clone.className = 'piece flying-piece drop'; // Add 'drop' class
+        clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
+
+        // Set final position and size
+        clone.style.top = `${toTop}px`;
+        clone.style.left = `${toLeft}px`;
+        clone.style.width = `${toRect.width}px`;
+        clone.style.height = `${toRect.height}px`;
+
+        boardElement.appendChild(clone);
+
+        // Force reflow
+        void clone.offsetWidth;
+
+        // Trigger fade-in
+        clone.style.opacity = '1';
+
+        setTimeout(() => {
+            clone.remove();
+        }, ANIMATION_DURATION);
+    }
+
+
     function onSquareClick(x, y) {
         if (gameState.gameOver) return;
 
@@ -477,6 +557,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Case 1: A piece is selected, and we're clicking a new square to move.
         if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
             if (isMyTurn) {
+                // --- [NEW] Trigger animation before sending move ---
+                const piece = gameState.boardState[selectedSquare.y][selectedSquare.x];
+                if (piece) {
+                    const pieceImgSrc = `sprites/${piece.type}_${piece.color}.png`;
+                    animateMove(selectedSquare, { x, y }, pieceImgSrc);
+                }
+                // --- [END NEW] ---
                 socket.emit('makeMove', { gameId, from: selectedSquare, to: { x, y } });
             }
             selectedSquare = null;
@@ -488,6 +575,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Case 2: A captured piece is selected for dropping.
         if (isDroppingPiece) {
             if (isMyTurn) {
+                // --- [NEW] Trigger drop animation ---
+                const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
+                const pieceImgSrc = `sprites/${isDroppingPiece.type}_${dropColor}.png`;
+                animateDrop({ x, y }, pieceImgSrc);
+                // --- [END NEW] ---
                 socket.emit('makeDrop', { gameId, piece: isDroppingPiece, to: { x, y } });
             }
             selectedSquare = null;
