@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
-    const winnerText = document.getElementById('winnerText'); // Corrected ID reference
+    // *** CORRECTED LINE BELOW ***
+    const winnerText = document.getElementById('winner-text');
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const playBotBtn = document.getElementById('play-bot-btn');
     
@@ -180,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        winnerText.textContent = '';
+        if (winnerText) winnerText.textContent = ''; // Check if winnerText exists
         gameOverControls.style.display = 'none';
     }
 
@@ -207,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainerElement.style.display = 'flex';
         gameControls.style.display = 'flex';
         gameOverControls.style.display = 'none';
-        winnerText.textContent = '';
+        if (winnerText) winnerText.textContent = ''; // Check if winnerText exists - THIS IS LINE 210
         turnIndicator.style.display = 'block';
 
         updateLocalState(initialGameState);
@@ -253,10 +254,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isNewGameOver && newGameState.winner) {
             const winnerName = newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
-            winnerText.textContent = `${winnerName} Wins!`;
-            if (newGameState.reason) {
-                winnerText.textContent += ` (${newGameState.reason})`;
-            }
+            if(winnerText) { // Check if winnerText exists before setting
+                winnerText.textContent = `${winnerName} Wins!`;
+                if (newGameState.reason) {
+                    winnerText.textContent += ` (${newGameState.reason})`;
+                }
+            }
             // --- NEW GAME OVER UI ---
             gameControls.style.display = 'none';
             gameOverControls.style.display = 'flex';
@@ -283,11 +286,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 botBonusState = null; 
 
                 // Call the bot, passing the (now-cleared) bonus state.
+                // Ensure findBestMoveWithTimeLimit is globally available or imported if needed
+                if (typeof findBestMoveWithTimeLimit !== 'function') {
+                    console.error("findBestMoveWithTimeLimit is not defined!");
+                    return;
+                }
                 const bestMove = findBestMoveWithTimeLimit(gameState.boardState, capturedPiecesForBot, currentBonusState);
 
                 if (bestMove) {
                     // Check if THIS move will trigger a bonus for the NEXT turn.
-                    const pieceThatMoved = bestMove.type === 'board' ? gameState.boardState[bestMove.from.y][bestMove.from.x] : null;
+                    const pieceThatMoved = bestMove.type === 'board' && gameState.boardState[bestMove.from.y] ? gameState.boardState[bestMove.from.y][bestMove.from.x] : null; // Added existence check
                     
                     // --- FIX: Only set a new bonus if we were NOT just in a bonus move ---
                     if (pieceThatMoved && !currentBonusState) {
@@ -648,7 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Hammer Head', type: 'jotu', desc: 'Moves like a Rook, but it can **jump over friendly pieces** along its path. When it does, any jumped friendly pieces (except Ancient Creature and Cthulhu) are returned to your hand. It captures the first enemy piece it encounters and stops.' },
         { name: 'Two Pincer Crab', type: 'finor', desc: 'Moves like a Bishop or a Knight. Acquired by capturing with a One Pincer Crab.' },
         { name: 'Shield Squid', type: 'greatshield', desc: 'Can only make non-capture moves one square forward (diagonally or straight) or straight backward. **Special Ability:** It **shields all adjacent friendly pieces** on its sides and behind it (5 total squares).', special: 'Promotes from Squid.' },
-        // *** CORRECTED AREA: Removed stray comment and 's' ***
         { name: 'Ancient Creature', type: 'greathorsegeneral', desc: "**Special Ability:** After making a non-capture move, it gets a second, non-capture move during the same turn. It Moves like a knight but with the the range extended by one, like a bishop in the forward diagnols, and like a rook backwards.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
         { name: 'Neptune', type: 'neptune', desc: 'Moves like a Clam or Narwhal. It can also jump over the first piece it encounters (friendly or enemy) on a straight line, then continue moving and capturing along that path.', special: 'Upon capture, it returns to the original owner\'s hand as a Mermaid.' },
         { name: 'Mermaid', type: 'mermaid', desc: 'Moves/Captures in a 5*5 square around itself, jumping over any piece.', special: 'Promotes to Neptune.' },
@@ -699,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             pieceListContainer.appendChild(entry);
         });
-    } // <-- This is line 648 now
+    }
 
 
     rulesBtn.addEventListener('click', () => {
