@@ -190,7 +190,7 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 addMove(x, y - 1);
             }
             else { 
-                generateJotuJumpMoves(0, -1);s
+                generateJotuJumpMoves(0, -1); // Removed stray 's' from here
                 addMove(x, y + 1);
             }
             break;
@@ -242,8 +242,8 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 while (isPositionValid(cx, cy)) {
                     const target = boardState[cy][cx];
                     if (!screenFound) { if (target !== null) { screenFound = true; } } 
-                    else {
-                        if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); }s
+                    else { // This is line 246
+                        if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); } // *** CORRECTED LINE 247: Removed stray 's' ***
                         else { if(target.color !== piece.color && !isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); } break; }
                     }
                     cx += dx; cy += dy;
@@ -251,7 +251,7 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             });
             for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); }
             addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
-nbsp;           addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
+            addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
             addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
             break;
         }
@@ -290,7 +290,7 @@ module.exports = {
     getInitialBoard,
     getValidMovesForPiece,
     isPositionValid,
-    pieceNotation, // --- ADDED EXPORT ---
-    BOARD_HEIGHT, // --- ADDED EXPORT ---
-    BOARD_WIDTH // --- ADDED EXPORT ---
+    pieceNotation, // --- ADDED EXPORT ---
+    BOARD_HEIGHT, // --- ADDED EXPORT ---
+    BOARD_WIDTH // --- ADDED EXPORT ---
 };
