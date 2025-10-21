@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
-    const winnerText = document.getElementById('winnerText');
+    const winnerText = document.getElementById('winner-text');
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const playBotBtn = document.getElementById('play-bot-btn');
     
