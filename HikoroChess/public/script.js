@@ -221,24 +221,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 // If a bonus move is pending, the bot cannot drop pieces.
                 const capturedPiecesForBot = botBonusState ? [] : gameState.blackCaptured;
 
-                // Call the bot, passing the current bonus state (which may be null).
-                const bestMove = findBestMoveWithTimeLimit(gameState.boardState, capturedPiecesForBot, botBonusState);
+                // --- FIX: Capture the current state and clear it BEFORE the search ---
+                const currentBonusState = botBonusState;
+                botBonusState = null; 
 
-                // The bonus state has been used, clear it for the next turn.
-                botBonusState = null;
+                // Call the bot, passing the (now-cleared) bonus state.
+                const bestMove = findBestMoveWithTimeLimit(gameState.boardState, capturedPiecesForBot, currentBonusState);
 
                 if (bestMove) {
                     // Check if THIS move will trigger a bonus for the NEXT turn.
                     const pieceThatMoved = bestMove.type === 'board' ? gameState.boardState[bestMove.from.y][bestMove.from.x] : null;
-                    if (pieceThatMoved) {
+                    
+                    // --- FIX: Only set a new bonus if we were NOT just in a bonus move ---
+                    if (pieceThatMoved && !currentBonusState) {
                         const isCopeBonus = pieceThatMoved.type === 'cope' && bestMove.isAttack;
                         const isGHGBonus = (pieceThatMoved.type === 'greathorsegeneral' || pieceThatMoved.type === 'cthulhu') && !bestMove.isAttack;
 
                         if (isCopeBonus || isGHGBonus) {
                             // Set the bonus state for the next time this function is called for the bot's turn.
                             botBonusState = {
-                                piece: pieceThatMoved,
-                                from: bestMove.to // The piece will be at its destination for the next move
+                                piece: { ...pieceThatMoved }, // Store a copy
+                                from: { ...bestMove.to }     // The piece will be at its destination
                             };
                         }
                     }
@@ -250,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         socket.emit('makeMove', { gameId, from: bestMove.from, to: bestMove.to });
                     }
                 } else {
-                    console.error("Bot returned no move.");
+                    console.error("Bot returned no move. This likely means a stalemate or a search error.");
                 }
             }, 100);
         }
