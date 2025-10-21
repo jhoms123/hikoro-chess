@@ -1,278 +1,311 @@
 :root {
-    /* Define a variable for square size. On desktop, it's based on viewport height. */
-    --square-size: min(4.5vh, 40px);
+    /* Define a variable for square size. On desktop, it's based on viewport height. */
+    --square-size: min(4.5vh, 40px);
 }
 
 body {
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: #333;
-    color: #eee;
-    margin: 0;
-    padding: 10px;
-    box-sizing: border-box;
-    min-height: 100vh;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #333;
+    color: #eee;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+    min-height: 100vh;
 }
 
 #game-container {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    justify-content: center;
-    width: 100%;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
 }
 
 #board-container {
-    /* Kept for outer border, but will be less pronounced with the new square borders */
-    border: 5px solid #4a2a00;
+    /* Kept for outer border, but will be less pronounced with the new square borders */
+    border: 5px solid #4a2a00;
 }
 
 #game-board {
-    display: grid;
-    /* Use the CSS variable to set the size dynamically */
-    grid-template-columns: repeat(10, var(--square-size));
-    grid-template-rows: repeat(16, var(--square-size));
-    width: calc(var(--square-size) * 10);
-    height: calc(var(--square-size) * 16);
-    /* * [CHANGE 1] 
-     * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
-     */
-    background-color: #d6b36b; /* A light, wood-like color */
+    display: grid;
+    /* Use the CSS variable to set the size dynamically */
+    grid-template-columns: repeat(10, var(--square-size));
+    grid-template-rows: repeat(16, var(--square-size));
+    width: calc(var(--square-size) * 10);
+    height: calc(var(--square-size) * 16);
+    /* * [CHANGE 1] 
+     * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
+     */
+    background-color: #d6b36b; /* A light, wood-like color */
 }
 
 .square {
-    width: var(--square-size);
-    height: var(--square-size);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    /* * [CHANGE 2] 
-     * Apply a border to all four sides to create the grid outline. 
-     * This border will appear *inside* the main #game-board color due to the grid layout.
-     */
-    border: 1px solid #4a2a00; /* Darker brown for the grid lines */
-    box-sizing: border-box; /* Ensures the border is included in the square's dimensions */
-    /* * [CHANGE 3] 
-     * Set a uniform background for all squares. 
-     * This will match the main board color from #game-board, making the border the visual separator.
-     */
-    background-color: #f9d892; 
+    width: var(--square-size);
+    height: var(--square-size);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    /* * [CHANGE 2] 
+     * Apply a border to all four sides to create the grid outline. 
+     * This border will appear *inside* the main #game-board color due to the grid layout.
+     */
+    border: 1px solid #4a2a00; /* Darker brown for the grid lines */
+    box-sizing: border-box; /* Ensures the border is included in the square's dimensions */
+    /* * [CHANGE 3] 
+     * Set a uniform background for all squares. 
+     * This will match the main board color from #game-board, making the border the visual separator.
+     */
+    background-color: #f9d892; 
 }
 
-/* * [CHANGE 4] 
- * REMOVE the checkerboard pattern (light/dark) styles 
- */
+/* * [CHANGE 4] 
+ * REMOVE the checkerboard pattern (light/dark) styles 
+ */
 /* .square.light { background-color: #f0d9b5; } */
 /* .square.dark { background-color: #b58863; } */
 
-.square.invalid { 
-    /* The invalid corners can still have a distinct background if needed */
-    background-color: #555; 
-    border-color: #555; /* Hide the grid line on invalid squares */
-} 
+.square.invalid { 
+    /* The invalid corners can still have a distinct background if needed */
+    background-color: #555; 
+    border-color: #555; /* Hide the grid line on invalid squares */
+} 
 .sanctuary-square {
-    /* Still apply a distinct background for sanctuary squares */
-    background-color: #e5b045 !important; /* A slightly darker golden yellow */
+    /* Still apply a distinct background for sanctuary squares */
+    background-color: #e5b045 !important; /* A slightly darker golden yellow */
 }
 
 
 .piece {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .piece img {
-    width: 90%;
-    height: 90%;
-    object-fit: contain;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: -webkit-crisp-edges;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: grab;
 }
 
-#create-game-btn, 
-#single-player-btn, 
+#create-game-btn, 
+#single-player-btn, 
 #play-bot-btn {
-    /* Use the same sizing properties as the original #create-game-btn */
-    padding: 10px 20px;
-    font-size: 16px;
-    /* Optional: Ensure they all have the same width for uniformity */
-    min-width: 200px; /* Adjust this value as needed */
-    box-sizing: border-box; /* Necessary if you set a width */
-    margin: 5px 0; /* Add a bit of vertical spacing between the buttons */
+    /* Use the same sizing properties as the original #create-game-btn */
+    padding: 10px 20px;
+    font-size: 16px;
+    /* Optional: Ensure they all have the same width for uniformity */
+    min-width: 200px; /* Adjust this value as needed */
+    box-sizing: border-box; /* Necessary if you set a width */
+    margin: 5px 0; /* Add a bit of vertical spacing between the buttons */
 }
 
 /* Selection and Move Highlights */
 /* NOTE: The !important is often needed to override the single square background from .square. */
 .square.selected {
-    background-color: #6a9cff !important;
+    background-color: #6a9cff !important;
 }
 
 .square.preview-selected {
-    background-color: rgba(150, 150, 150, 0.5) !important;
+    background-color: rgba(150, 150, 150, 0.5) !important;
 }
 
-.move-plate {
+/* --- NEW LAST MOVE HIGHLIGHTS --- */
+.square.last-move-from::before,
+.square.last-move-to::before {
+    content: '';
     position: absolute;
-    width: 70%;
-    height: 70%;
-    border-radius: 50%;
-    background-color: rgba(4, 255, 0, 0.4);
-    pointer-events: all;
-    cursor: pointer;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 235, 59, 0.3); /* Semi-transparent yellow */
+    box-sizing: border-box;
+    z-index: 1;
+}
+.square.last-move-to::before {
+    background-color: rgba(255, 235, 59, 0.5); /* Slightly darker for the 'to' square */
+}
+.piece {
+    position: relative;
+    z-index: 2; /* Ensures piece is on top of the highlight */
+}
+/* --- END LAST MOVE HIGHLIGHTS --- */
+
+.move-plate {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+    background-color: rgba(4, 255, 0, 0.4);
+    pointer-events: all;
+    cursor: pointer;
+    z-index: 3;
 }
 
 .move-plate.attack {
-    background-color: rgba(255, 20, 20, 0.5);
+    background-color: rgba(255, 20, 20, 0.5);
 }
 
 .move-plate.drop {
-    background-color: rgba(255, 242, 0, 0.4);
+    background-color: rgba(255, 242, 0, 0.4);
 }
 
 .move-plate.preview {
-    background-color: rgba(128, 128, 128, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(128, 128, 128, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
-  
+  
 .move-plate.preview.attack {
-    background-color: rgba(80, 80, 80, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(80, 80, 80, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 /* Captured Pieces Area */
 .captured-area {
-    width: calc(var(--square-size) * 4); /* Adjust width relative to square size */
-    text-align: center;
-    display: flex;
-    flex-direction: column;
+    width: calc(var(--square-size) * 4); /* Adjust width relative to square size */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
 }
 
 .captured-pieces-box {
-    background-color: #4a4a4a;
-    border: 2px solid #888;
-    min-height: calc(var(--square-size) * 5);
-    padding: 5px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    align-content: flex-start;
-    flex-grow: 1;
+    background-color: #4a4a4a;
+    border: 2px solid #888;
+    min-height: calc(var(--square-size) * 5);
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start;
+    flex-grow: 1;
 }
 
 .captured-piece {
-    width: var(--square-size);
-    height: var(--square-size);
-    border: 1px solid #ccc;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
+    width: var(--square-size);
+    height: var(--square-size);
+    border: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-sizing: border-box; /* --- ADDED --- */
 }
 
 .captured-piece.white { background-color: #f0d9b5; }
 .captured-piece.black { background-color: #b58863; }
 
+/* --- NEW SELECTED DROP PIECE STYLE --- */
+.captured-piece.selected-drop {
+    background-color: #6a9cff;
+    border: 2px solid #fff;
+    transform: scale(1.1);
+}
+/* --- END NEW STYLE --- */
+
 /* Turn Indicator & Winner Text */
 #turn-indicator-container {
-    margin-top: 20px;
-    text-align: center;
+    margin-top: 20px;
+    text-align: center;
 }
 
 #winner-text {
-    font-size: 1.5em;
-    color: #4CAF50;
-    font-weight: bold;
+    font-size: 1.5em;
+    color: #4CAF50;
+    font-weight: bold;
 }
 
 /* Lobby Styles */
 #lobby {
-    background-color: #444;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-    margin-bottom: 20px;
+    background-color: #444;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 
 
 #game-list {
-    max-height: 200px;
-    overflow-y: auto;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .game-item {
-    background-color: #555;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background-color: #555;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .join-btn {
-    padding: 5px 10px;
-    cursor: pointer;
+    padding: 5px 10px;
+    cursor: pointer;
 }
 
 /* ----- NEW STYLES ----- */
 
 #time-controls {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #666;
-    border-radius: 5px;
-    display: flex;
-    justify-content: center;
-    gap: 25px;
-    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
 }
 #time-controls div {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
 }
 #time-controls label {
-    font-weight: bold;
+    font-weight: bold;
 }
 #time-controls select {
-    padding: 5px;
-    background-color: #555;
-    color: #eee;
-    border: 1px solid #777;
+    padding: 5px;
+    background-color: #555;
+    color: #eee;
+    border: 1px solid #777;
 }
 
 /* Timer Display Styling in Game */
 .captured-area h3 {
-    font-weight: normal; /* Make the "Your Hand" text less bold */
+    font-weight: normal; /* Make the "Your Hand" text less bold */
 }
 
 #white-time, #black-time {
-    font-size: 1.2em;
-    font-weight: bold;
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #222;
-    color: #ddd;
-    padding: 3px 8px;
-    border-radius: 5px;
-    border: 2px solid #555;
-    transition: background-color 0.3s, border-color 0.3s;
+    font-size: 1.2em;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #222;
+    color: #ddd;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 2px solid #555;
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
 #white-time.active, #black-time.active {
-    background-color: #4a2a00;
-    color: #fff;
-    border-color: #ff9800;
+    background-color: #4a2a00;
+    color: #fff;
+    border-color: #ff9800;
 }
 
 
@@ -280,173 +313,256 @@ body {
 /* == MOBILE RESPONSIVE STYLES HERE == */
 /* =================================== */
 @media (orientation: portrait) {
-    :root {
-        /* On mobile, base the square size on the screen width */
-        --square-size: 9vw;
-    }
+    :root {
+        /* On mobile, base the square size on the screen width */
+        --square-size: 9vw;
+    }
 
-    body {
-        justify-content: flex-start; /* Align content to the top */
-    }
+    body {
+        justify-content: flex-start; /* Align content to the top */
+    }
 
-    #game-container {
-        /* Change to a vertical layout */
-        flex-direction: column;
-        align-items: center; /* Center the items vertically */
-        gap: 10px;
-    }
+    #game-container {
+        /* Change to a vertical layout */
+        flex-direction: column;
+        align-items: center; /* Center the items vertically */
+        gap: 10px;
+    }
 
-    /* Use CSS order property to rearrange elements for mobile */
-    #black-captured-area { order: 1; }
-    #board-container { order: 2; }
-    #white-captured-area { order: 3; }
-    
-    .captured-area {
-        /* Make the captured area wider on mobile */
+    /* Use CSS order property to rearrange elements for mobile */
+    #black-captured-area { order: 1; }
+    #board-container { order: 2; }
+    #white-captured-area { order: 3; }
+    #move-history-container { order: 4; } /* --- ADDED --- */
+    
+    .captured-area {
+        /* Make the captured area wider on mobile */
+        width: 90vw;
+    }
+
+    .captured-pieces-box {
+        /* Let the box grow as needed and align pieces in a row */
+        min-height: auto;
+        flex-wrap: nowrap; /* Don't wrap pieces to the next line */
+        overflow-x: auto; /* Allow horizontal scrolling if many pieces */
+        justify-content: flex-start;
+    }
+
+    .timer {
+        margin-top: 0;
+        margin-bottom: 5px; /* Add space below timer on mobile */
+        font-size: 1.5em;
+        padding: 5px;
+    }
+
+    /* --- ADDED FOR MOBILE --- */
+    #move-history-container {
         width: 90vw;
-    }
-
-    .captured-pieces-box {
-        /* Let the box grow as needed and align pieces in a row */
-        min-height: auto;
-        flex-wrap: nowrap; /* Don't wrap pieces to the next line */
-        overflow-x: auto; /* Allow horizontal scrolling if many pieces */
-        justify-content: flex-start;
-    }
-
-    .timer {
-        margin-top: 0;
-        margin-bottom: 5px; /* Add space below timer on mobile */
-        font-size: 1.5em;
-        padding: 5px;
+        height: 15vh; /* Give it a fixed height on mobile */
     }
 }
 
 /* =================================== */
-/* ==       RULES MODAL STYLES      == */
+/* ==       RULES MODAL STYLES      == */
 /* =================================== */
 
 #rules-btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 10px;
-    width: 90%;
-    max-width: 250px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    width: 90%;
+    max-width: 250px;
 }
 
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%;
+s   height: 100%;
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
 }
 
 .modal-content {
-    background-color: #2c2c2c;
-    margin: 5% auto; /* 5% from the top and centered */
-    padding: 25px;
-    border: 1px solid #888;
-    width: 90%;
-    max-width: 800px;
-    border-radius: 10px;
-    position: relative;
-    color: #eee;
-    max-height: 85vh; /* Max height is 85% of the viewport height */
-    overflow-y: auto; /* Enable vertical scrolling */
+    background-color: #2c2c2c;
+    margin: 5% auto; /* 5% from the top and centered */
+    padding: 25px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 800px;
+    border-radius: 10px;
+    position: relative;
+    color: #eee;
+    max-height: 85vh; /* Max height is 85% of the viewport height */
+    overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .close-btn {
-    color: #aaa;
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .close-btn:hover,
 .close-btn:focus {
-    color: #fff;
-    text-decoration: none;
+    color: #fff;
+    text-decoration: none;
 }
 
 #rules-body h2 {
-    color: #ffc107;
-    border-bottom: 2px solid #ffc107;
-    padding-bottom: 5px;
+    color: #ffc107;
+    border-bottom: 2px solid #ffc107;
+    padding-bottom: 5px;
 }
 
 #rules-body h3 {
-    color: #4CAF50;
-    margin-top: 20px;
+    color: #4CAF50;
+    margin-top: 20px;
 }
 
 #rules-body p, #rules-body li {
-    line-height: 1.6;
+    line-height: 1.6;
 }
 
 .piece-list {
-    margin-top: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
 }
 
 .piece-entry {
-    background-color: #444;
-    padding: 15px;
-    border-radius: 5px;
-    border-left: 5px solid #666;
+    background-color: #444;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 5px solid #666;
 }
 
 .piece-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.2em;
-    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
 }
 
 .piece-header img {
-    width: 40px;
-    height: 40px;
+    width: 40px;
+    height: 40px;
 }
 
 #game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+#main-menu-btn,
+#rules-btn-ingame,
+#resign-btn { /* --- ADDED RESIGN BTN --- */
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    background-color: #555;
+    color: #eee;
+    border: 1px solid #777;
+}
+
+#main-menu-btn:hover,
+#rules-btn-ingame:hover,
+#resign-btn:hover { /* --- ADDED RESIGN BTN --- */
+    background-color: #666;
+}
+
+/* --- MODIFIED MAIN MENU BTN --- */
+#main-menu-btn {
+    background-color: #6c757d;
+}
+#main-menu-btn:hover {
+    background-color: #828a91;
+}
+
+/* --- NEW RESIGN BUTTON STYLE --- */
+#resign-btn {
+    background-color: #a13a3a;
+}
+#resign-btn:hover {
+    background-color: #c04848;
+}
+
+/* --- NEW MOVE HISTORY STYLES --- */
+#move-history-container {
+    width: calc(var(--square-size) * 4);
+    height: calc(var(--square-size) * 16 + 10px); /* Match board height */
+    background-color: #444;
+    border: 2px solid #888;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+#move-history-container h3 {
+    margin: 10px 0 5px 0;
+    font-weight: normal;
+    color: #ccc;
+    border-bottom: 1px solid #666;
+    padding-bottom: 5px;
+}
+#move-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 5px 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    color: #eee;
+    text-align: left;
+}
+#move-history p {
+    margin: 4px 0;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+#move-history p:nth-child(even) {
+    background-color: #505050;
+}
+/* --- END MOVE HISTORY STYLES --- */
+
+/* --- NEW GAME OVER CONTROLS STYLES --- */
+#game-over-controls {
     display: flex;
     justify-content: center;
     gap: 15px;
     margin-top: 15px;
 }
-
-#main-menu-btn,
-#rules-btn-ingame {
-    padding: 8px 16px;
-    font-size: 14px;
+#game-over-controls button {
+    padding: 10px 20px;
+    font-size: 16px;
     cursor: pointer;
     border-radius: 5px;
     border: none;
-    background-color: #555;
     color: #eee;
-    border: 1px solid #777;
 }
-
-#main-menu-btn:hover,
-#rules-btn-ingame:hover {
-    background-color: #666;
+#rematch-btn {
+    background-color: #4CAF50; /* Green */
 }
-
-#main-menu-btn {
-    background-color: #a13a3a; /* A reddish color to signify leaving */
+#rematch-btn:hover {
+    background-color: #5cb85c;
 }
-
-#main-menu-btn:hover {
-    background-color: #c04848;
+#new-game-lobby-btn {
+    background-color: #0275d8; /* Blue */
 }
+#new-game-lobby-btn:hover {
+    background-color: #2a8ded;
+}
+/* --- END GAME OVER CONTROLS STYLES --- */
