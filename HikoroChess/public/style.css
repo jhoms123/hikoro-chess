@@ -236,11 +236,24 @@ body {
 
 /* Lobby Styles */
 #lobby {
-    background-color: #444;
+    /* [REMOVED] background-color: #444; */
+    
+    /* --- [NEW] --- */
+    /* Make sure you use the correct file extension (e.g., .png, .jpg) */
+    background-image: url('sprites/lobby_background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    /* --- [END NEW] --- */
+
     padding: 20px;
     border-radius: 8px;
     text-align: center;
     margin-bottom: 20px;
+    
+    /* [NEW] Add a semi-transparent overlay to make text readable */
+    /* This creates a dark tint over the image */
+    box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.5);
 }
 
 
