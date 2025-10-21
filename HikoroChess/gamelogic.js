@@ -3,7 +3,7 @@ const BOARD_HEIGHT = 16;
 
 // [MODIFIED] Using your custom abbreviations (C for Clam, D for Dolphin, etc.)
 const pieceNotation = {
-    lupa: "C", zur: "D",
+    lupa: "K", zur: "D",
     kota: "H", fin: "Oc", yoli: "B", pilut: "S",
     sult: "Cr", pawn: "F", cope: "Na", chair: "Du", jotu: "S", kor: "J",
     finor: "Tc", greatshield: "Ss", greathorsegeneral: "Ac",

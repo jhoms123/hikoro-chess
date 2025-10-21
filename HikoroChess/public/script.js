@@ -698,9 +698,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const rulesBody = document.getElementById('rules-body');
 
     const pieceInfo = [
-        { name: 'Clam (King)', type: 'lupa', desc: "The main objective. Moves one square in any direction. You must capture both of the opponent's Clams to win." },
+        { name: 'King Kraken (King)', type: 'lupa', desc: "The main objective. Moves one square in any direction. You must capture both of the opponent's King Krakens to win." },
         { name: 'Dolphin', type: 'zur', desc: 'Moves any number of squares along a rank, file, or diagonal.' },
-        { name: 'Hermit Crab', type: 'kota', desc: 'Moves like a standard Rook (any number of squares horizontally or vertically) AND one square in any direction (like a Clam).' },
+        { name: 'Hermit Crab', type: 'kota', desc: 'Moves like a standard Rook (any number of squares horizontally or vertically) AND one square in any direction (like a King Kraken).' },
         { name: 'One Pincer Crab', type: 'fin', desc: 'Moves any number of squares diagonally. It can also move one square horizontally (non-capture only).', special: 'Promotes to Two Pincer Crab upon capturing.' },
         { name: 'Big Eye Squid', type: 'yoli', desc: 'Moves in an "L" shape (two squares in one direction, then one perpendicularly). It can also move one square horizontally or vertically.' },
         { name: 'Jellyfish', type: 'kor', desc: 'Moves like a standard Knight OR one square diagonally.' },
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Shield Squid', type: 'greatshield', desc: 'Can only make non-capture moves one square forward (diagonally or straight) or straight backward. **Special Ability:** It **shields all adjacent friendly pieces** on its sides and behind it (5 total squares).', special: 'Promotes from Squid.' },
         // --- FILENAME FIX APPLIED HERE ---
         { name: 'Ancient Creature', type: 'greathorsegeneral', desc: "**Special Ability:** After making a non-capture move, it gets a second, non-capture move during the same turn. It Moves like a knight but with the the range extended by one, like a bishop in the forward diagnols, and like a rook backwards.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
-        { name: 'Neptune', type: 'neptune', desc: 'Moves like a Clam or Narwhal. It can also jump over the first piece it encounters (friendly or enemy) on a straight line, then continue moving and capturing along that path.', special: 'Upon capture, it returns to the original owner\'s hand as a Mermaid.' },
+        { name: 'Neptune', type: 'neptune', desc: 'Moves like a King Kraken or Narwhal. It can also jump over the first piece it encounters (friendly or enemy) on a straight line, then continue moving and capturing along that path.', special: 'Upon capture, it returns to the original owner\'s hand as a Mermaid.' },
         { name: 'Mermaid', type: 'mermaid', desc: 'Moves/Captures in a 5*5 square around itself, jumping over any piece.', special: 'Promotes to Neptune.' },
         { name: 'Cthulhu', type: 'cthulhu', desc: "An extremely powerful piece with the combined moves of an Ancient Creature and a Mermaid. **Special Ability:** Retains the Ancient Creature's bonus non-capture move." }
     ];
@@ -724,8 +724,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <h2>Winning the Game</h2>
             <p>There are two ways to achieve victory in Hikoro Chess:</p>
             <ul>
-                <li><strong>Clam Capture:</strong> The primary objective. Capture both of the opponent's <strong>Clam</strong> pieces.</li>
-                <li><strong>Sanctuary Victory:</strong> Move one of your own <strong>Clam</strong> pieces onto one of the eight golden "Sanctuary" located on the sides of the board.</li>
+                <li><strong>King kraken Capture:</strong> The primary objective. Capture both of the opponent's <strong>King Krakens</strong> pieces.</li>
+                <li><strong>Sanctuary Victory:</strong> Move one of your own <strong>King Kraken</strong> pieces onto one of the eight golden "Sanctuary" located on the sides of the board.</li>
             </ul>
 
             <h2>Special Mechanics</h2>

@@ -309,6 +309,47 @@ body {
     font-weight: normal; /* Make the "Your Hand" text less bold */
 }
 
+h1 {
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    display: inline-block; /* Prevent stretching full width */
+    margin-bottom: 20px; /* Add some space below */
+}
+
+/* Style for the container holding turn/winner text */
+#turn-indicator-container {
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    margin-top: 20px;
+    text-align: center;
+    /* Limit width so it doesn't look too wide */
+    max-width: 500px; 
+    /* Center the box itself */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Ensure winner text doesn't have extra top margin */
+#turn-indicator-container p#winner-text {
+    margin-top: 5px; 
+}
+
+/* Style specifically for the hand label text within the captured area */
+.captured-area h3 {
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #666;
+    margin-bottom: 10px; /* Space between label and captured box */
+    /* Prevent the box from stretching full width of the area */
+    display: inline-block; 
+    font-weight: normal; 
+}
+
 #white-time, #black-time {
     font-size: 1.2em;
     font-weight: bold;
