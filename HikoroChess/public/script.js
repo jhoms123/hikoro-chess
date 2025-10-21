@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
-    const winnerText = document.getElementById('winnerText');
+    const winnerText = document.getElementById('winnerText'); // Corrected ID reference
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const playBotBtn = document.getElementById('play-bot-btn');
     
@@ -23,11 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameControls = document.getElementById('game-controls');
     const mainMenuBtn = document.getElementById('main-menu-btn');
     const rulesBtnIngame = document.getElementById('rules-btn-ingame');
-    const resignBtn = document.getElementById('resign-btn');
-    const gameOverControls = document.getElementById('game-over-controls');
-    const rematchBtn = document.getElementById('rematch-btn');
-    const newGameLobbyBtn = document.getElementById('new-game-lobby-btn');
-    const moveHistoryElement = document.getElementById('move-history');
+    const resignBtn = document.getElementById('resign-btn');
+    const gameOverControls = document.getElementById('game-over-controls');
+    const rematchBtn = document.getElementById('rematch-btn');
+    const newGameLobbyBtn = document.getElementById('new-game-lobby-btn');
+    const moveHistoryElement = document.getElementById('move-history');
     // --- END ADDED ---
 
 
@@ -93,13 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Failed to connect to the server. Check the developer console (F12) for more info.");
     });
 
-    // --- NEW SOCKET HANDLER ---
-    socket.on('rematchOffered', () => {
-        if (confirm("Your opponent has offered a rematch. Do you accept?")) {
-            socket.emit('acceptRematch', gameId);
-        }
-    });
-    // --- END NEW HANDLER ---
+    // --- NEW SOCKET HANDLER ---
+    socket.on('rematchOffered', () => {
+        if (confirm("Your opponent has offered a rematch. Do you accept?")) {
+            socket.emit('acceptRematch', gameId);
+        }
+    });
+    // --- END NEW HANDLER ---
     
     function formatTimeControl(tc) {
         if (!tc || tc.main === -1) { return 'Unlimited'; }
@@ -180,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
-        winnerText.textContent = '';
-        gameOverControls.style.display = 'none';
+        winnerText.textContent = '';
+        gameOverControls.style.display = 'none';
     }
 
     function onGameStart(initialGameState) {
@@ -192,17 +192,23 @@ document.addEventListener('DOMContentLoaded', () => {
             isSinglePlayer = true;
             myColor = 'white';
         } else if (!myColor) {
+            // If we joined a game, assign black
             myColor = 'black';
             isSinglePlayer = false;
         }
+        // Reset myColor if it's a new game started from scratch
+        else if (initialGameState.turnCount === 0 && !initialGameState.isSinglePlayer && myColor === 'black') {
+            myColor = 'white'; // Should be white if creating
+        }
+
         isBotGame = isBotGame && isSinglePlayer;
 
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
         gameControls.style.display = 'flex';
-        gameOverControls.style.display = 'none';
-        winnerText.textContent = '';
-        turnIndicator.style.display = 'block';
+        gameOverControls.style.display = 'none';
+        winnerText.textContent = '';
+        turnIndicator.style.display = 'block';
 
         updateLocalState(initialGameState);
     }
@@ -220,25 +226,25 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
     });
 
-    // --- NEW EVENT LISTENERS ---
-    resignBtn.addEventListener('click', () => {
-        if (!gameState.gameOver && !isSinglePlayer && confirm("Are you sure you want to resign?")) {
-            socket.emit('resignGame', gameId);
-        } else if (isSinglePlayer) {
-            alert("You cannot resign in a single-player game.");
-        }
-    });
+    // --- NEW EVENT LISTENERS ---
+    resignBtn.addEventListener('click', () => {
+        if (!gameState.gameOver && !isSinglePlayer && confirm("Are you sure you want to resign?")) {
+            socket.emit('resignGame', gameId);
+        } else if (isSinglePlayer) {
+            alert("You cannot resign in a single-player game.");
+        }
+    });
 
-    rematchBtn.addEventListener('click', () => {
-        rematchBtn.textContent = "Waiting for Opponent...";
-        rematchBtn.disabled = true;
-        socket.emit('offerRematch', gameId);
-    });
+    rematchBtn.addEventListener('click', () => {
+        rematchBtn.textContent = "Waiting for Opponent...";
+        rematchBtn.disabled = true;
+        socket.emit('offerRematch', gameId);
+    });
 
-    newGameLobbyBtn.addEventListener('click', () => {
-        window.location.reload();
-    });
-    // --- END NEW LISTENERS ---
+    newGameLobbyBtn.addEventListener('click', () => {
+        window.location.reload();
+    });
+    // --- END NEW LISTENERS ---
 
 
     function updateLocalState(newGameState) {
@@ -251,20 +257,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newGameState.reason) {
                 winnerText.textContent += ` (${newGameState.reason})`;
             }
-            // --- NEW GAME OVER UI ---
-            gameControls.style.display = 'none';
-            gameOverControls.style.display = 'flex';
-            turnIndicator.style.display = 'none';
-            rematchBtn.textContent = "Offer Rematch";
-            rematchBtn.disabled = false;
-            if (isSinglePlayer) {
-                rematchBtn.style.display = 'none'; // No rematches in single player
-            }
-            // --- END NEW UI ---
+            // --- NEW GAME OVER UI ---
+            gameControls.style.display = 'none';
+            gameOverControls.style.display = 'flex';
+            turnIndicator.style.display = 'none';
+            rematchBtn.textContent = "Offer Rematch";
+            rematchBtn.disabled = false;
+            if (isSinglePlayer) {
+                rematchBtn.style.display = 'none'; // No rematches in single player
+            }
+            // --- END NEW UI ---
         }
         
         renderAll();
-        renderMoveHistory(gameState.moveList || []); // --- NEW CALL ---
+        renderMoveHistory(gameState.moveList || []); // --- NEW CALL ---
 
         // --- UPDATED BOT HANDLING LOGIC ---
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn) {
@@ -337,24 +343,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.style.gridRowStart = displayY + 1;
                 square.style.gridColumnStart = displayX + 1;
 
-                const isLight = (x + y) % 2 === 0;
-                square.classList.add(isLight ? 'light' : 'dark');
+                // Removed isLight/isDark logic to match CSS changes
+                // square.classList.add(isLight ? 'light' : 'dark');
 
                 const isSanctuary = sanctuarySquares.some(sq => sq.x === x && sq.y === y);
                 if (isSanctuary) {
                     square.classList.add('sanctuary-square');
                 }
 
-            // --- NEW: LAST MOVE HIGHLIGHT ---
-            if (gameState.lastMove) {
-                if (gameState.lastMove.from && x === gameState.lastMove.from.x && y === gameState.lastMove.from.y) {
-                    square.classList.add('last-move-from');
-                }
-                if (x === gameState.lastMove.to.x && y === gameState.lastMove.to.y) {
-                    square.classList.add('last-move-to');
-                }
-            }
-            // --- END NEW ---
+            // --- NEW: LAST MOVE HIGHLIGHT ---
+            if (gameState.lastMove) {
+                if (gameState.lastMove.from && gameState.lastMove.from !== 'hand' && x === gameState.lastMove.from.x && y === gameState.lastMove.from.y) {
+                    square.classList.add('last-move-from');
+                }
+                if (gameState.lastMove.to && x === gameState.lastMove.to.x && y === gameState.lastMove.to.y) {
+                    square.classList.add('last-move-to');
+                }
+            }
+            // --- END NEW ---
 
                 const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
                 if (!isBoardValid) {
@@ -377,10 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     spriteImg.src = `sprites/${piece.type}_${piece.color}.png`;
                     spriteImg.alt = `${piece.color} ${piece.type}`;
 
-                    // --- NEW: TOOLTIP ---
-                    const pieceName = pieceInfo.find(p => p.type === piece.type)?.name || piece.type;
-                    spriteImg.title = `${pieceName} (${piece.type})`;
-                    // --- END NEW ---
+                    // --- NEW: TOOLTIP ---
+                    const pieceName = pieceInfo.find(p => p.type === piece.type)?.name || piece.type;
+                    spriteImg.title = `${pieceName} (${piece.type})`;
+                    // --- END NEW ---
 
                     pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
@@ -419,16 +425,16 @@ document.addEventListener('DOMContentLoaded', () => {
             spriteImg.src = `sprites/${piece.type}_${spriteColor}.png`;
             spriteImg.alt = `${spriteColor} ${piece.type}`;
 
-            // --- NEW: TOOLTIP ---
-            const pieceName = pieceInfo.find(p => p.type === piece.type)?.name || piece.type;
-            spriteImg.title = `${pieceName} (${piece.type})`;
-            // --- END NEW ---
+            // --- NEW: TOOLTIP ---
+            const pieceName = pieceInfo.find(p => p.type === piece.type)?.name || piece.type;
+            spriteImg.title = `${pieceName} (${piece.type})`;
+            // --- END NEW ---
 
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
 
             if (isMyPiece) {
-                // --- MODIFIED: Pass event to handler ---
+                // --- MODIFIED: Pass event to handler ---
                 el.addEventListener('click', (event) => onCapturedClick(event, piece));
             }
             return el;
@@ -445,25 +451,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NEW FUNCTION: RENDER MOVE HISTORY ---
-    function renderMoveHistory(moves) {
-        moveHistoryElement.innerHTML = '';
-        moves.forEach(move => {
-            const moveEl = document.createElement('p');
-            moveEl.textContent = move;
-            moveHistoryElement.appendChild(moveEl);
-        });
-        // Auto-scroll to the bottom
-        moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
-    }
-    // --- END NEW FUNCTION ---
+    // --- NEW FUNCTION: RENDER MOVE HISTORY ---
+    function renderMoveHistory(moves) {
+        moveHistoryElement.innerHTML = '';
+        moves.forEach(move => {
+            const moveEl = document.createElement('p');
+            moveEl.textContent = move;
+            moveHistoryElement.appendChild(moveEl);
+        });
+        // Auto-scroll to the bottom
+        moveHistoryElement.scrollTop = moveHistoryElement.scrollHeight;
+    }
+    // --- END NEW FUNCTION ---
 
     function updateTurnIndicator() {
         if (gameState.gameOver) {
             turnIndicator.textContent = '';
-            if(!winnerText.textContent) {
-                winnerText.textContent = `${gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1)} Wins!`;
-            }
+            // winnerText content is set in updateLocalState
             return;
         }
 
@@ -536,8 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
         document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
-        // --- NEW: Clear drop selection ---
-        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        // --- NEW: Clear drop selection ---
+        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
     }
     
     function drawHighlights(moves) {
@@ -570,15 +574,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- MODIFIED FUNCTION ---
+    // --- MODIFIED FUNCTION ---
     function onCapturedClick(event, piece) {
         if (gameState.gameOver) return;
 
-        // Clear piece selection
-        selectedSquare = null;
-        document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
-        document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
-        document.querySelectorAll('.move-plate').forEach(p => p.remove());
+        // Clear piece selection
+        selectedSquare = null;
+        document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
+        document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
+        document.querySelectorAll('.move-plate').forEach(p => p.remove());
 
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
@@ -586,17 +590,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Clear all other drop selections
-        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        // Clear all other drop selections
+        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
         
         isDroppingPiece = piece;
-        event.currentTarget.classList.add('selected-drop');
+        event.currentTarget.classList.add('selected-drop');
         highlightDropSquares();
     }
-    // --- END MODIFIED FUNCTION ---
+    // --- END MODIFIED FUNCTION ---
 
     function highlightDropSquares() {
-        // Clear board highlights but not drop highlights
+        // Clear board highlights but not drop highlights
         document.querySelectorAll('.square.selected').forEach(s => s.classList.remove('selected'));
         document.querySelectorAll('.square.preview-selected').forEach(s => s.classList.remove('preview-selected'));
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
@@ -644,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Hammer Head', type: 'jotu', desc: 'Moves like a Rook, but it can **jump over friendly pieces** along its path. When it does, any jumped friendly pieces (except Ancient Creature and Cthulhu) are returned to your hand. It captures the first enemy piece it encounters and stops.' },
         { name: 'Two Pincer Crab', type: 'finor', desc: 'Moves like a Bishop or a Knight. Acquired by capturing with a One Pincer Crab.' },
         { name: 'Shield Squid', type: 'greatshield', desc: 'Can only make non-capture moves one square forward (diagonally or straight) or straight backward. **Special Ability:** It **shields all adjacent friendly pieces** on its sides and behind it (5 total squares).', special: 'Promotes from Squid.' },
-s       // --- FILENAME FIX APPLIED HERE ---
+        // *** CORRECTED AREA: Removed stray comment and 's' ***
         { name: 'Ancient Creature', type: 'greathorsegeneral', desc: "**Special Ability:** After making a non-capture move, it gets a second, non-capture move during the same turn. It Moves like a knight but with the the range extended by one, like a bishop in the forward diagnols, and like a rook backwards.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
         { name: 'Neptune', type: 'neptune', desc: 'Moves like a Clam or Narwhal. It can also jump over the first piece it encounters (friendly or enemy) on a straight line, then continue moving and capturing along that path.', special: 'Upon capture, it returns to the original owner\'s hand as a Mermaid.' },
         { name: 'Mermaid', type: 'mermaid', desc: 'Moves/Captures in a 5*5 square around itself, jumping over any piece.', special: 'Promotes to Neptune.' },
@@ -695,7 +699,7 @@ s       // --- FILENAME FIX APPLIED HERE ---
             `;
             pieceListContainer.appendChild(entry);
         });
-    }
+    } // <-- This is line 648 now
 
 
     rulesBtn.addEventListener('click', () => {
