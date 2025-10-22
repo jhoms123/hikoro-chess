@@ -49,8 +49,8 @@ function copyBoard(boardState) {
 function isPositionValid(x, y) {
     if (x < 0 || y < 0 || x >= BOT_BOARD_WIDTH || y >= BOT_BOARD_HEIGHT) return false;
     // Keep invalid corner logic if your game still uses it
-    // if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
-    // if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
+    if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
+    if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
     return true;
 }
 
