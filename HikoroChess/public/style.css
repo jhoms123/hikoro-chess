@@ -1,3 +1,14 @@
+/* --- [NEW] Palace Square Style --- */
+.square.palace-square {
+    /* A color between the normal square and sanctuary */
+    background-color: #f2c96c !important;
+}
+/* --- [END NEW] --- */
+
+/* You can place this rule anywhere, for example, after the .sanctuary-square rule */
+
+/* ... (rest of your existing CSS) ... */
+
 :root {
     /* Define a variable for square size. On desktop, it's based on viewport height. */
     --square-size: min(4.5vh, 40px);
@@ -17,7 +28,7 @@ body {
     padding: 10px;
     box-sizing: border-box;
     min-height: 100vh;
-    
+
     /* --- [NEW] --- */
     /* Set the background image on the html/body */
     background-image: url('sprites/lobby_background.jpg');
@@ -29,6 +40,23 @@ body {
     /* Required for the overlay */
     position: relative;
 }
+
+/* --- [NEW] --- */
+/* This creates a dark, semi-transparent overlay
+   that sits *behind* your content but *on top*
+   of the background image, ensuring text is readable. */
+body::before {
+    content: "";
+    position: fixed; /* Covers the whole screen */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Maybe try a lighter tint, like 0.5 or 0.4 if needed */
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: -1; /* Puts it behind all your content */
+}
+
 
 #game-container {
     display: flex;
@@ -56,11 +84,11 @@ body {
     /* [MODIFIED] Position in the new grid */
     grid-column: 2;
     grid-row: 2;
-    /* * [CHANGE 1] 
-     * Set the main, solid board color. A traditional shogi board is a lighter wood color. 
+    /* * [CHANGE 1]
+     * Set the main, solid board color. A traditional shogi board is a lighter wood color.
      */
     background-color: #d6b36b; /* A light, wood-like color */
-    
+
     /* --- [NEW] ---
        Required for positioning the animated clone on top.
     */
@@ -74,34 +102,41 @@ body {
     justify-content: center;
     align-items: center;
     position: relative;
-    /* * [CHANGE 2] 
-     * Apply a border to all four sides to create the grid outline. 
+    /* * [CHANGE 2]
+     * Apply a border to all four sides to create the grid outline.
      * This border will appear *inside* the main #game-board color due to the grid layout.
      */
     border: 1px solid #4a2a00; /* Darker brown for the grid lines */
     box-sizing: border-box; /* Ensures the border is included in the square's dimensions */
-    /* * [CHANGE 3] 
-     * Set a uniform background for all squares. 
+    /* * [CHANGE 3]
+     * Set a uniform background for all squares.
      * This will match the main board color from #game-board, making the border the visual separator.
      */
-    background-color: #f9d892; 
+    background-color: #f9d892;
 }
 
-/* * [CHANGE 4] 
- * REMOVE the checkerboard pattern (light/dark) styles 
+/* * [CHANGE 4]
+ * REMOVE the checkerboard pattern (light/dark) styles
  */
 /* .square.light { background-color: #f0d9b5; } */
 /* .square.dark { background-color: #b58863; } */
 
-.square.invalid { 
+.square.invalid {
     /* The invalid corners can still have a distinct background if needed */
-    background-color: #555; 
+    background-color: #555;
     border-color: #555; /* Hide the grid line on invalid squares */
-} 
+}
 .sanctuary-square {
     /* Still apply a distinct background for sanctuary squares */
     background-color: #e5b045 !important; /* A slightly darker golden yellow */
 }
+
+/* --- [NEW] Palace Square Style --- */
+.square.palace-square {
+    /* A color between the normal square and sanctuary */
+    background-color: #f2c96c !important;
+}
+/* --- [END NEW] --- */
 
 
 .piece {
@@ -140,8 +175,8 @@ body {
 /* --- [END NEW] --- */
 
 
-#create-game-btn, 
-#single-player-btn, 
+#create-game-btn,
+#single-player-btn,
 #play-bot-btn {
     /* Use the same sizing properties as the original #create-game-btn */
     padding: 10px 20px;
@@ -194,7 +229,7 @@ body {
     background-color: rgba(128, 128, 128, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.4);
 }
-  
+
 .move-plate.preview.attack {
     background-color: rgba(80, 80, 80, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -234,15 +269,27 @@ body {
 .captured-piece.black { background-color: #b58863; }
 
 /* Turn Indicator & Winner Text */
+/* Style for the container holding turn/winner text */
 #turn-indicator-container {
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #777;
     margin-top: 20px;
     text-align: center;
+    /* Limit width so it doesn't look too wide */
+    max-width: 500px;
+    /* Center the box itself */
+    margin-left: auto;
+    margin-right: auto;
 }
 
-#winner-text {
-    font-size: 1.5em;
-    color: #4CAF50;
-    font-weight: bold;
+/* Ensure winner text doesn't have extra top margin */
+#turn-indicator-container p#winner-text {
+    margin-top: 5px;
+    font-size: 1.5em; /* Moved from #winner-text */
+    color: #4CAF50;    /* Moved from #winner-text */
+    font-weight: bold; /* Moved from #winner-text */
 }
 
 /* Lobby Styles */
@@ -305,39 +352,6 @@ body {
 }
 
 /* Timer Display Styling in Game */
-.captured-area h3 {
-    font-weight: normal; /* Make the "Your Hand" text less bold */
-}
-
-h1 {
-    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: 1px solid #777;
-    display: inline-block; /* Prevent stretching full width */
-    margin-bottom: 20px; /* Add some space below */
-}
-
-/* Style for the container holding turn/winner text */
-#turn-indicator-container {
-    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #777;
-    margin-top: 20px;
-    text-align: center;
-    /* Limit width so it doesn't look too wide */
-    max-width: 500px; 
-    /* Center the box itself */
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Ensure winner text doesn't have extra top margin */
-#turn-indicator-container p#winner-text {
-    margin-top: 5px; 
-}
-
 /* Style specifically for the hand label text within the captured area */
 .captured-area h3 {
     background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
@@ -346,11 +360,13 @@ h1 {
     border: 1px solid #666;
     margin-bottom: 10px; /* Space between label and captured box */
     /* Prevent the box from stretching full width of the area */
-    display: inline-block; 
-    font-weight: normal; 
+    display: inline-block;
+    font-weight: normal;
 }
-
+/* Adjust timer alignment slightly now that h3 has padding */
 #white-time, #black-time {
+    vertical-align: middle; /* Helps align with text */
+    margin-left: 5px; /* Add a little space */
     font-size: 1.2em;
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace;
@@ -368,7 +384,7 @@ h1 {
     border-color: #ff9800;
 }
 
-/* --- [NEW] Board Notation Styles --- */
+/* --- Board Notation Styles --- */
 .notation-files {
     grid-column: 2;
     display: flex;
@@ -409,9 +425,9 @@ h1 {
     box-sizing: border-box;
 }
 
-/* --- [NEW] Move History Styles --- */
+/* --- Move History Styles --- */
 #move-history-container {
-    width: 200px; 
+    width: 200px;
     height: calc(var(--square-size) * 16 + var(--notation-size) * 2); /* Match board height + notation */
     display: flex;
     flex-direction: column;
@@ -439,6 +455,16 @@ h1 {
 }
 #move-history div:nth-child(even) {
     background-color: #3a3a3a;
+}
+
+/* Main Title Style */
+h1 {
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #777;
+    display: inline-block; /* Prevent stretching full width */
+    margin-bottom: 20px; /* Add some space below */
 }
 
 
@@ -469,18 +495,18 @@ h1 {
     #board-container { order: 2; }
     #white-captured-area { order: 3; }
     #move-history-container { order: 4; } /* [NEW] */
-    
+
     .captured-area {
         /* Make the captured area wider on mobile */
         width: 90vw;
     }
-    
+
     /* [NEW] Resize move history for mobile */
     #move-history-container {
         width: 90vw;
         height: 150px; /* Fixed height for mobile */
     }
-    
+
     /* [MODIFIED] Re-declare grid for mobile var size */
     #board-container {
         grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);

@@ -50,14 +50,14 @@ function getInitialBoard() {
         { y: 2, x: 5, type: 'greathorsegeneral' }, { y: 2, x: 7, type: 'sult' },
         // Row 1 (y=1) - Chairs/Kotas/Prince
         { y: 1, x: 2, type: 'chair' }, { y: 1, x: 3, type: 'kota' },
-        { y: 1, x: 4, type: 'prince' }, // Added Prince
-        { y: 1, x: 5, type: 'prince' }, // Added Prince
+        
         { y: 1, x: 6, type: 'kota' }, { y: 1, x: 7, type: 'chair' },
         // Row 0 (y=0) - King/Pawns
         // { y: 0, x: 2, type: 'lupa' }, // Removed one Lupa
         { y: 0, x: 3, type: 'pawn' },   // Shifted pawns slightly
-        { y: 0, x: 4, type: 'lupa' },   // Centered King
-        { y: 0, x: 5, type: 'pawn' },   // Shifted pawns slightly
+        { y: 0, x: 4, type: 'lupa' },
+		{ y: 0, x: 5, type: 'prince' },		// Centered King
+        { y: 0, x: 6, type: 'pawn' },   // Shifted pawns slightly
         // { y: 0, x: 7, type: 'lupa' }, // Removed one Lupa
     ];
     setup.forEach(p => {

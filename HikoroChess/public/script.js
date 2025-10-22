@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
+	
+	
 
     // --- Event Listeners and Initial Setup ---
     createGameBtn.addEventListener('click', () => {
@@ -319,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderBoard() {
         boardElement.innerHTML = '';
-        if (!gameState.boardState) return;
+        if (!gameState.boardState) return; // Guard clause
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -327,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.classList.add('square');
 
                 let displayX = x, displayY = y;
+                // Board orientation
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else if (myColor === 'black') {
@@ -353,9 +356,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     square.classList.add('sanctuary-square');
                 }
 
-                // Updated isPositionValid check for rendering (if you removed invalid corner logic in gamelogic.js, remove this too)
-                // const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-                const isBoardValid = isPositionValid(x, y); // Use the function directly if corners are now valid
+                // --- [NEW] Add palace class ---
+                const isWhitePalace = (x >= whitePalace.minX && x <= whitePalace.maxX && y >= whitePalace.minY && y <= whitePalace.maxY);
+                const isBlackPalace = (x >= blackPalace.minX && x <= blackPalace.maxX && y >= blackPalace.minY && y <= blackPalace.maxY);
+                if(isWhitePalace || isBlackPalace) {
+                    square.classList.add('palace-square');
+                }
+                // --- [END NEW] ---
+
+                // Assuming isPositionValid determines if a square is playable at all
+                const isBoardValid = isPositionValid(x, y);
 
                 if (!isBoardValid) {
                     square.classList.add('invalid');
@@ -374,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     pieceElement.classList.add('piece', piece.color);
 
                     const spriteImg = document.createElement('img');
-                    // --- [NEW] Ensure correct Prince sprite is used ---
                     const spriteType = piece.type === 'prince' ? 'prince' : piece.type;
                     spriteImg.src = `sprites/${spriteType}_${piece.color}.png`;
                     spriteImg.alt = `${piece.color} ${piece.type}`;

@@ -550,8 +550,8 @@ function checkForWinner(game) {
     let blackLupaOnBoard = false;
     // Prince status is tracked by game.whitePrinceOnBoard / game.blackPrinceOnBoard
 
-    for (let y = 0; y < BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOARD_WIDTH; x++) {
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 10; x++) {
             const piece = game.boardState[y][x];
             if (piece && piece.type === 'lupa') {
                 if (piece.color === 'white') whiteLupaOnBoard = true;
