@@ -3,38 +3,72 @@ const BOARD_HEIGHT = 16;
 
 // [MODIFIED] Using your custom abbreviations (C for Clam, D for Dolphin, etc.)
 const pieceNotation = {
-    lupa: "K", zur: "D",
-    kota: "H", fin: "Oc", yoli: "B", pilut: "S",
-    sult: "Cr", pawn: "F", cope: "Na", chair: "Du", jotu: "S", kor: "J",
-    finor: "Tc", greatshield: "Ss", greathorsegeneral: "Ac",
+    lupa: "K", prince: "KP", // Added Prince notation
+    zur: "D", kota: "H", fin: "Oc", yoli: "B", pilut: "S",
+    sult: "Cr", pawn: "F", cope: "Na", chair: "Du", jotu: "Sh", // Changed Jotu to Sh (Shark head?)
+    kor: "J", finor: "Tc", greatshield: "Ss", greathorsegeneral: "Ac",
     neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
 };
+
+const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
+const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
+
+function isKingRestricted(color, boardState) {
+    // The king is restricted if its corresponding prince is still on the board
+    for (let y = 0; y < BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            const piece = boardState[y][x];
+            if (piece && piece.type === 'prince' && piece.color === color) {
+                return true; // Prince found, King is restricted
+            }
+        }
+    }
+    return false; // Prince not found, King is free
+}
 
 function getInitialBoard() {
     let boardState = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(null));
     const setup = [
+        // Row 5 (y=5) - Piluts/Sults
         { y: 5, x: 0, type: 'pilut' }, { y: 5, x: 1, type: 'pilut' },
         { y: 5, x: 2, type: 'sult' }, { y: 5, x: 3, type: 'pilut' },
         { y: 5, x: 4, type: 'pilut' }, { y: 5, x: 5, type: 'pilut' },
         { y: 5, x: 6, type: 'pilut' }, { y: 5, x: 7, type: 'sult' },
         { y: 5, x: 8, type: 'pilut' }, { y: 5, x: 9, type: 'pilut' },
+        // Row 4 (y=4) - Copes/Majors
         { y: 4, x: 0, type: 'cope' }, { y: 4, x: 1, type: 'zur' },
         { y: 4, x: 2, type: 'kor' }, { y: 4, x: 3, type: 'fin' },
         { y: 4, x: 4, type: 'yoli' }, { y: 4, x: 5, type: 'yoli' },
         { y: 4, x: 6, type: 'fin' }, { y: 4, x: 7, type: 'kor' },
         { y: 4, x: 8, type: 'zur' }, { y: 4, x: 9, type: 'cope' },
+        // Row 3 (y=3) - Copes/Jotus/Pawns
         { y: 3, x: 1, type: 'cope' }, { y: 3, x: 2, type: 'jotu' },
         { y: 3, x: 3, type: 'pawn' }, { y: 3, x: 6, type: 'pawn' },
         { y: 3, x: 7, type: 'jotu' }, { y: 3, x: 8, type: 'cope' },
+        // Row 2 (y=2) - Sults/Neptune/GHG
         { y: 2, x: 2, type: 'sult' }, { y: 2, x: 4, type: 'neptune' },
-		{ y: 2, x: 5, type: 'greathorsegeneral' }, { y: 2, x: 7, type: 'sult' },
+        { y: 2, x: 5, type: 'greathorsegeneral' }, { y: 2, x: 7, type: 'sult' },
+        // Row 1 (y=1) - Chairs/Kotas/Prince
         { y: 1, x: 2, type: 'chair' }, { y: 1, x: 3, type: 'kota' },
+        { y: 1, x: 4, type: 'prince' }, // Added Prince
+        { y: 1, x: 5, type: 'prince' }, // Added Prince
         { y: 1, x: 6, type: 'kota' }, { y: 1, x: 7, type: 'chair' },
-        { y: 0, x: 2, type: 'lupa' }, { y: 0, x: 4, type: 'pawn' },
-        { y: 0, x: 5, type: 'pawn' }, { y: 0, x: 7, type: 'lupa' },
+        // Row 0 (y=0) - King/Pawns
+        // { y: 0, x: 2, type: 'lupa' }, // Removed one Lupa
+        { y: 0, x: 3, type: 'pawn' },   // Shifted pawns slightly
+        { y: 0, x: 4, type: 'lupa' },   // Centered King
+        { y: 0, x: 5, type: 'pawn' },   // Shifted pawns slightly
+        // { y: 0, x: 7, type: 'lupa' }, // Removed one Lupa
     ];
-    setup.forEach(p => boardState[p.y][p.x] = { type: p.type, color: 'white' });
-    setup.forEach(p => boardState[BOARD_HEIGHT - 1 - p.y][p.x] = { type: p.type, color: 'black' });
+    setup.forEach(p => {
+        // Ensure pieces are placed only if the position is valid initially
+        if (isPositionValid(p.x, p.y)) {
+            boardState[p.y][p.x] = { type: p.type, color: 'white' };
+        }
+        if (isPositionValid(p.x, BOARD_HEIGHT - 1 - p.y)) {
+             boardState[BOARD_HEIGHT - 1 - p.y][p.x] = { type: p.type, color: 'black' };
+        }
+    });
     return boardState;
 }
 
@@ -81,8 +115,17 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
 function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
     if (!piece) return [];
     const moves = [];
+    const color = piece.color;
+    const fwd = color === 'white' ? 1 : -1; // Forward direction
 
     const addMove = (toX, toY) => {
+		
+		if (piece.type === 'lupa' && isKingRestricted(color, boardState)) {
+            const palace = color === 'white' ? whitePalace : blackPalace;
+            if (toX < palace.minX || toX > palace.maxX || toY < palace.minY || toY > palace.maxY) {
+                return; // Move is outside the palace, invalid while restricted
+            }
+        }
         if (!isPositionValid(toX, toY)) return;
         const target = boardState[toY][toX];
         if (target === null) {
@@ -92,9 +135,17 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                 moves.push({ x: toX, y: toY, isAttack: true });
             }
         }
+		
     };
 
     const addNonCaptureMove = (toX, toY) => {
+		
+		if (piece.type === 'lupa' && isKingRestricted(color, boardState)) {
+            const palace = color === 'white' ? whitePalace : blackPalace;
+            if (toX < palace.minX || toX > palace.maxX || toY < palace.minY || toY > palace.maxY) {
+                return; // Move is outside the palace, invalid while restricted
+            }
+        }
         if (!isPositionValid(toX, toY)) return;
         if (boardState[toY][toX] === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
@@ -173,8 +224,25 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
     };
 
     switch (piece.type) {
-        case 'lupa': for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
-        case 'kota': generateLineMoves(1, 0); generateLineMoves(-1, 0); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
+        case 'lupa':
+            // Standard King moves - restriction is handled inside addMove/addNonCaptureMove
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    addMove(x + dx, y + dy);
+                }
+            }
+            break;
+        // --- [NEW] Kraken Prince Moveset ---
+        case 'prince':
+            // Moves like a Shogi Silver General
+            addMove(x, y + fwd);          // Forward
+            addMove(x + 1, y + fwd);      // Forward-Right Diagonal
+            addMove(x - 1, y + fwd);      // Forward-Left Diagonal
+            addMove(x + 1, y - fwd);      // Backward-Right Diagonal
+            addMove(x - 1, y - fwd);      // Backward-Left Diagonal
+            break;
+		case 'kota': generateLineMoves(1, 0); generateLineMoves(-1, 0); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
         case 'zur': for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; generateLineMoves(dx, dy); } break;
         case 'fin': generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1); addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y); break;
         case 'yoli': [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
