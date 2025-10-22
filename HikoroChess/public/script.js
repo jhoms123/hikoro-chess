@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 	
+	const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
+    const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
+	
 	
 
     // --- Event Listeners and Initial Setup ---
