@@ -1,5 +1,5 @@
 // ===================================================================
-//              Hikoro Chess Bot - Enhanced Strategy
+//              Hikoro Chess Bot - Enhanced Strategy & Safety Checks
 // ===================================================================
 
 const BOT_BOARD_WIDTH = 10;
@@ -21,8 +21,11 @@ const botSanctuarySquares = [
 
 // --- Function to check King Restriction (Mirrored from gamelogic.js) ---
 function isKingRestricted(color, boardState) {
-    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+    // [FIX] Use actual board dimensions
+    const height = boardState?.length || 0;
+    const width = boardState?.[0]?.length || 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
             const piece = boardState[y]?.[x];
             if (piece && piece.type === 'prince' && piece.color === color) {
                 return true;
@@ -34,21 +37,44 @@ function isKingRestricted(color, boardState) {
 // --- End New Rule Helpers ---
 
 function copyBoard(boardState) {
+    // Ensure input is a valid array of arrays
+    if (!Array.isArray(boardState) || boardState.length === 0 || !Array.isArray(boardState[0])) {
+        console.error("Invalid boardState passed to copyBoard:", boardState);
+        // Return a default empty board structure or throw error
+        return Array(BOT_BOARD_HEIGHT).fill(null).map(() => Array(BOT_BOARD_WIDTH).fill(null));
+    }
+
     const newBoard = [];
-    for (let i = 0; i < boardState.length; i++) {
+    const height = boardState.length; // Use actual height
+    for (let i = 0; i < height; i++) {
         if (Array.isArray(boardState[i])) {
              newBoard.push([...boardState[i]]);
         } else {
-             console.error("Invalid board state row detected in copyBoard:", boardState[i]);
-             newBoard.push([]);
+             console.error("Invalid board state row detected in copyBoard:", boardState[i], "at index", i);
+             // Push a row of nulls matching expected width, if possible
+             const width = boardState[0]?.length || BOT_BOARD_WIDTH;
+             newBoard.push(Array(width).fill(null));
         }
     }
+     // Ensure the copied board has the *expected* height, padding with empty rows if needed
+     while (newBoard.length < BOT_BOARD_HEIGHT) {
+         console.warn(`copyBoard: Input board height ${height} was less than expected ${BOT_BOARD_HEIGHT}. Padding.`);
+         const width = newBoard[0]?.length || BOT_BOARD_WIDTH;
+         newBoard.push(Array(width).fill(null));
+     }
+     // Trim excess rows if somehow too tall (less likely)
+     if (newBoard.length > BOT_BOARD_HEIGHT) {
+         console.warn(`copyBoard: Input board height ${height} was more than expected ${BOT_BOARD_HEIGHT}. Trimming.`);
+         newBoard.length = BOT_BOARD_HEIGHT;
+     }
+
     return newBoard;
 }
 
-function isPositionValid(x, y) {
+
+function isPositionValid(x, y) { // This function defines the *playable* area
     if (x < 0 || y < 0 || x >= BOT_BOARD_WIDTH || y >= BOT_BOARD_HEIGHT) return false;
-    // Keep invalid corner logic if your game still uses it
+    // These lines make the corners invalid:
     if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
     if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
     return true;
@@ -92,9 +118,12 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
 };
 
 
+// [FIX] Use actual board dimensions in loops
 function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
-    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+    const height = boardState?.length || 0;
+    const width = boardState?.[0]?.length || 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
             const piece = boardState[y]?.[x];
             if (piece && piece.color === attackingColor) {
                 // Pass boardState correctly
@@ -115,27 +144,30 @@ function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
 // ===================================================================
 
 function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false) {
+    // Input validation for boardState
+    if (!Array.isArray(boardState) || boardState.length === 0 || !Array.isArray(boardState[0])) {
+         console.error("Invalid boardState passed to getValidMovesForPiece");
+         return [];
+    }
     if (!piece) return [];
+
     const moves = [];
     const color = piece.color;
-    const fwd = color === 'white' ? 1 : -1; // Forward direction
+    const fwd = color === 'white' ? 1 : -1;
 
     // --- Add Move Helpers (with Palace Check integrated) ---
     const addMove = (toX, toY) => {
-        // --- Palace Restriction Check ---
         if (piece.type === 'lupa' && isKingRestricted(color, boardState)) {
             const palace = color === 'white' ? whitePalace : blackPalace;
             if (toX < palace.minX || toX > palace.maxX || toY < palace.minY || toY > palace.maxY) {
                 return;
             }
         }
-        // --- End Restriction ---
-
-        if (!isPositionValid(toX, toY)) return;
+        if (!isPositionValid(toX, toY)) return; // Check against RULES dimensions
         const target = boardState[toY]?.[toX];
         if (target === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
-        } else if (target.color !== piece.color) {
+        } else if (target && target.color !== piece.color) {
             if (!isProtected(target, toX, toY, boardState)) {
                 moves.push({ x: toX, y: toY, isAttack: true });
             }
@@ -143,15 +175,12 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
     };
 
     const addNonCaptureMove = (toX, toY) => {
-         // --- Palace Restriction Check ---
          if (piece.type === 'lupa' && isKingRestricted(color, boardState)) {
             const palace = color === 'white' ? whitePalace : blackPalace;
             if (toX < palace.minX || toX > palace.maxX || toY < palace.minY || toY > palace.maxY) {
                 return;
             }
         }
-        // --- End Restriction ---
-
         if (!isPositionValid(toX, toY)) return;
         if (boardState[toY]?.[toX] === null) {
             moves.push({ x: toX, y: toY, isAttack: false });
@@ -164,58 +193,39 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
          let cx = x + dx;
          let cy = y + dy;
          let pathHasEnemy = false;
-
          let checkX = cx, checkY = cy;
          while(isPositionValid(checkX, checkY)) {
              const checkTarget = boardState[checkY]?.[checkX];
-             if (checkTarget && checkTarget.color !== piece.color) {
-                 pathHasEnemy = true;
-                 break;
-             }
+             if (checkTarget && checkTarget.color !== piece.color) { pathHasEnemy = true; break; }
              checkX += dx; checkY += dy;
          }
-
          if (!pathHasEnemy) {
              while (isPositionValid(cx, cy)) {
                  const target = boardState[cy]?.[cx];
-                 if (target === null) {
-                     moves.push({ x: cx, y: cy, isAttack: false });
-                 } else {
-                     break;
-                 }
+                 if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); } else { break; }
                  cx += dx; cy += dy;
              }
              return;
          }
-
-         cx = x + dx;
-         cy = y + dy;
+         cx = x + dx; cy = y + dy;
          while (isPositionValid(cx, cy)) {
              const target = boardState[cy]?.[cx];
-             if (target === null) {
-                 moves.push({ x: cx, y: cy, isAttack: false });
-             } else if (target.color !== piece.color) {
-                 if (!isProtected(target, cx, cy, boardState)) {
-                     moves.push({ x: cx, y: cy, isAttack: true });
-                 }
+             if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); }
+              else if (target.color !== piece.color) {
+                 if (!isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); }
                  break;
              }
-             cx += dx;
-             cy += dy;
+              else { break; }
+             cx += dx; cy += dy;
          }
     };
     const generateLineMoves = (dx, dy) => {
          let cx = x + dx, cy = y + dy;
          while (isPositionValid(cx, cy)) {
              const target = boardState[cy]?.[cx];
-             if (target === null) {
-                 moves.push({ x: cx, y: cy, isAttack: false });
-             } else {
-                 if (target.color !== piece.color) {
-                     if (!isProtected(target, cx, cy, boardState)) {
-                         moves.push({ x: cx, y: cy, isAttack: true });
-                     }
-                 }
+             if (target === null) { moves.push({ x: cx, y: cy, isAttack: false }); }
+             else {
+                 if (target.color !== piece.color) { if (!isProtected(target, cx, cy, boardState)) { moves.push({ x: cx, y: cy, isAttack: true }); }}
                  break;
              }
              cx += dx; cy += dy;
@@ -232,21 +242,12 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
 
     switch (piece.type) {
         case 'lupa':
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
-                }
-            }
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); }
             break;
         case 'prince':
-            addMove(x, y + fwd);
-            addMove(x + 1, y + fwd);
-            addMove(x - 1, y + fwd);
-            addMove(x + 1, y - fwd);
-            addMove(x - 1, y - fwd);
+            addMove(x, y + fwd); addMove(x + 1, y + fwd); addMove(x - 1, y + fwd); addMove(x + 1, y - fwd); addMove(x - 1, y - fwd);
             break;
-        case 'kota': generateLineMoves(1, 0); generateLineMoves(-1, 0); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
+        case 'kota': generateLineMoves(1, 0); generateLineMoves(-1, 0); generateLineMoves(0, 1); generateLineMoves(0,-1); for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break;
         case 'zur': for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; generateLineMoves(dx, dy); } break;
         case 'fin': generateLineMoves(1, 1); generateLineMoves(-1, 1); generateLineMoves(1, -1); generateLineMoves(-1, -1); addNonCaptureMove(x + 1, y); addNonCaptureMove(x - 1, y); break;
         case 'yoli': [-2, -1, 1, 2].forEach(dx => [-2, -1, 1, 2].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) addMove(x + dx, y + dy); })); addMove(x + 1, y); addMove(x - 1, y); addMove(x, y + 1); addMove(x, y - 1); break;
@@ -275,15 +276,8 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
                      cx += dx; cy += dy;
                  }
              });
-             for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    addMove(x + dx, y + dy);
-                }
-             }
-             addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir);
-             addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir);
-             addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
+             for (let dx = -1; dx <= 1; dx++) { for (let dy = -1; dy <= 1; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } }
+             addMove(x + 2, y + 2 * fwdDir); addMove(x - 2, y + 2 * fwdDir); addMove(x, y + 1 * fwdDir); addMove(x, y + 2 * fwdDir); addMove(x, y - 1 * fwdDir); addMove(x, y - 2 * fwdDir);
              break;
          }
         case 'mermaid': { for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; addMove(x + dx, y + dy); } break; }
@@ -291,151 +285,159 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
             const cthulhuDir = piece.color === 'white' ? 1 : -1;
             const moveGenerator = bonusMoveActive ? addNonCaptureMove : addMove;
             const lineGenerator = bonusMoveActive ? generateNonCaptureLineMoves : generateLineMoves;
-
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    moveGenerator(x + dx, y + dy);
-                }
-            }
-            [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => {
-                if (Math.abs(dx) !== Math.abs(dy)) moveGenerator(x + dx, y + dy);
-            }));
-
-            lineGenerator(-1, cthulhuDir);
-            lineGenerator(1, cthulhuDir);
-            lineGenerator(0, -cthulhuDir);
+            for (let dx = -2; dx <= 2; dx++) { for (let dy = -2; dy <= 2; dy++) { if (dx === 0 && dy === 0) continue; moveGenerator(x + dx, y + dy); } }
+            [-3, -1, 1, 3].forEach(dx => [-3, -1, 1, 3].forEach(dy => { if (Math.abs(dx) !== Math.abs(dy)) moveGenerator(x + dx, y + dy); }));
+            lineGenerator(-1, cthulhuDir); lineGenerator(1, cthulhuDir); lineGenerator(0, -cthulhuDir);
             break;
         }
     }
     return moves;
 }
 
+
 function getBonusMoves(piece, toX, toY, boardState) {
     if (!piece) return [];
-
     const bonusMovesRaw = getValidMovesForPiece(piece, toX, toY, boardState, true);
-
     return bonusMovesRaw.map(move => ({
-        type: 'board',
-        from: { x: toX, y: toY },
-        to: { x: move.x, y: move.y },
-        isAttack: false
+        type: 'board', from: { x: toX, y: toY }, to: { x: move.x, y: move.y }, isAttack: false
     }));
 }
 
 function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
     const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, board);
-
     if (bonusMoves.length === 0) {
-        // After bonus move fails/ends, turn passes to opponent
         return minimax(board, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
     }
-
     let bestBonusEval = isMaximizingPlayer ? -Infinity : Infinity;
-
     for (const bonusMove of bonusMoves) {
          if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-
         const bonusBoard = copyBoard(board);
         const bonusPiece = bonusBoard[bonusMove.from.y]?.[bonusMove.from.x];
-         if (!bonusPiece) {
-              console.error("Error in handleBonusTurn: piece not found at bonus 'from'.");
-              continue;
-         }
+         if (!bonusPiece) continue;
         bonusBoard[bonusMove.to.y][bonusMove.to.x] = bonusPiece;
         bonusBoard[bonusMove.from.y][bonusMove.from.x] = null;
-
-        // After the bonus move, the turn passes to the opponent.
         const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit);
-
         if (isMaximizingPlayer) {
-            bestBonusEval = Math.max(bestBonusEval, evaluation);
-            alpha = Math.max(alpha, bestBonusEval);
+            bestBonusEval = Math.max(bestBonusEval, evaluation); alpha = Math.max(alpha, bestBonusEval);
         } else {
-            bestBonusEval = Math.min(bestBonusEval, evaluation);
-            beta = Math.min(beta, bestBonusEval);
+            bestBonusEval = Math.min(bestBonusEval, evaluation); beta = Math.min(beta, bestBonusEval);
         }
-        if (beta <= alpha) {
-            break;
-        }
+        if (beta <= alpha) break;
     }
     return bestBonusEval;
 }
+
 // ===================================================================
-// Section 3: Evaluation, Piece Values, and Piece-Square Tables (Updated)
+// Section 3: Evaluation, Piece Values, and Piece-Square Tables (Full PSTs)
 // ===================================================================
 
-// [MODIFIED] Added Prince value, adjusted others
 const pieceValues = {
     'pawn': 100, 'sult': 150, 'pilut': 120, 'fin': 320, 'cope': 300, 'kor': 330, 'yoli': 330, 'chair': 500,
-    'prince': 400, // Added Prince value (similar to minor piece)
+    'prince': 400,
     'greatshield': 300, 'finor': 550, 'jotu': 450, 'mermaid': 850, 'neptune': 1000, 'kota': 550,
     'greathorsegeneral': 1200, 'zur': 900, 'cthulhu': 1500, 'lupa': 20000
 };
 
-const SANCTUARY_THREAT_PENALTY_BASE = 350; // Penalty for opponent royalty near sanctuary
-const SANCTUARY_DEFENSE_BONUS_BASE = 10; // Bonus for bot pieces near threatened sanctuary
-const PRINCE_ADVANCEMENT_BONUS = 2; // Bonus per rank the bot's prince has advanced
+const SANCTUARY_THREAT_PENALTY_BASE = 350;
+const SANCTUARY_DEFENSE_BONUS_BASE = 15;
+const PRINCE_ADVANCEMENT_BONUS = 3;
 
-// PSTs...
-const pawnPositionValue = [ // Favors advancing, slight center
+function mirrorPST(table) {
+    if (!Array.isArray(table)) { console.error("Invalid PST passed to mirrorPST:", table); return []; }
+    return [...table].reverse();
+}
+
+// --- Piece-Square Tables (Full) ---
+const pawnPositionValue = [
     [0,0,0,0,0,0,0,0,0,0], [1,1,1,1,1,1,1,1,1,1], [1,1,2,2,2,2,2,2,1,1], [2,2,3,3,3,3,3,3,2,2], [2,3,3,4,4,4,4,3,3,2],
     [3,4,4,5,5,5,5,4,4,3], [4,5,5,6,6,6,6,5,5,4], [5,6,6,7,7,7,7,6,6,5], [6,7,7,8,8,8,8,7,7,6],
-    [8,9,9,9,9,9,9,9,9,8], [10,10,10,10,10,10,10,10,10,10], [10,10,10,10,10,10,10,10,10,10], [5,5,5,5,5,5,5,5,5,5], // Less penalty far back
+    [8,9,9,9,9,9,9,9,9,8], [10,10,10,10,10,10,10,10,10,10], [10,10,10,10,10,10,10,10,10,10], [5,5,5,5,5,5,5,5,5,5],
     [0,0,0,0,0,0,0,0,0,0], [0,0,0,0,0,0,0,0,0,0], [0,0,0,0,0,0,0,0,0,0]
 ];
-// [NEW] Prince PST strongly encourages reaching far ranks
 const princePositionValue = [
     [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], [10,10,10,10,10,10,10,10,10,10], [10,15,15,15,15,15,15,15,15,10],
     [15,20,20,20,20,20,20,20,20,15], [20,25,25,25,25,25,25,25,25,20], [30,35,35,35,35,35,35,35,35,30], [40,45,45,45,45,45,45,45,45,40], // Rank 9 (y=8)
     [50,55,55,55,55,55,55,55,55,50], [60,65,65,65,65,65,65,65,65,60], [70,75,75,75,75,75,75,75,75,70], [80,85,85,85,85,85,85,85,85,80], // Ranks 12, 13
     [90,95,95,95,95,95,95,95,95,90], [100,100,100,100,100,100,100,100,100,100], [100,100,100,100,100,100,100,100,100,100] // Ranks 15, 16
 ];
+const knightPositionValue = [
+    [-5,-4,-3,-3,-3,-3,-3,-3,-4,-5], [-4, 0, 0, 1, 1, 1, 1, 0, 0,-4], [-3, 0, 1, 2, 2, 2, 2, 1, 0,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3],
+    [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3],
+    [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 1, 2, 3, 3, 3, 3, 2, 1,-3], [-3, 0, 1, 2, 2, 2, 2, 1, 0,-3],
+    [-4, 0, 0, 1, 1, 1, 1, 0, 0,-4], [-5,-4,-3,-3,-3,-3,-3,-3,-4,-5], [-5,-4,-3,-3,-3,-3,-3,-3,-4,-5], [-5,-4,-3,-3,-3,-3,-3,-3,-4,-5]
+];
+const bishopPositionValue = [
+    [-2,-1,-1,-1,-1,-1,-1,-1,-1,-2], [-1, 0, 0, 0, 0, 0, 0, 0, 0,-1], [-1, 0, 1, 1, 1, 1, 1, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1],
+    [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1],
+    [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 2, 2, 2, 2, 1, 0,-1], [-1, 0, 1, 1, 1, 1, 1, 1, 0,-1],
+    [-1, 0, 0, 0, 0, 0, 0, 0, 0,-1], [-2,-1,-1,-1,-1,-1,-1,-1,-1,-2], [-2,-1,-1,-1,-1,-1,-1,-1,-1,-2], [-2,-1,-1,-1,-1,-1,-1,-1,-1,-2]
+];
+const rookPositionValue = [
+    [ 0, 0, 0, 1, 1, 1, 1, 0, 0, 0], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+    [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+    [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
+    [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 1, 2, 2, 2, 2, 2, 2, 2, 2, 1], [ 0, 0, 0, 1, 1, 1, 1, 0, 0, 0], [ 0, 0, 0, 1, 1, 1, 1, 0, 0, 0]
+];
+const queenPositionValue = [
+    [-2,-1,-1, 0, 0, 0, 0,-1,-1,-2], [-1, 0, 1, 1, 1, 1, 1, 1, 0,-1], [-1, 1, 1, 2, 2, 2, 2, 1, 1,-1], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0],
+    [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0],
+    [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [ 0, 1, 2, 2, 2, 2, 2, 2, 1, 0], [-1, 1, 1, 2, 2, 2, 2, 1, 1,-1],
+    [-1, 0, 1, 1, 1, 1, 1, 1, 0,-1], [-2,-1,-1, 0, 0, 0, 0,-1,-1,-2], [-2,-1,-1, 0, 0, 0, 0,-1,-1,-2], [-2,-1,-1, 0, 0, 0, 0,-1,-1,-2]
+];
+const kingEarlyPST = [ // Strong penalty for leaving back rows
+    [ 2, 3, 1, 0, 0, 0, 0, 1, 3, 2], [ 2, 2, 0, 0, 0, 0, 0, 0, 2, 2], [-1,-2,-2,-2,-2,-2,-2,-2,-2,-1], [-2,-3,-3,-4,-4,-4,-4,-3,-3,-2],
+    [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3],
+    [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-3,-4,-4,-5,-5,-5,-5,-4,-4,-3], [-2,-3,-3,-4,-4,-4,-4,-3,-3,-2],
+    [-1,-2,-2,-2,-2,-2,-2,-2,-2,-1], [ 2, 2, 0, 0, 0, 0, 0, 0, 2, 2], [ 2, 3, 1, 0, 0, 0, 0, 1, 3, 2], [ 2, 3, 1, 0, 0, 0, 0, 1, 3, 2]
+];
+const kingLatePST = [ // Encourage centralization if Prince is gone
+    [-3,-2,-1, 0, 0, 0, 0,-1,-2,-3], [-2, 0, 1, 2, 2, 2, 2, 1, 0,-2], [-1, 1, 2, 3, 3, 3, 3, 2, 1,-1], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0],
+    [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0],
+    [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [ 0, 2, 3, 3, 4, 4, 3, 3, 2, 0], [-1, 1, 2, 3, 3, 3, 3, 2, 1,-1],
+    [-2, 0, 1, 2, 2, 2, 2, 1, 0,-2], [-3,-2,-1, 0, 0, 0, 0,-1,-2,-3], [-3,-2,-1, 0, 0, 0, 0,-1,-2,-3], [-3,-2,-1, 0, 0, 0, 0,-1,-2,-3]
+];
 
-const knightPositionValue = [ /* ... unchanged ... */ ];
-const bishopPositionValue = [ /* ... unchanged ... */ ];
-const rookPositionValue = [ /* ... unchanged ... */ ];
-const queenPositionValue = [ /* ... unchanged ... */ ];
-const kingEarlyPST = [ /* ... unchanged ... */ ];
-const kingLatePST = [ /* ... unchanged ... */ ];
-
-
-// [MODIFIED] Added Prince PST mapping
 const piecePST = {
     'pawn': pawnPositionValue, 'sult': pawnPositionValue, 'pilut': pawnPositionValue, 'cope': pawnPositionValue,
-    'prince': princePositionValue, // Use the new Prince PST
+    'prince': princePositionValue,
     'kor': knightPositionValue, 'yoli': knightPositionValue,
     'fin': bishopPositionValue, 'chair': bishopPositionValue, 'greatshield': bishopPositionValue,
     'jotu': rookPositionValue, 'neptune': rookPositionValue,
     'zur': queenPositionValue, 'greathorsegeneral': queenPositionValue, 'cthulhu': queenPositionValue, 'mermaid': queenPositionValue,
     'finor': queenPositionValue, 'kota': queenPositionValue
-    // Lupa uses dynamic PST based on whether Prince is captured
 };
 
 // [MODIFIED] Updated evaluation function
 function evaluateBoard(boardState) {
-    let totalScore = 0;
-    let whiteLupaPos = null;
-    let blackLupaPos = null;
-    let whitePrincePos = null; // Track Prince positions
-    let blackPrincePos = null;
-    let whitePrinceOnBoard = false; // Track if they are on board
-    let blackPrinceOnBoard = false;
-    let pieceCount = 0; // To estimate game phase
+    if (!Array.isArray(boardState) || boardState.length !== BOT_BOARD_HEIGHT || !Array.isArray(boardState[0]) || boardState[0].length !== BOT_BOARD_WIDTH) {
+        console.error("evaluateBoard received invalid boardState structure:", boardState); return 0;
+    }
 
+    let totalScore = 0; let whiteLupaPos = null; let blackLupaPos = null; let whitePrincePos = null; let blackPrincePos = null;
+    let whitePrinceOnBoard = false; let blackPrinceOnBoard = false; let pieceCount = 0;
+    let whiteLupaFoundEval = false; let blackLupaFoundEval = false; let whitePrinceFoundEval = false; let blackPrinceFoundEval = false;
+
+    // --- Check immediate win conditions FIRST ---
+    for(const sq of botSanctuarySquares) {
+        const piece = boardState[sq.y]?.[sq.x];
+        if (piece && (piece.type === 'lupa' || piece.type === 'prince')) { return piece.color === 'white' ? Infinity : -Infinity; }
+    }
+
+    // --- Iterate board for scoring and finding royalty ---
     for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
         for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
             const piece = boardState[y]?.[x];
             if (piece) {
-                pieceCount++;
                 const value = pieceValues[piece.type] || 0;
                 let positionValue = 0;
                 let table = piecePST[piece.type];
 
                 if (piece.type === 'lupa') {
                     table = isKingRestricted(piece.color, boardState) ? kingEarlyPST : kingLatePST;
-                }
+                    if(piece.color === 'white') whiteLupaFoundEval = true; else blackLupaFoundEval = true;
+                } else if (piece.type === 'prince') {
+                     if(piece.color === 'white') whitePrinceFoundEval = true; else blackPrinceFoundEval = true;
+                } else { pieceCount++; }
 
                 if (table) {
                     const pst = (piece.color === 'white') ? table : mirrorPST(table);
@@ -445,128 +447,78 @@ function evaluateBoard(boardState) {
                       const pst = (piece.color === 'white') ? kingTable : mirrorPST(kingTable);
                       positionValue = (Array.isArray(pst) && pst[y] && pst[y][x] !== undefined) ? pst[y][x] : 0;
                  }
-
                 totalScore += (piece.color === 'white') ? (value + positionValue) : -(value + positionValue);
-
-                if (piece.type === 'lupa') {
-                    if (piece.color === 'white') whiteLupaPos = {x, y};
-                    else blackLupaPos = {x, y};
-                }
-                if (piece.type === 'prince') {
-                    if (piece.color === 'white') { whitePrincePos = {x, y}; whitePrinceOnBoard = true; }
-                    else { blackPrincePos = {x, y}; blackPrinceOnBoard = true; }
-                }
+                if (piece.type === 'lupa') { if (piece.color === 'white') whiteLupaPos = {x, y}; else blackLupaPos = {x, y}; }
+                if (piece.type === 'prince') { if (piece.color === 'white') whitePrincePos = {x, y}; else blackPrincePos = {x, y}; }
             }
         }
     }
+     // Update board status based on findings
+     whitePrinceOnBoard = whitePrinceFoundEval;
+     blackPrinceOnBoard = blackPrinceFoundEval;
 
-    // --- Game Phase Estimation (simple version) ---
-    // Max pieces ~ 40 initially (excluding pawns/piluts). Endgame ~< 15 pieces?
+     // --- Check capture win conditions ---
+     if (!whiteLupaFoundEval && !whitePrinceFoundEval) return -Infinity;
+     if (!blackLupaFoundEval && !blackPrinceFoundEval) return Infinity;
+
+    // --- Game Phase Estimation ---
     const isEndgame = pieceCount < 18;
 
     // --- Royalty Safety & Threat Evaluation ---
-    const royaltySafetyPenalty = 600; // Increased penalty for attacked royalty
-    const princeSafetyPenalty = 300; // Lower penalty for attacked prince
+    const royaltySafetyPenalty = 600; const princeSafetyPenalty = 300;
+    if (whiteLupaPos && isSquareAttackedBy(whiteLupaPos.x, whiteLupaPos.y, boardState, 'black')) totalScore -= royaltySafetyPenalty;
+    if (blackLupaPos && isSquareAttackedBy(blackLupaPos.x, blackLupaPos.y, boardState, 'white')) totalScore += royaltySafetyPenalty;
+    if (whitePrincePos && isSquareAttackedBy(whitePrincePos.x, whitePrincePos.y, boardState, 'black')) totalScore -= princeSafetyPenalty;
+    if (blackPrincePos && isSquareAttackedBy(blackPrincePos.x, blackPrincePos.y, boardState, 'white')) totalScore += princeSafetyPenalty;
 
-    if (whiteLupaPos && isSquareAttackedBy(whiteLupaPos.x, whiteLupaPos.y, boardState, 'black')) {
-        totalScore -= royaltySafetyPenalty;
-    }
-    if (blackLupaPos && isSquareAttackedBy(blackLupaPos.x, blackLupaPos.y, boardState, 'white')) {
-        totalScore += royaltySafetyPenalty;
-    }
-    if (whitePrincePos && isSquareAttackedBy(whitePrincePos.x, whitePrincePos.y, boardState, 'black')) {
-        totalScore -= princeSafetyPenalty;
-    }
-    if (blackPrincePos && isSquareAttackedBy(blackPrincePos.x, blackPrincePos.y, boardState, 'white')) {
-        totalScore += princeSafetyPenalty;
-    }
 
     // --- Sanctuary Threat Evaluation & Defense Bonus ---
-    let whiteThreatDistance = Infinity;
-    let threatenedSanctuary = null;
-
+    let whiteThreatDistance = Infinity; let threatenedSanctuary = null; let whiteThreatPieceType = null;
     const checkRoyaltyThreat = (royalPos) => {
-        if (!royalPos) return Infinity;
-        let minDist = Infinity;
-        let closestSq = null;
+        if (!royalPos) return { dist: Infinity, sq: null };
+        let minDist = Infinity; let closestSq = null;
         for (const sanctuarySq of botSanctuarySquares) {
             const dist = Math.max(Math.abs(royalPos.x - sanctuarySq.x), Math.abs(royalPos.y - sanctuarySq.y));
-            if (dist < minDist) {
-                minDist = dist;
-                closestSq = sanctuarySq;
-            }
+            if (dist < minDist) { minDist = dist; closestSq = sanctuarySq; }
         }
         return { dist: minDist, sq: closestSq };
     };
-
     const whiteKingThreat = checkRoyaltyThreat(whiteLupaPos);
     const whitePrinceThreat = checkRoyaltyThreat(whitePrincePos);
+    if (whiteKingThreat.dist <= whitePrinceThreat.dist) { whiteThreatDistance = whiteKingThreat.dist; threatenedSanctuary = whiteKingThreat.sq; whiteThreatPieceType = 'lupa'; }
+    else { whiteThreatDistance = whitePrinceThreat.dist; threatenedSanctuary = whitePrinceThreat.sq; whiteThreatPieceType = 'prince'; }
 
-    // Find the closest threat
-    if (whiteKingThreat.dist < whitePrinceThreat.dist) {
-        whiteThreatDistance = whiteKingThreat.dist;
-        threatenedSanctuary = whiteKingThreat.sq;
-    } else {
-        whiteThreatDistance = whitePrinceThreat.dist;
-        threatenedSanctuary = whitePrinceThreat.sq;
-    }
-
-    // Apply penalty for threat
     if (whiteThreatDistance <= 3) {
         const proximityFactor = Math.pow(4 - whiteThreatDistance, 2);
-        const penalty = SANCTUARY_THREAT_PENALTY_BASE * proximityFactor;
-        totalScore += penalty; // Add penalty (bad for bot)
-
-        // --- Add Defense Bonus ---
+        let penalty = SANCTUARY_THREAT_PENALTY_BASE * proximityFactor;
+        if (whiteThreatPieceType === 'prince') penalty *= 0.9;
+        totalScore += penalty;
         if (threatenedSanctuary) {
              let defenseScore = 0;
-             // Check squares around the threatened sanctuary
              for (let dy = -1; dy <= 1; dy++) {
                  for (let dx = -1; dx <= 1; dx++) {
-                      if (dx === 0 && dy === 0) continue; // Skip sanctuary itself
-                      const checkX = threatenedSanctuary.x + dx;
-                      const checkY = threatenedSanctuary.y + dy;
+                      if (dx === 0 && dy === 0) continue;
+                      const checkX = threatenedSanctuary.x + dx; const checkY = threatenedSanctuary.y + dy;
                       if (isPositionValid(checkX, checkY)) {
                           const piece = boardState[checkY]?.[checkX];
-                          if (piece && piece.color === 'black') { // If bot piece is nearby
-                              // Bonus based on proximity to the sanctuary
+                          if (piece && piece.color === 'black') {
                               const distToSq = Math.max(Math.abs(checkX - threatenedSanctuary.x), Math.abs(checkY - threatenedSanctuary.y));
-                              defenseScore += SANCTUARY_DEFENSE_BONUS_BASE / (distToSq + 1); // Closer is better
+                              defenseScore += SANCTUARY_DEFENSE_BONUS_BASE / (distToSq + 1);
                           }
                       }
                  }
              }
-             // Subtract defense score (higher defense makes score lower/better for bot)
+             if (isSquareAttackedBy(threatenedSanctuary.x, threatenedSanctuary.y, boardState, 'black')) { defenseScore += SANCTUARY_DEFENSE_BONUS_BASE * 1.5; }
              totalScore -= defenseScore;
-              // console.log(`Sanctuary ${threatenedSanctuary.x},${threatenedSanctuary.y} threatened (dist ${whiteThreatDistance}). Defense bonus: ${defenseScore.toFixed(1)}`);
         }
     }
 
-     // --- [NEW] Bot Prince Advancement Bonus (stronger in endgame) ---
+     // --- Bot Prince Advancement Bonus ---
      if (blackPrincePos) {
-          // Bonus based on rank (y-coordinate for black)
-          // Black starts at rank 15 (y=14), wants to reach rank 8/7 (y=7/8)
           const rankBonus = (blackPalace.minY - blackPrincePos.y) * PRINCE_ADVANCEMENT_BONUS;
-          totalScore -= rankBonus; // Subtract bonus (good for bot)
-
-          // Give an extra boost in the endgame
-          if (isEndgame) {
-              totalScore -= rankBonus * 1.5; // Apply bonus more strongly
-          }
+          totalScore -= rankBonus;
+          if (isEndgame) { totalScore -= rankBonus * 1.5; }
      }
-
-
-    // --- Check for immediate win/loss conditions ---
-    // (This check remains crucial and should override heuristic scores)
-    for(const sq of botSanctuarySquares) {
-        const piece = boardState[sq.y]?.[sq.x];
-        if (piece && (piece.type === 'lupa' || piece.type === 'prince')) {
-            return piece.color === 'white' ? Infinity : -Infinity;
-        }
-    }
-    // Check capture win condition
-    if (!whiteLupaPos && !whitePrinceOnBoard) return -Infinity; // Black (bot) wins
-    if (!blackLupaPos && !blackPrinceOnBoard) return Infinity;  // White (human) wins
 
     return totalScore;
 }
@@ -577,80 +529,33 @@ function evaluateBoard(boardState) {
 // ===================================================================
 
 function getCaptureMoves(boardState, color) { /* ... unchanged ... */ }
-
-// [MODIFIED] Prevent dropping King or Prince
-function getAllValidMoves(boardState, color, capturedPieces) {
-    const allMoves = [];
-    const opponentColor = color === 'white' ? 'black' : 'white';
-
-    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-            const piece = boardState[y]?.[x]; // Safe access
-            if (piece && piece.color === color) {
-                const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
-                for (const move of validMoves) {
-                    allMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: move.isAttack });
-                }
-            }
-        }
-    }
-
-    if (capturedPieces && capturedPieces.length > 0) {
-        const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
-        for (const pieceType of uniquePieceTypesInHand) {
-             // --- Cannot drop King or Prince ---
-             if (pieceType === 'lupa' || pieceType === 'prince') {
-                  continue;
-             }
-             // ---
-            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-                    // Drop move validation
-                    if (isPositionValid(x, y) && boardState[y]?.[x] === null /* && !isSquareAttackedBy(...) */ ) {
-                        allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
-                    }
-                }
-            }
-        }
-    }
-    return allMoves;
-}
+function getAllValidMoves(boardState, color, capturedPieces) { /* ... unchanged ... */ }
 
 // ===================================================================
 // Section 5: Opening Book
 // ===================================================================
 
-// Store opening sequences as arrays of moves { from: {x, y}, to: {x, y} }
-// These are for the BOT (Black)
 const openingBook = {
-    // Opening 1: Central Pawn Push & Prince Advance
     "central_prince": [
-        { from: { x: 5, y: 15 }, to: { x: 5, y: 14 } }, // Move right central pawn forward
-        { from: { x: 4, y: 15 }, to: { x: 4, y: 14 } }, // Move left central pawn forward
-        { from: { x: 5, y: 14 }, to: { x: 5, y: 13 } }, // Advance right Prince
-        { from: { x: 4, y: 13 }, to: { x: 4, y: 12 } }, // Advance left Prince (or other piece)
-        // Add more moves...
+        { from: { x: 5, y: 15 }, to: { x: 5, y: 14 } }, // f1 -> f2
+        { from: { x: 4, y: 15 }, to: { x: 4, y: 14 } }, // e1 -> e2
+        { from: { x: 5, y: 14 }, to: { x: 5, y: 13 } }, // Prince f2 -> f3
+        { from: { x: 4, y: 14 }, to: { x: 4, y: 13 } }, // Pawn e2 -> e3
+        { from: { x: 5, y: 13 }, to: { x: 4, y: 12 } }, // Prince f3 -> e4
     ],
-    // Opening 2: Side Pilut Advance & Bishop Development
     "side_bishop": [
-        { from: { x: 3, y: 10 }, to: { x: 3, y: 9 } }, // Advance d-file Pilut
-        { from: { x: 6, y: 10 }, to: { x: 6, y: 9 } }, // Advance g-file Pilut
-        { from: { x: 4, y: 11 }, to: { x: 5, y: 10 } }, // Develop left Yoli (Bishop)
-        { from: { x: 5, y: 11 }, to: { x: 4, y: 10 } }, // Develop right Yoli (Bishop)
-        // Add more moves...
+        { from: { x: 3, y: 10 }, to: { x: 3, y: 8 } },  // Pilut d6 -> d8 (2 squares)
+        { from: { x: 6, y: 10 }, to: { x: 6, y: 8 } },  // Pilut g6 -> g8 (2 squares)
+        { from: { x: 4, y: 11 }, to: { x: 2, y: 9 } },  // Yoli e5 -> c7
+        { from: { x: 5, y: 11 }, to: { x: 7, y: 9 } },  // Yoli f5 -> h7
     ],
-    // Opening 3: Defend Sanctuaries early
     "sanctuary_defense": [
-         { from: { x: 1, y: 10 }, to: { x: 1, y: 9 } }, // Advance b-file Pilut
-         { from: { x: 8, y: 10 }, to: { x: 8, y: 9 } }, // Advance i-file Pilut
-         { from: { x: 2, y: 11 }, to: { x: 2, y: 10 } }, // Move left Kor (Knight) slightly forward
-         { from: { x: 7, y: 11 }, to: { x: 7, y: 10 } }, // Move right Kor (Knight) slightly forward
-         // Add more moves...
+         { from: { x: 1, y: 10 }, to: { x: 1, y: 9 } },  // Pilut b6 -> b7
+         { from: { x: 8, y: 10 }, to: { x: 8, y: 9 } },  // Pilut i6 -> i7
+         { from: { x: 2, y: 11 }, to: { x: 3, y: 9 } },  // Kor c5 -> d7
+         { from: { x: 7, y: 11 }, to: { x: 6, y: 9 } },  // Kor h5 -> g7
     ]
-    // Add more openings here...
 };
-
-// Store the chosen opening for the current game (needs to be reset per game)
 let chosenOpeningSequence = null;
 let openingMoveIndex = 0;
 
@@ -659,66 +564,63 @@ let openingMoveIndex = 0;
 // Section 6: Main Bot Logic (Updated with Opening Book)
 // ===================================================================
 
-/**
- * Main entry point for the bot with a time limit, using iterative deepening.
- * Now accepts full gameState to check turn count for openings.
- */
  function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = null) {
     const startTime = Date.now();
     const timeLimit = 4000;
-    const { boardState, turnCount } = gameState; // Extract turn count
+    const { boardState, turnCount } = gameState; // Add safety check for gameState
+     if (!boardState) {
+         console.error("findBestMoveWithTimeLimit called with invalid gameState!");
+         return null; // Cannot proceed without board state
+     }
+
+
+    // Reset opening book choice if it's white's first move (turnCount 0) or black's first move (turnCount 1)
+     if (turnCount <= 1) {
+         chosenOpeningSequence = null;
+         openingMoveIndex = 0;
+     }
 
     // --- Opening Book Logic ---
-    // Choose an opening at the start of the bot's first turn (turnCount == 1 for black)
-    if (turnCount === 1 && !chosenOpeningSequence) {
+    if (turnCount === 1 && !chosenOpeningSequence) { // Bot's first move
         const openingNames = Object.keys(openingBook);
-        const randomIndex = Math.floor(Math.random() * openingNames.length);
-        const chosenName = openingNames[randomIndex];
-        chosenOpeningSequence = openingBook[chosenName];
-        openingMoveIndex = 0;
-        console.log(`Bot selected opening: ${chosenName}`);
+        if (openingNames.length > 0) {
+            const randomIndex = Math.floor(Math.random() * openingNames.length);
+            const chosenName = openingNames[randomIndex];
+            chosenOpeningSequence = openingBook[chosenName];
+            openingMoveIndex = 0;
+            console.log(`Bot selected opening: ${chosenName}`);
+        }
     }
 
-    // Play from opening book if applicable
-    if (chosenOpeningSequence && openingMoveIndex < chosenOpeningSequence.length && turnCount < chosenOpeningSequence.length * 2) {
+    if (chosenOpeningSequence && openingMoveIndex < chosenOpeningSequence.length && turnCount < 10) {
         const openingMove = chosenOpeningSequence[openingMoveIndex];
-
-        // **Crucial Check:** Verify the opening move is still valid on the current board
         const pieceAtFrom = boardState[openingMove.from.y]?.[openingMove.from.x];
-        if (pieceAtFrom && pieceAtFrom.color === 'black') { // Ensure the bot's piece is there
+
+        if (pieceAtFrom && pieceAtFrom.color === 'black') {
             const validMovesForPiece = getValidMovesForPiece(pieceAtFrom, openingMove.from.x, openingMove.from.y, boardState, false);
             const isOpeningMoveValid = validMovesForPiece.some(m => m.x === openingMove.to.x && m.y === openingMove.to.y);
-
-             // **Safety Check:** Don't play opening move if a better capture exists
-             const immediateCaptures = getCaptureMoves(boardState, 'black');
+            const immediateCaptures = getCaptureMoves(boardState, 'black');
              let bestCaptureValue = -Infinity;
              if (immediateCaptures.length > 0) {
-                  // Quick evaluation of captures
-                 for (const cap of immediateCaptures) {
-                      const victim = boardState[cap.to.y]?.[cap.to.x];
-                      const attacker = boardState[cap.from.y]?.[cap.from.x];
-                      if(victim && attacker){
-                           const value = (pieceValues[victim.type] || 0) - (pieceValues[attacker.type] || 0) / 10; // Simple MVV-LVA
-                           bestCaptureValue = Math.max(bestCaptureValue, value);
-                      }
-                 }
+                  for (const cap of immediateCaptures) { const victim = boardState[cap.to.y]?.[cap.to.x]; const attacker = boardState[cap.from.y]?.[cap.from.x]; if(victim && attacker){ const value = (pieceValues[victim.type] || 0) - (pieceValues[attacker.type] || 0) / 10; bestCaptureValue = Math.max(bestCaptureValue, value);}}
              }
-             // Only play opening if valid AND no significantly valuable capture is missed (e.g., capturing anything better than a pawn/pilut)
+
             if (isOpeningMoveValid && bestCaptureValue < (pieceValues['sult'] || 150)) {
                 console.log(`Bot playing opening move ${openingMoveIndex + 1}:`, openingMove);
                 openingMoveIndex++;
-                return { ...openingMove, type: 'board', isAttack: boardState[openingMove.to.y]?.[openingMove.to.x] !== null }; // Add type/isAttack
+                const isAttack = !!boardState[openingMove.to.y]?.[openingMove.to.x];
+                 return { ...openingMove, type: 'board', isAttack: isAttack };
             } else {
-                 console.log("Opening move invalid or better capture exists, deviating from book.");
-                 chosenOpeningSequence = null; // Deviate from the book permanently
+                 console.log(`Opening move ${openingMoveIndex + 1} invalid, unsafe, or better capture exists. Deviating.`);
+                 chosenOpeningSequence = null;
             }
         } else {
-            console.log("Opening state mismatch, deviating from book.");
-            chosenOpeningSequence = null; // Deviate from the book permanently
+            console.log("Opening state mismatch (piece not found), deviating.");
+            chosenOpeningSequence = null;
         }
     } else if (chosenOpeningSequence && openingMoveIndex >= chosenOpeningSequence.length) {
-         console.log("Opening finished.");
-         chosenOpeningSequence = null; // Opening sequence complete
+         // console.log("Opening finished."); // Less verbose
+         chosenOpeningSequence = null;
     }
     // --- End Opening Book Logic ---
 
@@ -726,35 +628,22 @@ let openingMoveIndex = 0;
     // --- Normal Search (Iterative Deepening) ---
     let bestMoveFound = null;
     let lastCompletedDepthResult = null;
+    // console.log("Bot searching with state:", { hasBonus: !!bonusMoveState }); // Less verbose
 
-    console.log("Bot searching with state:", { hasBonus: !!bonusMoveState });
-
-    for (let depth = 1; depth <= 4; depth++) { // Reduced max depth slightly for performance
-        console.log(`Searching at depth: ${depth}`);
+    for (let depth = 1; depth <= 4; depth++) {
+        // console.log(`Searching at depth: ${depth}`); // Less verbose
         let currentDepthResult = null;
         try {
             currentDepthResult = findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState);
         } catch (e) {
-            if (e.message === 'TimeLimitExceeded') {
-                console.log(`Time limit reached during depth ${depth}. Using best move from depth ${depth - 1}.`);
-                break;
-            }
+            if (e.message === 'TimeLimitExceeded') { break; }
             console.error("Error during minimax search:", e);
+             bestMoveFound = lastCompletedDepthResult; // Use last good result
             break;
         }
-
-        if (currentDepthResult) {
-             lastCompletedDepthResult = currentDepthResult;
-             // console.log(`Depth ${depth} completed. Best move found:`, lastCompletedDepthResult);
-        } else {
-             console.log(`No move found at depth ${depth}.`);
-             if (depth === 1) break;
-        }
-
-        if (Date.now() - startTime >= timeLimit) {
-            console.log(`Time limit reached after completing depth ${depth}.`);
-            break;
-        }
+        if (currentDepthResult) { lastCompletedDepthResult = currentDepthResult; }
+        else { if (depth === 1) break; }
+        if (Date.now() - startTime >= timeLimit) { break; }
     }
 
     bestMoveFound = lastCompletedDepthResult;
@@ -764,217 +653,156 @@ let openingMoveIndex = 0;
         console.warn("Iterative deepening finished without finding a best move. Selecting random fallback.");
         let moves;
         if (bonusMoveState) {
-             const { from } = bonusMoveState;
-             const piece = boardState[from.y]?.[from.x];
+             const { from } = bonusMoveState; const piece = boardState[from.y]?.[from.x];
              if (piece) moves = getBonusMoves(piece, from.x, from.y, boardState);
              else { console.error("Fallback Error: Piece not found for bonus move!"); moves = []; }
-        } else {
-            moves = getAllValidMoves(boardState, 'black', capturedPieces);
-        }
+        } else { moves = getAllValidMoves(boardState, 'black', capturedPieces); }
 
         if (moves && moves.length > 0) {
-            bestMoveFound = moves[Math.floor(Math.random() * moves.length)];
-             console.log("Selected random move:", bestMoveFound);
+            const captureMoves = moves.filter(m => m.isAttack);
+            if (captureMoves.length > 0) {
+                 bestMoveFound = captureMoves[Math.floor(Math.random() * captureMoves.length)];
+                 // console.log("Selected random capture fallback:", bestMoveFound);
+            } else {
+                 bestMoveFound = moves[Math.floor(Math.random() * moves.length)];
+                 // console.log("Selected random non-capture fallback:", bestMoveFound);
+            }
         } else {
-             console.error("CRITICAL: Bot found NO valid moves in fallback!");
-             return null;
+             console.error("CRITICAL: Bot found NO valid moves in fallback!"); return null;
         }
     }
 
-    console.log("Final best move selected:", bestMoveFound);
+    // console.log("Final best move selected:", bestMoveFound);
     return bestMoveFound;
 }
 
-/**
- * Performs the search for a single depth level.
- */
+
 function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState) {
     let bestMove = null;
-    let bestValue = Infinity; // Bot is minimizing (black)
+    let bestValue = Infinity;
     let alpha = -Infinity;
     let beta = Infinity;
     let moves;
 
     if (bonusMoveState) {
-        const { from } = bonusMoveState;
-        const piece = boardState[from.y]?.[from.x];
-        if (piece) {
-             // console.log(`Generating bonus moves for ${piece.type} at ${from.x},${from.y}`);
-             moves = getBonusMoves(piece, from.x, from.y, boardState);
-        } else {
-             console.error("Error generating bonus moves: Piece not found at source!");
-             moves = [];
-        }
+        const { from } = bonusMoveState; const piece = boardState[from.y]?.[from.x];
+        if (piece) { moves = getBonusMoves(piece, from.x, from.y, boardState); }
+        else { console.error("Error generating bonus moves: Piece not found!"); moves = []; }
     } else {
         moves = getAllValidMoves(boardState, 'black', capturedPieces);
     }
+     if (moves.length === 0) { return null; }
 
-     if (moves.length === 0) {
-          // console.log("No valid moves found for bot at this node.");
-          return null; // No moves possible
-     }
+    // MVV-LVA Ordering for captures, basic otherwise
+    moves.sort((a, b) => {
+        let scoreA = 0, scoreB = 0;
+        if (a.isAttack) {
+            const victim = boardState[a.to.y]?.[a.to.x];
+            const attacker = boardState[a.from.y]?.[a.from.x];
+            scoreA = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+        }
+        if (b.isAttack) {
+             const victim = boardState[b.to.y]?.[b.to.x];
+             const attacker = boardState[b.from.y]?.[b.from.x];
+             scoreB = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+        }
+        // Add simple heuristic for Prince advancement for non-captures
+        if (!a.isAttack && boardState[a.from.y]?.[a.from.x]?.type === 'prince') scoreA += (blackPalace.minY - a.to.y) * 2;
+        if (!b.isAttack && boardState[b.from.y]?.[b.from.x]?.type === 'prince') scoreB += (blackPalace.minY - b.to.y) * 2;
 
-    // Basic move ordering (Captures first)
-    moves.sort((a, b) => (b.isAttack ? 10 : 0) - (a.isAttack ? 10 : 0)); // Give captures higher priority
+        return scoreB - scoreA; // Higher score first
+    });
+
 
     for (const move of moves) {
          if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-
         const tempBoard = copyBoard(boardState);
-        let capturedType = null; // Store type for unmaking move if needed
-
+        let capturedType = null;
         if (move.type === 'drop') {
             tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
         } else {
             const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
-             if (!pieceToMove) { continue; } // Skip if piece somehow disappeared
-
+             if (!pieceToMove) { continue; }
             const targetPiece = tempBoard[move.to.y]?.[move.to.x];
-            if (targetPiece) capturedType = targetPiece.type; // Store type if capture
-
+            if (targetPiece) capturedType = targetPiece.type;
             tempBoard[move.to.y][move.to.x] = pieceToMove;
             tempBoard[move.from.y][move.from.x] = null;
-            // TODO: Handle promotions simulation
+            // TODO: Promotion simulation
         }
 
         let boardValue;
          const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
          const isCopeBonusTrigger = !bonusMoveState && pieceMoved?.type === 'cope' && move.isAttack;
          const isGHGBonusTrigger = !bonusMoveState && (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
-
          if (isCopeBonusTrigger || isGHGBonusTrigger) {
-             boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); // Pass depth (not depth-1) for bonus turn evaluation
+             boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); // Pass depth
+         } else {
+             boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
          }
-         else {
-              boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
-         }
-
-        // Bot is minimizing
-        if (boardValue < bestValue) {
-            bestValue = boardValue;
-            bestMove = move;
-        }
+        if (boardValue < bestValue) { bestValue = boardValue; bestMove = move; }
         beta = Math.min(beta, boardValue);
-        if (beta <= alpha) {
-            break;
-        }
+        if (beta <= alpha) { break; }
     }
-
     return bestMove;
 }
 
 
 function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
-    if (Date.now() - startTime >= timeLimit) {
-        throw new Error('TimeLimitExceeded');
-    }
+    if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
 
-    // Check terminal nodes based on game rules first
+    // Check terminal nodes
     let whiteLupaPos = null, blackLupaPos = null, whitePrinceOnBoard = false, blackPrinceOnBoard = false;
      for (let y = 0; y < BOT_BOARD_HEIGHT; y++) { for (let x = 0; x < BOT_BOARD_WIDTH; x++) { const p = boardState[y]?.[x]; if (p) { if(p.type==='lupa'){if(p.color==='white')whiteLupaPos={x,y};else blackLupaPos={x,y};} else if(p.type==='prince'){if(p.color==='white')whitePrinceOnBoard=true;else blackPrinceOnBoard=true;}}}}
      for(const sq of botSanctuarySquares) { const p = boardState[sq.y]?.[sq.x]; if (p && (p.type === 'lupa' || p.type === 'prince')) return p.color === 'white' ? Infinity : -Infinity; }
-     if (!whiteLupaPos && !whitePrinceOnBoard) return -Infinity; // Black wins
-     if (!blackLupaPos && !blackPrinceOnBoard) return Infinity;  // White wins
-
+     if (!whiteLupaPos && !whitePrinceOnBoard) return -Infinity - depth;
+     if (!blackLupaPos && !blackPrinceOnBoard) return Infinity + depth;
 
     if (depth === 0) {
         return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit);
     }
 
     const color = isMaximizingPlayer ? 'white' : 'black';
-    const moves = getAllValidMoves(boardState, color, []); // Pass empty captured array
-
+    const moves = getAllValidMoves(boardState, color, []);
     if (moves.length === 0) {
-        // Basic check: If the player whose turn it is has no moves, how is their King?
         const kingPos = isMaximizingPlayer ? whiteLupaPos : blackLupaPos;
         const opponentColor = isMaximizingPlayer ? 'black' : 'white';
-        if (kingPos && isSquareAttackedBy(kingPos.x, kingPos.y, boardState, opponentColor)) {
-            // Checkmate
-             return isMaximizingPlayer ? -Infinity - depth : Infinity + depth; // Penalize faster checkmates
-        } else {
-             // Stalemate
-             return 0;
-        }
-       // return evaluateBoard(boardState); // Fallback if checkmate/stalemate logic is complex
+        if (kingPos && isSquareAttackedBy(kingPos.x, kingPos.y, boardState, opponentColor)) { return isMaximizingPlayer ? -Infinity - depth : Infinity + depth; }
+        else { return 0; }
     }
 
-    // Move Ordering
-     moves.sort((a, b) => (b.isAttack ? 10 : 0) - (a.isAttack ? 10 : 0));
+     // Move Ordering
+     moves.sort((a, b) => {
+         let scoreA = 0, scoreB = 0;
+         if (a.isAttack) { const victim = boardState[a.to.y]?.[a.to.x]; scoreA = victim ? (pieceValues[victim.type] || 0) * 10 : 0; }
+         if (b.isAttack) { const victim = boardState[b.to.y]?.[b.to.x]; scoreB = victim ? (pieceValues[victim.type] || 0) * 10 : 0; }
+         return scoreB - scoreA;
+     });
 
 
-    if (isMaximizingPlayer) { // White (Human)
+    if (isMaximizingPlayer) {
         let maxEval = -Infinity;
         for (const move of moves) {
              if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-
-            const tempBoard = copyBoard(boardState);
-            const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
-
-            if (!pieceToMove && move.type === 'board') { continue; }
-
-            // Simulate move
-            if (move.type === 'drop') {
-                tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
-            } else {
-                 tempBoard[move.to.y][move.to.x] = pieceToMove;
-                 tempBoard[move.from.y][move.from.x] = null;
-                 // TODO: Handle promotions simulation if needed
-            }
-
-            const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
-            const isCopeBonusTrigger = pieceMoved?.type === 'cope' && move.isAttack;
-            const isGHGBonusTrigger = (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
-
+            const tempBoard = copyBoard(boardState); const pieceToMove = tempBoard[move.from.y]?.[move.from.x]; if (!pieceToMove && move.type === 'board') continue;
+            if (move.type === 'drop') { tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color }; } else { tempBoard[move.to.y][move.to.x] = pieceToMove; tempBoard[move.from.y][move.from.x] = null; /* Promo? */ }
+            const pieceMoved = tempBoard[move.to.y]?.[move.to.x]; const isCopeBonusTrigger = pieceMoved?.type === 'cope' && move.isAttack; const isGHGBonusTrigger = (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
             let eval;
-            if (isCopeBonusTrigger || isGHGBonusTrigger) {
-                 eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, true, startTime, timeLimit); // Pass depth
-            } else {
-                 eval = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit);
-            }
-
-            maxEval = Math.max(maxEval, eval);
-            alpha = Math.max(alpha, eval);
-            if (beta <= alpha) {
-                break;
-            }
+            if (isCopeBonusTrigger || isGHGBonusTrigger) { eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, true, startTime, timeLimit); }
+            else { eval = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit); }
+            maxEval = Math.max(maxEval, eval); alpha = Math.max(alpha, eval); if (beta <= alpha) break;
         }
         return maxEval;
-
-    } else { // Minimizing Player (Black/Bot)
+    } else {
         let minEval = Infinity;
         for (const move of moves) {
              if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-
-            const tempBoard = copyBoard(boardState);
-            const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
-
-             if (!pieceToMove && move.type === 'board') { continue; }
-
-            // Simulate move
-            if (move.type === 'drop') {
-                tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color };
-            } else {
-                 tempBoard[move.to.y][move.to.x] = pieceToMove;
-                 tempBoard[move.from.y][move.from.x] = null;
-                 // TODO: Handle promotions simulation
-            }
-
-            const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
-            const isCopeBonusTrigger = pieceMoved?.type === 'cope' && move.isAttack;
-            const isGHGBonusTrigger = (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
-
+            const tempBoard = copyBoard(boardState); const pieceToMove = tempBoard[move.from.y]?.[move.from.x]; if (!pieceToMove && move.type === 'board') continue;
+            if (move.type === 'drop') { tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: color }; } else { tempBoard[move.to.y][move.to.x] = pieceToMove; tempBoard[move.from.y][move.from.x] = null; /* Promo? */ }
+            const pieceMoved = tempBoard[move.to.y]?.[move.to.x]; const isCopeBonusTrigger = pieceMoved?.type === 'cope' && move.isAttack; const isGHGBonusTrigger = (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
             let eval;
-             if (isCopeBonusTrigger || isGHGBonusTrigger) {
-                  eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); // Pass depth
-             } else {
-                  eval = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
-             }
-
-            minEval = Math.min(minEval, eval);
-            beta = Math.min(beta, eval);
-            if (beta <= alpha) {
-                break;
-            }
+             if (isCopeBonusTrigger || isGHGBonusTrigger) { eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); }
+             else { eval = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit); }
+            minEval = Math.min(minEval, eval); beta = Math.min(beta, eval); if (beta <= alpha) break;
         }
         return minEval;
     }
@@ -984,78 +812,45 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
 const QUIESCENCE_MAX_DEPTH = 3;
 
  function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit, depth = QUIESCENCE_MAX_DEPTH) {
-     if (Date.now() - startTime >= timeLimit) {
-         throw new Error('TimeLimitExceeded');
-     }
+     if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
 
      // Check terminal nodes
      let whiteLupaPosQ = null, blackLupaPosQ = null, whitePrinceOnBoardQ = false, blackPrinceOnBoardQ = false;
       for (let y = 0; y < BOT_BOARD_HEIGHT; y++) { for (let x = 0; x < BOT_BOARD_WIDTH; x++) { const p = boardState[y]?.[x]; if (p) { if(p.type==='lupa'){if(p.color==='white')whiteLupaPosQ={x,y};else blackLupaPosQ={x,y};} else if(p.type==='prince'){if(p.color==='white')whitePrinceOnBoardQ=true;else blackPrinceOnBoardQ=true;}}}}
       for(const sq of botSanctuarySquares) { const p = boardState[sq.y]?.[sq.x]; if (p && (p.type === 'lupa' || p.type === 'prince')) return p.color === 'white' ? Infinity : -Infinity; }
-      if (!whiteLupaPosQ && !whitePrinceOnBoardQ) return -Infinity;
-      if (!blackLupaPosQ && !blackPrinceOnBoardQ) return Infinity;
-
+      if (!whiteLupaPosQ && !whitePrinceOnBoardQ) return -Infinity - depth; // Prioritize faster wins slightly
+      if (!blackLupaPosQ && !blackPrinceOnBoardQ) return Infinity + depth;
 
      let stand_pat = evaluateBoard(boardState);
+     if (depth === 0) return stand_pat;
 
-     if (depth === 0) {
-         return stand_pat;
-     }
-
-     // Use stand_pat score for pruning check before generating moves
+     // Use stand_pat score for pruning check
      if (isMaximizingPlayer) {
-          if (stand_pat >= beta) return beta; // Current score is already too good for maximizing player
-          alpha = Math.max(alpha, stand_pat); // Update lower bound
+          if (stand_pat >= beta) return beta; alpha = Math.max(alpha, stand_pat);
      } else {
-          if (stand_pat <= alpha) return alpha; // Current score is already too good for minimizing player
-          beta = Math.min(beta, stand_pat); // Update upper bound
+          if (stand_pat <= alpha) return alpha; beta = Math.min(beta, stand_pat);
      }
-
 
      const color = isMaximizingPlayer ? 'white' : 'black';
      const captureMoves = getCaptureMoves(boardState, color);
-
-     if (captureMoves.length === 0) {
-         return stand_pat; // No captures, position is quiet
-     }
+     if (captureMoves.length === 0) return stand_pat;
 
       // MVV-LVA Ordering
       captureMoves.sort((a, b) => {
-          const victimA = boardState[a.to.y]?.[a.to.x];
-          const victimB = boardState[b.to.y]?.[b.to.x];
-          const attackerA = boardState[a.from.y]?.[a.from.x];
-          const attackerB = boardState[b.from.y]?.[b.from.x];
-          const victimValA = victimA ? (pieceValues[victimA.type] || 0) : 0;
-          const victimValB = victimB ? (pieceValues[victimB.type] || 0) : 0;
-          const attackerValA = attackerA ? (pieceValues[attackerA.type] || 0) : 0;
-          const attackerValB = attackerB ? (pieceValues[attackerB.type] || 0) : 0;
-          if (victimValA !== victimValB) return victimValB - victimValA;
-          else return attackerValA - attackerValB;
+          const victimA = boardState[a.to.y]?.[a.to.x]; const victimB = boardState[b.to.y]?.[b.to.x];
+          const attackerA = boardState[a.from.y]?.[a.from.x]; const attackerB = boardState[b.from.y]?.[b.from.x];
+          const victimValA = victimA ? (pieceValues[victimA.type] || 0) : 0; const victimValB = victimB ? (pieceValues[victimB.type] || 0) : 0;
+          const attackerValA = attackerA ? (pieceValues[attackerA.type] || 0) : 0; const attackerValB = attackerB ? (pieceValues[attackerB.type] || 0) : 0;
+          if (victimValA !== victimValB) return victimValB - victimValA; else return attackerValA - attackerValB;
       });
-
 
      for (const move of captureMoves) {
          if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-
-         const tempBoard = copyBoard(boardState);
-         const piece = tempBoard[move.from.y]?.[move.from.x];
-
-         if (!piece) { continue; } // Skip if piece missing
-
-          // Simulate capture
-          tempBoard[move.to.y][move.to.x] = piece;
-          tempBoard[move.from.y][move.from.x] = null;
-          // TODO: Handle promotions during quiescence if needed
-
+         const tempBoard = copyBoard(boardState); const piece = tempBoard[move.from.y]?.[move.from.x]; if (!piece) continue;
+          tempBoard[move.to.y][move.to.x] = piece; tempBoard[move.from.y][move.from.x] = null; // Promo? Unlikely needed here.
          let score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, depth - 1);
-
-         if (isMaximizingPlayer) {
-             alpha = Math.max(alpha, score);
-             if (beta <= alpha) break; // Beta cutoff
-         } else {
-             beta = Math.min(beta, score);
-             if (beta <= alpha) break; // Alpha cutoff
-         }
+         if (isMaximizingPlayer) { alpha = Math.max(alpha, score); if (beta <= alpha) break; }
+         else { beta = Math.min(beta, score); if (beta <= alpha) break; }
      }
      return isMaximizingPlayer ? alpha : beta;
  }
