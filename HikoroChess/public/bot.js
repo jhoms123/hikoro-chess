@@ -700,7 +700,7 @@ let killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]);
     let lastCompletedDepthResult = null;
     console.log("Bot searching with state:", { hasBonus: !!bonusMoveState });
 
-    for (let depth = 1; depth <= 3; depth++) {
+    for (let depth = 1; depth <= 2; depth++) {
         console.log(`Searching at depth: ${depth}`); 
         let currentDepthResult = null;
         try {
