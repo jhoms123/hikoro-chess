@@ -83,7 +83,7 @@ function isPositionValid(x, y) { // This function defines the *playable* area
 const isProtected = (targetPiece, targetX, targetY, board) => {
     // This logic needs to correctly handle the board array structure
     const protectingColor = targetPiece.color;
-    const inFrontDir = protectingColor === 'white' ? 1 : -1;
+    const inFrontDir = protectingColor === 'white' ? -1 : 1;
     const pilutProtectorY = targetY + inFrontDir;
 
     // Check Pilut protection
@@ -338,9 +338,9 @@ const pieceValues = {
     'greathorsegeneral': 1200, 'zur': 900, 'cthulhu': 1500, 'lupa': 20000
 };
 
-const SANCTUARY_THREAT_PENALTY_BASE = 350;
-const SANCTUARY_DEFENSE_BONUS_BASE = 15;
-const PRINCE_ADVANCEMENT_BONUS = 3;
+const SANCTUARY_THREAT_PENALTY_BASE = 500;
+const SANCTUARY_DEFENSE_BONUS_BASE = 400;
+const PRINCE_ADVANCEMENT_BONUS = 4;
 
 function mirrorPST(table) {
     if (!Array.isArray(table)) { console.error("Invalid PST passed to mirrorPST:", table); return []; }
@@ -612,6 +612,8 @@ const openingBook = {
 let chosenOpeningSequence = null;
 let openingMoveIndex = 0;
 
+const MAX_SEARCH_DEPTH = 10; // Max depth you expect to ever search
+let killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]); // Stores 2 killer moves per depth
 
 // ===================================================================
 // Section 6: Main Bot Logic (Updated with Opening Book)
@@ -625,6 +627,8 @@ let openingMoveIndex = 0;
          console.error("findBestMoveWithTimeLimit called with invalid gameState!");
          return null; // Cannot proceed without board state
      }
+	 
+	 killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]);
 
 
     // Reset opening book choice if it's white's first move (turnCount 0) or black's first move (turnCount 1)
@@ -808,6 +812,18 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
     return bestMove;
 }
 
+function storeKillerMove(depth, move) {
+    // [NEW] Helper function to store a killer move
+    if (depth < 0 || depth >= MAX_SEARCH_DEPTH) return;
+    // Don't add duplicates
+    if (killerMoves[depth][0] && killerMoves[depth][0].from.x === move.from.x && killerMoves[depth][0].from.y === move.from.y && killerMoves[depth][0].to.x === move.to.x && killerMoves[depth][0].to.y === move.to.y) {
+        return;
+    }
+    // Shift old killer move down
+    killerMoves[depth][1] = killerMoves[depth][0];
+    killerMoves[depth][0] = move;
+}
+
 
 function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit) {
     if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
@@ -833,12 +849,52 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     }
 
      // Move Ordering
-     moves.sort((a, b) => {
-         let scoreA = 0, scoreB = 0;
-         if (a.isAttack) { const victim = boardState[a.to.y]?.[a.to.x]; scoreA = victim ? (pieceValues[victim.type] || 0) * 10 : 0; }
-         if (b.isAttack) { const victim = boardState[b.to.y]?.[b.to.x]; scoreB = victim ? (pieceValues[victim.type] || 0) * 10 : 0; }
-         return scoreB - scoreA;
-     });
+     const killers = (depth >= 0 && depth < MAX_SEARCH_DEPTH) ? killerMoves[depth] : [null, null];
+     moves.sort((a, b) => {
+         // 1. Prioritize Captures over Quiet Moves
+         if (a.isAttack !== b.isAttack) {
+             return a.isAttack ? -1 : 1;
+         }
+
+         if (a.isAttack) {
+             // 2. Both are captures: Use MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+             const victimA = boardState[a.to.y]?.[a.to.x];
+             const victimB = boardState[b.to.y]?.[b.to.x];
+            // Must check a.from/b.from because a "capture" could be a drop on a piece (invalid, but defensive)
+             const attackerA = a.from ? boardState[a.from.y]?.[a.from.x] : null;
+             const attackerB = b.from ? boardState[b.from.y]?.[b.from.x] : null;
+             
+             const valA = (victimA ? (pieceValues[victimA.type] || 0) * 10 : 0) - (attackerA ? (pieceValues[attackerA.type] || 0) : 1000);
+             const valB = (victimB ? (pieceValues[victimB.type] || 0) * 10 : 0) - (attackerB ? (pieceValues[attackerB.type] || 0) : 1000);
+             
+             return valB - valA; // Higher score (better trade) first
+         }
+
+         // 3. Both are quiet moves: Prioritize Killer Moves
+        // We must check .from, as drop moves are also "quiet" but have no .from
+        let aIsKiller = false;
+        let bIsKiller = false;
+
+        if (a.from && killers[0]) {
+            aIsKiller = a.from.x === killers[0].from.x && a.from.y === killers[0].from.y && a.to.x === killers[0].to.x && a.to.y === killers[0].to.y;
+        }
+        if (a.from && killers[1] && !aIsKiller) {
+             aIsKiller = a.from.x === killers[1].from.x && a.from.y === killers[1].from.y && a.to.x === killers[1].to.x && a.to.y === killers[1].to.y;
+        }
+        if (b.from && killers[0]) {
+            bIsKiller = b.from.x === killers[0].from.x && b.from.y === killers[0].from.y && b.to.x === killers[0].to.x && b.to.y === killers[0].to.y;
+        }
+        if (b.from && killers[1] && !bIsKiller) {
+            bIsKiller = b.from.x === killers[1].from.x && b.from.y === killers[1].from.y && b.to.x === killers[1].to.x && b.to.y === killers[1].to.y;
+        }
+
+         if (aIsKiller !== bIsKiller) {
+             return aIsKiller ? -1 : 1; // Killer moves first
+         }
+
+         // 4. No other preference (e.g., Prince moves, etc., could be added here)
+         return 0;
+     });
 
 
     if (isMaximizingPlayer) {
@@ -851,7 +907,14 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
             let eval;
             if (isCopeBonusTrigger || isGHGBonusTrigger) { eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, true, startTime, timeLimit); }
             else { eval = minimax(tempBoard, depth - 1, alpha, beta, false, startTime, timeLimit); }
-            maxEval = Math.max(maxEval, eval); alpha = Math.max(alpha, eval); if (beta <= alpha) break;
+            maxEval = Math.max(maxEval, eval); alpha = Math.max(alpha, eval); 
+			if (beta <= alpha) {
+                // [NEW] This quiet move caused a cutoff, store it
+                if (!move.isAttack && move.from) { 
+                    storeKillerMove(depth, move);
+                }
+                break;
+            }
         }
         return maxEval;
     } else {
@@ -864,7 +927,13 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
             let eval;
              if (isCopeBonusTrigger || isGHGBonusTrigger) { eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); }
              else { eval = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit); }
-            minEval = Math.min(minEval, eval); beta = Math.min(beta, eval); if (beta <= alpha) break;
+            minEval = Math.min(minEval, eval); beta = Math.min(beta, eval); if (beta <= alpha) {
+                // [NEW] This quiet move caused a cutoff, store it
+                if (!move.isAttack && move.from) {
+                    storeKillerMove(depth, move);
+                }
+                break;
+            }
         }
         return minEval;
     }
