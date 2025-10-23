@@ -548,64 +548,67 @@ function getCaptureMoves(boardState, color) {
 
 // [MODIFIED] Prevent dropping King or Prince
 function getAllValidMoves(boardState, color, capturedPieces) {
-    const allMoves = [];
-    const opponentColor = color === 'white' ? 'black' : 'white';
+    const allMoves = [];
+    const opponentColor = color === 'white' ? 'black' : 'white';
 
-    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-            const piece = boardState[y]?.[x]; // Safe access
-            if (piece && piece.color === color) {
-                const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
-                for (const move of validMoves) {
-                    allMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: move.isAttack });
-                }
-            }
-        }
-    }
+    // --- Generate Board Moves ---
+    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+            const piece = boardState[y]?.[x];
+            if (piece && piece.color === color) {
+                const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of validMoves) {
+                    allMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: move.isAttack });
+                }
+            }
+        }
+    }
 
-    if (capturedPieces && capturedPieces.length > 0) {
+    // --- Generate Drop Moves ---
+    if (capturedPieces && capturedPieces.length > 0) {
         const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
         for (const pieceType of uniquePieceTypesInHand) {
-             // --- Cannot drop King or Prince ---
+             // Cannot drop King or Prince
              if (pieceType === 'lupa' || pieceType === 'prince') {
                   continue;
              }
-             // ---
+
+            const droppedPieceValue = pieceValues[pieceType] || 0;
+
             for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
                 for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-                    // [FIX] Drop move validation with safety check
+                    // Check if square is empty and valid
                     if (isPositionValid(x, y) && boardState[y]?.[x] === null) {
-                        // Check if the drop square is attacked by the opponent
-                        const droppedPieceValue = pieceValues[pieceType] || 0;
-                        let isSafeDrop = true;
+                        
+                        // [FIX] Optimized Drop Safety Check:
+                        let isSafeDrop = true;
+                        let leastValuableAttackerValue = Infinity;
 
-                        // Simulate the drop to check attackers accurately
-                        const tempBoard = copyBoard(boardState); // Avoid modifying original board
-                        tempBoard[y][x] = { type: pieceType, color: color }; // Simulate drop
+                        // Check if the square is attacked by any opponent piece on the *current* board
+                        for (let attY = 0; attY < BOT_BOARD_HEIGHT; attY++) {
+                            for (let attX = 0; attX < BOT_BOARD_WIDTH; attX++) {
+                                const attackerPiece = boardState[attY]?.[attX];
+                                if (attackerPiece && attackerPiece.color === opponentColor) {
+                                    // Get moves for the attacker on the *current* board
+                                    const attackerMoves = getValidMovesForPiece(attackerPiece, attX, attY, boardState, false);
+                                    for (const move of attackerMoves) {
+                                        // Is the potential drop square (x, y) one of the attacker's targets?
+                                        if (move.x === x && move.y === y) {
+                                            const attackerValue = pieceValues[attackerPiece.type] || 0;
+                                            leastValuableAttackerValue = Math.min(leastValuableAttackerValue, attackerValue);
+                                            break; // Found an attacker for this square, no need to check other moves of this piece
+                                        }
+                                    }
+                                }
+                            }
+                            // Small optimization: If we already found an attacker cheaper than the dropped piece, stop checking other attackers
+                            if (leastValuableAttackerValue < droppedPieceValue) break;
+                        }
 
-                        // Find the least valuable attacker
-                        let leastValuableAttackerValue = Infinity;
-                        for (let attY = 0; attY < BOT_BOARD_HEIGHT; attY++) {
-                            for (let attX = 0; attX < BOT_BOARD_WIDTH; attX++) {
-                                const attackerPiece = tempBoard[attY]?.[attX];
-                                if (attackerPiece && attackerPiece.color === opponentColor) {
-                                    const attackerMoves = getValidMovesForPiece(attackerPiece, attX, attY, tempBoard, false);
-                                    for (const move of attackerMoves) {
-                                        if (move.x === x && move.y === y && move.isAttack) {
-                                            const attackerValue = pieceValues[attackerPiece.type] || 0;
-                                            leastValuableAttackerValue = Math.min(leastValuableAttackerValue, attackerValue);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                                // If attacked by a piece of equal or lesser value, it's not safe (unless defended after drop)
-                                // Simplified check: If attacked at all by something less valuable, consider unsafe for now.
-                                // A more complex check would see if the dropped piece is defended.
-                        if (leastValuableAttackerValue < droppedPieceValue) {
-                            isSafeDrop = false;
-                        }
+                         // If the least valuable attacker is worth less than the piece being dropped, it's unsafe.
+                        if (leastValuableAttackerValue < droppedPieceValue) {
+                            isSafeDrop = false;
+                        }
 
                         if (isSafeDrop) {
                             allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
