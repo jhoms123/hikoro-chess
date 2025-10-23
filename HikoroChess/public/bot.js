@@ -114,23 +114,22 @@ const isProtected = (targetPiece, targetX, targetY, board) => {
 
 
 function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
-    const height = boardState?.length || 0;
-    const width = boardState?.[0]?.length || 0;
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const piece = boardState[y]?.[x];
-            if (piece && piece.color === attackingColor) {
-                
-                const moves = getValidMovesForPiece(piece, x, y, boardState, false);
-                for (const move of moves) {
-                    if (move.x === targetX && move.y === targetY) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
+    const height = boardState?.length || 0;
+    const width = boardState?.[0]?.length || 0;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const piece = boardState[y]?.[x];
+            if (piece && piece.color === attackingColor) {
+                const moves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of moves) {
+                    if (move.x === targetX && move.y === targetY) {
+                        return true; 
+                    }
+                }
+            }
+        }
+    }
+    return false;
 }
 
 
@@ -638,7 +637,7 @@ let killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]);
 
  function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = null) {
     const startTime = Date.now();
-    const timeLimit = 6000;
+    const timeLimit = 8000;
     const { boardState, turnCount } = gameState; 
      if (!boardState) {
          console.error("findBestMoveWithTimeLimit called with invalid gameState!");
