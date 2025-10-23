@@ -1,18 +1,11 @@
-/* --- [NEW] Palace Square Style --- */
+
 .square.palace-square {
-    /* A color between the normal square and sanctuary */
     background-color: #f2c96c !important;
 }
-/* --- [END NEW] --- */
 
-/* You can place this rule anywhere, for example, after the .sanctuary-square rule */
-
-/* ... (rest of your existing CSS) ... */
 
 :root {
-    /* Define a variable for square size. On desktop, it's based on viewport height. */
     --square-size: min(4.5vh, 40px);
-    /* [NEW] Size for the notation markers */
     --notation-size: calc(var(--square-size) * 0.75);
 }
 
@@ -22,39 +15,34 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    /* [REMOVED] background-color: #333; */
     color: #eee;
     margin: 0;
     padding: 10px;
     box-sizing: border-box;
     min-height: 100vh;
 
-    /* --- [NEW] --- */
-    /* Set the background image on the html/body */
+   
     background-image: url('sprites/lobby_background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    /* Ensures the background stays fixed during scroll */
+    
     background-attachment: fixed;
-    /* Required for the overlay */
+  
     position: relative;
 }
 
-/* --- [NEW] --- */
-/* This creates a dark, semi-transparent overlay
-   that sits *behind* your content but *on top*
-   of the background image, ensuring text is readable. */
+
 body::before {
     content: "";
-    position: fixed; /* Covers the whole screen */
+    position: fixed; 
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    /* Maybe try a lighter tint, like 0.5 or 0.4 if needed */
+    
     background-color: rgba(0, 0, 0, 0.6);
-    z-index: -1; /* Puts it behind all your content */
+    z-index: -1; 
 }
 
 
@@ -67,7 +55,7 @@ body::before {
 }
 
 #board-container {
-    /* [MODIFIED] Changed to a grid to hold notation markers */
+    
     display: grid;
     grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
     grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
@@ -76,22 +64,18 @@ body::before {
 
 #game-board {
     display: grid;
-    /* Use the CSS variable to set the size dynamically */
+    
     grid-template-columns: repeat(10, var(--square-size));
     grid-template-rows: repeat(16, var(--square-size));
     width: calc(var(--square-size) * 10);
     height: calc(var(--square-size) * 16);
-    /* [MODIFIED] Position in the new grid */
+    
     grid-column: 2;
     grid-row: 2;
-    /* * [CHANGE 1]
-     * Set the main, solid board color. A traditional shogi board is a lighter wood color.
-     */
-    background-color: #d6b36b; /* A light, wood-like color */
+    
+    background-color: #d6b36b; 
 
-    /* --- [NEW] ---
-       Required for positioning the animated clone on top.
-    */
+   
     position: relative;
 }
 
@@ -102,41 +86,32 @@ body::before {
     justify-content: center;
     align-items: center;
     position: relative;
-    /* * [CHANGE 2]
-     * Apply a border to all four sides to create the grid outline.
-     * This border will appear *inside* the main #game-board color due to the grid layout.
-     */
-    border: 1px solid #4a2a00; /* Darker brown for the grid lines */
-    box-sizing: border-box; /* Ensures the border is included in the square's dimensions */
-    /* * [CHANGE 3]
-     * Set a uniform background for all squares.
-     * This will match the main board color from #game-board, making the border the visual separator.
-     */
+    
+    border: 1px solid #4a2a00; 
+    box-sizing: border-box; 
+    
+    
     background-color: #f9d892;
 }
 
-/* * [CHANGE 4]
- * REMOVE the checkerboard pattern (light/dark) styles
- */
-/* .square.light { background-color: #f0d9b5; } */
-/* .square.dark { background-color: #b58863; } */
+
 
 .square.invalid {
-    /* The invalid corners can still have a distinct background if needed */
+    
     background-color: #555;
-    border-color: #555; /* Hide the grid line on invalid squares */
+    border-color: #555; 
 }
 .sanctuary-square {
-    /* Still apply a distinct background for sanctuary squares */
-    background-color: #e5b045 !important; /* A slightly darker golden yellow */
+    
+    background-color: #e5b045 !important; 
 }
 
-/* --- [NEW] Palace Square Style --- */
+
 .square.palace-square {
-    /* A color between the normal square and sanctuary */
+    
     background-color: #f2c96c !important;
 }
-/* --- [END NEW] --- */
+
 
 
 .piece {
@@ -157,38 +132,35 @@ body::before {
     image-rendering: crisp-edges;
 }
 
-/* --- [NEW] ---
-   Styles for the animated "clone" piece.
-*/
+
 .flying-piece {
     position: absolute;
-    z-index: 1001; /* Must be on top of other pieces */
-    pointer-events: none; /* So it doesn't block clicks */
-    transition: all 0.25s ease-out; /* Animation speed */
+    z-index: 1001; 
+    pointer-events: none; 
+    transition: all 0.25s ease-out; 
 }
 
-/* For drops, we fade in instead of flying */
+
 .flying-piece.drop {
     opacity: 0;
     transition: opacity 0.25s ease-out;
 }
-/* --- [END NEW] --- */
+
 
 
 #create-game-btn,
 #single-player-btn,
 #play-bot-btn {
-    /* Use the same sizing properties as the original #create-game-btn */
+    
     padding: 10px 20px;
     font-size: 16px;
-    /* Optional: Ensure they all have the same width for uniformity */
-    min-width: 200px; /* Adjust this value as needed */
-    box-sizing: border-box; /* Necessary if you set a width */
-    margin: 5px 0; /* Add a bit of vertical spacing between the buttons */
+    
+    min-width: 200px; 
+    box-sizing: border-box; 
+    margin: 5px 0; 
 }
 
-/* Selection and Move Highlights */
-/* NOTE: The !important is often needed to override the single square background from .square. */
+
 .square.selected {
     background-color: #6a9cff !important;
 }
@@ -197,14 +169,14 @@ body::before {
     background-color: rgba(150, 150, 150, 0.5) !important;
 }
 
-/* --- [NEW] Last Move Highlighting --- */
+
 .square.last-move-from {
     background-color: rgba(255, 255, 0, 0.3) !important;
 }
 .square.last-move-to {
     background-color: rgba(255, 255, 0, 0.6) !important;
 }
-/* --- [END NEW] --- */
+
 
 
 .move-plate {
@@ -235,9 +207,9 @@ body::before {
     border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* Captured Pieces Area */
+
 .captured-area {
-    width: calc(var(--square-size) * 4); /* Adjust width relative to square size */
+    width: calc(var(--square-size) * 4); 
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -268,31 +240,30 @@ body::before {
 .captured-piece.white { background-color: #f0d9b5; }
 .captured-piece.black { background-color: #b58863; }
 
-/* Turn Indicator & Winner Text */
-/* Style for the container holding turn/winner text */
+
 #turn-indicator-container {
-    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    background-color: rgba(30, 30, 30, 0.8); 
     padding: 15px;
     border-radius: 8px;
     border: 1px solid #777;
     margin-top: 20px;
     text-align: center;
-    /* Limit width so it doesn't look too wide */
+    
     max-width: 500px;
-    /* Center the box itself */
+    
     margin-left: auto;
     margin-right: auto;
 }
 
-/* Ensure winner text doesn't have extra top margin */
+
 #turn-indicator-container p#winner-text {
     margin-top: 5px;
-    font-size: 1.5em; /* Moved from #winner-text */
-    color: #4CAF50;    /* Moved from #winner-text */
-    font-weight: bold; /* Moved from #winner-text */
+    font-size: 1.5em; 
+    color: #4CAF50;   
+    font-weight: bold; 
 }
 
-/* Lobby Styles */
+
 #lobby {
     background-color: #444;
     padding: 20px;
@@ -323,7 +294,7 @@ body::before {
     cursor: pointer;
 }
 
-/* ----- NEW STYLES ----- */
+
 
 #time-controls {
     margin-bottom: 20px;
@@ -351,22 +322,21 @@ body::before {
     border: 1px solid #777;
 }
 
-/* Timer Display Styling in Game */
-/* Style specifically for the hand label text within the captured area */
+
 .captured-area h3 {
-    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent */
+    background-color: rgba(30, 30, 30, 0.8); 
     padding: 5px 10px;
     border-radius: 5px;
     border: 1px solid #666;
-    margin-bottom: 10px; /* Space between label and captured box */
-    /* Prevent the box from stretching full width of the area */
+    margin-bottom: 10px; 
+    
     display: inline-block;
     font-weight: normal;
 }
-/* Adjust timer alignment slightly now that h3 has padding */
+
 #white-time, #black-time {
-    vertical-align: middle; /* Helps align with text */
-    margin-left: 5px; /* Add a little space */
+    vertical-align: middle; 
+    margin-left: 5px; 
     font-size: 1.2em;
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace;
