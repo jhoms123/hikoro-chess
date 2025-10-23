@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 botBonusState = null;
 
                 // Make sure findBestMoveWithTimeLimit is globally available or imported
-                const bestMove = findBestMoveWithTimeLimit(gameState.boardState, capturedPiecesForBot, currentBonusState);
+                const bestMove = findBestMoveWithTimeLimit(gameState, capturedPiecesForBot, currentBonusState);
 
                 if (bestMove) {
                      const pieceThatMoved = bestMove.type === 'board' && gameState.boardState[bestMove.from.y]
