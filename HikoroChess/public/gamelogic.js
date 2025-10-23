@@ -357,9 +357,3 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
 }
 
 
-module.exports = {
-    getInitialBoard,
-    getValidMovesForPiece,
-    isPositionValid,
-    pieceNotation 
-};
