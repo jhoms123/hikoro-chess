@@ -317,7 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
             console.error("Bot's turn, but worker is not available!");
         }
-		} else { // ADD THIS ELSE
+	
+		else { // ADD THIS ELSE
              console.log("[updateLocalState] Conditions *not* met for bot move.");
         }
     }
