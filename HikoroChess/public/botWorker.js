@@ -20,7 +20,7 @@ const SANCTUARY_THREAT_PENALTY_BASE = 500;
 const SANCTUARY_DEFENSE_BONUS_BASE = 400;
 const PRINCE_ADVANCEMENT_BONUS = 4;
 
-// Piece Square Tables (PSTs)
+
 const pawnPositionValue = [
     [0,0,0,0,0,0,0,0,0,0], [1,1,1,1,1,1,1,1,1,1], [1,1,2,2,2,2,2,2,1,1], [2,2,3,3,3,3,3,3,2,2], [2,3,3,4,4,4,4,3,3,2],
     [3,4,4,5,5,5,5,4,4,3], [4,5,5,6,6,6,6,5,5,4], [5,6,6,7,7,7,7,6,6,5], [6,7,7,8,8,8,8,7,7,6],
@@ -638,7 +638,7 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
             if (isOpeningMoveValid && bestCaptureValue < (pieceValues['sult'] || 150)) {
                 console.log(`Worker: Bot playing opening move ${openingMoveIndex + 1}:`, openingMove);
                 openingMoveIndex++;
-                const isAttack = !!boardState[openingMove.to.y]?.[openingMove.to.x]; // Check if target square occupied
+                const isAttack = !!boardState[openingMove.to.y]?.[openingMove.to.x]; 
                 
                 return { ...openingMove, type: 'board', isAttack: isAttack };
             } else {
@@ -952,7 +952,7 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
 
         if (isCopeBonusTrigger || isGHGBonusTrigger) {
             
-            boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit, nextHash ^ zobristTurnBlack); // Pass hash *before* turn flip
+            boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit, nextHash ^ zobristTurnBlack); 
         } else {
             
             boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit, nextHash);
@@ -1151,7 +1151,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         try {
             if (isCopeBonusTrigger || isGHGBonusTrigger) {
                 
-                 eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit, nextHash ^ zobristTurnBlack); // Pass hash *before* turn flip
+                 eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit, nextHash ^ zobristTurnBlack); 
             } else {
                 
                 eval = minimax(tempBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, nextHash);
@@ -1176,7 +1176,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
             }
             alpha = Math.max(alpha, eval);
             if (beta <= alpha) { 
-                 if (!move.isAttack && move.type === 'board' && move.from) { storeKillerMove(depth, move); } // Store non-capture killer
+                 if (!move.isAttack && move.type === 'board' && move.from) { storeKillerMove(depth, move); } 
                  break;
             }
         } else { 
@@ -1186,7 +1186,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
              }
              beta = Math.min(beta, eval);
              if (beta <= alpha) { 
-                 if (!move.isAttack && move.type === 'board' && move.from) { storeKillerMove(depth, move); } // Store non-capture killer
+                 if (!move.isAttack && move.type === 'board' && move.from) { storeKillerMove(depth, move); } 
                  break;
              }
         }
@@ -1352,5 +1352,5 @@ self.onmessage = function(e) {
     }
 };
 
-// Log to confirm worker script loaded (optional)
+
 console.log("botWorker.js loaded and ready with helper functions.");

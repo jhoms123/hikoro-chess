@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
 
-                -
+                
                 if (bestMove.type === 'drop') {
                     socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
                 } else {
