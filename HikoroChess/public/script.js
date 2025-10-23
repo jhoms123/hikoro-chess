@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
-    const winnerText = document.getElementById('winner-text'); // Corrected ID
+    const winnerText = document.getElementById('winner-text'); 
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const playBotBtn = document.getElementById('play-bot-btn');
 
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainMenuBtn = document.getElementById('main-menu-btn');
     const rulesBtnIngame = document.getElementById('rules-btn-ingame');
 
-    const ANIMATION_DURATION = 250; // ms, must match CSS
+    const ANIMATION_DURATION = 250; 
 
     let gameState = {};
     let myColor = null;
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	
 
-    // --- Event Listeners and Initial Setup ---
+    
     createGameBtn.addEventListener('click', () => {
         const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
     singlePlayerBtn.addEventListener('click', () => {
         isSinglePlayer = true;
         isBotGame = false;
-        botBonusState = null; // Reset on new game
+        botBonusState = null; 
         socket.emit('createSinglePlayerGame');
     });
 
     playBotBtn.addEventListener('click', () => {
         isSinglePlayer = true;
         isBotGame = true;
-        botBonusState = null; // Reset on new game
+        botBonusState = null; 
         socket.emit('createSinglePlayerGame');
     });
 
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     rulesBtnIngame.addEventListener('click', () => {
-        populateRulesModal(); // The function you already have
+        populateRulesModal(); 
         rulesModal.style.display = 'block';
     });
 
@@ -102,9 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.location.reload();
     });
-    // --- End Initial Setup ---
+   
 
-    // --- Helper Functions (formatTime, updateLobby, etc.) ---
+    
     function formatTimeControl(tc) {
         if (!tc || tc.main === -1) { return 'Unlimited'; }
         const mainMinutes = Math.floor(tc.main / 60);
@@ -208,10 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLocalState(newGameState) {
         const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
-        gameState = newGameState; // Update global state first
+        gameState = newGameState; 
 
         if (isNewGameOver && newGameState.winner) {
-             // Check winnerText exists before modifying
+             
             if(winnerText) {
                 const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
                  winnerText.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
@@ -234,13 +234,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentBonusState = botBonusState;
                 botBonusState = null;
 
-                // Make sure findBestMoveWithTimeLimit is globally available or imported
+               
                 const bestMove = findBestMoveWithTimeLimit(gameState, capturedPiecesForBot, currentBonusState);
 
                 if (bestMove) {
                      const pieceThatMoved = bestMove.type === 'board' && gameState.boardState[bestMove.from.y]
                         ? gameState.boardState[bestMove.from.y][bestMove.from.x]
-                        : null; // Handle potential out-of-bounds or non-board move
+                        : null;
 
                     if (pieceThatMoved && !currentBonusState) {
                         const isCopeBonus = pieceThatMoved.type === 'cope' && bestMove.isAttack;
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderBoard() {
         boardElement.innerHTML = '';
-        if (!gameState.boardState) return; // Guard clause
+        if (!gameState.boardState) return;
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -332,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.classList.add('square');
 
                 let displayX = x, displayY = y;
-                // Board orientation
+                
                 if (myColor === 'white') {
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else if (myColor === 'black') {
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.style.gridRowStart = displayY + 1;
                 square.style.gridColumnStart = displayX + 1;
 
-                // Last Move Highlighting
+                
                 if (gameState.lastMove) {
                     if (x === gameState.lastMove.from?.x && y === gameState.lastMove.from?.y) {
                         square.classList.add('last-move-from');
@@ -359,15 +359,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     square.classList.add('sanctuary-square');
                 }
 
-                // --- [NEW] Add palace class ---
+                
                 const isWhitePalace = (x >= whitePalace.minX && x <= whitePalace.maxX && y >= whitePalace.minY && y <= whitePalace.maxY);
                 const isBlackPalace = (x >= blackPalace.minX && x <= blackPalace.maxX && y >= blackPalace.minY && y <= blackPalace.maxY);
                 if(isWhitePalace || isBlackPalace) {
                     square.classList.add('palace-square');
                 }
-                // --- [END NEW] ---
+                
 
-                // Assuming isPositionValid determines if a square is playable at all
+                
                 const isBoardValid = isPositionValid(x, y);
 
                 if (!isBoardValid) {
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function renderCaptured() {
-        // Assume gameState exists and has the necessary properties
+        
         if (!gameState || !gameState.whiteCaptured || !gameState.blackCaptured) {
              console.error("Gamestate incomplete for renderCaptured");
              return;
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const myCapturedEl = document.querySelector(myColor === 'white' ? '#white-captured' : '#black-captured');
         const oppCapturedEl = document.querySelector(myColor === 'white' ? '#black-captured' : '#white-captured');
 
-        // Check if elements exist
+        
         if (!myCapturedEl || !oppCapturedEl) {
             console.error("Captured piece elements not found!");
             return;
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pieceElement.classList.add('piece');
 
             const spriteImg = document.createElement('img');
-            // --- [NEW] Ensure correct Prince sprite is used ---
+            
             const spriteType = piece.type === 'prince' ? 'prince' : piece.type;
             spriteImg.src = `sprites/${spriteType}_${isMyPiece ? myColor : (myColor === 'white' ? 'black' : 'white')}.png`;
             spriteImg.alt = `${isMyPiece ? myColor : (myColor === 'white' ? 'black' : 'white')} ${piece.type}`;
@@ -464,15 +464,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTurnIndicator() {
-         // Check if elements exist before updating
+         
         if (!turnIndicator || !winnerText) {
              console.error("Turn indicator or winner text element not found!");
              return;
          }
 
         if (gameState.gameOver) {
-            turnIndicator.textContent = ''; // Clear turn indicator on game over
-            // Only update winner text if it hasn't been set yet (prevents overwriting)
+            turnIndicator.textContent = ''; 
+            
             if(!winnerText.textContent || winnerText.textContent.includes("Turn")) {
                  const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
                  winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-             winnerText.textContent = ''; // Clear winner text if game is ongoing
+             winnerText.textContent = ''; 
             if (isSinglePlayer) {
                 turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fromSquareEl = document.querySelector(`[data-logical-x='${from.x}'][data-logical-y='${from.y}']`);
         const toSquareEl = document.querySelector(`[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
 
-        if (!fromSquareEl || !toSquareEl || !boardElement) return; // Add boardElement check
+        if (!fromSquareEl || !toSquareEl || !boardElement) return; 
 
         const boardRect = boardElement.getBoundingClientRect();
         const fromRect = fromSquareEl.getBoundingClientRect();
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function animateDrop(to, pieceImgSrc) {
         const toSquareEl = document.querySelector(`[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
-        if (!toSquareEl || !boardElement) return; // Add boardElement check
+        if (!toSquareEl || !boardElement) return;
 
         const boardRect = boardElement.getBoundingClientRect();
         const toRect = toSquareEl.getBoundingClientRect();
@@ -557,18 +557,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function onSquareClick(x, y) {
-        if (gameState.gameOver || !gameState.boardState) return; // Add gameState.boardState check
+        if (gameState.gameOver || !gameState.boardState) return;
 
         const isMyTurn = (isSinglePlayer && !isBotGame) ||
                          (isBotGame && gameState.isWhiteTurn) ||
                          (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-        // Case 1: Moving a selected piece
+        
         if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
             if (isMyTurn) {
-                const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x]; // Safe access
+                const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
                 if (piece) {
-                     // --- [MODIFIED] Ensure correct Prince sprite is used ---
+                     
                      const spriteType = piece.type === 'prince' ? 'prince' : piece.type;
                     const pieceImgSrc = `sprites/${spriteType}_${piece.color}.png`;
                     animateMove(selectedSquare, { x, y }, pieceImgSrc);
@@ -581,9 +581,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Case 2: Dropping a selected piece
+        
         if (isDroppingPiece) {
-             // Prevent dropping King or Prince
+            
              if (isDroppingPiece.type === 'lupa' || isDroppingPiece.type === 'prince') {
                   console.log("Cannot drop King or Prince.");
                   isDroppingPiece = null;
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
              }
             if (isMyTurn) {
                 const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
-                 // --- [MODIFIED] Ensure correct Prince sprite is used ---
+                 
                  const spriteType = isDroppingPiece.type === 'prince' ? 'prince' : isDroppingPiece.type;
                 const pieceImgSrc = `sprites/${spriteType}_${dropColor}.png`;
                 animateDrop({ x, y }, pieceImgSrc);
@@ -604,8 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Case 3: Selecting/deselecting a piece on the board
-        const piece = gameState.boardState[y]?.[x]; // Safe access
+        
+        const piece = gameState.boardState[y]?.[x]; 
         if (piece) {
             let canSelectPiece;
             if (isSinglePlayer) {
@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     socket.emit('getValidMoves', { gameId, square: { x, y } });
                 }
             }
-        } else { // Case 4: Clicking an empty square
+        } else { 
             selectedSquare = null;
             isDroppingPiece = null;
             clearHighlights();
@@ -640,14 +640,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawHighlights(moves) {
-        clearHighlights(); // Clear previous highlights first
+        clearHighlights();
 
-        // Handle both piece selection and drop selection highlighting
+        
         const elementToHighlight = selectedSquare
              ? document.querySelector(`[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`)
-             : document.querySelector('.captured-piece.selected-drop'); // Need to add this class in onCapturedClick
+             : document.querySelector('.captured-piece.selected-drop');
 
-        if (!elementToHighlight && !isDroppingPiece) return; // Nothing is selected
+        if (!elementToHighlight && !isDroppingPiece) return; 
 
         const isMyTurn = (isSinglePlayer && !isBotGame) ||
                          (isBotGame && gameState.isWhiteTurn) ||
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedSquare && elementToHighlight) {
             elementToHighlight.classList.add(isMyTurn ? 'selected' : 'preview-selected');
         }
-         // Highlight drop selection later if needed (requires adding class)
+         
 
         moves.forEach(move => {
             const moveSquare = document.querySelector(`[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 plate.classList.add('move-plate');
                 if (!isMyTurn) plate.classList.add('preview');
                 if (move.isAttack) plate.classList.add('attack');
-                 // Add specific class for drop highlights if needed (e.g., 'drop-plate')
+                 
                 if (isDroppingPiece) plate.classList.add('drop');
 
                 moveSquare.appendChild(plate);
@@ -676,34 +676,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function onCapturedClick(piece) {
          if (gameState.gameOver) return;
 
-         // Prevent selecting King or Prince from hand (shouldn't be possible anyway)
+         
         if (piece.type === 'lupa' || piece.type === 'prince') {
             console.log("Cannot select royalty from hand.");
             return;
         }
 
-        // Deselect if clicking the same piece type again
+        
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
-            selectedSquare = null; // Ensure board selection is also cleared
+            selectedSquare = null; 
             clearHighlights();
-            // TODO: Remove selected-drop class if you add it
+           
             return;
         }
 
-        selectedSquare = null; // Clear board selection
+        selectedSquare = null; 
         isDroppingPiece = piece;
-        clearHighlights(); // Clear board highlights
-        // TODO: Add 'selected-drop' class to the clicked captured piece element
+        clearHighlights(); 
+        
         highlightDropSquares();
     }
 
 
     function highlightDropSquares() {
-        clearHighlights(); // Clear board highlights first
-
-        // Highlight the selected captured piece if needed (add CSS for .captured-piece.selected-drop)
-        // Example: Add class to the specific captured piece element
+        clearHighlights(); 
 
         const isMyTurn = (isSinglePlayer && !isBotGame) ||
                          (isBotGame && gameState.isWhiteTurn) ||
@@ -711,12 +708,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                 // const isBoardValid = !((x <= 1 && y <= 2) || (x >= 8 && y <= 2) || (x <= 1 && y >= 13) || (x >= 8 && y >= 13));
-                 const isBoardValid = isPositionValid(x, y); // Use helper function
+                 
+                 const isBoardValid = isPositionValid(x, y); 
 
-                // Check if square is empty AND valid for dropping
+                
                 if (gameState.boardState && gameState.boardState[y]?.[x] === null && isBoardValid) {
-                     // Additional drop rules can be added here if needed (e.g., pawn drop restrictions)
+                     
                     const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
                     if (square) {
                         const plate = document.createElement('div');
@@ -732,13 +729,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Rules Modal Logic ---
+    
     const rulesBtn = document.getElementById('rules-btn');
     const rulesModal = document.getElementById('rules-modal');
     const closeRulesBtn = document.getElementById('close-rules-btn');
     const rulesBody = document.getElementById('rules-body');
 
-    // [MODIFIED] pieceInfo array with Prince and updated King
+    
     const pieceInfo = [
         { name: 'King Kraken (King)', type: 'lupa', notation: 'K', desc: "The primary royal piece. Moves one square in any direction. **Special Rule:** Starts confined to the 'Palace' (the central 4x2 area on the back rank). It can only leave the Palace if your Kraken Prince has been captured.", special: 'Capture required to win.' },
         { name: 'Kraken Prince', type: 'prince', notation: 'KP', desc: "The secondary royal piece. Moves one step forward, or one step diagonally (forward or backward), like a Silver General in Shogi.", special: 'Capture required to win. Reaching a Sanctuary wins the game. If captured, the King Kraken is freed from the Palace.' },
@@ -762,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
 
-    // [MODIFIED] Updated rules text
+    
     function populateRulesModal() {
         rulesBody.innerHTML = `
             <h2>Winning the Game</h2>
@@ -804,21 +801,21 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const pieceListContainer = document.getElementById('piece-list-container');
-        if (!pieceListContainer) return; // Add safety check
-        pieceListContainer.innerHTML = ''; // Clear previous entries
+        if (!pieceListContainer) return; 
+        pieceListContainer.innerHTML = ''; 
 
-        // Sort pieces for better order (King, Prince first) and render
+        
         [...pieceInfo].sort((a, b) => {
              if (a.type === 'lupa') return -1;
              if (b.type === 'lupa') return 1;
-             if (a.type === 'prince') return -1; // Prince comes after King
+             if (a.type === 'prince') return -1; 
              if (b.type === 'prince') return 1;
-             // You might want additional sorting logic here, e.g., by name or value
-             return 0; // Keep original relative order otherwise
+            
+             return 0; 
          }).forEach(p => {
             const entry = document.createElement('div');
             entry.className = 'piece-entry';
-            // Use the notation property from pieceInfo
+            
             const notation = p.notation || '?';
             entry.innerHTML = `
                 <div class="piece-header">
@@ -834,18 +831,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     rulesBtn.addEventListener('click', () => {
         populateRulesModal();
-        if (rulesModal) rulesModal.style.display = 'block'; // Safety check
+        if (rulesModal) rulesModal.style.display = 'block'; 
     });
 
     closeRulesBtn.addEventListener('click', () => {
-       if (rulesModal) rulesModal.style.display = 'none'; // Safety check
+       if (rulesModal) rulesModal.style.display = 'none'; 
     });
 
     window.addEventListener('click', (event) => {
         if (event.target == rulesModal) {
-            if (rulesModal) rulesModal.style.display = 'none'; // Safety check
+            if (rulesModal) rulesModal.style.display = 'none'; 
         }
     });
-    // --- End Rules Modal ---
+    
 
-}); // End DOMContentLoaded
+}); 
