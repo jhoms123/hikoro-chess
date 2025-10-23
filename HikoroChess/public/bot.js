@@ -731,72 +731,81 @@ let openingMoveIndex = 0;
 
 
 function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState) {
-    let bestMove = null;
-    let bestValue = Infinity;
-    let alpha = -Infinity;
-    let beta = Infinity;
-    let moves;
+    let bestMove = null;
+    let bestValue = Infinity;
+    let alpha = -Infinity;
+    let beta = Infinity;
+    let moves;
 
-    if (bonusMoveState) {
-        const { from } = bonusMoveState; const piece = boardState[from.y]?.[from.x];
-        if (piece) { moves = getBonusMoves(piece, from.x, from.y, boardState); }
-        else { console.error("Error generating bonus moves: Piece not found!"); moves = []; }
-    } else {
-        moves = getAllValidMoves(boardState, 'black', capturedPieces);
-    }
-     if (moves.length === 0) { return null; }
+    if (bonusMoveState) {
+        const { from } = bonusMoveState; const piece = boardState[from.y]?.[from.x];
+        if (piece) { moves = getBonusMoves(piece, from.x, from.y, boardState); }
+        else { console.error("Error generating bonus moves: Piece not found!"); moves = []; }
+    } else {
+        moves = getAllValidMoves(boardState, 'black', capturedPieces);
+    }
+     if (moves.length === 0) { return null; }
 
-    // MVV-LVA Ordering for captures, basic otherwise
-    moves.sort((a, b) => {
-        let scoreA = 0, scoreB = 0;
-        if (a.isAttack) {
-            const victim = boardState[a.to.y]?.[a.to.x];
-            const attacker = boardState[a.from.y]?.[a.from.x];
-            scoreA = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+    // MVV-LVA Ordering for captures, basic otherwise
+    moves.sort((a, b) => {
+        let scoreA = 0, scoreB = 0;
+        if (a.isAttack) {
+            const victim = boardState[a.to.y]?.[a.to.x];
+            // [FIX] Added a.from check for attacker, as drop moves won't have it
+            const attacker = a.from ? boardState[a.from.y]?.[a.from.x] : null; 
+            scoreA = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+        }
+        if (b.isAttack) {
+             const victim = boardState[b.to.y]?.[b.to.x];
+             // [FIX] Added b.from check for attacker
+             const attacker = b.from ? boardState[b.from.y]?.[b.from.x] : null;
+             scoreB = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+        }
+        // Add simple heuristic for Prince advancement for non-captures
+        // [FIX] Check for a.from to avoid crashing on 'drop' moves
+        if (!a.isAttack && a.from && boardState[a.from.y]?.[a.from.x]?.type === 'prince') {
+            scoreA += (blackPalace.minY - a.to.y) * 2;
         }
-        if (b.isAttack) {
-             const victim = boardState[b.to.y]?.[b.to.x];
-             const attacker = boardState[b.from.y]?.[b.from.x];
-             scoreB = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
-        }
-        // Add simple heuristic for Prince advancement for non-captures
-        if (!a.isAttack && boardState[a.from.y]?.[a.from.x]?.type === 'prince') scoreA += (blackPalace.minY - a.to.y) * 2;
-        if (!b.isAttack && boardState[b.from.y]?.[b.from.x]?.type === 'prince') scoreB += (blackPalace.minY - b.to.y) * 2;
-
-        return scoreB - scoreA; // Higher score first
-    });
-
-
-    for (const move of moves) {
-         if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
-        const tempBoard = copyBoard(boardState);
-        let capturedType = null;
-        if (move.type === 'drop') {
-            tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
-        } else {
-            const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
-             if (!pieceToMove) { continue; }
-            const targetPiece = tempBoard[move.to.y]?.[move.to.x];
-            if (targetPiece) capturedType = targetPiece.type;
-            tempBoard[move.to.y][move.to.x] = pieceToMove;
-            tempBoard[move.from.y][move.from.x] = null;
-            // TODO: Promotion simulation
+        // [FIX] Check for b.from to avoid crashing on 'drop' moves
+        if (!b.isAttack && b.from && boardState[b.from.y]?.[b.from.x]?.type === 'prince') {
+            scoreB += (blackPalace.minY - b.to.y) * 2;
         }
 
-        let boardValue;
-         const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
-         const isCopeBonusTrigger = !bonusMoveState && pieceMoved?.type === 'cope' && move.isAttack;
-         const isGHGBonusTrigger = !bonusMoveState && (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
-         if (isCopeBonusTrigger || isGHGBonusTrigger) {
-             boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); // Pass depth
-         } else {
-             boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
-         }
-        if (boardValue < bestValue) { bestValue = boardValue; bestMove = move; }
-        beta = Math.min(beta, boardValue);
-        if (beta <= alpha) { break; }
-    }
-    return bestMove;
+        return scoreB - scoreA; // Higher score first
+    });
+
+
+    for (const move of moves) {
+         if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
+        const tempBoard = copyBoard(boardState);
+        let capturedType = null;
+        if (move.type === 'drop') {
+            tempBoard[move.to.y][move.to.x] = { type: move.pieceType, color: 'black' };
+        } else {
+            const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
+             if (!pieceToMove) { continue; }
+            const targetPiece = tempBoard[move.to.y]?.[move.to.x];
+            if (targetPiece) capturedType = targetPiece.type;
+            tempBoard[move.to.y][move.to.x] = pieceToMove;
+            tempBoard[move.from.y][move.from.x] = null;
+            // TODO: Promotion simulation
+        }
+
+        let boardValue;
+         const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
+         const isCopeBonusTrigger = !bonusMoveState && pieceMoved?.type === 'cope' && move.isAttack;
+         // [FIX] Check move.type to ensure this isn't a drop move
+         const isGHGBonusTrigger = !bonusMoveState && move.type === 'board' && (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
+         if (isCopeBonusTrigger || isGHGBonusTrigger) {
+             boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit); // Pass depth
+         } else {
+             boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit);
+         }
+        if (boardValue < bestValue) { bestValue = boardValue; bestMove = move; }
+          beta = Math.min(beta, boardValue);
+        if (beta <= alpha) { break; }
+    }
+    return bestMove;
 }
 
 
