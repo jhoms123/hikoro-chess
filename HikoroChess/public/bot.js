@@ -764,7 +764,7 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
     }
      if (moves.length === 0) { return null; }
 
-    /
+    
     moves.sort((a, b) => {
         let scoreA = 0;
         let scoreB = 0;
