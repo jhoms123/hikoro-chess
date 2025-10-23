@@ -357,3 +357,15 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
 }
 
 
+if (typeof module !== 'undefined' && module.exports) {
+    // This code only runs in Node.js (the server), not in the worker
+    module.exports = {
+        getInitialBoard,
+        getValidMovesForPiece,
+        isPositionValid,
+        pieceNotation,
+        // Add any other functions the server needs direct access to
+        isKingRestricted,
+        isProtected
+    };
+}
