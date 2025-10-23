@@ -6,26 +6,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const socket = io(serverUrl);
 
-    // --- Create the Web Worker ---
+    
     let botWorker = null;
     try {
         botWorker = new Worker('botWorker.js');
         console.log("Bot Worker created successfully.");
 
-        // --- Handle messages FROM the worker ---
+        
         botWorker.onmessage = function(e) {
             const bestMove = e.data;
             console.log("Received best move from worker:", bestMove);
 
             if (bestMove) {
-                // Determine piece that potentially triggered bonus (needed for botBonusState update)
+                
                 const pieceThatMoved = bestMove.type === 'board' && gameState.boardState[bestMove.from.y]
                     ? gameState.boardState[bestMove.from.y][bestMove.from.x]
                     : null;
 
-                // Update botBonusState *before* sending move to server, based on the move the bot *just* decided on.
-                // We clear botBonusState *before* asking the worker, so this check is for the *next* turn.
-                if (pieceThatMoved && !currentTurnHadBonusState) { // Use a flag to track if the current calculation was already a bonus
+                
+                if (pieceThatMoved && !currentTurnHadBonusState) { 
                     const isCopeBonus = pieceThatMoved.type === 'cope' && bestMove.isAttack;
                     const isGHGBonus = (pieceThatMoved.type === 'greathorsegeneral' || pieceThatMoved.type === 'cthulhu') && !bestMove.isAttack;
 
@@ -36,14 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                          console.log("Setting up botBonusState for next turn:", botBonusState);
                     } else {
-                        botBonusState = null; // Clear if no bonus triggered
+                        botBonusState = null; 
                     }
                 } else {
-                     botBonusState = null; // Clear if it was already a bonus move calculation or not a bonus trigger
+                     botBonusState = null; 
                 }
 
 
-                // --- Send the move TO the server ---
+                -
                 if (bestMove.type === 'drop') {
                     socket.emit('makeDrop', { gameId, piece: { type: bestMove.pieceType }, to: bestMove.to });
                 } else {
@@ -51,21 +50,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 console.error("Bot worker returned no move.");
-                // Handle stalemate or error? Maybe alert the user?
+                
             }
         };
 
         botWorker.onerror = function(error) {
             console.error("Error in Bot Worker:", error.message, error);
-            // Handle worker error - maybe display a message to the user
+            
         };
 
     } catch (e) {
         console.error("Failed to create Bot Worker:", e);
         alert("Could not initialize the AI worker. The bot will not function.");
-        // Disable bot play if worker fails?
+        
     }
-    // --- End Worker Setup ---
+    
 
 
     const BOARD_WIDTH = 10;
@@ -95,8 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSinglePlayer = false;
     let isBotGame = false;
 
-    let botBonusState = null; // Still needed to track bonus state between turns
-    let currentTurnHadBonusState = false; // Flag for worker message handler
+    let botBonusState = null; 
+    let currentTurnHadBonusState = false; 
 
 
     const sanctuarySquares = [
@@ -107,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
     const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
 
-    // --- Event Listeners and Initial Setup ---
+    
     createGameBtn.addEventListener('click', () => {
         const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
@@ -252,16 +251,15 @@ document.addEventListener('DOMContentLoaded', () => {
         isSinglePlayer = initialGameState.isSinglePlayer;
 
     if (isSinglePlayer) {
-        myColor = 'white'; // Player is always white in SP/Bot games
-        // isBotGame was already set correctly by the playBotBtn click event listener.
-        // We *don't* reset it here based on initialGameState.players.black.
-        console.log(`[onGameStart] Single player game started. isBotGame = ${isBotGame}`); // Verify flag
+        myColor = 'white'; 
+        
+        console.log(`[onGameStart] Single player game started. isBotGame = ${isBotGame}`); 
     } else {
-        // This is multiplayer game logic
-        isBotGame = false; // Explicitly set to false for multiplayer
-        isSinglePlayer = false; // Also ensure this is false
+        
+        isBotGame = false; 
+        isSinglePlayer = false; 
         if (!myColor) {
-            myColor = 'black'; // This means we joined as black
+            myColor = 'black';
         }
         console.log("[onGameStart] Multiplayer game started.");
     }
@@ -297,20 +295,19 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
 
-        // --- Trigger Bot Move via Web Worker ---
+        
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
             console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
-            // Send necessary data to the worker
-            const capturedPiecesForBot = gameState.blackCaptured; // Worker needs captured pieces for potential drops
-            currentTurnHadBonusState = !!botBonusState; // Set flag before clearing
+            
+            const capturedPiecesForBot = gameState.blackCaptured; 
+            currentTurnHadBonusState = !!botBonusState; 
 
-            // Make deep copies to avoid issues with transferable objects if needed later
+            
             const safeGameState = JSON.parse(JSON.stringify(gameState));
             const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
             const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
 
-             // Clear botBonusState for the *next* turn calculation, the worker will use the state passed in message
-             // botBonusState = null; // We'll set this *after* the worker returns the move
+             
 			 console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
 
             botWorker.postMessage({
@@ -323,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Bot's turn, but worker is not available!");
         }
 	
-		else { // ADD THIS ELSE
+		else { 
              console.log("[updateLocalState] Conditions *not* met for bot move.");
         }
     }
@@ -395,13 +392,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.classList.add('square');
 
                 let displayX = x, displayY = y;
-                if (myColor === 'white' || isSinglePlayer) { // White's perspective for player 1 or single player
+                if (myColor === 'white' || isSinglePlayer) { 
                     displayY = BOARD_HEIGHT - 1 - y;
-                } else if (myColor === 'black') { // Black's perspective if player 2
+                } else if (myColor === 'black') { 
                     displayX = BOARD_WIDTH - 1 - x;
-                     displayY = y; // Keep original y for black perspective if needed, or reverse like white? Reverse seems more standard. Let's reverse both.
-                     displayY = y; // Actually keep y as is, just reverse x
-                     displayX = BOARD_WIDTH - 1 - x; // Reverse x for black
+                     displayY = y; 
+                     displayY = y; 
+                     displayX = BOARD_WIDTH - 1 - x; 
                 }
 
 
@@ -430,9 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     square.classList.add('palace-square');
                 }
 
-                 // Use a separate isPositionValid function assumed to be globally available or imported
-                 // Ensure this function exists or copy it here.
-                const isBoardValid = typeof isPositionValid === 'function' ? isPositionValid(x, y) : true; // Fallback
+                
+                const isBoardValid = typeof isPositionValid === 'function' ? isPositionValid(x, y) : true; 
 
 
                 if (!isBoardValid) {
@@ -446,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                const piece = gameState.boardState[y]?.[x]; // Safe access
+                const piece = gameState.boardState[y]?.[x]; 
                 if (piece) {
                     const pieceElement = document.createElement('div');
                     pieceElement.classList.add('piece', piece.color);
@@ -488,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isSinglePlayer) {
              playerLabelEl.textContent = "Your Hand";
-             opponentLabelEl.textContent = isBotGame ? "Bot's Hand" : "Black's Hand"; // Assuming player is white in SP
+             opponentLabelEl.textContent = isBotGame ? "Bot's Hand" : "Black's Hand";
         } else {
              playerLabelEl.textContent = "Your Hand";
              opponentLabelEl.textContent = "Opponent's Hand";
@@ -507,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const spriteImg = document.createElement('img');
             const spriteType = piece.type;
-            // Determine the color to display based on whose hand it's theoretically in
+            
              const displayColor = isPlayerPiece ? (isSinglePlayer ? 'white' : myColor) : (isSinglePlayer ? 'black' : (myColor === 'white' ? 'black' : 'white'));
              spriteImg.src = `sprites/${spriteType}_${displayColor}.png`;
              spriteImg.alt = `${displayColor} ${piece.type}`;
@@ -579,12 +575,12 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.className = 'piece flying-piece';
         clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
 
-        clone.style.position = 'absolute'; // Ensure positioning context
+        clone.style.position = 'absolute'; 
         clone.style.top = `${fromTop}px`;
         clone.style.left = `${fromLeft}px`;
         clone.style.width = `${fromRect.width}px`;
         clone.style.height = `${fromRect.height}px`;
-        clone.style.zIndex = '100'; // Make sure it's above other pieces
+        clone.style.zIndex = '100'; 
         clone.style.transition = `top ${ANIMATION_DURATION}ms ease-out, left ${ANIMATION_DURATION}ms ease-out`;
 
 
@@ -595,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.style.left = `${toLeft}px`;
 
         setTimeout(() => {
-             if (clone.parentNode === boardElement) { // Check if it's still attached
+             if (clone.parentNode === boardElement) { 
                 clone.remove();
              }
         }, ANIMATION_DURATION);
@@ -612,11 +608,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const toLeft = toRect.left - boardRect.left;
 
         const clone = document.createElement('div');
-        clone.className = 'piece flying-piece drop'; // Add 'drop' class for potential styling
+        clone.className = 'piece flying-piece drop'; 
         clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
 
         clone.style.position = 'absolute';
-        clone.style.top = `${toTop - toRect.height}px`; // Start above
+        clone.style.top = `${toTop - toRect.height}px`; 
         clone.style.left = `${toLeft}px`;
         clone.style.width = `${toRect.width}px`;
         clone.style.height = `${toRect.height}px`;
@@ -642,10 +638,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.gameOver || !gameState.boardState) return;
 
         const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                           (isBotGame && gameState.isWhiteTurn) || // Player always plays white vs bot
+                           (isBotGame && gameState.isWhiteTurn) || 
                            (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-        if (!isPlayerTurn) return; // Ignore clicks if not player's turn
+        if (!isPlayerTurn) return; 
 
         if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
             const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
@@ -683,9 +679,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (piece) {
             let canSelectPiece;
              if (isSinglePlayer) {
-                 // In SP/Bot games, player is always white (or current turn's color if hotseat)
+                 
                  canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
-                 if(isBotGame && !gameState.isWhiteTurn) canSelectPiece = false; // Player can only move white vs bot
+                 if(isBotGame && !gameState.isWhiteTurn) canSelectPiece = false; 
              } else {
                  canSelectPiece = piece.color === myColor;
              }
@@ -698,7 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     selectedSquare = { x, y };
                     isDroppingPiece = null;
-                    socket.emit('getValidMoves', { gameId, square: { x, y } }); // Request highlights from server
+                    socket.emit('getValidMoves', { gameId, square: { x, y } }); 
                 }
             }
         } else {
@@ -713,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
             s.classList.remove('selected', 'preview-selected');
         });
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
-         document.querySelectorAll('.captured-piece.selected-drop').forEach(p => p.classList.remove('selected-drop')); // Clear captured highlight
+         document.querySelectorAll('.captured-piece.selected-drop').forEach(p => p.classList.remove('selected-drop')); 
     }
 
     function drawHighlights(moves) {
@@ -733,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
          if (selectedSquare && elementToHighlight) {
             elementToHighlight.classList.add(isPlayerTurn ? 'selected' : 'preview-selected');
          } else if (isDroppingPiece && elementToHighlight) {
-             // Already handled by adding 'selected-drop' in onCapturedClick
+             
          }
 
         moves.forEach(move => {
@@ -754,10 +750,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameState.gameOver) return;
 
          const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                            (isBotGame && gameState.isWhiteTurn) || // Player always plays white vs bot
+                            (isBotGame && gameState.isWhiteTurn) || 
                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
-         if (!isPlayerTurn) return; // Can only select captured pieces on your turn
+         if (!isPlayerTurn) return; 
 
 
         if (piece.type === 'lupa' || piece.type === 'prince') {
@@ -765,26 +761,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const clickedElement = event.currentTarget; // Get the clicked div
+        const clickedElement = event.currentTarget; 
 
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
             isDroppingPiece = null;
             selectedSquare = null;
             clearHighlights();
-            clickedElement.classList.remove('selected-drop'); // Remove highlight
+            clickedElement.classList.remove('selected-drop'); 
             return;
         }
 
         selectedSquare = null;
         isDroppingPiece = piece;
         clearHighlights();
-        clickedElement.classList.add('selected-drop'); // Add highlight to clicked captured piece
+        clickedElement.classList.add('selected-drop'); 
         highlightDropSquares();
     }
 
 
     function highlightDropSquares() {
-        // Clear only board highlights, keep captured piece selected
+        
         document.querySelectorAll('.square.selected, .square.preview-selected').forEach(s => {
             s.classList.remove('selected', 'preview-selected');
         });
@@ -797,11 +793,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                 // Use a separate isPositionValid function
+                 
                  const isBoardValid = typeof isPositionValid === 'function' ? isPositionValid(x, y) : true;
 
                 if (gameState.boardState && gameState.boardState[y]?.[x] === null && isBoardValid) {
-                    // Basic check: is square empty and valid? Add more drop rules here if needed.
+                    
                     const square = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
                     if (square) {
                         const plate = document.createElement('div');
@@ -881,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [...pieceInfo].sort((a, b) => {
             if (a.type === 'lupa') return -1; if (b.type === 'lupa') return 1;
             if (a.type === 'prince') return -1; if (b.type === 'prince') return 1;
-            return a.name.localeCompare(b.name); // Sort others alphabetically
+            return a.name.localeCompare(b.name); 
         }).forEach(p => {
             const entry = document.createElement('div');
             entry.className = 'piece-entry';
@@ -913,8 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-     // Need a global or accessible isPositionValid function for renderBoard
-     // If it's not already global, define it here or ensure it's imported/available
+     
      function isPositionValid(x, y) {
         if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
         if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
@@ -922,4 +917,4 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
      }
 
-}); // End DOMContentLoaded
+}); 
