@@ -23,7 +23,7 @@ let games = {};
 let lobbyGames = {};
 
 // [MODIFIED] Import pieceNotation
-const { getInitialBoard, getValidMovesForPiece, isPositionValid, pieceNotation } = require('./gamelogic');
+const { getInitialBoard, getValidMovesForPiece, isPositionValid, pieceNotation } = require('./public/gamelogic');
 
 // --- Notation Helper Functions ---
 
