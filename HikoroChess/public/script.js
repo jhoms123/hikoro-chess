@@ -289,6 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCaptured();
         updateTurnIndicator();
         renderMoveHistory(gameState.moveList);
+		
+		console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
 
         // --- Trigger Bot Move via Web Worker ---
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
@@ -304,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
              // Clear botBonusState for the *next* turn calculation, the worker will use the state passed in message
              // botBonusState = null; // We'll set this *after* the worker returns the move
+			 console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
 
             botWorker.postMessage({
                 gameState: safeGameState,
@@ -313,6 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
             console.error("Bot's turn, but worker is not available!");
+        }
+		} else { // ADD THIS ELSE
+             console.log("[updateLocalState] Conditions *not* met for bot move.");
         }
     }
 

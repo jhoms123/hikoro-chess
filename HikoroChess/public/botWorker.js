@@ -1351,22 +1351,24 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime
 
 // --- Web Worker Message Handler ---
 self.onmessage = function(e) {
-    // console.log("Worker received message:", e.data);
+    console.log("Worker received message:", e.data); // ADD THIS
     const { gameState, capturedPieces, bonusMoveState } = e.data;
 
     if (!gameState) {
         console.error("Worker: Received invalid message data.");
-        postMessage(null); // Send back null if data is bad
+        postMessage(null);
         return;
     }
 
     try {
+        console.log("Worker starting findBestMoveWithTimeLimit..."); // ADD THIS
         const bestMove = findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState);
-        // console.log("Worker finished search. Best move:", bestMove);
-        postMessage(bestMove); // Send the result back to the main thread
+        console.log("Worker finished search. Posting best move:", bestMove); // ADD THIS
+        postMessage(bestMove); // Send the result back
     } catch (error) {
         console.error("Worker: Error during findBestMoveWithTimeLimit:", error);
-        postMessage(null); // Send back null in case of error during search
+        console.log("Worker posting null due to error."); // ADD THIS
+        postMessage(null); // Send back null on error
     }
 };
 
