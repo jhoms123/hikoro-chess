@@ -1,4 +1,4 @@
-
+importScripts('gamelogic.js');
 const BOT_BOARD_WIDTH = 10;
 const BOT_BOARD_HEIGHT = 16;
 

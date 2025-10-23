@@ -1,4 +1,4 @@
-importScripts('gamelogic.js');
+
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
