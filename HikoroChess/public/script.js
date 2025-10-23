@@ -249,17 +249,22 @@ document.addEventListener('DOMContentLoaded', () => {
         gameId = initialGameState.id;
         botBonusState = null;
 
-        if (initialGameState.isSinglePlayer) {
-            isSinglePlayer = true;
-            myColor = 'white'; // Assume player is white in SP/Bot games
-             isBotGame = initialGameState.players.black === 'BOT'; // Check if it's explicitly a bot game if server sets it
-             // Or keep the logic from playBotBtn click:
-             // isBotGame = isBotGame && isSinglePlayer;
-        } else if (!myColor) {
-            myColor = 'black'; // Joined a game
-            isSinglePlayer = false;
-            isBotGame = false;
+        isSinglePlayer = initialGameState.isSinglePlayer;
+
+    if (isSinglePlayer) {
+        myColor = 'white'; // Player is always white in SP/Bot games
+        // isBotGame was already set correctly by the playBotBtn click event listener.
+        // We *don't* reset it here based on initialGameState.players.black.
+        console.log(`[onGameStart] Single player game started. isBotGame = ${isBotGame}`); // Verify flag
+    } else {
+        // This is multiplayer game logic
+        isBotGame = false; // Explicitly set to false for multiplayer
+        isSinglePlayer = false; // Also ensure this is false
+        if (!myColor) {
+            myColor = 'black'; // This means we joined as black
         }
+        console.log("[onGameStart] Multiplayer game started.");
+    }
 
         lobbyElement.style.display = 'none';
         gameContainerElement.style.display = 'flex';
