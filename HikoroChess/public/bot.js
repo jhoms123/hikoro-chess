@@ -660,7 +660,7 @@ let killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]); //
 
  function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = null) {
     const startTime = Date.now();
-    const timeLimit = 4000;
+    const timeLimit = 6000;
     const { boardState, turnCount } = gameState; // Add safety check for gameState
      if (!boardState) {
          console.error("findBestMoveWithTimeLimit called with invalid gameState!");
@@ -726,7 +726,7 @@ let killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]); //
     let lastCompletedDepthResult = null;
     // console.log("Bot searching with state:", { hasBonus: !!bonusMoveState }); // Less verbose
 
-    for (let depth = 1; depth <= 4; depth++) {
+    for (let depth = 1; depth <= 3; depth++) {
         // console.log(`Searching at depth: ${depth}`); // Less verbose
         let currentDepthResult = null;
         try {
