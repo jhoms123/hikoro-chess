@@ -528,8 +528,61 @@ function evaluateBoard(boardState) {
 // Section 4: AI Search Logic (Minimax, Quiescence, Move Ordering)
 // ===================================================================
 
-function getCaptureMoves(boardState, color) { /* ... unchanged ... */ }
-function getAllValidMoves(boardState, color, capturedPieces) { /* ... unchanged ... */ }
+function getCaptureMoves(boardState, color) {
+    const captureMoves = [];
+    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+            const piece = boardState[y]?.[x]; // Safe access
+            if (piece && piece.color === color) {
+                const allPieceMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of allPieceMoves) {
+                    if (move.isAttack) {
+                        captureMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: true });
+                    }
+                }
+            }
+        }
+    }
+    return captureMoves;
+}
+
+// [MODIFIED] Prevent dropping King or Prince
+function getAllValidMoves(boardState, color, capturedPieces) {
+    const allMoves = [];
+    const opponentColor = color === 'white' ? 'black' : 'white';
+
+    for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+        for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+            const piece = boardState[y]?.[x]; // Safe access
+            if (piece && piece.color === color) {
+                const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+                for (const move of validMoves) {
+                    allMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: move.isAttack });
+                }
+            }
+        }
+    }
+
+    if (capturedPieces && capturedPieces.length > 0) {
+        const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
+        for (const pieceType of uniquePieceTypesInHand) {
+             // --- Cannot drop King or Prince ---
+             if (pieceType === 'lupa' || pieceType === 'prince') {
+                  continue;
+             }
+             // ---
+            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+                    // Drop move validation
+                    if (isPositionValid(x, y) && boardState[y]?.[x] === null /* && !isSquareAttackedBy(...) */ ) { // Consider drop safety later if needed
+                        allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
+                    }
+                }
+            }
+        }
+    }
+    return allMoves;
+}
 
 // ===================================================================
 // Section 5: Opening Book
