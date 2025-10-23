@@ -624,17 +624,19 @@ function getAllValidMoves(boardState, color, capturedPieces) {
 
 const openingBook = {
     "central_prince": [
-        { from: { x: 5, y: 15 }, to: { x: 5, y: 14 } }, // f1 -> f2
-        { from: { x: 4, y: 15 }, to: { x: 4, y: 14 } }, // e1 -> e2
-        { from: { x: 5, y: 14 }, to: { x: 5, y: 13 } }, // Prince f2 -> f3
-        { from: { x: 4, y: 14 }, to: { x: 4, y: 13 } }, // Pawn e2 -> e3
-        { from: { x: 5, y: 13 }, to: { x: 4, y: 12 } }, // Prince f3 -> e4
+        { from: { x: 5, y: 15 }, to: { x: 5, y: 14 } }, // KPf15
+        { from: { x: 5, y: 14 }, to: { x: 6, y: 13 } }, // KPf2
+        { from: { x: 4, y: 10 }, to: { x: 4, y: 8 } }, // Se9
+        { from: { x: 5, y: 13 }, to: { x:5, y: 12 } }, // Acf13
+		{ from: { x: 5, y: 12 }, to: { x:4, y: 9 } }, // Acf13
+		{ from: { x: 6, y: 12 }, to: { x:4, y: 14 } }, // Acf13
     ],
     "side_bishop": [
-        { from: { x: 3, y: 10 }, to: { x: 3, y: 8 } },  // Pilut d6 -> d8 (2 squares)
-        { from: { x: 6, y: 10 }, to: { x: 6, y: 8 } },  // Pilut g6 -> g8 (2 squares)
-        { from: { x: 4, y: 11 }, to: { x: 2, y: 9 } },  // Yoli e5 -> c7
-        { from: { x: 5, y: 11 }, to: { x: 7, y: 9 } },  // Yoli f5 -> h7
+        { from: { x: 2, y: 10 }, to: { x: 2, y: 9 } },  // Pilut d6 -> d8 (2 squares)
+        { from: { x: 7, y: 10 }, to: { x: 7, y: 9 } },  // Pilut g6 -> g8 (2 squares)
+        { from: { x: 5, y: 15 }, to: { x: 5, y: 14 } },  // KPf15
+        { from: { x: 4, y: 10 }, to: { x: 4, y: 9 } },  // Se10
+		{ from: { x: 5, y: 14 }, to: { x: 6, y: 13 } },  // Se10
     ],
     "sanctuary_defense": [
          { from: { x: 1, y: 10 }, to: { x: 1, y: 9 } },  // Pilut b6 -> b7
