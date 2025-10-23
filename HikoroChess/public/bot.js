@@ -564,24 +564,58 @@ function getAllValidMoves(boardState, color, capturedPieces) {
     }
 
     if (capturedPieces && capturedPieces.length > 0) {
-        const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
-        for (const pieceType of uniquePieceTypesInHand) {
-             // --- Cannot drop King or Prince ---
-             if (pieceType === 'lupa' || pieceType === 'prince') {
-                  continue;
-             }
-             // ---
-            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
-                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
-                    // Drop move validation
-                    if (isPositionValid(x, y) && boardState[y]?.[x] === null /* && !isSquareAttackedBy(...) */ ) { // Consider drop safety later if needed
-                        allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
-                    }
-                }
-            }
-        }
-    }
-    return allMoves;
+        const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
+        for (const pieceType of uniquePieceTypesInHand) {
+             // --- Cannot drop King or Prince ---
+             if (pieceType === 'lupa' || pieceType === 'prince') {
+                  continue;
+             }
+             // ---
+            for (let y = 0; y < BOT_BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOT_BOARD_WIDTH; x++) {
+                    // [FIX] Drop move validation with safety check
+                    if (isPositionValid(x, y) && boardState[y]?.[x] === null) {
+                        // Check if the drop square is attacked by the opponent
+                        const droppedPieceValue = pieceValues[pieceType] || 0;
+                        let isSafeDrop = true;
+
+                        // Simulate the drop to check attackers accurately
+                        const tempBoard = copyBoard(boardState); // Avoid modifying original board
+                        tempBoard[y][x] = { type: pieceType, color: color }; // Simulate drop
+
+                        // Find the least valuable attacker
+                        let leastValuableAttackerValue = Infinity;
+                        for (let attY = 0; attY < BOT_BOARD_HEIGHT; attY++) {
+                            for (let attX = 0; attX < BOT_BOARD_WIDTH; attX++) {
+                                const attackerPiece = tempBoard[attY]?.[attX];
+                                if (attackerPiece && attackerPiece.color === opponentColor) {
+                                    const attackerMoves = getValidMovesForPiece(attackerPiece, attX, attY, tempBoard, false);
+                                    for (const move of attackerMoves) {
+                                        if (move.x === x && move.y === y && move.isAttack) {
+                                            const attackerValue = pieceValues[attackerPiece.type] || 0;
+                                            leastValuableAttackerValue = Math.min(leastValuableAttackerValue, attackerValue);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                                // If attacked by a piece of equal or lesser value, it's not safe (unless defended after drop)
+                                // Simplified check: If attacked at all by something less valuable, consider unsafe for now.
+                                // A more complex check would see if the dropped piece is defended.
+                        if (leastValuableAttackerValue < droppedPieceValue) {
+                            isSafeDrop = false;
+                        }
+
+                        if (isSafeDrop) {
+                            allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return allMoves;
 }
 
 // ===================================================================
@@ -752,29 +786,69 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
 
     // MVV-LVA Ordering for captures, basic otherwise
     moves.sort((a, b) => {
-        let scoreA = 0, scoreB = 0;
-        if (a.isAttack) {
-            const victim = boardState[a.to.y]?.[a.to.x];
-            // [FIX] Added a.from check for attacker, as drop moves won't have it
-            const attacker = a.from ? boardState[a.from.y]?.[a.from.x] : null; 
-            scoreA = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
-        }
-        if (b.isAttack) {
-             const victim = boardState[b.to.y]?.[b.to.x];
-             // [FIX] Added b.from check for attacker
-             const attacker = b.from ? boardState[b.from.y]?.[b.from.x] : null;
-             scoreB = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
-        }
-        // Add simple heuristic for Prince advancement for non-captures
-        // [FIX] Check for a.from to avoid crashing on 'drop' moves
-        if (!a.isAttack && a.from && boardState[a.from.y]?.[a.from.x]?.type === 'prince') {
-            scoreA += (blackPalace.minY - a.to.y) * 2;
-        }
-        // [FIX] Check for b.from to avoid crashing on 'drop' moves
-        if (!b.isAttack && b.from && boardState[b.from.y]?.[b.from.x]?.type === 'prince') {
-            scoreB += (blackPalace.minY - b.to.y) * 2;
-        }
+        let scoreA = 0;
+        let scoreB = 0;
+        const DEFENSIVE_PILUT_DROP_BONUS = 500; // High bonus to prioritize saving pieces
 
+        // --- Score Move A ---
+        if (a.type === 'board') {
+            if (a.isAttack) {
+                const victim = boardState[a.to.y]?.[a.to.x];
+                const attacker = boardState[a.from.y]?.[a.from.x];
+                scoreA = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+            } else {
+                // Prince advancement heuristic
+                const piece = boardState[a.from.y]?.[a.from.x];
+                if (piece && piece.type === 'prince' && piece.color === 'black') {
+                    scoreA += (a.from.y - a.to.y) * 5; // Prioritize forward movement slightly more
+                }
+            }
+        } else if (a.type === 'drop' && a.pieceType === 'pilut') {
+            // Check if this Pilut drop defends a threatened piece
+            const dropX = a.to.x;
+            const dropY = a.to.y;
+            const protectedY = dropY + 1; // Black Pilut at y protects piece at y+1
+            if (isPositionValid(dropX, protectedY)) {
+                const potentiallyProtectedPiece = boardState[protectedY]?.[dropX];
+                if (potentiallyProtectedPiece && potentiallyProtectedPiece.color === 'black') {
+                    // Is the piece ACTUALLY attacked by white?
+                    if (isSquareAttackedBy(dropX, protectedY, boardState, 'white')) {
+                        scoreA += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece.type] || 0); // Bonus + value of saved piece
+                    }
+                }
+            }
+        }
+
+        // --- Score Move B ---
+        if (b.type === 'board') {
+            if (b.isAttack) {
+                const victim = boardState[b.to.y]?.[b.to.x];
+                const attacker = boardState[b.from.y]?.[b.from.x];
+                scoreB = (victim ? (pieceValues[victim.type] || 0) * 10 : 0) - (attacker ? (pieceValues[attacker.type] || 0) : 1000);
+            } else {
+                // Prince advancement heuristic
+                const piece = boardState[b.from.y]?.[b.from.x];
+                if (piece && piece.type === 'prince' && piece.color === 'black') {
+                    scoreB += (b.from.y - b.to.y) * 5; // Prioritize forward movement
+                }
+            }
+        } else if (b.type === 'drop' && b.pieceType === 'pilut') {
+            // Check if this Pilut drop defends a threatened piece
+            const dropX = b.to.x;
+            const dropY = b.to.y;
+            const protectedY = dropY + 1; // Black Pilut at y protects piece at y+1
+            if (isPositionValid(dropX, protectedY)) {
+                const potentiallyProtectedPiece = boardState[protectedY]?.[dropX];
+                if (potentiallyProtectedPiece && potentiallyProtectedPiece.color === 'black') {
+                    // Is the piece ACTUALLY attacked by white?
+                    if (isSquareAttackedBy(dropX, protectedY, boardState, 'white')) {
+                        scoreB += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece.type] || 0); // Bonus + value of saved piece
+                    }
+                }
+            }
+        }
+
+        // --- Comparison ---
         return scoreB - scoreA; // Higher score first
     });
 
