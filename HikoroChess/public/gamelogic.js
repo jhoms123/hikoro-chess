@@ -48,7 +48,7 @@ function getInitialBoard() {
         { y: 3, x: 7, type: 'jotu' }, { y: 3, x: 8, type: 'cope' },
         
         { y: 2, x: 3, type: 'chair' }, { y: 2, x: 4, type: 'pawn' },
-        { y: 2, x: 5, type: 'pawn' }, { y: 2, x: 7, type: 'chair' },
+        { y: 2, x: 5, type: 'pawn' }, { y: 2, x: 6, type: 'chair' },
         
         
 		{ y: 1, x: 2, type: 'sult' }, { y: 1, x: 3, type: 'kota' },
