@@ -739,24 +739,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function onCapturedClick(piece) {
+    function onCapturedClick(piece, handColor, clickedElement) {
         if (gameState.gameOver) return;
 
-         const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                            (isBotGame && gameState.isWhiteTurn) || 
-                            (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+        
+        const activeColor = gameState.isWhiteTurn ? 'white' : 'black';
+        if (handColor !== activeColor) {
+            return; 
+        }
 
-         if (!isPlayerTurn) return; 
+        
+        const isPlayerAllowedToMove = (isSinglePlayer && !isBotGame) || 
+                                    (isBotGame && gameState.isWhiteTurn) || 
+                                    (!isSinglePlayer && myColor === activeColor); 
 
+        if (!isPlayerAllowedToMove) {
+            return; 
+        }
 
+        
         if (piece.type === 'lupa' || piece.type === 'prince') {
             console.log("Cannot select royalty from hand.");
             return;
         }
 
-        const clickedElement = event.currentTarget; 
-
+        
         if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+            
             isDroppingPiece = null;
             selectedSquare = null;
             clearHighlights();
@@ -764,8 +773,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        
         selectedSquare = null;
-        isDroppingPiece = piece;
+        isDroppingPiece = piece; 
         clearHighlights();
         clickedElement.classList.add('selected-drop'); 
         highlightDropSquares();
