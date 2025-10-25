@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                       (!isSinglePlayer && myColor === bottomHandColor); 
 
         
-        const isTopHandClickable = (isSinglePlayer && !isBotGame) || /
+        const isTopHandClickable = (isSinglePlayer && !isBotGame) || 
                                    (!isSinglePlayer && myColor === topHandColor); 
                                   
 
