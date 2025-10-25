@@ -467,36 +467,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-         const playerCaptured = (isSinglePlayer || myColor === 'white') ? gameState.whiteCaptured : gameState.blackCaptured;
-         const opponentCaptured = (isSinglePlayer || myColor === 'white') ? gameState.blackCaptured : gameState.whiteCaptured;
-         const playerCapturedEl = document.querySelector((isSinglePlayer || myColor === 'white') ? '#white-captured' : '#black-captured');
-         const opponentCapturedEl = document.querySelector((isSinglePlayer || myColor === 'white') ? '#black-captured' : '#white-captured');
+        
+        const isBottomHandWhite = (isSinglePlayer || myColor === 'white');
+        
+        const bottomHandPieces = isBottomHandWhite ? gameState.whiteCaptured : gameState.blackCaptured;
+        const topHandPieces = isBottomHandWhite ? gameState.blackCaptured : gameState.whiteCaptured;
+        
+        const bottomHandEl = document.querySelector(isBottomHandWhite ? '#white-captured' : '#black-captured');
+        const topHandEl = document.querySelector(isBottomHandWhite ? '#black-captured' : '#white-captured');
+        
+        const bottomLabelEl = document.querySelector(isBottomHandWhite ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label');
+        const topLabelEl = document.querySelector(isBottomHandWhite ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label');
 
-
-        if (!playerCapturedEl || !opponentCapturedEl) {
+        if (!bottomHandEl || !topHandEl || !bottomLabelEl || !topLabelEl) {
             console.error("Captured piece elements not found!");
             return;
         }
 
-        const playerLabelEl = document.querySelector((isSinglePlayer || myColor === 'white') ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label');
-        const opponentLabelEl = document.querySelector((isSinglePlayer || myColor === 'white') ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label');
-
-
+        
         if (isSinglePlayer) {
-             playerLabelEl.textContent = "Your Hand";
-             opponentLabelEl.textContent = isBotGame ? "Bot's Hand" : "Black's Hand";
+             bottomLabelEl.textContent = "White's Hand";
+             topLabelEl.textContent = isBotGame ? "Bot's Hand (Black)" : "Black's Hand";
         } else {
-             playerLabelEl.textContent = "Your Hand";
-             opponentLabelEl.textContent = "Opponent's Hand";
+             bottomLabelEl.textContent = "Your Hand";
+             topLabelEl.textContent = "Opponent's Hand";
         }
 
+        
+        bottomHandEl.innerHTML = '';
+        topHandEl.innerHTML = '';
 
-        playerCapturedEl.innerHTML = '';
-        opponentCapturedEl.innerHTML = '';
-
-        const createCapturedPieceElement = (piece, isPlayerPiece) => {
+        
+        const createCapturedPieceElement = (piece, handColor, isClickable) => {
             const el = document.createElement('div');
-            el.classList.add('captured-piece', piece.color);
+            el.classList.add('captured-piece', handColor); 
 
             const pieceElement = document.createElement('div');
             pieceElement.classList.add('piece');
@@ -504,55 +508,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const spriteImg = document.createElement('img');
             const spriteType = piece.type;
             
-             const displayColor = isPlayerPiece ? (isSinglePlayer ? 'white' : myColor) : (isSinglePlayer ? 'black' : (myColor === 'white' ? 'black' : 'white'));
-             spriteImg.src = `sprites/${spriteType}_${displayColor}.png`;
-             spriteImg.alt = `${displayColor} ${piece.type}`;
-
+            const displayColor = handColor; 
+            spriteImg.src = `sprites/${spriteType}_${displayColor}.png`;
+            spriteImg.alt = `${displayColor} ${piece.type}`;
 
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
 
-            if (isPlayerPiece) {
-                el.addEventListener('click', () => onCapturedClick(piece));
+            if (isClickable) {
+                
+                el.addEventListener('click', (event) => onCapturedClick(piece, handColor, event.currentTarget));
             }
             return el;
         };
 
-        playerCaptured.forEach((piece) => {
-            const pieceEl = createCapturedPieceElement(piece, true);
-            playerCapturedEl.appendChild(pieceEl);
+        
+        const bottomHandColor = isBottomHandWhite ? 'white' : 'black';
+        const topHandColor = isBottomHandWhite ? 'black' : 'white';
+
+        
+        const isBottomHandClickable = (isSinglePlayer && !isBotGame) || 
+                                      (isSinglePlayer && isBotGame) ||  
+                                      (!isSinglePlayer && myColor === bottomHandColor); 
+
+        
+        const isTopHandClickable = (isSinglePlayer && !isBotGame) || /
+                                   (!isSinglePlayer && myColor === topHandColor); 
+                                  
+
+        
+        bottomHandPieces.forEach((piece) => {
+            const pieceEl = createCapturedPieceElement(piece, bottomHandColor, isBottomHandClickable);
+            bottomHandEl.appendChild(pieceEl);
         });
 
-        opponentCaptured.forEach((piece) => {
-            const pieceEl = createCapturedPieceElement(piece, false);
-            opponentCapturedEl.appendChild(pieceEl);
+        topHandPieces.forEach((piece) => {
+            const pieceEl = createCapturedPieceElement(piece, topHandColor, isTopHandClickable);
+            topHandEl.appendChild(pieceEl);
         });
-    }
-
-    function updateTurnIndicator() {
-        if (!turnIndicator || !winnerText) {
-            console.error("Turn indicator or winner text element not found!");
-            return;
-        }
-
-        if (gameState.gameOver) {
-            turnIndicator.textContent = '';
-            if(!winnerText.textContent || winnerText.textContent.includes("Turn")) {
-                const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
-                winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
-                if (gameState.reason) {
-                    winnerText.textContent += ` (${gameState.reason})`;
-                }
-            }
-        } else {
-            winnerText.textContent = '';
-            if (isSinglePlayer) {
-                turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
-            } else {
-                const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-                turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
-            }
-        }
     }
 
 
