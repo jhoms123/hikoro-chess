@@ -547,6 +547,32 @@ document.addEventListener('DOMContentLoaded', () => {
             topHandEl.appendChild(pieceEl);
         });
     }
+	
+	function updateTurnIndicator() {
+        if (!turnIndicator || !winnerText) {
+            console.error("Turn indicator or winner text element not found!");
+            return;
+        }
+
+        if (gameState.gameOver) {
+            turnIndicator.textContent = '';
+            if(!winnerText.textContent || winnerText.textContent.includes("Turn")) {
+                const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
+                winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
+                if (gameState.reason) {
+                    winnerText.textContent += ` (${gameState.reason})`;
+                }
+            }
+        } else {
+            winnerText.textContent = '';
+            if (isSinglePlayer) {
+                turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
+            } else {
+                const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+                turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
+            }
+        }
+    }
 
 
     function animateMove(from, to, pieceImgSrc) {
