@@ -1704,6 +1704,7 @@ function handlePromotion(piece, y, wasCapture) {
 }
 
 
+
     // --- Updated handleReplaySquareClick ---
     function handleReplaySquareClick(x, y) {
         if (!currentReplayNode) return; // Should not happen in replay mode
