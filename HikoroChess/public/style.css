@@ -39,6 +39,12 @@ body {
     cursor: pointer;
 }
 
+#move-history .move-node.active-move {
+    background-color: #007bff; /* Brighter blue */
+    color: white;
+    font-weight: bold;
+}
+
 #replay-controls button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
