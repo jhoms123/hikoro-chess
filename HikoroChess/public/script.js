@@ -1305,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Check for the piece *type* from the notation
                 if (piece && piece.color === color && piece.type === pieceType) {
                     console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
-                     try {
+                     try { // <--- This is a `try` block
                         const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                         const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
                         if (matchingMove) {
@@ -1315,12 +1315,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                  console.warn(`   -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
                             } else if (!isCaptureNotation && matchingMove.isAttack) {
                                  console.warn(`   -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
-                    _2_1}
                             }
+                            // <--- STRAY "}" REMOVED FROM HERE
 
                             possibleMoves.push({ type: 'board', from: { x, y }, to: to }); // <-- Add to list
                         }
-                     } catch(e) {
+                     } catch(e) { // <--- This catch block is now correctly placed
                          console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
                      }
                 }
@@ -1334,7 +1334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (possibleMoves.length > 1) {
             console.warn(`AMBIGUOUS MOVE: "${notation}". Multiple pieces (${pieceType}) can move to ${algTo}. Defaulting to the first one found.`);
             return possibleMoves[0]; // Kifu is ambiguous, make a best guess
-        } else {
+    _2_1 } else {
             // --- CHECK FOR PROMOTION-RELATED NOTATION ---
             // This handles the case "Duxe12" where the piece was a "Cr" on the *previous* move
             // We re-scan, looking for pieces that *promote* to this piece type
@@ -1344,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pieceType === 'greatshield') promotingTypes.push('pilut');
             if (pieceType === 'finor') promotingTypes.push('fin');
             if (pieceType === 'cthulhu') promotingTypes.push('greathorsegeneral');
-            if (pieceType === 'neptune') promotingTypes.push('mermaid');
+ind(piece.type === 'neptune') promotingTypes.push('mermaid');
 
             for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
                 for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
@@ -1352,33 +1352,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Check if this piece is one that *could* promote to the piece in the notation
                     if (piece && piece.color === color && promotingTypes.includes(piece.type)) {
                         console.log(` -> Checking promoting piece at ${toAlgebraic(x,y)} (${piece.type})`);
-                        try {
+source;                     try {
                             const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                             const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
                             if (matchingMove) {
-                                // Found a move. Now, does this move *result* in the correct promotion?
+                              nbsp; // Found a move. Now, does this move *result* in the correct promotion?
                                 const inPromotionZone = (color === 'white' && to.y > 8) || (color === 'black' && to.y < 7);
                                 const wasCapture = matchingMove.isAttack;
                                 let promotedType = piece.type;
 
                                 // Test promotion logic
                                 if (piece.type === 'fin' && wasCapture) promotedType = 'finor';
-                                else if ((piece.type === 'sult' || piece.type === 'pawn') && inPromotionZone) promotedType = 'chair';
+nbsp;                         else if ((piece.type === 'sult' || piece.type === 'pawn') && inPromotionZone) promotedType = 'chair';
                                 else if (piece.type === 'pilut' && inPromotionZone) promotedType = 'greatshield';
                                 else if (piece.type === 'greathorsegeneral' && wasCapture) promotedType = 'cthulhu';
                                 else if (piece.type === 'mermaid' && wasCapture) promotedType = 'neptune';
 
                                 if (promotedType === pieceType) {
-                nbsp;                console.log(`   -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
+                    ind(             console.log(`   -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
                                     possibleMoves.push({ type: 'board', from: { x, y }, to: to });
                                 }
-                nbsp;           }
-                        } catch(e) {
+                            }
+source;                     } catch(e) {
                             console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
                         }
                     }
                 }
-            }
+Indented block;         }
             
             // Check possibilities from the *second* scan
             if (possibleMoves.length === 1) {
@@ -1389,7 +1389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return possibleMoves[0];
             } else {
                 console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color} (checked promotions)`);
-                return null; // Truly failed
+g;               return null; // Truly failed
             }
         }
     }
