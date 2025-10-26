@@ -1,8 +1,7 @@
 (function(exports) {
-
-
-const BOARD_HEIGHT = gameLogic.BOARD_HEIGHT;
-const BOARD_WIDTH = gameLogic.BOARD_WIDTH;
+	
+const BOARD_WIDTH = 10;
+const BOARD_HEIGHT = 16;
 
 
 const pieceNotation = {
