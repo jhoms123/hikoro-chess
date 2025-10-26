@@ -422,61 +422,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateLocalState(newGameState) {
-        const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
-        gameState = newGameState;
+    const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
+    gameState = newGameState; // Update global state first
 
-        if (isNewGameOver && newGameState.winner) {
-            if(winnerText) {
-                const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
-                winnerText.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
-                if (newGameState.reason) {
-                    winnerText.textContent += ` (${newGameState.reason})`;
-                }
-            } else {
-                console.error("winnerText element not found!");
+    if (isNewGameOver && newGameState.winner) {
+        // Fetch element here when game ends
+        const winnerTextEl = document.getElementById('winner-text');
+        if (winnerTextEl) { // Use the local variable
+            const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+            winnerTextEl.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
+            if (newGameState.reason) {
+                winnerTextEl.textContent += ` (${newGameState.reason})`;
             }
-            // [NEW] Show post-game controls
-            if (postGameControls) {
-                postGameControls.style.display = 'flex';
-            }
+        } else {
+            // Log error if still not found, even when game is over
+            console.error("updateLocalState (Game Over): winner-text element not found!");
         }
-
-        renderBoard();
-        renderCaptured();
-        updateTurnIndicator();
-        renderMoveHistory(gameState.moveList);
-        
-        console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
-
-        
-        if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
-            console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
-            
-            const capturedPiecesForBot = gameState.blackCaptured; 
-            currentTurnHadBonusState = !!botBonusState; 
-
-            
-            const safeGameState = JSON.parse(JSON.stringify(gameState));
-            const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
-            const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
-
-            
-             console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
-
-            botWorker.postMessage({
-                gameState: safeGameState,
-                capturedPieces: safeCapturedPieces,
-                bonusMoveState: safeBonusState
-            });
-
-        } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
-            console.error("Bot's turn, but worker is not available!");
-        }
-    
-        else { 
-             console.log("[updateLocalState] Conditions *not* met for bot move.");
+        // Show post-game controls regardless of winner text element
+        if (postGameControls) {
+            postGameControls.style.display = 'flex';
         }
     }
+
+    renderBoard();
+    renderCaptured();
+    updateTurnIndicator(); // This will now fetch its own elements
+    renderMoveHistory(gameState.moveList);
+
+    console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
+
+    if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
+        console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
+
+        const capturedPiecesForBot = gameState.blackCaptured;
+        currentTurnHadBonusState = !!botBonusState;
+
+        const safeGameState = JSON.parse(JSON.stringify(gameState));
+        const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
+        const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
+
+        console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
+
+        botWorker.postMessage({
+            gameState: safeGameState,
+            capturedPieces: safeCapturedPieces,
+            bonusMoveState: safeBonusState
+        });
+
+    } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
+        console.error("Bot's turn, but worker is not available!");
+    } else {
+        console.log("[updateLocalState] Conditions *not* met for bot move.");
+    }
+}
 
 
     function renderNotationMarkers() {
@@ -714,31 +712,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateTurnIndicator() {
-        if (!turnIndicator || !winnerText) {
-            console.error("Turn indicator or winner text element not found!");
-            return;
-        }
+    // Fetch elements inside the function
+    const turnIndicatorEl = document.getElementById('turn-indicator');
+    const winnerTextEl = document.getElementById('winner-text');
 
-        if (gameState.gameOver && !isReplayMode) { // [MODIFIED] Don't show winner in replay
-            turnIndicator.textContent = '';
-            if(!winnerText.textContent || winnerText.textContent.includes("Turn")) {
-                const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
-                winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
-                if (gameState.reason) {
-                    winnerText.textContent += ` (${gameState.reason})`;
-                }
+    if (!turnIndicatorEl || !winnerTextEl) { // Check the local variables
+        // If the error persists even with this, there's a deeper issue with HTML loading or element existence.
+        console.error("updateTurnIndicator: Turn indicator or winner text element not found!");
+        return;
+    }
+
+    // Use the local variables (turnIndicatorEl, winnerTextEl)
+    if (gameState.gameOver && !isReplayMode) {
+        turnIndicatorEl.textContent = '';
+        // Check content to avoid overwriting if already set by updateLocalState
+        if (!winnerTextEl.textContent || winnerTextEl.textContent.includes("Turn")) {
+            const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
+            winnerTextEl.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
+            if (gameState.reason) {
+                winnerTextEl.textContent += ` (${gameState.reason})`;
             }
+        }
+    } else {
+        winnerTextEl.textContent = ''; // Clear winner text if game not over or in replay
+        if (isSinglePlayer || isReplayMode) {
+            turnIndicatorEl.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
         } else {
-            winnerText.textContent = '';
-            // [MODIFIED] Show 'White/Black's Turn' in replay mode
-            if (isSinglePlayer || isReplayMode) {
-                turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
-            } else {
-                const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-                turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
-            }
+            const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
+            turnIndicatorEl.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
         }
     }
+}
 
 
     function animateMove(from, to, pieceImgSrc) {
