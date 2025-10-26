@@ -1,6 +1,8 @@
 
 importScripts('gamelogic.js');
 
+const BOARD_HEIGHT = gameLogic.BOARD_HEIGHT;
+const BOARD_WIDTH = gameLogic.BOARD_WIDTH;
 
 const botSanctuarySquares = [
     {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
