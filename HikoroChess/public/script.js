@@ -1263,141 +1263,152 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Updated Notation Parser ---
-    function parseNotation(notation, boardState, isWhiteTurn) {
-    // Requires gameLogic to be loaded
-    if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
-         console.error("parseNotation: gameLogic not available");
-         return null;
-    }
+    Okay, here is the parseNotation function formatted correctly with proper indentation. This should make it easier to read and maintain.
 
-    const color = isWhiteTurn ? 'white' : 'black';
-    console.log(`Parsing notation: "${notation}" for ${color}`); // Log input
+JavaScript
 
-    // 1. Check for Drop
-    let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
-    if (match) {
-        const pieceAbbr = match[1];
-        const algTo = match[2];
-        const to = fromAlgebraic(algTo);
-        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-        if (!pieceType || !to) { console.warn(`Invalid drop notation or target: "${notation}"`); return null;}
-        console.log(` -> Parsed as Drop: type=${pieceType}, to=`, to);
-        return { type: 'drop', piece: { type: pieceType }, to: to };
-    }
+// --- CORRECTED Notation Parser (Fixes Ambiguity & Syntax Errors) ---
+function parseNotation(notation, boardState, isWhiteTurn) {
+    // Requires gameLogic to be loaded
+    if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
+        console.error("parseNotation: gameLogic not available");
+        return null;
+    }
 
-    // 2. Check for Move
-    match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
-    if (match) {
-        const pieceAbbr = match[1];
-        const isCaptureNotation = match[2] === 'x'; // Check if 'x' is present
-        const algTo = match[3];
-        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-        const to = fromAlgebraic(algTo);
+    const color = isWhiteTurn ? 'white' : 'black';
+    console.log(`Parsing notation: "${notation}" for ${color}`); // Log input
 
-        if (!pieceType || !to) { console.warn(`Invalid move notation or target: "${notation}"`); return null; }
-        console.log(` -> Attempting Move: type=${pieceType}, to=`, to, ` CaptureNotation=${isCaptureNotation}`);
+    // 1. Check for Drop
+    let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const algTo = match[2];
+        const to = fromAlgebraic(algTo);
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        if (!pieceType || !to) {
+            console.warn(`Invalid drop notation or target: "${notation}"`);
+            return null;
+        }
+        console.log(` -> Parsed as Drop: type=${pieceType}, to=`, to);
+        return { type: 'drop', piece: { type: pieceType }, to: to };
+    }
 
-        let possibleMoves = []; // <-- Store all possible 'from' squares
+    // 2. Check for Move
+    match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const isCaptureNotation = match[2] === 'x'; // Check if 'x' is present
+        const algTo = match[3];
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        const to = fromAlgebraic(algTo);
 
-        for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
-            for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
-                const piece = boardState[y]?.[x];
-                // Check for the piece *type* from the notation
-                if (piece && piece.color === color && piece.type === pieceType) {
-                    console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
-                     try { // <--- This is a `try` block
-                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
-                        const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
-                        if (matchingMove) {
-                             console.log(`   -> Found valid move from ${toAlgebraic(x,y)} to ${algTo}. Is Attack=${matchingMove.isAttack}`);
-                            
-                            if (isCaptureNotation && !matchingMove.isAttack) {
-                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
-                            } else if (!isCaptureNotation && matchingMove.isAttack) {
-                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
-                            }
-                            // <--- STRAY "}" REMOVED FROM HERE
+        if (!pieceType || !to) {
+            console.warn(`Invalid move notation or target: "${notation}"`);
+            return null;
+        }
+        console.log(` -> Attempting Move: type=${pieceType}, to=`, to, ` CaptureNotation=${isCaptureNotation}`);
 
-                            possibleMoves.push({ type: 'board', from: { x, y }, to: to }); // <-- Add to list
-                        }
-                     } catch(e) { // <--- This catch block is now correctly placed
-                         console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
-                     }
-                }
-            }
-        }
+        let possibleMoves = []; // <-- Store all possible 'from' squares
 
-        // --- Handle Ambiguity ---
-        if (possibleMoves.length === 1) {
-            console.log(` -> Successfully parsed "${notation}" as Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
-            return possibleMoves[0]; // Unambiguous, correct move
-        } else if (possibleMoves.length > 1) {
-            console.warn(`AMBIGUOUS MOVE: "${notation}". Multiple pieces (${pieceType}) can move to ${algTo}. Defaulting to the first one found.`);
-            return possibleMoves[0]; // Kifu is ambiguous, make a best guess
-    _2_1 } else {
-            // --- CHECK FOR PROMOTION-RELATED NOTATION ---
-            // This handles the case "Duxe12" where the piece was a "Cr" on the *previous* move
-            // We re-scan, looking for pieces that *promote* to this piece type
-            console.log(` -> No ${pieceType} found. Checking for pieces that *promote* to ${pieceType}`);
-            const promotingTypes = [];
-            if (pieceType === 'chair') promotingTypes.push('sult', 'pawn');
-            if (pieceType === 'greatshield') promotingTypes.push('pilut');
-            if (pieceType === 'finor') promotingTypes.push('fin');
-            if (pieceType === 'cthulhu') promotingTypes.push('greathorsegeneral');
-ind(piece.type === 'neptune') promotingTypes.push('mermaid');
+        // First pass: Check for pieces of the exact type specified in the notation
+        for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+            for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                const piece = boardState[y]?.[x];
+                // Check for the piece *type* from the notation
+                if (piece && piece.color === color && piece.type === pieceType) {
+                    console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
+                    try {
+                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                        const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+                        if (matchingMove) {
+                            console.log(`    -> Found valid move from ${toAlgebraic(x,y)} to ${algTo}. Is Attack=${matchingMove.isAttack}`);
 
-            for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
-                for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
-                    const piece = boardState[y]?.[x];
-                    // Check if this piece is one that *could* promote to the piece in the notation
-                    if (piece && piece.color === color && promotingTypes.includes(piece.type)) {
-                        console.log(` -> Checking promoting piece at ${toAlgebraic(x,y)} (${piece.type})`);
-source;                     try {
-                            const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
-                            const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
-                            if (matchingMove) {
-                              nbsp; // Found a move. Now, does this move *result* in the correct promotion?
-                                const inPromotionZone = (color === 'white' && to.y > 8) || (color === 'black' && to.y < 7);
-                                const wasCapture = matchingMove.isAttack;
-                                let promotedType = piece.type;
+                            if (isCaptureNotation && !matchingMove.isAttack) {
+                                console.warn(`    -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
+                            } else if (!isCaptureNotation && matchingMove.isAttack) {
+                                console.warn(`    -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
+                            }
+                            possibleMoves.push({ type: 'board', from: { x, y }, to: to }); // <-- Add to list
+                        }
+                    } catch (e) {
+                        console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                    }
+                }
+            }
+        }
 
-                                // Test promotion logic
-                                if (piece.type === 'fin' && wasCapture) promotedType = 'finor';
-nbsp;                         else if ((piece.type === 'sult' || piece.type === 'pawn') && inPromotionZone) promotedType = 'chair';
-                                else if (piece.type === 'pilut' && inPromotionZone) promotedType = 'greatshield';
-                                else if (piece.type === 'greathorsegeneral' && wasCapture) promotedType = 'cthulhu';
-                                else if (piece.type === 'mermaid' && wasCapture) promotedType = 'neptune';
+        // --- Handle Ambiguity or Failed First Pass ---
+        if (possibleMoves.length === 1) {
+            console.log(` -> Successfully parsed "${notation}" as Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
+            return possibleMoves[0]; // Unambiguous, correct move
+        } else if (possibleMoves.length > 1) {
+            console.warn(`AMBIGUOUS MOVE: "${notation}". Multiple pieces (${pieceType}) can move to ${algTo}. Defaulting to the first one found.`);
+            return possibleMoves[0]; // Kifu is ambiguous, make a best guess
+        } else {
+            // --- Second pass: CHECK FOR PROMOTION-RELATED NOTATION ---
+            // Handles cases like "Duxe12" where the piece was a "Cr" before moving and promoting.
+            console.log(` -> No ${pieceType} found. Checking for pieces that *promote* to ${pieceType}`);
+            const promotingTypes = [];
+            if (pieceType === 'chair') promotingTypes.push('sult', 'pawn');
+            if (pieceType === 'greatshield') promotingTypes.push('pilut');
+            if (pieceType === 'finor') promotingTypes.push('fin');
+            if (pieceType === 'cthulhu') promotingTypes.push('greathorsegeneral');
+            if (pieceType === 'neptune') promotingTypes.push('mermaid');
 
-                                if (promotedType === pieceType) {
-                    ind(             console.log(`   -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
-                                    possibleMoves.push({ type: 'board', from: { x, y }, to: to });
-                                }
-                            }
-source;                     } catch(e) {
-                            console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
-                        }
-                    }
-                }
-Indented block;         }
-            
-            // Check possibilities from the *second* scan
-            if (possibleMoves.length === 1) {
-                console.log(` -> Successfully parsed "${notation}" as Promoting Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
-                return possibleMoves[0];
-            } else if (possibleMoves.length > 1) {
-                console.warn(`AMBIGUOUS PROMOTING MOVE: "${notation}". Multiple pieces can move to ${algTo} and promote to ${pieceType}. Defaulting to first.`);
-                return possibleMoves[0];
-            } else {
-                console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color} (checked promotions)`);
-g;               return null; // Truly failed
-            }
-        }
-    }
+            // Re-scan, looking for pieces that *could* promote to the type in the notation
+            for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+                for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                    const piece = boardState[y]?.[x];
+                    // Check if this piece is one that *could* promote to the piece in the notation
+                    if (piece && piece.color === color && promotingTypes.includes(piece.type)) {
+                        console.log(` -> Checking promoting piece at ${toAlgebraic(x,y)} (${piece.type})`);
+                        try {
+                            const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                            const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+                            if (matchingMove) {
+                                // Found a valid move. Now, check if this move *results* in the correct promotion.
+                                const inPromotionZone = (color === 'white' && to.y > 8) || (color === 'black' && to.y < 7);
+                                const wasCapture = matchingMove.isAttack;
+                                let promotedType = piece.type; // Start with original type
 
-     console.warn("Could not parse notation (doesn't match drop or move):", notation);
-    return null; // Doesn't match drop or move format
+                                // Simulate promotion logic based on the move found
+                                if (piece.type === 'fin' && wasCapture) promotedType = 'finor';
+                                else if ((piece.type === 'sult' || piece.type === 'pawn') && inPromotionZone) promotedType = 'chair';
+                                else if (piece.type === 'pilut' && inPromotionZone) promotedType = 'greatshield';
+                                else if (piece.type === 'greathorsegeneral' && wasCapture) promotedType = 'cthulhu';
+                                else if (piece.type === 'mermaid' && wasCapture) promotedType = 'neptune';
+
+                                // Does the simulated promotion match the piece type in the notation?
+                                if (promotedType === pieceType) {
+                                    console.log(`    -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
+                                    possibleMoves.push({ type: 'board', from: { x, y }, to: to });
+                                }
+                            }
+                        } catch (e) {
+                            console.error(`Error checking valid moves for promoting piece ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                        }
+                    }
+                }
+            }
+
+            // Check results from the *second* (promotion) scan
+            if (possibleMoves.length === 1) {
+                console.log(` -> Successfully parsed "${notation}" as Promoting Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
+                return possibleMoves[0];
+            } else if (possibleMoves.length > 1) {
+                console.warn(`AMBIGUOUS PROMOTING MOVE: "${notation}". Multiple pieces can move to ${algTo} and promote to ${pieceType}. Defaulting to first.`);
+                return possibleMoves[0];
+            } else {
+                console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color} (checked direct moves and promotions)`);
+                return null; // Truly failed to find any valid origin
+            }
+        }
+    }
+
+    // If it didn't match Drop or Move regex
+    console.warn("Could not parse notation (doesn't match drop or move format):", notation);
+    return null;
 }
-
 function handlePromotion(piece, y, wasCapture) {
          if(!piece) return; // Safety check
          const color = piece.color;
