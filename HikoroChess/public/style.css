@@ -32,6 +32,44 @@ body {
     position: relative;
 }
 
+#replay-controls button {
+    padding: 5px 10px;
+    font-size: 1.2em;
+    min-width: 40px;
+    cursor: pointer;
+}
+
+#replay-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#replay-move-number {
+    font-size: 1.1em;
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0 10px;
+}
+
+/* [NEW] Move History Branching */
+#move-history .move-node {
+    padding: 3px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: pre; /* Keep notation on one line */
+}
+#move-history .move-node:hover {
+    background-color: #555;
+}
+#move-history .move-node.active-move {
+    background-color: #6a9cff;
+    color: #000;
+    font-weight: bold;
+}
+#move-history .move-node.move-branch {
+    font-style: italic;
+    color: #ccc;
+}
+
 
 body::before {
     content: "";

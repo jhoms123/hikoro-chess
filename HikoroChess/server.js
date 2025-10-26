@@ -22,23 +22,15 @@ app.use(express.static('public'));
 let games = {};
 let lobbyGames = {};
 
-// [MODIFIED] Import pieceNotation
 const { getInitialBoard, getValidMovesForPiece, isPositionValid, pieceNotation } = require('./public/gamelogic');
 
-// --- Notation Helper Functions ---
 
-/**
- * Converts (x, y) coordinates to algebraic notation (e.g., a1, j16)
- */
 function toAlgebraic(x, y) {
     const file = String.fromCharCode('a'.charCodeAt(0) + x);
-    const rank = y + 1; // y=0 is rank 1, y=15 is rank 16
+    const rank = y + 1;
     return `${file}${rank}`;
 }
 
-/**
- * Generates the notation string for a single move.
- */
 function generateNotation(piece, to, wasCapture, wasDrop) {
     const pieceAbbr = pieceNotation[piece.type] || '?';
     const coord = toAlgebraic(to.x, to.y);
@@ -52,26 +44,19 @@ function generateNotation(piece, to, wasCapture, wasDrop) {
     return `${pieceAbbr}${coord}`;
 }
 
-/**
- * Updates the game's moveList array with the new notation.
- */
 function updateMoveList(game, notationString) {
     const turnNum = Math.floor(game.turnCount / 2) + 1;
 
-    // game.isWhiteTurn is TRUE before the move, so it reflects the player who *made* the move.
     if (game.isWhiteTurn) {
         game.moveList.push(`${turnNum}. ${notationString}`);
     } else {
         if (game.moveList.length > 0) {
             game.moveList[game.moveList.length - 1] += ` ${notationString}`;
         } else {
-            // Should not happen, but as a fallback
             game.moveList.push(`${turnNum}... ${notationString}`);
         }
     }
 }
-// --- End Notation Helpers ---
-
 
 function gameTimerTick() {
     const now = Date.now();
@@ -173,7 +158,7 @@ io.on('connection', (socket) => {
 		games[gameId] = {
 			id: gameId,
 			players: { white: socket.id, black: null },
-			boardState: getInitialBoard(), // Uses the modified function
+			boardState: getInitialBoard(),
 			whiteCaptured: [],
 			blackCaptured: [],
 			isWhiteTurn: true,
@@ -188,7 +173,6 @@ io.on('connection', (socket) => {
 			lastMoveTimestamp: null,
             moveList: [],
             lastMove: null,
-            // [NEW] Track if Princes are still on board
             whitePrinceOnBoard: true,
             blackPrinceOnBoard: true
 		};
@@ -239,7 +223,6 @@ io.on('connection', (socket) => {
 
         const piece = game.boardState[square.y][square.x];
         if (piece) {
-            // Pass the whole game state to getValidMoves to check prince status
             const validMoves = getValidMovesForPiece(piece, square.x, square.y, game.boardState, bonusMoveActive);
             socket.emit('validMoves', validMoves);
         } else {
@@ -276,12 +259,11 @@ io.on('connection', (socket) => {
         let bonusMoveActive = false;
         if (game.bonusMoveInfo) {
              if (from.x !== game.bonusMoveInfo.pieceX || from.y !== game.bonusMoveInfo.pieceY) {
-                 return; // Trying to move wrong piece during bonus
+                 return;
              }
              bonusMoveActive = true;
          }
 
-        // Get valid moves using the updated logic (which includes palace restriction)
         const validMoves = getValidMovesForPiece(piece, from.x, from.y, game.boardState, bonusMoveActive);
         const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
 
@@ -290,7 +272,6 @@ io.on('connection', (socket) => {
             const wasCapture = targetPiece !== null;
             const notationString = generateNotation(piece, to, wasCapture, false);
 
-            // Jotu jump logic
             if (piece.type === 'jotu') {
                  const dx = Math.sign(to.x - from.x);
                  const dy = Math.sign(to.y - from.y);
@@ -315,9 +296,7 @@ io.on('connection', (socket) => {
                  }
             }
 
-            // Handle captures
             if (targetPiece !== null) {
-                // --- [MODIFIED] Check if a Prince was captured and update game state ---
                 if(targetPiece.type === 'prince') {
                     if (targetPiece.color === 'white') {
                         game.whitePrinceOnBoard = false;
@@ -326,8 +305,7 @@ io.on('connection', (socket) => {
                         game.blackPrinceOnBoard = false;
                         console.log("Black Prince captured!");
                     }
-                    // Prince (like King) is not added to hand
-                } else { // Handle other captures
+                } else {
                     const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
                     if (targetPiece.type === 'neptune') {
                         const losingPlayerColor = targetPiece.color;
@@ -337,7 +315,6 @@ io.on('connection', (socket) => {
                             capturedArray.push(pieceForHand);
                         }
                      }
-                     // Don't add captured King to hand either
                      else if (!indestructiblePieces.includes(targetPiece.type) && targetPiece.type !== 'lupa') {
                          let pieceForHand = { type: targetPiece.type, color: playerColor };
                          const capturedArray = playerColor === 'white' ? game.whiteCaptured : game.blackCaptured;
@@ -345,21 +322,19 @@ io.on('connection', (socket) => {
                              capturedArray.push(pieceForHand);
                          }
                      }
-                 }
+                }
             }
 
-            // Move the piece
             game.boardState[to.y][to.x] = piece;
             game.boardState[from.y][from.x] = null;
-            handlePromotion(piece, to.y, wasCapture); // Prince doesn't promote
+            handlePromotion(piece, to.y, wasCapture);
 
             updateMoveList(game, notationString);
             game.lastMove = { from, to };
 
-            checkForWinner(game); // Uses updated win conditions
+            checkForWinner(game);
             game.turnCount++;
 
-            // Bonus move logic... unchanged ...
             if (bonusMoveActive) {
                 game.bonusMoveInfo = null;
                 game.isWhiteTurn = !game.isWhiteTurn;
@@ -382,7 +357,7 @@ io.on('connection', (socket) => {
         const game = {
             id: gameId,
             players: { white: socket.id, black: socket.id },
-            boardState: getInitialBoard(), // Uses new setup
+            boardState: getInitialBoard(),
             whiteCaptured: [],
             blackCaptured: [],
             isWhiteTurn: true,
@@ -398,7 +373,6 @@ io.on('connection', (socket) => {
             isSinglePlayer: true,
             moveList: [],
             lastMove: null,
-             // [MODIFIED] Track princes
             whitePrinceOnBoard: true,
             blackPrinceOnBoard: true
         };
@@ -427,10 +401,9 @@ io.on('connection', (socket) => {
 			return;
 		}
 
-		// Ensure piece type is valid before dropping (shouldn't be King or Prince)
 		if (piece.type === 'lupa' || piece.type === 'prince') {
 		    console.log("Attempted to drop invalid piece type:", piece.type);
-		    return; // Cannot drop royalty
+		    return;
 		}
 
 		if (game.boardState[to.y][to.x] === null && isPositionValid(to.x, to.y)) {
@@ -452,9 +425,7 @@ io.on('connection', (socket) => {
 				game.turnCount++;
 				io.to(gameId).emit('gameStateUpdate', game);
 			} else {
-			    // This case should ideally not happen if the client state is correct
 			    console.error(`Error: Piece type ${piece.type} not found in captured array for ${playerColor}`);
-			    // Rollback the drop from boardState if piece wasn't in hand
 			    game.boardState[to.y][to.x] = null;
 			}
 		}
@@ -500,7 +471,6 @@ io.on('connection', (socket) => {
 function handlePromotion(piece, y, wasCapture) {
     const color = piece.color;
 
-    // Prince does not promote
     if (piece.type === 'prince') return;
 
     if (piece.type === 'greathorsegeneral' && wasCapture) {
@@ -523,19 +493,16 @@ function handlePromotion(piece, y, wasCapture) {
     }
 }
 
-// [MODIFIED] Updated win condition logic
 function checkForWinner(game) {
     if (game.gameOver) return;
 
-    const sanctuarySquares = [ // Use consistent name
+    const sanctuarySquares = [
         {x: 0, y: 7}, {x: 1, y: 7}, {x: 8, y: 7}, {x: 9, y: 7},
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
-    // Check Sanctuary Victory (King or Prince)
     for (const square of sanctuarySquares) {
         const pieceOnSquare = game.boardState[square.y][square.x];
-        // [MODIFIED] Check for lupa OR prince
         if (pieceOnSquare && (pieceOnSquare.type === 'lupa' || pieceOnSquare.type === 'prince')) {
             game.gameOver = true;
             game.winner = pieceOnSquare.color;
@@ -545,10 +512,8 @@ function checkForWinner(game) {
         }
     }
 
-    // Check Capture Victory (King AND Prince must be captured)
     let whiteLupaOnBoard = false;
     let blackLupaOnBoard = false;
-    // Prince status is tracked by game.whitePrinceOnBoard / game.blackPrinceOnBoard
 
     for (let y = 0; y < 16; y++) {
         for (let x = 0; x < 10; x++) {
@@ -557,11 +522,9 @@ function checkForWinner(game) {
                 if (piece.color === 'white') whiteLupaOnBoard = true;
                 else blackLupaOnBoard = true;
             }
-            // We don't need to check for prince here, we use the game flags
         }
     }
 
-    // [MODIFIED] Check if BOTH king and prince are gone
     if (!blackLupaOnBoard && !game.blackPrinceOnBoard && game.turnCount > 0) {
         game.gameOver = true;
         game.winner = 'white';

@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         botBonusState = null; 
                     }
                 } else {
-                     botBonusState = null; 
+                       botBonusState = null; 
                 }
 
 
@@ -76,13 +76,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const boardElement = document.getElementById('game-board');
     const turnIndicator = document.getElementById('turn-indicator');
-    const winnerText = document.getElementById('winner-text');
+    const winnerText = document.getElementById('winnerText');
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const playBotBtn = document.getElementById('play-bot-btn');
 
     const gameControls = document.getElementById('game-controls');
     const mainMenuBtn = document.getElementById('main-menu-btn');
     const rulesBtnIngame = document.getElementById('rules-btn-ingame');
+    const moveHistoryElement = document.getElementById('move-history'); // Get move history el
+
+    // [NEW] Post-game and Replay elements
+    const postGameControls = document.getElementById('post-game-controls');
+    const copyKifuBtn = document.getElementById('copy-kifu-btn');
+    const downloadKifuBtn = document.getElementById('download-kifu-btn');
+    
+    const replaySection = document.getElementById('replay-section');
+    const kifuPasteArea = document.getElementById('kifu-paste-area');
+    const startReplayBtn = document.getElementById('start-replay-btn');
+    const replayControls = document.getElementById('replay-controls');
+    const replayFirstBtn = document.getElementById('replay-first-btn');
+    const replayPrevBtn = document.getElementById('replay-prev-btn');
+    const replayNextBtn = document.getElementById('replay-next-btn');
+    const replayLastBtn = document.getElementById('replay-last-btn');
+    const replayMoveNumber = document.getElementById('replay-move-number');
+
 
     const ANIMATION_DURATION = 250;
 
@@ -94,6 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSinglePlayer = false;
     let isBotGame = false;
 
+    // [NEW] Replay state variables
+    let isReplayMode = false;
+    let replayGameTree = null; // Root node of the game tree
+    let currentReplayNode = null; // The node currently being displayed
+    let flatMoveList = []; // For easy Next/Prev on main line
+    let currentMoveIndex = -1;
+
     let botBonusState = null; 
     let currentTurnHadBonusState = false; 
 
@@ -103,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {x: 0, y: 8}, {x: 1, y: 8}, {x: 8, y: 8}, {x: 9, y: 8}
     ];
 
-	const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
+    const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
     const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
 
     
@@ -158,11 +182,124 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     mainMenuBtn.addEventListener('click', () => {
-        if (gameId) {
+        if (gameId && !isReplayMode) { // Don't emit leaveGame in replay mode
             socket.emit('leaveGame', gameId);
         }
-        window.location.reload();
+        
+        // This is the simplest way to reset all state
+        window.location.reload(); 
     });
+
+    // [NEW] Kifu and Replay Listeners
+    if (copyKifuBtn) {
+        copyKifuBtn.addEventListener('click', () => {
+            if (gameState && gameState.moveList) {
+                const kifuText = gameState.moveList.join('\n');
+                navigator.clipboard.writeText(kifuText).then(() => {
+                    alert('Kifu copied to clipboard!');
+                }, (err) => {
+                    console.error('Failed to copy kifu: ', err);
+                    alert('Failed to copy. See console for details.');
+                });
+            }
+        });
+    }
+
+    if (downloadKifuBtn) {
+        downloadKifuBtn.addEventListener('click', () => {
+            if (gameState && gameState.moveList) {
+                const kifuText = gameState.moveList.join('\n');
+                const blob = new Blob([kifuText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `hikoro-chess-kifu-${gameId || 'game'}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+    }
+
+    if (startReplayBtn) {
+        startReplayBtn.addEventListener('click', () => {
+            const kifuText = kifuPasteArea.value;
+            if (!kifuText.trim()) return;
+            
+            // Check if gameLogic is loaded
+            if (typeof gameLogic === 'undefined' || !gameLogic.getInitialBoard) {
+                alert("Error: Game logic failed to load. Cannot start replay.");
+                return;
+            }
+
+            replayGameTree = buildReplayTree(kifuText);
+            if (!replayGameTree) return;
+            
+            flatMoveList = [replayGameTree];
+            let node = replayGameTree;
+            while(node.children.length > 0) {
+                 // Follow the main line (first child)
+                 node = node.children[0];
+                 flatMoveList.push(node);
+            }
+
+            currentReplayNode = replayGameTree;
+            currentMoveIndex = 0;
+            isReplayMode = true;
+            isSinglePlayer = false; // Ensure other modes are off
+            isBotGame = false;
+            
+            // Hide lobby, show game
+            lobbyElement.style.display = 'none';
+            gameContainerElement.style.display = 'flex';
+            gameControls.style.display = 'flex';
+            replayControls.style.display = 'flex';
+            
+            // Set up board
+            myColor = 'white'; // Replay is always from white's perspective
+            renderNotationMarkers();
+            displayReplayState(currentReplayNode);
+        });
+    }
+
+    // [NEW] Replay Navigation Listeners
+    replayFirstBtn.addEventListener('click', () => {
+        if (!isReplayMode) return;
+        currentMoveIndex = 0;
+        displayReplayState(flatMoveList[currentMoveIndex]);
+    });
+    
+    replayPrevBtn.addEventListener('click', () => {
+        if (!isReplayMode) return;
+        
+        // Find current node's parent, regardless of branch
+        if (currentReplayNode && currentReplayNode.parent) {
+            displayReplayState(currentReplayNode.parent);
+        }
+    });
+    
+    replayNextBtn.addEventListener('click', () => {
+        if (!isReplayMode) return;
+        
+        // Find index in flat list
+        let flatIndex = flatMoveList.indexOf(currentReplayNode);
+        if (flatIndex > -1 && flatIndex < flatMoveList.length - 1) {
+             // On main line, just go to next
+             displayReplayState(flatMoveList[flatIndex + 1]);
+        } else if (currentReplayNode.children.length > 0) {
+            // On a branch, or at end of main line with branches
+            // Just go to the first child
+            displayReplayState(currentReplayNode.children[0]);
+        }
+    });
+    
+    replayLastBtn.addEventListener('click', () => {
+        if (!isReplayMode) return;
+        currentMoveIndex = flatMoveList.length - 1;
+        displayReplayState(flatMoveList[currentMoveIndex]);
+    });
+
 
     function formatTimeControl(tc) {
         if (!tc || tc.main === -1) { return 'Unlimited'; }
@@ -192,6 +329,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const blackTimerEl = document.getElementById('black-time');
 
         if (!whiteTimerEl || !blackTimerEl || !gameState.timeControl) return;
+
+        // [NEW] Hide timers in replay mode
+        if (isReplayMode) {
+             whiteTimerEl.style.display = 'none';
+             blackTimerEl.style.display = 'none';
+             return;
+        } else {
+             whiteTimerEl.style.display = 'inline-block';
+             blackTimerEl.style.display = 'inline-block';
+        }
 
         const { whiteTime, blackTime, isInByoyomiWhite, isInByoyomiBlack } = times;
 
@@ -238,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         myColor = data.color;
         isSinglePlayer = false;
         isBotGame = false;
+        isReplayMode = false; // [NEW]
         botBonusState = null;
         turnIndicator.textContent = "Waiting for an opponent...";
         lobbyElement.style.display = 'none';
@@ -247,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function onGameStart(initialGameState) {
         gameId = initialGameState.id;
         botBonusState = null;
+        isReplayMode = false; // [NEW]
 
         isSinglePlayer = initialGameState.isSinglePlayer;
 
@@ -286,14 +435,18 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.error("winnerText element not found!");
             }
+            // [NEW] Show post-game controls
+            if (postGameControls) {
+                postGameControls.style.display = 'flex';
+            }
         }
 
         renderBoard();
         renderCaptured();
         updateTurnIndicator();
         renderMoveHistory(gameState.moveList);
-		
-		console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
+        
+        console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
 
         
         if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
@@ -307,8 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
             const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
 
-             
-			 console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
+            
+             console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
 
             botWorker.postMessage({
                 gameState: safeGameState,
@@ -319,8 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
             console.error("Bot's turn, but worker is not available!");
         }
-	
-		else { 
+    
+        else { 
              console.log("[updateLocalState] Conditions *not* met for bot move.");
         }
     }
@@ -342,8 +495,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const files = Array.from({length: 10}, (_, i) => String.fromCharCode('a'.charCodeAt(0) + i));
         const ranks = Array.from({length: 16}, (_, i) => i + 1);
 
-        const displayFiles = (myColor === 'black' && !isSinglePlayer) ? [...files].reverse() : files;
-        const displayRanks = (myColor === 'white' || isSinglePlayer) ? [...ranks].reverse() : ranks;
+        // [MODIFIED] Use isSinglePlayer OR isReplayMode
+        const displayFiles = (myColor === 'black' && !isSinglePlayer && !isReplayMode) ? [...files].reverse() : files;
+        const displayRanks = (myColor === 'white' || isSinglePlayer || isReplayMode) ? [...ranks].reverse() : ranks;
 
 
         displayFiles.forEach(file => {
@@ -368,7 +522,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderMoveHistory(moves) {
-        const moveHistoryElement = document.getElementById('move-history');
+        // [NEW] Divert to replay renderer if in replay mode
+        if (isReplayMode) {
+            renderReplayMoveHistory();
+            return;
+        }
+
         if (!moveHistoryElement) return;
         moveHistoryElement.innerHTML = '';
         if (!moves) return;
@@ -392,13 +551,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 square.classList.add('square');
 
                 let displayX = x, displayY = y;
-                if (myColor === 'white' || isSinglePlayer) { 
+                // [MODIFIED] Use isSinglePlayer OR isReplayMode
+                if (myColor === 'white' || isSinglePlayer || isReplayMode) { 
                     displayY = BOARD_HEIGHT - 1 - y;
                 } else if (myColor === 'black') { 
                     displayX = BOARD_WIDTH - 1 - x;
-                     displayY = y; 
-                     displayY = y; 
-                     displayX = BOARD_WIDTH - 1 - x; 
+                    displayY = y; 
+                    displayY = y; 
+                    displayX = BOARD_WIDTH - 1 - x; 
                 }
 
 
@@ -428,7 +588,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 
-                const isBoardValid = typeof isPositionValid === 'function' ? isPositionValid(x, y) : true; 
+                // [MODIFIED] Use gameLogic if available
+                const isBoardValid = typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x, y) : (typeof isPositionValid === 'function' ? isPositionValid(x, y) : true); 
 
 
                 if (!isBoardValid) {
@@ -438,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const clickedSquare = event.currentTarget;
                         const logicalX = parseInt(clickedSquare.dataset.logicalX);
                         const logicalY = parseInt(clickedSquare.dataset.logicalY);
-                        onSquareClick(logicalX, logicalY);
+                        onSquareClick(logicalX, logicalY); // This function will now check isReplayMode
                     });
                 }
 
@@ -468,7 +629,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         
-        const isBottomHandWhite = (isSinglePlayer || myColor === 'white');
+        // [MODIFIED] Use isSinglePlayer OR isReplayMode
+        const isBottomHandWhite = (isSinglePlayer || isReplayMode || myColor === 'white');
         
         const bottomHandPieces = isBottomHandWhite ? gameState.whiteCaptured : gameState.blackCaptured;
         const topHandPieces = isBottomHandWhite ? gameState.blackCaptured : gameState.whiteCaptured;
@@ -485,9 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         
-        if (isSinglePlayer) {
+        // [MODIFIED] Add replay mode text
+        if (isSinglePlayer || isReplayMode) {
              bottomLabelEl.textContent = "White's Hand";
-             topLabelEl.textContent = isBotGame ? "Bot's Hand (Black)" : "Black's Hand";
+             topLabelEl.textContent = (isBotGame && !isReplayMode) ? "Bot's Hand (Black)" : "Black's Hand";
         } else {
              bottomLabelEl.textContent = "Your Hand";
              topLabelEl.textContent = "Opponent's Hand";
@@ -517,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isClickable) {
                 
-                el.addEventListener('click', (event) => onCapturedClick(piece, handColor, event.currentTarget));
+                el.addEventListener('click', (event) => onCapturedClick(piece, handColor, event.currentTarget)); // This function will check isReplayMode
             }
             return el;
         };
@@ -527,15 +690,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const topHandColor = isBottomHandWhite ? 'black' : 'white';
 
         
+        // [MODIFIED] Allow clicking both hands in replay mode
         const isBottomHandClickable = (isSinglePlayer && !isBotGame) || 
-                                      (isSinglePlayer && isBotGame) ||  
+                                      (isSinglePlayer && isBotGame) || 
+                                      (isReplayMode) || // [NEW]
                                       (!isSinglePlayer && myColor === bottomHandColor); 
 
         
         const isTopHandClickable = (isSinglePlayer && !isBotGame) || 
+                                   (isReplayMode) || // [NEW]
                                    (!isSinglePlayer && myColor === topHandColor); 
-                                  
-
+                                
         
         bottomHandPieces.forEach((piece) => {
             const pieceEl = createCapturedPieceElement(piece, bottomHandColor, isBottomHandClickable);
@@ -547,14 +712,14 @@ document.addEventListener('DOMContentLoaded', () => {
             topHandEl.appendChild(pieceEl);
         });
     }
-	
-	function updateTurnIndicator() {
+    
+    function updateTurnIndicator() {
         if (!turnIndicator || !winnerText) {
             console.error("Turn indicator or winner text element not found!");
             return;
         }
 
-        if (gameState.gameOver) {
+        if (gameState.gameOver && !isReplayMode) { // [MODIFIED] Don't show winner in replay
             turnIndicator.textContent = '';
             if(!winnerText.textContent || winnerText.textContent.includes("Turn")) {
                 const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
@@ -565,7 +730,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             winnerText.textContent = '';
-            if (isSinglePlayer) {
+            // [MODIFIED] Show 'White/Black's Turn' in replay mode
+            if (isSinglePlayer || isReplayMode) {
                 turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
                 const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
@@ -654,11 +820,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function onSquareClick(x, y) {
+        // [NEW] Divert to replay logic if in replay mode
+        if (isReplayMode) {
+            handleReplaySquareClick(x, y);
+            return;
+        }
+
         if (gameState.gameOver || !gameState.boardState) return;
 
         const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                           (isBotGame && gameState.isWhiteTurn) || 
-                           (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+                             (isBotGame && gameState.isWhiteTurn) || 
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
         if (!isPlayerTurn) return; 
 
@@ -740,13 +912,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!elementToHighlight && !isDroppingPiece) return;
 
-        const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                           (isBotGame && gameState.isWhiteTurn) ||
-                           (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+        // [MODIFIED] Add isReplayMode check
+        const isPlayerTurn = (isReplayMode) || // [NEW]
+                             (isSinglePlayer && !isBotGame) ||
+                             (isBotGame && gameState.isWhiteTurn) ||
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
 
          if (selectedSquare && elementToHighlight) {
-            elementToHighlight.classList.add(isPlayerTurn ? 'selected' : 'preview-selected');
+             elementToHighlight.classList.add(isPlayerTurn ? 'selected' : 'preview-selected');
          } else if (isDroppingPiece && elementToHighlight) {
              
          }
@@ -766,6 +940,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onCapturedClick(piece, handColor, clickedElement) {
+        // [NEW] Divert to replay logic
+        if (isReplayMode) {
+            handleReplayCapturedClick(piece, handColor, clickedElement);
+            return;
+        }
+
         if (gameState.gameOver) return;
 
         
@@ -815,15 +995,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
 
-         const isPlayerTurn = (isSinglePlayer && !isBotGame) ||
-                            (isBotGame && gameState.isWhiteTurn) ||
-                            (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+         // [MODIFIED] Add isReplayMode check
+         const isPlayerTurn = (isReplayMode) || // [NEW]
+                              (isSinglePlayer && !isBotGame) ||
+                              (isBotGame && gameState.isWhiteTurn) ||
+                              (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
-                 
-                 const isBoardValid = typeof isPositionValid === 'function' ? isPositionValid(x, y) : true;
+                
+                // [MODIFIED] Use gameLogic
+                const isBoardValid = typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x, y) : (typeof isPositionValid === 'function' ? isPositionValid(x, y) : true);
 
                 if (gameState.boardState && gameState.boardState[y]?.[x] === null && isBoardValid) {
                     
@@ -945,5 +1128,410 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
         return true;
      }
+	 
+	 function toAlgebraic(x, y) {
+        const file = String.fromCharCode('a'.charCodeAt(0) + x);
+        const rank = y + 1; // y=0 is rank 1
+        return `${file}${rank}`;
+    }
+
+    // [NEW] Helper to convert "e10" to {x: 4, y: 9}
+    function fromAlgebraic(alg) {
+        if (!alg || alg.length < 2) return null;
+        const file = alg.charAt(0);
+        const rank = parseInt(alg.slice(1), 10);
+        if (isNaN(rank)) return null;
+        
+        const x = file.charCodeAt(0) - 'a'.charCodeAt(0);
+        const y = rank - 1; // y=0 is rank 1
+        return { x, y };
+    }
+
+    // [NEW] Helper to generate notation (copied from server.js)
+    function generateServerNotation(piece, to, wasCapture, wasDrop) {
+        const pieceAbbr = gameLogic.pieceNotation[piece.type] || '?';
+        const coord = toAlgebraic(to.x, to.y); 
+
+        if (wasDrop) {
+            return `${pieceAbbr}*${coord}`;
+        }
+        if (wasCapture) {
+            return `${pieceAbbr}x${coord}`;
+        }
+        return `${pieceAbbr}${coord}`;
+    }
+
+    // [NEW] Parse "1. W_Move B_Move" into ["W_Move", "B_Move"]
+    function parseKifuToMoveList(kifuText) {
+        const moves = [];
+        const lines = kifuText.split('\n');
+        for (const line of lines) {
+            const parts = line.trim().match(/^\d+\.\s*([^\s]+)(?:\s+([^\s]+))?$/);
+            if (parts) {
+                if (parts[1]) moves.push(parts[1]); // White's move
+                if (parts[2]) moves.push(parts[2]); // Black's move
+            }
+        }
+        return moves; // Returns ["S*e10", "S*f7", "B*c5", "KPa8"]
+    }
+    
+    // [NEW] Find the 'from' square for a move notation
+    function parseNotation(notation, boardState, isWhiteTurn) {
+        const color = isWhiteTurn ? 'white' : 'black';
+        
+        // 1. Check for Drop (e.g., "S*e10")
+        let match = notation.match(/^([A-Za-z]+)\*([a-j]\d+)$/);
+        if (match) {
+            const pieceAbbr = match[1];
+            const algTo = match[2];
+            const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+            if (!pieceType) return null; 
+            
+            return {
+                type: 'drop',
+                piece: { type: pieceType },
+                to: fromAlgebraic(algTo)
+            };
+        }
+        
+        // 2. Check for Move (e.g., "KPa8" or "KxPa8")
+        match = notation.match(/^([A-Za-z]+)(x?)([a-j]\d+)$/);
+        if (match) {
+            const pieceAbbr = match[1];
+            const algTo = match[3];
+            const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+            const to = fromAlgebraic(algTo);
+            
+            if (!pieceType || !to) return null; 
+            
+            // Find the 'from' square
+            for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+                for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                    const piece = boardState[y]?.[x];
+                    if (piece && piece.color === color && piece.type === pieceType) {
+                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                        if (validMoves.some(m => m.x === to.x && m.y === to.y)) {
+                            return {
+                                type: 'board',
+                                from: { x, y },
+                                to: to
+                            };
+                        }
+                    }
+                }
+            }
+            console.warn(`Could not find 'from' square for move: ${notation}`);
+            return null;
+        }
+        return null;
+    }
+
+    // [NEW] Simulate a move and return the new game state
+    function applyMoveToState(oldGameState, move) {
+        let newGameState = JSON.parse(JSON.stringify(oldGameState)); // Deep copy
+        let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
+        const color = isWhiteTurn ? 'white' : 'black';
+
+        if (move.type === 'drop') {
+            boardState[move.to.y][move.to.x] = { type: move.piece.type, color: color };
+            const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+            const pieceIndex = hand.findIndex(p => p.type === move.piece.type);
+            if (pieceIndex > -1) hand.splice(pieceIndex, 1);
+            
+        } else if (move.type === 'board') {
+            const piece = boardState[move.from.y][move.from.x];
+            if (!piece) return oldGameState; 
+            
+            const targetPiece = boardState[move.to.y][move.to.x];
+            if (targetPiece) {
+                // Simplified capture logic for replay
+                if (targetPiece.type !== 'lupa' && targetPiece.type !== 'prince') {
+                    const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+                    if (hand.length < 6) {
+                        hand.push({ type: targetPiece.type, color: color });
+                    }
+                }
+            }
+            
+            boardState[move.to.y][move.to.x] = piece;
+            boardState[move.from.y][move.from.x] = null;
+            
+            // Note: Simplified replay doesn't handle promotions, but could be added here
+        }
+
+        newGameState.isWhiteTurn = !newGameState.isWhiteTurn;
+        newGameState.turnCount++;
+        newGameState.lastMove = move.type === 'board' ? { from: move.from, to: move.to } : { from: null, to: move.to };
+        return newGameState;
+    }
+
+    // [NEW] Main Replay Game Tree Builder
+    function buildReplayTree(kifuText) {
+        const moveNotations = parseKifuToMoveList(kifuText); 
+        if (moveNotations.length === 0) {
+            alert("Invalid or empty kifu.");
+            return null;
+        }
+
+        const initialBoard = gameLogic.getInitialBoard();
+        const rootNode = {
+            moveNotation: "Start",
+            moveObj: null,
+            gameState: {
+                boardState: initialBoard,
+                whiteCaptured: [],
+                blackCaptured: [],
+                isWhiteTurn: true,
+                turnCount: 0,
+                gameOver: false,
+                lastMove: null
+            },
+            parent: null,
+            children: []
+        };
+
+        let currentNode = rootNode;
+        let currentGameState = rootNode.gameState;
+
+        for (const notation of moveNotations) {
+            const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
+            if (!moveObj) {
+                console.error(`Failed to parse move: ${notation}`);
+                continue; // Skip this move
+            }
+
+            const newGameState = applyMoveToState(currentGameState, moveObj);
+            
+            const newNode = {
+                moveNotation: notation,
+                moveObj: moveObj,
+                gameState: newGameState,
+                parent: currentNode,
+                children: []
+            };
+            
+            currentNode.children.push(newNode);
+            currentNode = newNode;
+            currentGameState = newNode.gameState;
+        }
+        
+        return rootNode;
+    }
+    
+    // [NEW] Function to display a specific replay node
+    function displayReplayState(node) {
+        if (!node) return;
+        
+        currentReplayNode = node;
+        
+        // Find index in flat list (main line)
+        currentMoveIndex = flatMoveList.indexOf(node);
+        let moveNum = currentMoveIndex;
+
+        if (currentMoveIndex === -1) {
+            // This is a branch. Find its depth.
+            let tempNode = node;
+            let depth = 0;
+            while (tempNode.parent) {
+                depth++;
+                tempNode = tempNode.parent;
+            }
+            moveNum = depth;
+        }
+
+        // Set global gameState for rendering functions
+        gameState = node.gameState; 
+        
+        renderBoard();
+        renderCaptured();
+        updateTurnIndicator(); 
+        renderReplayMoveHistory(); // Use the new tree renderer
+        
+        // Update replay controls
+        let totalMoves = flatMoveList.length - 1;
+        replayMoveNumber.textContent = `${moveNum} / ${totalMoves}`;
+        
+        replayFirstBtn.disabled = (moveNum <= 0 && currentMoveIndex !== -1);
+        replayPrevBtn.disabled = (!node.parent);
+        
+        // Disable next/last if not on the main line
+        replayNextBtn.disabled = (node.children.length === 0);
+        replayLastBtn.disabled = (currentMoveIndex === -1 || currentMoveIndex === totalMoves);
+    }
+
+    // [NEW] Recursive move history renderer for branching
+    function renderReplayMoveHistory() {
+        if (!moveHistoryElement) return;
+        moveHistoryElement.innerHTML = '';
+        
+        function renderNodeRecursive(node, parentEl, depth) {
+            const moveEl = document.createElement('div');
+            moveEl.classList.add('move-node');
+            moveEl.style.paddingLeft = `${depth * 15}px`;
+            
+            let moveText = node.moveNotation;
+             if (depth > 0 || node.parent) { // Not root
+                 const isWhiteMove = !node.gameState.isWhiteTurn; // state is *after* move
+                 if (isWhiteMove) {
+                     const turnNum = Math.floor(node.gameState.turnCount / 2) + 1;
+                     moveText = `${turnNum}. ${moveText}`;
+                 } else {
+                     moveText = `... ${moveText}`;
+                 }
+                 // Add parenthesis for branches
+                 if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
+                     moveText = `( ${moveText} )`;
+                 }
+             }
+            moveEl.textContent = moveText;
+
+            if (node === currentReplayNode) {
+                moveEl.classList.add('active-move');
+                // Scroll to active move
+                setTimeout(() => moveEl.scrollIntoView({ behavior: 'auto', block: 'nearest' }), 0);
+            }
+            
+            moveEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                displayReplayState(node);
+            });
+            
+            parentEl.appendChild(moveEl);
+            
+            // Render children
+            for (const child of node.children) {
+                renderNodeRecursive(child, parentEl, depth + (node.parent && node.parent.children.length > 1 ? 1 : 0));
+            }
+        }
+        
+        renderNodeRecursive(replayGameTree, moveHistoryElement, 0);
+    }
+
+    // [NEW] Handler for clicks during replay
+    function handleReplaySquareClick(x, y) {
+        if (gameState.gameOver) return; // 'gameState' is set by displayReplayState
+
+        if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+            // User is making a move (a new branch)
+            const from = selectedSquare;
+            const to = { x, y };
+            const piece = gameState.boardState[from.y]?.[from.x];
+            
+            if (!piece) { clearHighlights(); selectedSquare = null; return; }
+            
+            const validMoves = gameLogic.getValidMovesForPiece(piece, from.x, from.y, gameState.boardState, false);
+            const isValidBranchMove = validMoves.some(m => m.x === to.x && m.y === to.y);
+
+            if (isValidBranchMove) {
+                const moveObj = { type: 'board', from, to };
+                const newGameState = applyMoveToState(gameState, moveObj);
+                const wasCapture = !!gameState.boardState[to.y][to.x];
+                const notationString = generateServerNotation(piece, to, wasCapture, false);
+                
+                const newNode = {
+                    moveNotation: notationString,
+                    moveObj: moveObj,
+                    gameState: newGameState,
+                    parent: currentReplayNode, // Branch off the *current* node
+                    children: []
+                };
+                
+                currentReplayNode.children.push(newNode);
+                
+                // If this was the main line, update it
+                if (flatMoveList.indexOf(currentReplayNode) > -1) {
+                    flatMoveList.splice(currentMoveIndex + 1); // Truncate old main line
+                    flatMoveList.push(newNode);
+                }
+                
+                displayReplayState(newNode);
+            }
+            
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        if (isDroppingPiece) {
+            // User is dropping a piece (a new branch)
+            const to = { x, y };
+            const moveObj = { type: 'drop', piece: isDroppingPiece, to };
+            
+            if (gameState.boardState[to.y][to.x] === null && gameLogic.isPositionValid(to.x, to.y)) {
+                const newGameState = applyMoveToState(gameState, moveObj);
+                const notationString = generateServerNotation(isDroppingPiece, to, false, true);
+                
+                const newNode = {
+                    moveNotation: notationString,
+                    moveObj: moveObj,
+                    gameState: newGameState,
+                    parent: currentReplayNode,
+                    children: []
+                };
+                
+                currentReplayNode.children.push(newNode);
+                
+                if (flatMoveList.indexOf(currentReplayNode) > -1) {
+                    flatMoveList.splice(currentMoveIndex + 1); 
+                    flatMoveList.push(newNode);
+                }
+
+                displayReplayState(newNode);
+            }
+            
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+            return;
+        }
+
+        // Standard piece selection logic
+        const piece = gameState.boardState[y]?.[x];
+        if (piece) {
+            const canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
+
+            if (canSelectPiece) {
+                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                    selectedSquare = null;
+                    clearHighlights();
+                } else {
+                    selectedSquare = { x, y };
+                    isDroppingPiece = null;
+                    
+                    const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, gameState.boardState, false);
+                    drawHighlights(validMoves); 
+                }
+            }
+        } else {
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHighlights();
+        }
+    }
+
+    // [NEW] Handler for captured clicks during replay
+    function handleReplayCapturedClick(piece, handColor, clickedElement) {
+        if (gameState.gameOver) return;
+
+        const activeColor = gameState.isWhiteTurn ? 'white' : 'black';
+        if (handColor !== activeColor) return;
+        
+        if (piece.type === 'lupa' || piece.type === 'prince') return;
+
+        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+            isDroppingPiece = null;
+            selectedSquare = null;
+            clearHighlights();
+            clickedElement.classList.remove('selected-drop');
+            return;
+        }
+        
+        selectedSquare = null;
+        isDroppingPiece = piece;
+        clearHighlights();
+        clickedElement.classList.add('selected-drop');
+        highlightDropSquares();
+    }
 
 }); 
