@@ -1,4 +1,3 @@
-
 importScripts('gamelogic.js');
 
 const BOARD_HEIGHT = gameLogic.BOARD_HEIGHT;
@@ -209,7 +208,7 @@ function copyBoard(boardState) {
     const height = boardState.length;
     for (let i = 0; i < height; i++) {
         if (Array.isArray(boardState[i])) {
-            
+           
             newBoard.push(boardState[i].map(piece => piece ? {...piece} : null));
         } else {
             console.error("Invalid board state row detected in copyBoard:", boardState[i], "at index", i);
@@ -218,7 +217,7 @@ function copyBoard(boardState) {
         }
     }
 
-    
+   
     while (newBoard.length < BOARD_HEIGHT) {
         console.warn(`copyBoard: Input board height ${height} was less than expected ${BOARD_HEIGHT}. Padding.`);
         const width = newBoard[0]?.length || BOARD_WIDTH; 
@@ -240,8 +239,8 @@ function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
         for (let x = 0; x < width; x++) {
             const piece = boardState[y]?.[x];
             if (piece && piece.color === attackingColor) {
-                
-                const moves = getValidMovesForPiece(piece, x, y, boardState, false);
+               
+                const moves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                 for (const move of moves) {
                     if (move.x === targetX && move.y === targetY) {
                         return true;
@@ -255,9 +254,9 @@ function isSquareAttackedBy(targetX, targetY, boardState, attackingColor) {
 
 function getBonusMoves(piece, toX, toY, boardState) {
     if (!piece) return [];
-    
-    const bonusMovesRaw = getValidMovesForPiece(piece, toX, toY, boardState, true);
-    
+   
+    const bonusMovesRaw = gameLogic.getValidMovesForPiece(piece, toX, toY, boardState, true);
+   
     return bonusMovesRaw
         .filter(move => !move.isAttack) 
         .map(move => ({
@@ -268,13 +267,13 @@ function getBonusMoves(piece, toX, toY, boardState) {
 function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit, currentHash) {
     const bonusMoves = getBonusMoves(piece, move.to.x, move.to.y, board);
 
-    
+   
     if (bonusMoves.length === 0) {
         let nextHash = currentHash ^ zobristTurnBlack; 
         return minimax(board, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, nextHash);
     }
 
-    
+   
     let bestBonusEval = isMaximizingPlayer ? -Infinity : Infinity;
 
     for (const bonusMove of bonusMoves) {
@@ -289,7 +288,7 @@ function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPla
 
         let nextHash = currentHash;
 
-        
+       
         if(zobristTable[bonusPiece.type]?.[bonusPiece.color]?.[bonusMove.from.y]?.[bonusMove.from.x]){
              nextHash ^= zobristTable[bonusPiece.type][bonusPiece.color][bonusMove.from.y][bonusMove.from.x];
         } else { console.warn("Missing Zobrist key for bonus move from:", bonusPiece, bonusMove.from.y, bonusMove.from.x); }
@@ -301,13 +300,13 @@ function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPla
              nextHash ^= zobristTable[bonusPiece.type][bonusPiece.color][bonusMove.to.y][bonusMove.to.x];
         } else { console.warn("Missing Zobrist key for bonus move to:", bonusPiece, bonusMove.to.y, bonusMove.to.x); }
 
-        
+       
         nextHash ^= zobristTurnBlack;
 
-        
+       
         const evaluation = minimax(bonusBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, nextHash);
 
-        
+       
         if (isMaximizingPlayer) {
             bestBonusEval = Math.max(bestBonusEval, evaluation);
             alpha = Math.max(alpha, bestBonusEval);
@@ -324,12 +323,12 @@ function handleBonusTurn(board, piece, move, depth, alpha, beta, isMaximizingPla
 
 function mirrorPST(table) {
     if (!Array.isArray(table)) { console.error("Invalid PST passed to mirrorPST:", table); return []; }
-    
+   
     return [...table].reverse();
 }
 
 function evaluateBoard(boardState) {
-    
+   
     if (!Array.isArray(boardState) || boardState.length !== BOARD_HEIGHT || !Array.isArray(boardState[0]) || boardState[0].length !== BOARD_WIDTH) {
         console.error("evaluateBoard received invalid boardState structure:", boardState); return 0;
     }
@@ -341,16 +340,16 @@ function evaluateBoard(boardState) {
     let whitePrinceFoundEval = false; let blackPrinceFoundEval = false;
     let pieceCount = 0; 
 
-    
+   
     for(const sq of botSanctuarySquares) {
         const piece = boardState[sq.y]?.[sq.x];
         if (piece && (piece.type === 'lupa' || piece.type === 'prince')) {
-            
+           
             return piece.color === 'white' ? Infinity : -Infinity;
         }
     }
 
-    
+   
     for (let y = 0; y < BOARD_HEIGHT; y++) { 
         for (let x = 0; x < BOARD_WIDTH; x++) { 
             const piece = boardState[y]?.[x];
@@ -359,10 +358,10 @@ function evaluateBoard(boardState) {
                 let positionValue = 0;
                 let table = piecePST[piece.type]; 
 
-                
+               
                 if (piece.type === 'lupa') {
-                    
-                    table = isKingRestricted(piece.color, boardState) ? kingEarlyPST : kingLatePST;
+                   
+                    table = gameLogic.isKingRestricted(piece.color, boardState) ? kingEarlyPST : kingLatePST;
                     if(piece.color === 'white') whiteLupaFoundEval = true; else blackLupaFoundEval = true;
                 } else if (piece.type === 'prince') {
                      if(piece.color === 'white') whitePrinceFoundEval = true; else blackPrinceFoundEval = true;
@@ -370,35 +369,35 @@ function evaluateBoard(boardState) {
                     pieceCount++; 
                 }
 
-                
+               
                 if (table) {
                     const pst = (piece.color === 'white') ? table : mirrorPST(table); 
-                    
+                   
                     positionValue = (Array.isArray(pst) && pst[y] && pst[y][x] !== undefined) ? pst[y][x] : 0;
                 } else if (piece.type === 'lupa') { 
-                    const kingTable = isKingRestricted(piece.color, boardState) ? kingEarlyPST : kingLatePST;
+                    const kingTable = gameLogic.isKingRestricted(piece.color, boardState) ? kingEarlyPST : kingLatePST;
                     const pst = (piece.color === 'white') ? kingTable : mirrorPST(kingTable);
                     positionValue = (Array.isArray(pst) && pst[y] && pst[y][x] !== undefined) ? pst[y][x] : 0;
                 }
 
                 totalScore += (piece.color === 'white') ? (value + positionValue) : -(value + positionValue);
 
-                
+               
                 if (piece.type === 'lupa') { if (piece.color === 'white') whiteLupaPos = {x, y}; else blackLupaPos = {x, y}; }
                 if (piece.type === 'prince') { if (piece.color === 'white') whitePrincePos = {x, y}; else blackPrincePos = {x, y}; }
             }
         }
     }
 
-    
+   
     if (!whiteLupaFoundEval && !whitePrinceFoundEval) return -Infinity; 
     if (!blackLupaFoundEval && !blackPrinceFoundEval) return Infinity;  
 
-    
+   
 
     const isEndgame = pieceCount < 18; 
 
-    
+   
     const royaltySafetyPenalty = 600; const princeSafetyPenalty = 300;
     if (whiteLupaPos && isSquareAttackedBy(whiteLupaPos.x, whiteLupaPos.y, boardState, 'black')) totalScore -= royaltySafetyPenalty;
     if (blackLupaPos && isSquareAttackedBy(blackLupaPos.x, blackLupaPos.y, boardState, 'white')) totalScore += royaltySafetyPenalty;
@@ -406,15 +405,15 @@ function evaluateBoard(boardState) {
     if (blackPrincePos && isSquareAttackedBy(blackPrincePos.x, blackPrincePos.y, boardState, 'white')) totalScore += princeSafetyPenalty;
 
 
-    
+   
     let whiteThreatDistance = Infinity; let threatenedSanctuary = null; let whiteThreatPieceType = null;
 
-    
+   
     const checkRoyaltyThreat = (royalPos) => {
         if (!royalPos) return { dist: Infinity, sq: null };
         let minDist = Infinity; let closestSq = null;
         for (const sanctuarySq of botSanctuarySquares) {
-            
+           
             const dist = Math.max(Math.abs(royalPos.x - sanctuarySq.x), Math.abs(royalPos.y - sanctuarySq.y));
             if (dist < minDist) { minDist = dist; closestSq = sanctuarySq; }
         }
@@ -424,7 +423,7 @@ function evaluateBoard(boardState) {
     const whiteKingThreat = checkRoyaltyThreat(whiteLupaPos);
     const whitePrinceThreat = checkRoyaltyThreat(whitePrincePos);
 
-    
+   
     if (whiteKingThreat.dist <= whitePrinceThreat.dist) {
         whiteThreatDistance = whiteKingThreat.dist;
         threatenedSanctuary = whiteKingThreat.sq;
@@ -435,31 +434,31 @@ function evaluateBoard(boardState) {
         whiteThreatPieceType = 'prince';
     }
 
-    
+   
     if (whiteThreatDistance <= 3) { 
         const proximityFactor = Math.pow(4 - whiteThreatDistance, 2); 
         let penalty = SANCTUARY_THREAT_PENALTY_BASE * proximityFactor;
         if (whiteThreatPieceType === 'prince') penalty *= 0.9; 
         totalScore += penalty; 
 
-        
+       
         if (threatenedSanctuary) {
             let defenseScore = 0;
-            
+           
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                     if (dx === 0 && dy === 0) continue;
                     const checkX = threatenedSanctuary.x + dx; const checkY = threatenedSanctuary.y + dy;
-                    if (isPositionValid(checkX, checkY)) { 
+                    if (gameLogic.isPositionValid(checkX, checkY)) { 
                         const piece = boardState[checkY]?.[checkX];
                         if (piece && piece.color === 'black') {
-                           const distToSq = Math.max(Math.abs(checkX - threatenedSanctuary.x), Math.abs(checkY - threatenedSanctuary.y));
-                           defenseScore += SANCTUARY_DEFENSE_BONUS_BASE / (distToSq + 1); 
+                            const distToSq = Math.max(Math.abs(checkX - threatenedSanctuary.x), Math.abs(checkY - threatenedSanctuary.y));
+                            defenseScore += SANCTUARY_DEFENSE_BONUS_BASE / (distToSq + 1); 
                         }
                     }
                 }
             }
-            
+           
             if (isSquareAttackedBy(threatenedSanctuary.x, threatenedSanctuary.y, boardState, 'black')) {
                  defenseScore += SANCTUARY_DEFENSE_BONUS_BASE * 1.5;
             }
@@ -467,16 +466,16 @@ function evaluateBoard(boardState) {
         }
     }
 
-    
+   
     if (blackPrincePos) {
-        
-        const rankBonus = (blackPalace.minY - blackPrincePos.y) * PRINCE_ADVANCEMENT_BONUS; 
+       
+        const rankBonus = (gameLogic.blackPalace.minY - blackPrincePos.y) * PRINCE_ADVANCEMENT_BONUS; 
         totalScore -= rankBonus;
-        
+       
         if (isEndgame) { totalScore -= rankBonus * 1.5; }
     }
 
-    
+   
 
     return totalScore;
 }
@@ -488,8 +487,8 @@ function getCaptureMoves(boardState, color) {
         for (let x = 0; x < BOARD_WIDTH; x++) { 
             const piece = boardState[y]?.[x];
             if (piece && piece.color === color) {
-                
-                const allPieceMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+               
+                const allPieceMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                 for (const move of allPieceMoves) {
                     if (move.isAttack) {
                         captureMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: true });
@@ -506,13 +505,13 @@ function getAllValidMoves(boardState, color, capturedPieces) {
     const allMoves = [];
     const opponentColor = color === 'white' ? 'black' : 'white';
 
-    
+   
     for (let y = 0; y < BOARD_HEIGHT; y++) { 
         for (let x = 0; x < BOARD_WIDTH; x++) { 
             const piece = boardState[y]?.[x];
             if (piece && piece.color === color) {
-                
-                const validMoves = getValidMovesForPiece(piece, x, y, boardState, false);
+               
+                const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                 for (const move of validMoves) {
                     allMoves.push({ type: 'board', from: { x, y }, to: { x: move.x, y: move.y }, isAttack: move.isAttack });
                 }
@@ -520,13 +519,13 @@ function getAllValidMoves(boardState, color, capturedPieces) {
         }
     }
 
-    
+   
     if (capturedPieces && capturedPieces.length > 0) {
-        
+       
         const uniquePieceTypesInHand = [...new Set(capturedPieces.map(p => p.type))];
 
         for (const pieceType of uniquePieceTypesInHand) {
-            
+           
             if (pieceType === 'lupa' || pieceType === 'prince') {
                 continue;
             }
@@ -535,19 +534,19 @@ function getAllValidMoves(boardState, color, capturedPieces) {
 
             for (let y = 0; y < BOARD_HEIGHT; y++) { 
                 for (let x = 0; x < BOARD_WIDTH; x++) { 
-                    
-                    if (isPositionValid(x, y) && boardState[y]?.[x] === null) { 
+                   
+                    if (gameLogic.isPositionValid(x, y) && boardState[y]?.[x] === null) { 
 
-                        
+                       
                         let isSafeDrop = true;
                         let leastValuableAttackerValue = Infinity;
 
-                        
+                       
                          for (let attY = 0; attY < BOARD_HEIGHT; attY++) {
                              for (let attX = 0; attX < BOARD_WIDTH; attX++) {
                                  const attackerPiece = boardState[attY]?.[attX];
                                  if (attackerPiece && attackerPiece.color === opponentColor) {
-                                     const attackerMoves = getValidMovesForPiece(attackerPiece, attX, attY, boardState, false);
+                                     const attackerMoves = gameLogic.getValidMovesForPiece(attackerPiece, attX, attY, boardState, false);
                                      for (const move of attackerMoves) {
                                          if (move.x === x && move.y === y) { 
                                              const attackerValue = pieceValues[attackerPiece.type] || 0;
@@ -567,9 +566,9 @@ function getAllValidMoves(boardState, color, capturedPieces) {
                              isSafeDrop = false;
                          }
 
-                        
+                       
                              allMoves.push({ type: 'drop', pieceType: pieceType, to: { x, y }, isAttack: false });
-                        
+                       
                     }
                 }
             }
@@ -589,17 +588,17 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
         return null;
     }
 
-    
+   
     killerMoves = Array(MAX_SEARCH_DEPTH).fill(null).map(() => [null, null]);
     clearTT();
 
-    
+   
     if (turnCount <= 1) { 
         chosenOpeningSequence = null;
         openingMoveIndex = 0;
     }
 
-    
+   
      if (turnCount === 1 && !chosenOpeningSequence) {
         const openingNames = Object.keys(openingBook);
         if (openingNames.length > 0) {
@@ -611,37 +610,37 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
         }
      }
 
-    
+   
      if (chosenOpeningSequence && openingMoveIndex < chosenOpeningSequence.length && turnCount < 10) { 
         const openingMove = chosenOpeningSequence[openingMoveIndex];
         const pieceAtFrom = boardState[openingMove.from.y]?.[openingMove.from.x];
 
-        
+       
         if (pieceAtFrom && pieceAtFrom.color === 'black') {
-            const validMovesForPiece = getValidMovesForPiece(pieceAtFrom, openingMove.from.x, openingMove.from.y, boardState, false);
+            const validMovesForPiece = gameLogic.getValidMovesForPiece(pieceAtFrom, openingMove.from.x, openingMove.from.y, boardState, false);
             const isOpeningMoveValid = validMovesForPiece.some(m => m.x === openingMove.to.x && m.y === openingMove.to.y);
 
-            
+           
             const immediateCaptures = getCaptureMoves(boardState, 'black'); 
             let bestCaptureValue = -Infinity;
             if (immediateCaptures.length > 0) {
                  for (const cap of immediateCaptures) {
-                      const victim = boardState[cap.to.y]?.[cap.to.x];
-                      const attacker = boardState[cap.from.y]?.[cap.from.x];
-                      if(victim && attacker){
+                     const victim = boardState[cap.to.y]?.[cap.to.x];
+                     const attacker = boardState[cap.from.y]?.[cap.from.x];
+                     if(victim && attacker){
                            
-                           const value = (pieceValues[victim.type] || 0) - (pieceValues[attacker.type] || 0) / 10;
-                           bestCaptureValue = Math.max(bestCaptureValue, value);
-                      }
+                         const value = (pieceValues[victim.type] || 0) - (pieceValues[attacker.type] || 0) / 10;
+                         bestCaptureValue = Math.max(bestCaptureValue, value);
+                     }
                  }
             }
 
-            
+           
             if (isOpeningMoveValid && bestCaptureValue < (pieceValues['sult'] || 150)) {
                 console.log(`Worker: Bot playing opening move ${openingMoveIndex + 1}:`, openingMove);
                 openingMoveIndex++;
                 const isAttack = !!boardState[openingMove.to.y]?.[openingMove.to.x]; 
-                
+               
                 return { ...openingMove, type: 'board', isAttack: isAttack };
             } else {
                  console.log(`Worker: Opening move ${openingMoveIndex + 1} invalid, unsafe, or better capture exists. Deviating.`);
@@ -657,7 +656,7 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
      }
 
 
-    
+   
     let bestMoveFound = null;
     let lastCompletedDepthResult = null;
     console.log("Worker: Bot searching with state:", { hasBonus: !!bonusMoveState });
@@ -668,43 +667,43 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
         console.log(`Worker: Searching at depth: ${depth}`);
         let currentDepthResult = null;
         try {
-            
+           
             currentDepthResult = findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeLimit, bonusMoveState, currentHash);
         } catch (e) {
              if (e.message === 'TimeLimitExceeded') {
-                  console.log(`Worker: Time limit exceeded during depth ${depth}. Using result from depth ${depth - 1}.`);
-                  break; 
+                 console.log(`Worker: Time limit exceeded during depth ${depth}. Using result from depth ${depth - 1}.`);
+                 break; 
              }
-            
+           
             console.error("Worker: Error during minimax search:", e);
             bestMoveFound = lastCompletedDepthResult; 
             break; 
         }
 
-        
+       
         if (currentDepthResult) {
             lastCompletedDepthResult = currentDepthResult;
          } else {
-              
-              if (depth === 1) {
-                   console.warn("Worker: No moves found even at depth 1.");
-                   break;
-              }
-              
-              console.warn(`Worker: No move found at depth ${depth}, using result from ${depth-1}`);
-              break;
+             
+             if (depth === 1) {
+                 console.warn("Worker: No moves found even at depth 1.");
+                 break;
+             }
+             
+             console.warn(`Worker: No move found at depth ${depth}, using result from ${depth-1}`);
+             break;
          }
 
          
          if (Date.now() - startTime >= timeLimit) {
-              console.log(`Worker: Time limit reached after completing depth ${depth}. Using this result.`);
-              break; 
+             console.log(`Worker: Time limit reached after completing depth ${depth}. Using this result.`);
+             break; 
          }
     }
 
     bestMoveFound = lastCompletedDepthResult;
 
-    
+   
     if (!bestMoveFound) {
         console.warn("Worker: Iterative deepening finished without finding a best move or timed out before depth 1 completed. Selecting random fallback.");
         let moves;
@@ -713,7 +712,7 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
             if (piece) moves = getBonusMoves(piece, from.x, from.y, boardState);
             else { console.error("Worker: Fallback Error - Piece not found for bonus move!"); moves = []; }
         } else {
-            
+           
             moves = getAllValidMoves(boardState, 'black', capturedPieces);
         }
 
@@ -728,7 +727,7 @@ function findBestMoveWithTimeLimit(gameState, capturedPieces, bonusMoveState = n
                  console.log("Worker: Selected random non-capture fallback:", bestMoveFound);
              }
         } else {
-            
+           
             console.error("Worker: CRITICAL - Bot found NO valid moves in fallback!");
             return null; 
         }
@@ -746,34 +745,34 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
     let beta = Infinity;
     let moves;
 
-    
+   
     if (bonusMoveState) {
         const { from } = bonusMoveState; const piece = boardState[from.y]?.[from.x];
         if (piece) { moves = getBonusMoves(piece, from.x, from.y, boardState); }
         else { console.error("Worker: Error generating bonus moves - Piece not found!"); moves = []; }
     } else {
-        
+       
         moves = getAllValidMoves(boardState, 'black', capturedPieces);
     }
 
-    
+   
     if (moves.length === 0) {
         console.warn("Worker: No valid moves found at depth", depth);
         return null;
     }
 
-    
+   
     const ttProbe = probeTTEntry(currentHash, depth, alpha, beta);
     const ttBestMove = ttProbe.bestMove;
 
-    
+   
      const getMinSanctuaryDist = (pieceX, pieceY) => {
-          let minDist = Infinity;
-          for (const sq of botSanctuarySquares) {
-               const dist = Math.max(Math.abs(pieceX - sq.x), Math.abs(pieceY - sq.y));
-               minDist = Math.min(minDist, dist);
-          }
-          return minDist;
+         let minDist = Infinity;
+         for (const sq of botSanctuarySquares) {
+             const dist = Math.max(Math.abs(pieceX - sq.x), Math.abs(pieceY - sq.y));
+             minDist = Math.min(minDist, dist);
+         }
+         return minDist;
      };
 
     moves.sort((a, b) => {
@@ -781,17 +780,17 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
         let aIsTTBest = false; let bIsTTBest = false;
         if (ttBestMove) {
              if (a.type === ttBestMove.type) {
-                  if(a.type === 'board' && ttBestMove.from && a.from && a.from.x === ttBestMove.from.x && a.from.y === ttBestMove.from.y && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
-                  if(a.type === 'drop' && a.pieceType === ttBestMove.pieceType && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
+                 if(a.type === 'board' && ttBestMove.from && a.from && a.from.x === ttBestMove.from.x && a.from.y === ttBestMove.from.y && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
+                 if(a.type === 'drop' && a.pieceType === ttBestMove.pieceType && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
              }
              if (b.type === ttBestMove.type) {
-                  if(b.type === 'board' && ttBestMove.from && b.from && b.from.x === ttBestMove.from.x && b.from.y === ttBestMove.from.y && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
-                  if(b.type === 'drop' && b.pieceType === ttBestMove.pieceType && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
+                 if(b.type === 'board' && ttBestMove.from && b.from && b.from.x === ttBestMove.from.x && b.from.y === ttBestMove.from.y && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
+                 if(b.type === 'drop' && b.pieceType === ttBestMove.pieceType && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
              }
         }
         if (aIsTTBest !== bIsTTBest) return aIsTTBest ? -1 : 1; 
 
-        
+       
         let sanctuaryScoreA = 0; let sanctuaryScoreB = 0;
         const SANCTUARY_MOVE_BONUS = 10000; 
         let whiteLupaPos = null; let whitePrincePos = null;
@@ -805,12 +804,12 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
                 if (piece && (piece.type === 'lupa' || piece.type === 'prince')) {
                     const distBefore = getMinSanctuaryDist(move.from.x, move.from.y);
                     const distAfter = getMinSanctuaryDist(move.to.x, move.to.y);
-                    
+                   
                     if (piece.color === 'black' && distAfter < distBefore) score += SANCTUARY_MOVE_BONUS / (distAfter + 1);
-                    
+                   
                     if (piece.color === 'white' && distAfter > distBefore && distBefore <=2) score += SANCTUARY_MOVE_BONUS / 2;
                 }
-                
+               
                  if (whiteRoyalPos && getMinSanctuaryDist(whiteRoyalPos.x, whiteRoyalPos.y) <= 2) {
                      
                      if (getMinSanctuaryDist(move.to.x, move.to.y) <= 1) score += SANCTUARY_MOVE_BONUS / 3;
@@ -818,7 +817,7 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
                      if (move.isAttack && move.to.x === whiteRoyalPos.x && move.to.y === whiteRoyalPos.y) score += SANCTUARY_MOVE_BONUS;
                  }
             } else if (move.type === 'drop' && move.pieceType === 'pilut') {
-                
+               
                 const protectedY = move.to.y + 1; 
                 const potentiallyProtectedPiece = boardState[protectedY]?.[move.to.x];
                 if (potentiallyProtectedPiece && potentiallyProtectedPiece.color === 'black' && isSquareAttackedBy(move.to.x, protectedY, boardState, 'white') && getMinSanctuaryDist(move.to.x, protectedY) <=2) {
@@ -831,43 +830,43 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
         sanctuaryScoreB = calculateSanctuaryScore(b);
         if (sanctuaryScoreA !== sanctuaryScoreB) return sanctuaryScoreB - sanctuaryScoreA;
 
-        
+       
         if (a.isAttack !== b.isAttack) return a.isAttack ? -1 : 1; 
         if (a.isAttack) { 
             const victimA = boardState[a.to.y]?.[a.to.x]; const attackerA = a.from ? boardState[a.from.y]?.[a.from.x] : null;
             const victimB = boardState[b.to.y]?.[b.to.x]; const attackerB = b.from ? boardState[b.from.y]?.[b.from.x] : null;
-            
+           
             const valA = (victimA ? (pieceValues[victimA.type] || 0) * 10 : 0) - (attackerA ? (pieceValues[attackerA.type] || 0) : 1000);
             const valB = (victimB ? (pieceValues[victimB.type] || 0) * 10 : 0) - (attackerB ? (pieceValues[attackerB.type] || 0) : 1000);
              if (valA !== valB) return valB - valA; 
         }
 
-        
+       
         const killers = (depth >= 0 && depth < MAX_SEARCH_DEPTH) ? killerMoves[depth] : [null, null];
         let aIsKiller = false; let bIsKiller = false;
-        
+       
         if (a.type === 'board' && a.from) { 
              if (killers[0] && killers[0].from && a.from.x === killers[0].from.x && a.from.y === killers[0].from.y && a.to.x === killers[0].to.x && a.to.y === killers[0].to.y) aIsKiller = true;
              if (!aIsKiller && killers[1] && killers[1].from && a.from.x === killers[1].from.x && a.from.y === killers[1].from.y && a.to.x === killers[1].to.x && a.to.y === killers[1].to.y) aIsKiller = true;
         }
-        
+       
         if (b.type === 'board' && b.from) {
              if (killers[0] && killers[0].from && b.from.x === killers[0].from.x && b.from.y === killers[0].from.y && b.to.x === killers[0].to.x && b.to.y === killers[0].to.y) bIsKiller = true;
              if (!bIsKiller && killers[1] && killers[1].from && b.from.x === killers[1].from.x && b.from.y === killers[1].from.y && b.to.x === killers[1].to.x && b.to.y === killers[1].to.y) bIsKiller = true;
         }
         if (aIsKiller !== bIsKiller) { return aIsKiller ? -1 : 1; } 
 
-        
+       
          let scoreA_heuristic = 0; let scoreB_heuristic = 0;
          const DEFENSIVE_PILUT_DROP_BONUS = 500;
          if (a.type === 'drop' && a.pieceType === 'pilut') {
-              const protectedY_A = a.to.y + 1;
-              if (isPositionValid(a.to.x, protectedY_A)) {
-                   const potentiallyProtectedPiece_A = boardState[protectedY_A]?.[a.to.x];
-                   if (potentiallyProtectedPiece_A && potentiallyProtectedPiece_A.color === 'black' && isSquareAttackedBy(a.to.x, protectedY_A, boardState, 'white')) {
-                        scoreA_heuristic += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece_A.type] || 0);
-                   }
-              }
+             const protectedY_A = a.to.y + 1;
+             if (gameLogic.isPositionValid(a.to.x, protectedY_A)) {
+                 const potentiallyProtectedPiece_A = boardState[protectedY_A]?.[a.to.x];
+                 if (potentiallyProtectedPiece_A && potentiallyProtectedPiece_A.color === 'black' && isSquareAttackedBy(a.to.x, protectedY_A, boardState, 'white')) {
+                     scoreA_heuristic += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece_A.type] || 0);
+                 }
+             }
          } else if (a.type === 'board' && !a.isAttack && a.from) {
              const piece = boardState[a.from.y]?.[a.from.x];
              if (piece && piece.type === 'prince' && piece.color === 'black') {
@@ -877,13 +876,13 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
          }
 
         if (b.type === 'drop' && b.pieceType === 'pilut') {
-              const protectedY_B = b.to.y + 1;
-              if (isPositionValid(b.to.x, protectedY_B)) {
-                   const potentiallyProtectedPiece_B = boardState[protectedY_B]?.[b.to.x];
-                   if (potentiallyProtectedPiece_B && potentiallyProtectedPiece_B.color === 'black' && isSquareAttackedBy(b.to.x, protectedY_B, boardState, 'white')) {
-                        scoreB_heuristic += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece_B.type] || 0);
-                   }
-              }
+             const protectedY_B = b.to.y + 1;
+             if (gameLogic.isPositionValid(b.to.x, protectedY_B)) {
+                 const potentiallyProtectedPiece_B = boardState[protectedY_B]?.[b.to.x];
+                 if (potentiallyProtectedPiece_B && potentiallyProtectedPiece_B.color === 'black' && isSquareAttackedBy(b.to.x, protectedY_B, boardState, 'white')) {
+                     scoreB_heuristic += DEFENSIVE_PILUT_DROP_BONUS + (pieceValues[potentiallyProtectedPiece_B.type] || 0);
+                 }
+             }
          } else if (b.type === 'board' && !b.isAttack && b.from) {
              const piece = boardState[b.from.y]?.[b.from.x];
              if (piece && piece.type === 'prince' && piece.color === 'black') {
@@ -894,25 +893,25 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
 
         return 0; 
     });
-    
+   
 
     let bestMoveCurrentDepth = null;
     let originalAlpha = alpha; 
 
-    
+   
     for (const move of moves) {
         if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded'); 
 
         const tempBoard = copyBoard(boardState); 
         let nextHash = currentHash; 
 
-        
+       
         if (move.type === 'drop') {
             const pieceType = move.pieceType;
              tempBoard[move.to.y][move.to.x] = { type: pieceType, color: 'black' };
              
              if(zobristTable[pieceType] && zobristTable[pieceType]['black'][move.to.y][move.to.x]){
-                  nextHash ^= zobristTable[pieceType]['black'][move.to.y][move.to.x];
+                 nextHash ^= zobristTable[pieceType]['black'][move.to.y][move.to.x];
              } else { console.warn("Missing Zobrist key for drop:", pieceType, move.to.y, move.to.x); }
         } else { 
             const pieceToMove = tempBoard[move.from.y]?.[move.from.x];
@@ -921,48 +920,48 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
 
 
              if(zobristTable[pieceToMove.type]?.[pieceToMove.color]?.[move.from.y]?.[move.from.x]){
-                  nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.from.y][move.from.x];
+                 nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.from.y][move.from.x];
              } else { console.warn("Missing Zobrist key for move from:", pieceToMove, move.from.y, move.from.x); }
 
-            
+           
              if (targetPiece) {
-                  if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
-                       nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
-                  } else { console.warn("Missing Zobrist key for capture:", targetPiece, move.to.y, move.to.x); }
+                 if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
+                     nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
+                 } else { console.warn("Missing Zobrist key for capture:", targetPiece, move.to.y, move.to.x); }
              }
 
-            
+           
             tempBoard[move.to.y][move.to.x] = pieceToMove;
             tempBoard[move.from.y][move.from.x] = null;
 
-            
+           
              if(zobristTable[pieceToMove.type]?.[pieceToMove.color]?.[move.to.y]?.[move.to.x]){
-                  nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.to.y][move.to.x];
+                 nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.to.y][move.to.x];
              } else { console.warn("Missing Zobrist key for move to:", pieceToMove, move.to.y, move.to.x); }
         }
 
-        
+       
         nextHash ^= zobristTurnBlack;
 
-        
+       
         let boardValue;
         const pieceMoved = tempBoard[move.to.y]?.[move.to.x]; 
 
-        
+       
         const isCopeBonusTrigger = !bonusMoveState && pieceMoved?.type === 'cope' && move.isAttack;
         const isGHGBonusTrigger = !bonusMoveState && move.type === 'board' && (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack;
 
         if (isCopeBonusTrigger || isGHGBonusTrigger) {
-            
+           
             boardValue = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, false, startTime, timeLimit, nextHash ^ zobristTurnBlack); 
         } else {
-            
+           
             boardValue = minimax(tempBoard, depth - 1, alpha, beta, true, startTime, timeLimit, nextHash);
         }
-        
+       
 
 
-        
+       
         if (boardValue < bestValue) {
             bestValue = boardValue;
             bestMove = move; 
@@ -970,29 +969,29 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
         }
         beta = Math.min(beta, boardValue); 
 
-        
+       
         if (beta <= alpha) {
-            
+           
             if (!move.isAttack && move.type === 'board' && move.from) { 
                 storeKillerMove(depth, move);
             }
             break; 
         }
-        
+       
     }
 
-    
+   
     let flag = TT_FLAG_EXACT;
     if (bestValue <= originalAlpha) { 
         flag = TT_FLAG_UPPERBOUND;
     } else if (bestValue >= beta) { 
         flag = TT_FLAG_LOWERBOUND;
     }
-    
+   
     if (bestMoveCurrentDepth) {
        storeTTEntry(currentHash, depth, bestValue, flag, bestMoveCurrentDepth);
     }
-    
+   
 
     return bestMove; 
 }
@@ -1001,18 +1000,18 @@ function findBestMoveAtDepth(boardState, capturedPieces, depth, startTime, timeL
 function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit, currentHash) {
      const timeCheckStart = Date.now();
      if (timeCheckStart - startTime >= timeLimit) {
-          throw new Error('TimeLimitExceeded');
+         throw new Error('TimeLimitExceeded');
      }
 
     let alphaOrig = alpha; 
     const ttProbe = probeTTEntry(currentHash, depth, alpha, beta);
     if (ttProbe.score !== null) {
-        
+       
         return ttProbe.score;
     }
     const ttBestMove = ttProbe.bestMove; 
 
-    
+   
     for(const sq of botSanctuarySquares) { 
         const p = boardState[sq.y]?.[sq.x];
         if (p && (p.type === 'lupa' || p.type === 'prince')) {
@@ -1020,7 +1019,7 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
         }
     }
 
-    
+   
     let whiteLupaPos = null, blackLupaPos = null, whitePrinceOnBoard = false, blackPrinceOnBoard = false;
     for (let y = 0; y < BOARD_HEIGHT; y++) { for (let x = 0; x < BOARD_WIDTH; x++) { const p = boardState[y]?.[x]; if (p) { if(p.type==='lupa'){if(p.color==='white')whiteLupaPos={x,y};else blackLupaPos={x,y};} else if(p.type==='prince'){if(p.color==='white')whitePrinceOnBoard=true;else blackPrinceOnBoard=true;}}}}
 
@@ -1028,49 +1027,49 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
     if (!blackLupaPos && !blackPrinceOnBoard) return Infinity + depth;
 
 
-    
+   
     if (depth === 0) {
         return quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit, QUIESCENCE_MAX_DEPTH, currentHash);
     }
    
 
 
-    
+   
     const color = isMaximizingPlayer ? 'white' : 'black';
-    
+   
     const moves = getAllValidMoves(boardState, color, []); 
 
-    
+   
     if (moves.length === 0) {
         const kingPos = isMaximizingPlayer ? whiteLupaPos : blackLupaPos; 
         const opponentColor = isMaximizingPlayer ? 'black' : 'white';
-        
+       
         if (kingPos && isSquareAttackedBy(kingPos.x, kingPos.y, boardState, opponentColor)) {
-             
+            
              return isMaximizingPlayer ? -Infinity - depth : Infinity + depth;
         } else {
-             
+            
              return 0; 
         }
     }
 
-    
+   
     moves.sort((a, b) => {
-        
+       
          let aIsTTBest = false; let bIsTTBest = false;
          if (ttBestMove) { 
-              if (a.type === ttBestMove.type) {
-                   if(a.type === 'board' && ttBestMove.from && a.from && a.from.x === ttBestMove.from.x && a.from.y === ttBestMove.from.y && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
-                   if(a.type === 'drop' && a.pieceType === ttBestMove.pieceType && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
-              }
-              if (b.type === ttBestMove.type) {
-                   if(b.type === 'board' && ttBestMove.from && b.from && b.from.x === ttBestMove.from.x && b.from.y === ttBestMove.from.y && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
-                   if(b.type === 'drop' && b.pieceType === ttBestMove.pieceType && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
-              }
+             if (a.type === ttBestMove.type) {
+                 if(a.type === 'board' && ttBestMove.from && a.from && a.from.x === ttBestMove.from.x && a.from.y === ttBestMove.from.y && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
+                 if(a.type === 'drop' && a.pieceType === ttBestMove.pieceType && a.to.x === ttBestMove.to.x && a.to.y === ttBestMove.to.y) aIsTTBest = true;
+             }
+             if (b.type === ttBestMove.type) {
+                 if(b.type === 'board' && ttBestMove.from && b.from && b.from.x === ttBestMove.from.x && b.from.y === ttBestMove.from.y && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
+                 if(b.type === 'drop' && b.pieceType === ttBestMove.pieceType && b.to.x === ttBestMove.to.x && b.to.y === ttBestMove.to.y) bIsTTBest = true;
+             }
          }
          if (aIsTTBest !== bIsTTBest) return aIsTTBest ? -1 : 1;
 
-        
+       
         if (a.isAttack !== b.isAttack) {
             return a.isAttack ? -1 : 1; 
         }
@@ -1079,11 +1078,11 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
             const victimB = boardState[b.to.y]?.[b.to.x]; const attackerB = b.from ? boardState[b.from.y]?.[b.from.x] : null;
             const valA = (victimA ? (pieceValues[victimA.type] || 0) * 10 : 0) - (attackerA ? (pieceValues[attackerA.type] || 0) : 1000);
             const valB = (victimB ? (pieceValues[victimB.type] || 0) * 10 : 0) - (attackerB ? (pieceValues[attackerB.type] || 0) : 1000);
-            
+           
             if (valA !== valB) return valB - valA;
         }
 
-        
+       
         const killers = (depth >= 0 && depth < MAX_SEARCH_DEPTH) ? killerMoves[depth] : [null, null];
         let aIsKiller = false; let bIsKiller = false;
         if (a.type === 'board' && a.from) { 
@@ -1098,10 +1097,10 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
 
         return 0; 
     });
-    
+   
 
 
-    
+   
     let bestMove = null; 
     let bestScore = isMaximizingPlayer ? -Infinity : Infinity;
     const isRootNode = (depth === 3 || depth === 2); 
@@ -1111,40 +1110,40 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
          const currentTime = Date.now();
          const dynamicTimeLimit = timeLimit - (isRootNode ? 50 : 20); 
          if (currentTime - startTime >= dynamicTimeLimit) {
-              throw new Error('TimeLimitExceeded');
+             throw new Error('TimeLimitExceeded');
          }
 
         const tempBoard = copyBoard(boardState); 
         let nextHash = currentHash;
 
-        
+       
          if (move.type === 'drop') {
              const pieceType = move.pieceType;
               tempBoard[move.to.y][move.to.x] = { type: pieceType, color: color };
              if(zobristTable[pieceType]?.[color]?.[move.to.y]?.[move.to.x]){
-                  nextHash ^= zobristTable[pieceType][color][move.to.y][move.to.x];
+                 nextHash ^= zobristTable[pieceType][color][move.to.y][move.to.x];
              } else { console.warn("Missing Zobrist key for drop:", pieceType, color, move.to.y, move.to.x); }
          } else { 
              const pieceToMove = tempBoard[move.from.y]?.[move.from.x]; if (!pieceToMove) continue; 
              const targetPiece = tempBoard[move.to.y]?.[move.to.x];
               if(zobristTable[pieceToMove.type]?.[pieceToMove.color]?.[move.from.y]?.[move.from.x]){
-                   nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.from.y][move.from.x];
+                 nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.from.y][move.from.x];
               } else { console.warn("Missing Zobrist key for move from:", pieceToMove, move.from.y, move.from.x); }
               if (targetPiece) {
-                   if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
-                        nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
-                   } else { console.warn("Missing Zobrist key for capture:", targetPiece, move.to.y, move.to.x); }
+                 if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
+                     nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
+                 } else { console.warn("Missing Zobrist key for capture:", targetPiece, move.to.y, move.to.x); }
               }
              tempBoard[move.to.y][move.to.x] = pieceToMove;
              tempBoard[move.from.y][move.from.x] = null;
               if(zobristTable[pieceToMove.type]?.[pieceToMove.color]?.[move.to.y]?.[move.to.x]){
-                   nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.to.y][move.to.x];
+                 nextHash ^= zobristTable[pieceToMove.type][pieceToMove.color][move.to.y][move.to.x];
               } else { console.warn("Missing Zobrist key for move to:", pieceToMove, move.to.y, move.to.x); }
          }
          nextHash ^= zobristTurnBlack; 
 
 
-        
+       
         const pieceMoved = tempBoard[move.to.y]?.[move.to.x];
         const isCopeBonusTrigger = pieceMoved?.type === 'cope' && move.isAttack;
         const isGHGBonusTrigger = (pieceMoved?.type === 'greathorsegeneral' || pieceMoved?.type === 'cthulhu') && !move.isAttack && move.type === 'board';
@@ -1152,11 +1151,11 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
 
         try {
             if (isCopeBonusTrigger || isGHGBonusTrigger) {
-                
+               
                  eval = handleBonusTurn(tempBoard, pieceMoved, move, depth, alpha, beta, isMaximizingPlayer, startTime, timeLimit, nextHash ^ zobristTurnBlack); 
             } else {
-                
-                eval = minimax(tempBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, nextHash);
+               
+                 eval = minimax(tempBoard, depth - 1, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, nextHash);
             }
         } catch (e) {
             if (e.message === 'TimeLimitExceeded') {
@@ -1167,10 +1166,10 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
                  eval = isMaximizingPlayer ? -Infinity : Infinity;
             }
         }
-        
+       
 
 
-        
+       
         if (isMaximizingPlayer) {
             if (eval > bestScore) {
                 bestScore = eval;
@@ -1192,18 +1191,18 @@ function minimax(boardState, depth, alpha, beta, isMaximizingPlayer, startTime, 
                  break;
              }
         }
-        
+       
     }
-    
+   
 
 
-    
+   
     let flag = TT_FLAG_EXACT; 
     if (bestScore <= alphaOrig) { flag = TT_FLAG_UPPERBOUND; } 
     else if (bestScore >= beta) { flag = TT_FLAG_LOWERBOUND; } 
-    
+   
     storeTTEntry(currentHash, depth, bestScore, flag, bestMove || ttBestMove); 
-    
+   
 
     return bestScore;
 }
@@ -1214,52 +1213,52 @@ const QUIESCENCE_MAX_DEPTH = 3;
 function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime, timeLimit, depth = QUIESCENCE_MAX_DEPTH, currentHash) {
     if (Date.now() - startTime >= timeLimit) throw new Error('TimeLimitExceeded');
 
-    
+   
     for(const sq of botSanctuarySquares) { const p = boardState[sq.y]?.[sq.x]; if (p && (p.type === 'lupa' || p.type === 'prince')) return p.color === 'white' ? Infinity : -Infinity; }
     let whiteLupaPosQ = null, blackLupaPosQ = null, whitePrinceOnBoardQ = false, blackPrinceOnBoardQ = false;
     for (let y = 0; y < BOARD_HEIGHT; y++) { for (let x = 0; x < BOARD_WIDTH; x++) { const p = boardState[y]?.[x]; if (p) { if(p.type==='lupa'){if(p.color==='white')whiteLupaPosQ={x,y};else blackLupaPosQ={x,y};} else if(p.type==='prince'){if(p.color==='white')whitePrinceOnBoardQ=true;else blackPrinceOnBoardQ=true;}}}}
     if (!whiteLupaPosQ && !whitePrinceOnBoardQ) return -Infinity - depth; 
     if (!blackLupaPosQ && !blackPrinceOnBoardQ) return Infinity + depth;
 
-    
+   
     let stand_pat = evaluateBoard(boardState);
 
-    
+   
     if (depth === 0) return stand_pat;
 
-    
+   
     if (isMaximizingPlayer) {
         if (stand_pat >= beta) return beta; 
         alpha = Math.max(alpha, stand_pat);
     } else { 
         if (stand_pat <= alpha) return alpha; 
-        beta = Math.min(beta, stand_pat);   
+        beta = Math.min(beta, stand_pat);    
     }
-    
+   
 
 
-    
+   
     const color = isMaximizingPlayer ? 'white' : 'black';
     const captureMoves = getCaptureMoves(boardState, color); 
 
-    
+   
     if (captureMoves.length === 0) return stand_pat;
 
-    
+   
     captureMoves.sort((a, b) => {
         const victimA = boardState[a.to.y]?.[a.to.x]; const victimB = boardState[b.to.y]?.[b.to.x];
         const attackerA = a.from ? boardState[a.from.y]?.[a.from.x] : null; const attackerB = b.from ? boardState[b.from.y]?.[b.from.x] : null;
-        
+       
         const victimValA = victimA ? (pieceValues[victimA.type] || 0) : 0; const victimValB = victimB ? (pieceValues[victimB.type] || 0) : 0;
         const attackerValA = attackerA ? (pieceValues[attackerA.type] || 0) : 0; const attackerValB = attackerB ? (pieceValues[attackerB.type] || 0) : 0;
-        
+       
         if (victimValA !== victimValB) return victimValB - victimValA; 
         else return attackerValA - attackerValB;
     });
-    
+   
 
 
-    
+   
     let bestMove = null; 
     let bestScore = stand_pat; 
 
@@ -1272,39 +1271,39 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime
         const targetPiece = tempBoard[move.to.y]?.[move.to.x]; 
         let nextHash = currentHash;
 
-        
+       
          if(zobristTable[piece.type]?.[piece.color]?.[move.from.y]?.[move.from.x]){
-              nextHash ^= zobristTable[piece.type][piece.color][move.from.y][move.from.x];
+             nextHash ^= zobristTable[piece.type][piece.color][move.from.y][move.from.x];
          } else { console.warn("Missing Zobrist key QSearch move from:", piece, move.from.y, move.from.x); }
          if (targetPiece) { 
-              if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
-                   nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
-              } else { console.warn("Missing Zobrist key QSearch capture:", targetPiece, move.to.y, move.to.x); }
+             if(zobristTable[targetPiece.type]?.[targetPiece.color]?.[move.to.y]?.[move.to.x]){
+                 nextHash ^= zobristTable[targetPiece.type][targetPiece.color][move.to.y][move.to.x];
+             } else { console.warn("Missing Zobrist key QSearch capture:", targetPiece, move.to.y, move.to.x); }
          } else { console.warn("Quiescence search move was not a capture?", move); } 
         tempBoard[move.to.y][move.to.x] = piece;
         tempBoard[move.from.y][move.from.x] = null;
          if(zobristTable[piece.type]?.[piece.color]?.[move.to.y]?.[move.to.x]){
-              nextHash ^= zobristTable[piece.type][piece.color][move.to.y][move.to.x];
+             nextHash ^= zobristTable[piece.type][piece.color][move.to.y][move.to.x];
          } else { console.warn("Missing Zobrist key QSearch move to:", piece, move.to.y, move.to.x); }
          nextHash ^= zobristTurnBlack;
 
 
-        
+       
         let score;
          try {
-              score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, depth - 1, nextHash);
+             score = quiescenceSearch(tempBoard, alpha, beta, !isMaximizingPlayer, startTime, timeLimit, depth - 1, nextHash);
          } catch (e) {
-              if (e.message === 'TimeLimitExceeded') {
-                   throw e; 
-              } else {
-                   console.error("Worker: Unexpected error during quiescence search:", e);
-                   score = isMaximizingPlayer ? -Infinity : Infinity;
-              }
+             if (e.message === 'TimeLimitExceeded') {
+                 throw e; 
+             } else {
+                 console.error("Worker: Unexpected error during quiescence search:", e);
+                 score = isMaximizingPlayer ? -Infinity : Infinity;
+             }
          }
        
 
 
-        
+       
         if (isMaximizingPlayer) {
              if (score > bestScore) {
                  bestScore = score;
@@ -1320,12 +1319,12 @@ function quiescenceSearch(boardState, alpha, beta, isMaximizingPlayer, startTime
              beta = Math.min(beta, score);
              if (beta <= alpha) break; 
         }
-        
+       
     }
-    
+   
 
 
-    
+   
 
     return bestScore; 
 }
