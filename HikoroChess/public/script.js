@@ -423,22 +423,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLocalState(newGameState) {
     const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
-    gameState = newGameState; // Update global state first
+    gameState = newGameState;
 
     if (isNewGameOver && newGameState.winner) {
-        // Fetch element here when game ends
-        const winnerTextEl = document.getElementById('winner-text');
-        if (winnerTextEl) { // Use the local variable
+        // CORRECTED ID HERE:
+        const winnerTextEl = document.getElementById('winnerText');
+        if (winnerTextEl) {
             const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
             winnerTextEl.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
             if (newGameState.reason) {
                 winnerTextEl.textContent += ` (${newGameState.reason})`;
             }
         } else {
-            // Log error if still not found, even when game is over
-            console.error("updateLocalState (Game Over): winner-text element not found!");
+            console.error("updateLocalState (Game Over): winnerText element not found!");
         }
-        // Show post-game controls regardless of winner text element
         if (postGameControls) {
             postGameControls.style.display = 'flex';
         }
@@ -446,29 +444,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderBoard();
     renderCaptured();
-    updateTurnIndicator(); // This will now fetch its own elements
+    updateTurnIndicator();
     renderMoveHistory(gameState.moveList);
 
     console.log(`[updateLocalState] Checking bot turn: isBotGame=${isBotGame}, gameOver=${gameState.gameOver}, isWhiteTurn=${gameState.isWhiteTurn}, botWorkerExists=${!!botWorker}`);
 
     if (isBotGame && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
         console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
-
         const capturedPiecesForBot = gameState.blackCaptured;
         currentTurnHadBonusState = !!botBonusState;
-
         const safeGameState = JSON.parse(JSON.stringify(gameState));
         const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
         const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
-
         console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
-
         botWorker.postMessage({
             gameState: safeGameState,
             capturedPieces: safeCapturedPieces,
             bonusMoveState: safeBonusState
         });
-
     } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
         console.error("Bot's turn, but worker is not available!");
     } else {
@@ -714,18 +707,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTurnIndicator() {
     // Fetch elements inside the function
     const turnIndicatorEl = document.getElementById('turn-indicator');
-    const winnerTextEl = document.getElementById('winner-text');
+    // CORRECTED ID HERE:
+    const winnerTextEl = document.getElementById('winnerText');
 
-    if (!turnIndicatorEl || !winnerTextEl) { // Check the local variables
-        // If the error persists even with this, there's a deeper issue with HTML loading or element existence.
+    if (!turnIndicatorEl || !winnerTextEl) {
         console.error("updateTurnIndicator: Turn indicator or winner text element not found!");
         return;
     }
 
-    // Use the local variables (turnIndicatorEl, winnerTextEl)
     if (gameState.gameOver && !isReplayMode) {
         turnIndicatorEl.textContent = '';
-        // Check content to avoid overwriting if already set by updateLocalState
         if (!winnerTextEl.textContent || winnerTextEl.textContent.includes("Turn")) {
             const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
             winnerTextEl.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
@@ -734,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     } else {
-        winnerTextEl.textContent = ''; // Clear winner text if game not over or in replay
+        winnerTextEl.textContent = '';
         if (isSinglePlayer || isReplayMode) {
             turnIndicatorEl.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
         } else {
