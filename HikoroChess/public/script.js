@@ -111,12 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSinglePlayer = false;
     let isBotGame = false;
 
-    // [NEW] Replay state variables
     let isReplayMode = false;
-    let replayGameTree = null; // Root node of the game tree
-    let currentReplayNode = null; // The node currently being displayed
-    let flatMoveList = []; // For easy Next/Prev on main line
-    let currentMoveIndex = -1;
+	let replayGameTree = null;
+	let currentReplayNode = null;
+	let flatMoveList = [];
+	let currentMoveIndex = -1;
+	let awaitingBonusMove = null;
 
     let botBonusState = null; 
     let currentTurnHadBonusState = false; 
@@ -1156,19 +1156,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${pieceAbbr}${coord}`;
     }
 
-    // [NEW] Parse "1. W_Move B_Move" into ["W_Move", "B_Move"]
     function parseKifuToMoveList(kifuText) {
-        const moves = [];
-        const lines = kifuText.split('\n');
-        for (const line of lines) {
-            const parts = line.trim().match(/^\d+\.\s*([^\s]+)(?:\s+([^\s]+))?$/);
-            if (parts) {
-                if (parts[1]) moves.push(parts[1]); // White's move
-                if (parts[2]) moves.push(parts[2]); // Black's move
-            }
+    const moves = [];
+    const lines = kifuText.split('\n');
+    for (const line of lines) {
+        // Match turn number and the rest of the line
+        const lineMatch = line.trim().match(/^(\d+)\.\s*(.*)$/);
+        if (lineMatch && lineMatch[2]) {
+            // Split the moves part by spaces
+            const moveParts = lineMatch[2].trim().split(/\s+/);
+            moves.push(...moveParts); // Add all parts to the flat list
         }
-        return moves; // Returns ["S*e10", "S*f7", "B*c5", "KPa8"]
     }
+    console.log("Parsed Kifu:", moves); // Log parsed moves
+    return moves;
+}
     
     // [NEW] Find the 'from' square for a move notation
     function parseNotation(notation, boardState, isWhiteTurn) {
@@ -1221,97 +1223,158 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
-    // [NEW] Simulate a move and return the new game state
-    function applyMoveToState(oldGameState, move) {
-        let newGameState = JSON.parse(JSON.stringify(oldGameState)); // Deep copy
-        let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
-        const color = isWhiteTurn ? 'white' : 'black';
+    function applyMoveToState(oldGameState, moveObj) {
+    let newGameState = JSON.parse(JSON.stringify(oldGameState)); // Deep copy
+    let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
+    const color = isWhiteTurn ? 'white' : 'black';
+    let pieceMoved = null;
+    let wasCapture = false;
 
-        if (move.type === 'drop') {
-            boardState[move.to.y][move.to.x] = { type: move.piece.type, color: color };
-            const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-            const pieceIndex = hand.findIndex(p => p.type === move.piece.type);
-            if (pieceIndex > -1) hand.splice(pieceIndex, 1);
-            
-        } else if (move.type === 'board') {
-            const piece = boardState[move.from.y][move.from.x];
-            if (!piece) return oldGameState; 
-            
-            const targetPiece = boardState[move.to.y][move.to.x];
-            if (targetPiece) {
-                // Simplified capture logic for replay
-                if (targetPiece.type !== 'lupa' && targetPiece.type !== 'prince') {
-                    const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-                    if (hand.length < 6) {
-                        hand.push({ type: targetPiece.type, color: color });
-                    }
+    // --- Apply the move ---
+    if (moveObj.type === 'drop') {
+        const droppedPiece = { type: moveObj.piece.type, color: color };
+        boardState[moveObj.to.y][moveObj.to.x] = droppedPiece;
+        const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+        const pieceIndex = hand.findIndex(p => p.type === moveObj.piece.type);
+        if (pieceIndex > -1) hand.splice(pieceIndex, 1);
+        pieceMoved = droppedPiece; // Track the piece involved
+        newGameState.lastMove = { from: null, to: moveObj.to };
+
+    } else if (moveObj.type === 'board') {
+        const piece = boardState[moveObj.from.y]?.[moveObj.from.x];
+        if (!piece) {
+             console.error("ApplyMove: Piece not found at source", moveObj);
+             return oldGameState; // Return old state on error
+        }
+        pieceMoved = piece; // Track the piece involved
+
+        const targetPiece = boardState[moveObj.to.y]?.[moveObj.to.x];
+        wasCapture = targetPiece !== null;
+
+        if (targetPiece) {
+            // Simplified capture logic for replay - NO PROMOTION/NEPTUNE handling needed here
+            if (targetPiece.type !== 'lupa' && targetPiece.type !== 'prince') {
+                const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+                // Use the *original* type of the captured piece
+                if (hand.length < 6) {
+                    hand.push({ type: targetPiece.type }); // Only need type for hand
                 }
             }
-            
-            boardState[move.to.y][move.to.x] = piece;
-            boardState[move.from.y][move.from.x] = null;
-            
-            // Note: Simplified replay doesn't handle promotions, but could be added here
         }
 
-        newGameState.isWhiteTurn = !newGameState.isWhiteTurn;
-        newGameState.turnCount++;
-        newGameState.lastMove = move.type === 'board' ? { from: move.from, to: move.to } : { from: null, to: move.to };
-        return newGameState;
+        boardState[moveObj.to.y][moveObj.to.x] = piece; // Move the piece object
+        boardState[moveObj.from.y][moveObj.from.x] = null;
+        newGameState.lastMove = { from: moveObj.from, to: moveObj.to };
+
+         // Basic promotion check (optional for replay validity but good practice)
+         // Note: Does NOT handle special promotions like Ac->Ct, Fin->Finor, Mm->Np on capture
+         const promotablePawns = ['sult', 'pawn', 'pilut'];
+         if (promotablePawns.includes(piece.type)) {
+             const inPromotionZone = (color === 'white' && moveObj.to.y > 8) || (color === 'black' && moveObj.to.y < 7);
+             if (inPromotionZone) {
+                 if (piece.type === 'pilut') piece.type = 'greatshield';
+                 else piece.type = 'chair'; // Sult and Pawn promote to Chair
+             }
+         }
     }
+
+    // --- Update Bonus Move Info & Turn ---
+    const isBonusContinuation = !!oldGameState.bonusMoveInfo; // Was the *previous* state waiting for a bonus?
+
+    let triggersBonus = false;
+    if (pieceMoved && !isBonusContinuation) { // Only check trigger on the first move of a turn
+        const isCopeBonusTrigger = pieceMoved.type === 'cope' && wasCapture;
+        const isGHGBonusTrigger = (pieceMoved.type === 'greathorsegeneral' || pieceMoved.type === 'cthulhu') && !wasCapture && moveObj.type === 'board';
+        triggersBonus = isCopeBonusTrigger || isGHGBonusTrigger;
+    }
+
+    if (triggersBonus) {
+        // This move starts a bonus sequence
+        newGameState.bonusMoveInfo = { pieceX: moveObj.to.x, pieceY: moveObj.to.y };
+        // DON'T change turn yet
+        newGameState.isWhiteTurn = oldGameState.isWhiteTurn;
+    } else if (isBonusContinuation) {
+        // This move *was* the bonus move continuation
+        newGameState.bonusMoveInfo = null;
+        // Change turn *after* the bonus move
+        newGameState.isWhiteTurn = !oldGameState.isWhiteTurn;
+        newGameState.turnCount++; // Increment turn count only after the full turn (including bonus)
+    } else {
+        // Normal move, no bonus involved
+        newGameState.bonusMoveInfo = null;
+        // Change turn
+        newGameState.isWhiteTurn = !oldGameState.isWhiteTurn;
+        newGameState.turnCount++;
+    }
+
+    // Always clear gameOver flag when applying a move in replay (allows branching from end)
+    newGameState.gameOver = false;
+    newGameState.winner = null;
+    newGameState.reason = null;
+
+    return newGameState;
+}
 
     // [NEW] Main Replay Game Tree Builder
     function buildReplayTree(kifuText) {
-        const moveNotations = parseKifuToMoveList(kifuText); 
-        if (moveNotations.length === 0) {
-            alert("Invalid or empty kifu.");
-            return null;
+    const moveNotations = parseKifuToMoveList(kifuText);
+    if (moveNotations.length === 0) {
+        alert("Invalid or empty kifu.");
+        return null;
+    }
+
+    const initialBoard = gameLogic.getInitialBoard();
+    const rootNode = {
+        moveNotation: "Start",
+        moveObj: null,
+        gameState: {
+            boardState: initialBoard,
+            whiteCaptured: [],
+            blackCaptured: [],
+            isWhiteTurn: true,
+            turnCount: 0,
+            gameOver: false,
+            lastMove: null,
+            bonusMoveInfo: null // Initialize bonus info
+        },
+        parent: null,
+        children: [],
+        isBonusSecondMove: false // Flag to help display
+    };
+
+    let currentNode = rootNode;
+    let currentGameState = rootNode.gameState;
+
+    for (let i = 0; i < moveNotations.length; i++) {
+        const notation = moveNotations[i];
+        const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
+
+        if (!moveObj) {
+            console.error(`Failed to parse move: ${notation} at index ${i}. Skipping.`);
+            // Attempt to recover by assuming turn changes, might lead to inaccuracies
+             currentGameState = {...currentGameState, isWhiteTurn: !currentGameState.isWhiteTurn, bonusMoveInfo: null};
+            continue;
         }
 
-        const initialBoard = gameLogic.getInitialBoard();
-        const rootNode = {
-            moveNotation: "Start",
-            moveObj: null,
-            gameState: {
-                boardState: initialBoard,
-                whiteCaptured: [],
-                blackCaptured: [],
-                isWhiteTurn: true,
-                turnCount: 0,
-                gameOver: false,
-                lastMove: null
-            },
-            parent: null,
-            children: []
+        const newGameState = applyMoveToState(currentGameState, moveObj);
+
+        const newNode = {
+            moveNotation: notation,
+            moveObj: moveObj,
+            gameState: newGameState,
+            parent: currentNode,
+            children: [],
+            // Check if THIS node completes a bonus started by parent
+            isBonusSecondMove: !!currentGameState.bonusMoveInfo
         };
 
-        let currentNode = rootNode;
-        let currentGameState = rootNode.gameState;
-
-        for (const notation of moveNotations) {
-            const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
-            if (!moveObj) {
-                console.error(`Failed to parse move: ${notation}`);
-                continue; // Skip this move
-            }
-
-            const newGameState = applyMoveToState(currentGameState, moveObj);
-            
-            const newNode = {
-                moveNotation: notation,
-                moveObj: moveObj,
-                gameState: newGameState,
-                parent: currentNode,
-                children: []
-            };
-            
-            currentNode.children.push(newNode);
-            currentNode = newNode;
-            currentGameState = newNode.gameState;
-        }
-        
-        return rootNode;
+        currentNode.children.push(newNode);
+        currentNode = newNode;
+        currentGameState = newNode.gameState; // Update state for the next iteration
     }
+
+    return rootNode;
+}
     
     // [NEW] Function to display a specific replay node
     function displayReplayState(node) {
@@ -1356,177 +1419,347 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // [NEW] Recursive move history renderer for branching
     function renderReplayMoveHistory() {
-        if (!moveHistoryElement) return;
-        moveHistoryElement.innerHTML = '';
-        
-        function renderNodeRecursive(node, parentEl, depth) {
-            const moveEl = document.createElement('div');
-            moveEl.classList.add('move-node');
-            moveEl.style.paddingLeft = `${depth * 15}px`;
-            
-            let moveText = node.moveNotation;
-             if (depth > 0 || node.parent) { // Not root
-                 const isWhiteMove = !node.gameState.isWhiteTurn; // state is *after* move
-                 if (isWhiteMove) {
-                     const turnNum = Math.floor(node.gameState.turnCount / 2) + 1;
-                     moveText = `${turnNum}. ${moveText}`;
-                 } else {
-                     moveText = `... ${moveText}`;
-                 }
-                 // Add parenthesis for branches
-                 if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
-                     moveText = `( ${moveText} )`;
-                 }
-             }
-            moveEl.textContent = moveText;
+    if (!moveHistoryElement) return;
+    moveHistoryElement.innerHTML = '';
 
-            if (node === currentReplayNode) {
-                moveEl.classList.add('active-move');
-                // Scroll to active move
-                setTimeout(() => moveEl.scrollIntoView({ behavior: 'auto', block: 'nearest' }), 0);
-            }
-            
-            moveEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                displayReplayState(node);
-            });
-            
-            parentEl.appendChild(moveEl);
-            
-            // Render children
-            for (const child of node.children) {
-                renderNodeRecursive(child, parentEl, depth + (node.parent && node.parent.children.length > 1 ? 1 : 0));
-            }
+    function renderNodeRecursive(node, parentEl, currentLineNumber) {
+        if (!node || node === replayGameTree) { // Skip root
+             if(node && node.children){ // Render children of root
+                 node.children.forEach(child => renderNodeRecursive(child, parentEl, 1));
+             }
+            return;
         }
-        
-        renderNodeRecursive(replayGameTree, moveHistoryElement, 0);
+
+        const moveEl = document.createElement('div');
+        moveEl.classList.add('move-node');
+        // Indent based on branching, not just depth
+        let indentDepth = 0;
+        let tempNode = node;
+        while(tempNode.parent !== replayGameTree) {
+             if (tempNode.parent && tempNode.parent.children.length > 1 && tempNode.parent.children[0] !== tempNode) {
+                 indentDepth++;
+             }
+             tempNode = tempNode.parent;
+             if (!tempNode) break; // Safety break
+        }
+        moveEl.style.paddingLeft = `${indentDepth * 20}px`;
+
+        let moveText = node.moveNotation;
+        const isWhiteMoveActual = !node.gameState.isWhiteTurn || !!node.gameState.bonusMoveInfo; // Is white moving OR just started bonus?
+        const displayTurnNumber = Math.floor((node.gameState.turnCount + (isWhiteMoveActual ? 1:0)) / 2); // Calculate based on state *after* move
+
+        if (node.isBonusSecondMove) {
+            // It's the second part of a bonus move, find the first part (parent)
+             const firstPartNode = node.parent;
+             if (firstPartNode && firstPartNode !== replayGameTree) {
+                 moveText = `${firstPartNode.moveNotation} > ${node.moveNotation}`; // Combine notations
+                 // Add turn number only if the first part was white's move
+                 if (!firstPartNode.gameState.isWhiteTurn) { // First part was white's move if turn didn't change
+                     moveText = `${displayTurnNumber}. ${moveText}`;
+                 } else {
+                      moveText = `... ${moveText}`;
+                 }
+             } else {
+                  // Fallback if parent isn't the first part somehow
+                 moveText = `> ${moveText}`;
+             }
+        } else if (node.gameState.bonusMoveInfo) {
+             // It's the first part of a bonus move, but don't combine yet
+             if (isWhiteMoveActual) {
+                 moveText = `${displayTurnNumber}. ${moveText}`;
+             } else {
+                 moveText = `... ${moveText}`;
+             }
+        } else {
+             // Normal move or drop
+             if (isWhiteMoveActual) {
+                 moveText = `${displayTurnNumber}. ${moveText}`;
+             } else {
+                  moveText = `... ${moveText}`;
+             }
+        }
+
+
+        // Add parenthesis for branches (only if it's NOT the first child)
+        if (node.parent && node.parent !== replayGameTree && node.parent.children.length > 1 && node.parent.children[0] !== node) {
+             // Don't add parenthesis around combined bonus moves
+             if (!node.isBonusSecondMove) {
+                  moveText = `( ${moveText} )`;
+             } else if (node.parent && node.parent.parent && node.parent.parent.children.length > 1 && node.parent.parent.children[0] !== node.parent) {
+                  // Add parenthesis around the combined bonus move if the *first* part was a branch
+                  moveText = `( ${moveText} )`;
+             }
+        }
+
+
+        moveEl.textContent = moveText;
+
+        if (node === currentReplayNode) {
+            moveEl.classList.add('active-move');
+            setTimeout(() => moveEl.scrollIntoView({ behavior: 'auto', block: 'nearest' }), 0);
+        }
+
+        moveEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+             // Prevent displaying the combined move element if it's the second part
+             if(!node.isBonusSecondMove){
+                 displayReplayState(node);
+             } else if (node.parent !== replayGameTree) {
+                 // If clicking the second part, display the state *after* the second move
+                 displayReplayState(node);
+             }
+        });
+
+        // Don't append the second part of a bonus move directly
+        if (!node.isBonusSecondMove) {
+             parentEl.appendChild(moveEl);
+             // Render children recursively
+             node.children.forEach(child => renderNodeRecursive(child, parentEl, displayTurnNumber));
+        }
+
     }
 
-    // [NEW] Handler for clicks during replay
+    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
+}
+
     function handleReplaySquareClick(x, y) {
-        if (gameState.gameOver) return; // 'gameState' is set by displayReplayState
+    const currentGameState = currentReplayNode.gameState; // Use state from the current node
+    const isTurn = currentGameState.isWhiteTurn ? 'white' : 'black';
 
-        if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
-            // User is making a move (a new branch)
-            const from = selectedSquare;
-            const to = { x, y };
-            const piece = gameState.boardState[from.y]?.[from.x];
-            
-            if (!piece) { clearHighlights(); selectedSquare = null; return; }
-            
-            const validMoves = gameLogic.getValidMovesForPiece(piece, from.x, from.y, gameState.boardState, false);
-            const isValidBranchMove = validMoves.some(m => m.x === to.x && m.y === to.y);
+    // --- Check if awaiting BONUS move ---
+    if (currentGameState.bonusMoveInfo) {
+        const bonusPieceX = currentGameState.bonusMoveInfo.pieceX;
+        const bonusPieceY = currentGameState.bonusMoveInfo.pieceY;
+        const piece = currentGameState.boardState[bonusPieceY]?.[bonusPieceX];
 
-            if (isValidBranchMove) {
-                const moveObj = { type: 'board', from, to };
-                const newGameState = applyMoveToState(gameState, moveObj);
-                const wasCapture = !!gameState.boardState[to.y][to.x];
-                const notationString = generateServerNotation(piece, to, wasCapture, false);
-                
-                const newNode = {
-                    moveNotation: notationString,
-                    moveObj: moveObj,
-                    gameState: newGameState,
-                    parent: currentReplayNode, // Branch off the *current* node
-                    children: []
-                };
-                
-                currentReplayNode.children.push(newNode);
-                
-                // If this was the main line, update it
-                if (flatMoveList.indexOf(currentReplayNode) > -1) {
-                    flatMoveList.splice(currentMoveIndex + 1); // Truncate old main line
-                    flatMoveList.push(newNode);
-                }
-                
-                displayReplayState(newNode);
-            }
-            
-            selectedSquare = null;
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
+        if (!piece) { // Safety check
+            console.error("Bonus move pending, but piece not found at expected location!");
+            clearHighlights(); selectedSquare = null; return;
         }
 
-        if (isDroppingPiece) {
-            // User is dropping a piece (a new branch)
-            const to = { x, y };
-            const moveObj = { type: 'drop', piece: isDroppingPiece, to };
-            
-            if (gameState.boardState[to.y][to.x] === null && gameLogic.isPositionValid(to.x, to.y)) {
-                const newGameState = applyMoveToState(gameState, moveObj);
-                const notationString = generateServerNotation(isDroppingPiece, to, false, true);
-                
-                const newNode = {
-                    moveNotation: notationString,
-                    moveObj: moveObj,
-                    gameState: newGameState,
-                    parent: currentReplayNode,
-                    children: []
-                };
-                
-                currentReplayNode.children.push(newNode);
-                
-                if (flatMoveList.indexOf(currentReplayNode) > -1) {
-                    flatMoveList.splice(currentMoveIndex + 1); 
-                    flatMoveList.push(newNode);
-                }
-
-                displayReplayState(newNode);
-            }
-            
-            selectedSquare = null;
-            isDroppingPiece = null;
-            clearHighlights();
-            return;
+        // Check if selected square IS the bonus piece (it should already be selected)
+        if (!selectedSquare || selectedSquare.x !== bonusPieceX || selectedSquare.y !== bonusPieceY) {
+            console.warn("Incorrect piece selected during bonus move requirement.");
+            clearHighlights(); selectedSquare = null; return; // Only allow moving the correct piece
         }
 
-        // Standard piece selection logic
-        const piece = gameState.boardState[y]?.[x];
-        if (piece) {
-            const canSelectPiece = piece.color === (gameState.isWhiteTurn ? 'white' : 'black');
+        // Check if target square is a valid *non-capture* bonus move
+        const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true)
+                                      .filter(m => !m.isAttack); // Bonus moves cannot capture
+        const isValidBonusTarget = validBonusMoves.some(m => m.x === x && m.y === y);
 
-            if (canSelectPiece) {
-                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                    selectedSquare = null;
+        if (isValidBonusTarget) {
+            const moveObj = { type: 'board', from: { x: bonusPieceX, y: bonusPieceY }, to: { x, y } };
+            const nextGameState = applyMoveToState(currentGameState, moveObj);
+            const notationString = generateServerNotation(piece, { x, y }, false, false); // Bonus moves are never captures
+
+            const newNode = {
+                moveNotation: notationString,
+                moveObj: moveObj,
+                gameState: nextGameState,
+                parent: currentReplayNode,
+                children: [],
+                isBonusSecondMove: true // Mark this as the second part
+            };
+
+            currentReplayNode.children.push(newNode);
+            // If we were on the main line, truncate and append
+            const flatIndex = flatMoveList.indexOf(currentReplayNode);
+            if (flatIndex > -1) {
+                flatMoveList.splice(flatIndex + 1);
+                flatMoveList.push(newNode);
+            }
+
+            selectedSquare = null; // Clear selection after completing bonus
+            isDroppingPiece = null;
+            clearHighlights();
+            displayReplayState(newNode); // Display the state *after* the bonus move
+
+        } else {
+            // Clicked invalid square for bonus move
+            console.log("Invalid target for bonus move.");
+            // Don't clear selection, keep forcing bonus move
+             clearHighlights(); // Clear highlights but keep selection
+             drawHighlights(validBonusMoves); // Redraw bonus highlights
+             const bonusSquareEl = document.querySelector(`[data-logical-x='${bonusPieceX}'][data-logical-y='${bonusPieceY}']`);
+             if(bonusSquareEl) bonusSquareEl.classList.add('selected');
+
+        }
+        return; // Don't process further clicks until bonus is done
+    }
+
+    // --- Standard move/selection logic (if NOT awaiting bonus) ---
+    if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+        // Attempting to make the FIRST part of a move or a normal move
+        const from = selectedSquare;
+        const to = { x, y };
+        const piece = currentGameState.boardState[from.y]?.[from.x];
+
+        if (!piece) { clearHighlights(); selectedSquare = null; return; }
+
+        const validMoves = gameLogic.getValidMovesForPiece(piece, from.x, from.y, currentGameState.boardState, false); // bonusActive is false for the first move
+        const targetMove = validMoves.find(m => m.x === to.x && m.y === to.y); // Find the specific move
+
+        if (targetMove) {
+            const wasCapture = targetMove.isAttack; // Use info from getValidMoves
+            const moveObj = { type: 'board', from, to };
+            const nextGameState = applyMoveToState(currentGameState, moveObj); // Apply the first move
+            const notationString = generateServerNotation(piece, to, wasCapture, false);
+
+            const newNode = {
+                moveNotation: notationString,
+                moveObj: moveObj,
+                gameState: nextGameState,
+                parent: currentReplayNode,
+                children: [],
+                 isBonusSecondMove: false // This is the first part or a normal move
+            };
+
+            currentReplayNode.children.push(newNode);
+            const flatIndex = flatMoveList.indexOf(currentReplayNode);
+             if (flatIndex > -1) {
+                 flatMoveList.splice(flatIndex + 1);
+                 flatMoveList.push(newNode);
+             }
+
+
+            // Check if THIS move triggered a bonus in the *next* state
+            if (nextGameState.bonusMoveInfo) {
+                awaitingBonusMove = { from: to, pieceType: piece.type }; // Set state for next click
+                selectedSquare = { x: to.x, y: to.y }; // Keep the piece selected
+                displayReplayState(newNode); // Display state after first move
+
+                // Highlight ONLY bonus moves
+                 const bonusPiece = nextGameState.boardState[to.y]?.[to.x];
+                 if(bonusPiece){
+                    const validBonusMoves = gameLogic.getValidMovesForPiece(bonusPiece, to.x, to.y, nextGameState.boardState, true)
+                                              .filter(m => !m.isAttack);
                     clearHighlights();
-                } else {
-                    selectedSquare = { x, y };
-                    isDroppingPiece = null;
-                    
-                    const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, gameState.boardState, false);
-                    drawHighlights(validMoves); 
-                }
+                    drawHighlights(validBonusMoves);
+                    const bonusSquareEl = document.querySelector(`[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
+             		if(bonusSquareEl) bonusSquareEl.classList.add('selected');
+                 } else {
+                     clearHighlights(); // Should not happen
+                 }
+
+            } else {
+                // Normal move completed
+                awaitingBonusMove = null;
+                selectedSquare = null;
+                isDroppingPiece = null;
+                clearHighlights();
+                displayReplayState(newNode);
             }
         } else {
-            selectedSquare = null;
-            isDroppingPiece = null;
-            clearHighlights();
+             // Invalid target square clicked
+             clearHighlights();
+             selectedSquare = null; // Deselect if invalid target
         }
+        return;
     }
 
-    // [NEW] Handler for captured clicks during replay
-    function handleReplayCapturedClick(piece, handColor, clickedElement) {
-        if (gameState.gameOver) return;
+    if (isDroppingPiece) {
+        // Attempting to make a drop move
+        const to = { x, y };
+        const moveObj = { type: 'drop', piece: isDroppingPiece, to };
 
-        const activeColor = gameState.isWhiteTurn ? 'white' : 'black';
-        if (handColor !== activeColor) return;
-        
-        if (piece.type === 'lupa' || piece.type === 'prince') return;
+        // Check if drop is valid (empty, valid square)
+        if (currentGameState.boardState[to.y]?.[to.x] === null && gameLogic.isPositionValid(to.x, to.y)) {
+            const nextGameState = applyMoveToState(currentGameState, moveObj);
+            const notationString = generateServerNotation({type: isDroppingPiece.type}, to, false, true); // Piece type needed for notation
 
-        if (isDroppingPiece && isDroppingPiece.type === piece.type) {
-            isDroppingPiece = null;
+            const newNode = {
+                moveNotation: notationString,
+                moveObj: moveObj,
+                gameState: nextGameState,
+                parent: currentReplayNode,
+                children: [],
+                 isBonusSecondMove: false
+            };
+
+            currentReplayNode.children.push(newNode);
+            const flatIndex = flatMoveList.indexOf(currentReplayNode);
+            if (flatIndex > -1) {
+                 flatMoveList.splice(flatIndex + 1);
+                 flatMoveList.push(newNode);
+            }
+
+            // Drops never trigger bonus moves
+            awaitingBonusMove = null;
             selectedSquare = null;
+            isDroppingPiece = null;
             clearHighlights();
-            clickedElement.classList.remove('selected-drop');
-            return;
+            displayReplayState(newNode);
+
+        } else {
+            // Invalid drop location
+            clearHighlights();
+            isDroppingPiece = null; // Deselect piece
         }
-        
+        return;
+    }
+
+    // --- Standard piece selection logic ---
+    const piece = currentGameState.boardState[y]?.[x];
+    if (piece) {
+        const canSelectPiece = piece.color === (currentGameState.isWhiteTurn ? 'white' : 'black');
+
+        if (canSelectPiece) {
+            if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                // Deselecting the piece
+                selectedSquare = null;
+                clearHighlights();
+            } else {
+                // Selecting a new piece
+                selectedSquare = { x, y };
+                isDroppingPiece = null;
+                const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, currentGameState.boardState, false); // bonusActive=false for initial selection
+                clearHighlights(); // Clear previous highlights first
+                drawHighlights(validMoves);
+                const selSquareEl = document.querySelector(`[data-logical-x='${x}'][data-logical-y='${y}']`);
+                if(selSquareEl) selSquareEl.classList.add('selected'); // Ensure selection is highlighted
+            }
+        } else {
+             // Clicked opponent's piece
+             selectedSquare = null; isDroppingPiece = null; clearHighlights();
+        }
+    } else {
+        // Clicked empty square
         selectedSquare = null;
-        isDroppingPiece = piece;
+        isDroppingPiece = null;
         clearHighlights();
-        clickedElement.classList.add('selected-drop');
-        highlightDropSquares();
     }
+}
+
+    function handleReplayCapturedClick(piece, handColor, clickedElement) {
+     const currentGameState = currentReplayNode.gameState;
+
+    // Do nothing if a bonus move is pending
+    if (currentGameState.bonusMoveInfo) {
+         console.log("Cannot select captured piece while bonus move is pending.");
+         return;
+    }
+
+    const activeColor = currentGameState.isWhiteTurn ? 'white' : 'black';
+    if (handColor !== activeColor) return;
+
+    if (piece.type === 'lupa' || piece.type === 'prince') return;
+
+    if (isDroppingPiece && isDroppingPiece.type === piece.type) {
+        // Deselect drop piece
+        isDroppingPiece = null;
+        selectedSquare = null;
+        clearHighlights();
+        clickedElement.classList.remove('selected-drop');
+        return;
+    }
+
+    // Select drop piece
+    selectedSquare = null;
+    isDroppingPiece = { type: piece.type }; // Only need type
+    clearHighlights();
+    clickedElement.classList.add('selected-drop');
+    highlightDropSquares(); // Uses global gameState which is set by displayReplayState
+}
 
 }); 
