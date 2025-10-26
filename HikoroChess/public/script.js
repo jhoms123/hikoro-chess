@@ -1519,35 +1519,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!moveHistoryElement) return;
     moveHistoryElement.innerHTML = ''; // Clear previous history
 
-    // Recursive function to render nodes and their variations
-    function renderNodeRecursive(node, parentDOMElement, depth) {
-        // Skip root node itself, start with its direct children
+    // Recursive function to render a node and its main continuation + branches
+    function renderNodeRecursive(node, container, depth) {
+        // Skip root node itself in display
         if (!node || node === replayGameTree) {
              if(node && node.children.length > 0){
-                // Create a container for the main line moves starting from root
-                const mainLineContainer = document.createElement('div');
-                mainLineContainer.classList.add('move-line');
-                parentDOMElement.appendChild(mainLineContainer);
-
-                // Render children into the main container
+                // Render all top-level moves (children of root) directly into the main container
                 node.children.forEach((child, index) => {
-                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
+                     renderNodeRecursive(child, container, 0); // Start all at depth 0
                 });
              }
             return;
         }
 
-        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
+        const moveWrapper = document.createElement('div'); // Wrapper for this move line
         moveWrapper.classList.add('move-wrapper');
-        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
-             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        } else if (depth > 0) {
-             // Indent main line continuations if they are nested under a branch display visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        }
+        moveWrapper.style.marginLeft = `${depth * 20}px`; // Apply indentation based on depth
 
-        const moveEl = document.createElement('span'); // Use span for the text part
+        const moveEl = document.createElement('span'); // Use span for the clickable text
         moveEl.classList.add('move-node');
 
         let moveText = node.moveNotation;
@@ -1555,31 +1544,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
         const wasWhiteMove = stateBefore.isWhiteTurn;
 
-         // Handle bonus move display - maybe combine? For now, show separately.
-         if (node.isBonusSecondMove) {
-             moveText = `> ${moveText}`; // Indicate continuation visually
-             // Don't add turn number/ellipsis to second part of bonus
-         } else if (wasWhiteMove) {
-             moveText = `${turnNum}. ${moveText}`;
-         } else {
-             moveText = `... ${moveText}`;
-         }
-
-        // Add parenthesis for the start of a branch variation
-        // Add only if it's the *first* move of a non-main-line variation
-        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
-        if (isBranchStartNode && !node.isBonusSecondMove) {
-             moveText = `( ${moveText}`;
+        // --- Handle Bonus Move Display ---
+        if (node.isBonusSecondMove) {
+            // If it's the second part, just show the notation indented slightly more
+            moveText = `> ${moveText}`;
+             moveWrapper.style.marginLeft = `${parseInt(moveWrapper.style.marginLeft || '0', 10) + 10}px`; // Extra indent for bonus part
+            // No turn number/ellipsis needed
+        } else if (wasWhiteMove) {
+            moveText = `${turnNum}. ${moveText}`;
+        } else {
+            moveText = `... ${moveText}`;
         }
 
-        moveEl.textContent = moveText + " "; // Add space after text
+         // Add parenthesis for the start of a branch variation line
+         const isBranchStart = node.parent && node.parent !== replayGameTree && node.parent.children[0] !== node;
+         if (isBranchStart && !node.isBonusSecondMove) {
+              moveText = `( ${moveText}`;
+         }
+
+
+        moveEl.textContent = moveText + " "; // Add space
 
         if (node === currentReplayNode) {
             moveEl.classList.add('active-move');
-             // Scroll the wrapper into view
             setTimeout(() => {
-                if (node === currentReplayNode) { // Check again in case of rapid navigation
-                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (node === currentReplayNode) {
+                    moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }, 50);
         }
@@ -1589,28 +1579,22 @@ document.addEventListener('DOMContentLoaded', () => {
             displayReplayState(node);
         });
 
-        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
-        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
+        moveWrapper.appendChild(moveEl);
+        container.appendChild(moveWrapper); // Add this move line to the parent container
 
-        // --- Render Children Recursively ---
+        // --- Render Children ---
         if (node.children.length > 0) {
-            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
-            // Or create a new line container if branches DO exist
-             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
-             if (node.children.length > 1) { // If there are branches, create a sub-container
-                containerForChildren = document.createElement('div');
-                containerForChildren.classList.add('move-line-continuation');
-                moveWrapper.appendChild(containerForChildren); // Nest child container
-             }
+            // Render the first child (main continuation) recursively into the *same container*
+            renderNodeRecursive(node.children[0], container, depth); // Continues at same depth
 
-            // Render first child (main continuation)
-             renderNodeRecursive(node.children[0], containerForChildren, depth);
-
-            // Render other variations (branches)
+            // Render other children (branches) into the *same container*, increasing depth
             for (let i = 1; i < node.children.length; i++) {
-                // Branches always start a new visual block/indent level
-                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
+                renderNodeRecursive(node.children[i], container, depth + 1); // Branches increase depth
             }
+        } else if (isBranchStart && !node.isBonusSecondMove){
+             // If this was the start of a branch and has no children, add closing paren
+             // This is tricky, might need adjustment based on bonus moves
+             // moveEl.textContent += " )"; // Simplistic closing paren
         }
     }
 
