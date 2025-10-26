@@ -1,4 +1,5 @@
-
+(function(exports) {
+	
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 16;
 
@@ -10,6 +11,11 @@ const pieceNotation = {
     kor: "J", finor: "Tc", greatshield: "Ss", greathorsegeneral: "Ac",
     neptune: "Np", mermaid: "Mm", cthulhu: "Ct"
 };
+
+const notationToPieceType = {};
+    for (const key in pieceNotation) {
+        notationToPieceType[pieceNotation[key]] = key;
+    }
 
 const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
 const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
@@ -357,15 +363,17 @@ function getValidMovesForPiece(piece, x, y, boardState, bonusMoveActive = false)
 }
 
 
-if (typeof module !== 'undefined' && module.exports) {
-    
-    module.exports = {
-        getInitialBoard,
-        getValidMovesForPiece,
-        isPositionValid,
-        pieceNotation,
-        
-        isKingRestricted,
-        isProtected
-    };
-}
+exports.getInitialBoard = getInitialBoard;
+    exports.getValidMovesForPiece = getValidMovesForPiece;
+    exports.isPositionValid = isPositionValid;
+    exports.pieceNotation = pieceNotation;
+    exports.notationToPieceType = notationToPieceType; 
+    exports.isKingRestricted = isKingRestricted;
+    exports.isProtected = isProtected;
+    exports.BOARD_WIDTH = BOARD_WIDTH;
+    exports.BOARD_HEIGHT = BOARD_HEIGHT;
+    exports.whitePalace = whitePalace;
+    exports.blackPalace = blackPalace;
+
+
+})(typeof module === 'undefined' ? (this.gameLogic = {}) : module.exports);
