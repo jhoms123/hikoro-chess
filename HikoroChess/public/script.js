@@ -1262,12 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return moves;
     }
 
-    // --- Updated Notation Parser ---
-    Okay, here is the parseNotation function formatted correctly with proper indentation. This should make it easier to read and maintain.
-
-JavaScript
-
-// --- CORRECTED Notation Parser (Fixes Ambiguity & Syntax Errors) ---
+   
 function parseNotation(notation, boardState, isWhiteTurn) {
     // Requires gameLogic to be loaded
     if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
