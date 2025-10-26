@@ -39,10 +39,60 @@ body {
     cursor: pointer;
 }
 
-#move-history .move-node.active-move {
-    background-color: #007bff; /* Brighter blue */
+#move-history {
+    /* Existing styles */
+    line-height: 1.6; /* Improve spacing */
+}
+
+.move-wrapper {
+    /* Container for a move and its potential nested branches */
+    display: block; /* Make sure each wrapper is on a new line */
+}
+
+.move-node {
+    /* Styles for the clickable move text itself */
+    padding: 1px 3px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: pre; /* Keep notation on one line */
+    display: inline; /* Keep text flowing */
+}
+
+.move-node:hover {
+    background-color: #555;
+}
+
+.move-node.active-move {
+    background-color: #007bff;
     color: white;
     font-weight: bold;
+}
+
+.move-branch {
+    /* Optional visual distinction for the start of a branch */
+    color: #ccc; */
+}
+
+.move-line-continuation {
+     /* Container for nested lines/branches */
+     /* Optional: Add padding if needed */
+     /* padding-left: 15px; */
+}
+
+/* Style for piece counts in captured area */
+.captured-piece {
+     position: relative; /* Needed for positioning the count */
+}
+.piece-count {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 0.7em;
+    padding: 0 3px;
+    border-radius: 3px;
+    line-height: 1;
 }
 
 #replay-controls button:disabled {

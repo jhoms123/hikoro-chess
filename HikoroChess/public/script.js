@@ -1264,53 +1264,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Updated Notation Parser ---
     function parseNotation(notation, boardState, isWhiteTurn) {
-        // Requires gameLogic to be loaded
-        if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
-             console.error("parseNotation: gameLogic not available");
-             return null;
-        }
+    // Requires gameLogic to be loaded
+    if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
+         console.error("parseNotation: gameLogic not available");
+         return null;
+    }
 
-        const color = isWhiteTurn ? 'white' : 'black';
-        // Updated Regex for more specific rank matching (1-16) and piece notation (starts with capital)
-        let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
-        if (match) {
-            const pieceAbbr = match[1];
-            const algTo = match[2];
-            const to = fromAlgebraic(algTo);
-            const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-            if (!pieceType || !to) { console.warn("Invalid drop notation:", notation); return null;}
-            return { type: 'drop', piece: { type: pieceType }, to: to };
-        }
-        match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
-        if (match) {
-            const pieceAbbr = match[1];
-            const algTo = match[3];
-            const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-            const to = fromAlgebraic(algTo);
-            if (!pieceType || !to) { console.warn("Invalid move notation:", notation); return null; }
+    const color = isWhiteTurn ? 'white' : 'black';
+    console.log(`Parsing notation: "${notation}" for ${color}`); // Log input
 
-            for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
-                for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
-                    const piece = boardState[y]?.[x];
-                    if (piece && piece.color === color && piece.type === pieceType) {
-                         try {
-                            const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false); // Check non-bonus moves
-                            if (validMoves.some(m => m.x === to.x && m.y === to.y)) {
-                                return { type: 'board', from: { x, y }, to: to };
+    // 1. Check for Drop
+    let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const algTo = match[2];
+        const to = fromAlgebraic(algTo);
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        if (!pieceType || !to) { console.warn(`Invalid drop notation or target: "${notation}"`); return null;}
+        console.log(` -> Parsed as Drop: type=${pieceType}, to=`, to);
+        return { type: 'drop', piece: { type: pieceType }, to: to };
+    }
+
+    // 2. Check for Move
+    match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const isCaptureNotation = match[2] === 'x'; // Check if 'x' is present
+        const algTo = match[3];
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        const to = fromAlgebraic(algTo);
+
+        if (!pieceType || !to) { console.warn(`Invalid move notation or target: "${notation}"`); return null; }
+        console.log(` -> Attempting Move: type=${pieceType}, to=`, to, ` CaptureNotation=${isCaptureNotation}`);
+
+        let foundMove = null;
+        for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+            for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                const piece = boardState[y]?.[x];
+                if (piece && piece.color === color && piece.type === pieceType) {
+                    console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
+                     try {
+                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                        const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+                        if (matchingMove) {
+                             console.log(`   -> Found valid move from ${toAlgebraic(x,y)} to ${algTo}. Is Attack=${matchingMove.isAttack}`);
+                            // Check consistency: notation says capture ('x'), but move logic says no attack? Or vice versa?
+                            if (isCaptureNotation && !matchingMove.isAttack) {
+                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
+                            } else if (!isCaptureNotation && matchingMove.isAttack) {
+                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
+                                 // Allow this, standard notation often omits 'x'
                             }
-                         } catch(e) {
-                             console.error("Error checking valid moves during parse:", e, {notation, piece, x, y, boardState});
-                             // Continue searching in case of error with one piece instance
-                         }
-                    }
+
+                             // If multiple pieces can move, this might overwrite a previous find, but usually only one is legal.
+                             foundMove = { type: 'board', from: { x, y }, to: to };
+                             // Don't break immediately, log all possibilities in case of ambiguity later
+                        } else {
+                             // console.log(`   -> No valid move to ${algTo} from ${toAlgebraic(x,y)}`);
+                        }
+                     } catch(e) {
+                         console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                     }
                 }
             }
-            console.warn(`Could not find 'from' square for move: ${notation} for ${color}`);
-            return null; // Move is ambiguous or piece doesn't exist
         }
-         console.warn("Could not parse notation:", notation);
-        return null; // Doesn't match drop or move format
+
+        if (foundMove) {
+             console.log(` -> Successfully parsed "${notation}" as Move: from=`, foundMove.from, ` to=`, foundMove.to);
+             return foundMove;
+        } else {
+             console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color}`);
+             // Log board state for debugging
+             // console.log("Board state at time of failure:", JSON.stringify(boardState));
+             return null;
+        }
     }
+
+     console.warn("Could not parse notation (doesn't match drop or move):", notation);
+    return null; // Doesn't match drop or move format
+}
 
      // --- Updated Apply Move Function ---
     function applyMoveToState(oldGameState, moveObj) {
@@ -1484,103 +1516,106 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Updated Move History Renderer ---
     function renderReplayMoveHistory() {
-        if (!moveHistoryElement) return;
-        moveHistoryElement.innerHTML = ''; // Clear previous history
+    if (!moveHistoryElement) return;
+    moveHistoryElement.innerHTML = ''; // Clear previous history
 
-        function renderNodeRecursive(node, container, depth, isFirstChildOfParent) {
-             // Skip root node itself in display
-            if (!node || node === replayGameTree) {
-                 if(node && node.children.length > 0){
-                     renderNodeRecursive(node.children[0], container, 0, true); // Render first move
-                     for(let i = 1; i < node.children.length; i++) { // Render variations off root
-                          renderNodeRecursive(node.children[i], container, 0, false);
-                     }
-                 }
-                return;
-            }
+    // Recursive function to render nodes and their variations
+    function renderNodeRecursive(node, parentDOMElement, depth) {
+        // Skip root node itself, start with its direct children
+        if (!node || node === replayGameTree) {
+             if(node && node.children.length > 0){
+                // Create a container for the main line moves starting from root
+                const mainLineContainer = document.createElement('div');
+                mainLineContainer.classList.add('move-line');
+                parentDOMElement.appendChild(mainLineContainer);
 
-            const moveEl = document.createElement('div');
-            moveEl.classList.add('move-node');
-            if (!isFirstChildOfParent) {
-                 moveEl.classList.add('move-branch');
-                 moveEl.style.marginLeft = `${depth * 15}px`;
-            } else if (depth > 0) {
-                 // Indent main line continuations if they are nested under a branch display
-                 let parentIsBranch = false;
-                 let temp = node.parent;
-                 while(temp && temp !== replayGameTree){
-                     if(temp.parent && temp.parent.children[0] !== temp){
-                         parentIsBranch = true; break;
-                     }
-                     temp = temp.parent;
-                 }
-                 if(parentIsBranch) moveEl.style.marginLeft = `${depth * 15}px`;
-            }
-
-
-            let moveText = node.moveNotation;
-            // Determine turn number and if it was white based on the state *before* this move
-            const stateBefore = node.parent.gameState;
-            const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
-            const wasWhiteMove = stateBefore.isWhiteTurn;
-
-             // Handle bonus move display
-             if (node.isBonusSecondMove) {
-                 // Indent second part slightly
-                 moveEl.style.marginLeft = `${parseInt(moveEl.style.marginLeft || '0', 10) + 10}px`;
-                 moveText = `> ${moveText}`; // Indicate continuation
-                 // Don't add turn number/ellipsis
-             } else if (wasWhiteMove) {
-                 moveText = `${turnNum}. ${moveText}`;
-             } else {
-                 moveText = `... ${moveText}`;
+                // Render children into the main container
+                node.children.forEach((child, index) => {
+                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
+                });
              }
-
-             // Add parenthesis for the start of a branch
-             if (!isFirstChildOfParent && !node.isBonusSecondMove) { // Don't add paren for bonus continuation
-                 moveText = `( ${moveText}`;
-             }
-
-
-            moveEl.textContent = moveText;
-
-            if (node === currentReplayNode) {
-                moveEl.classList.add('active-move');
-                // Debounce scrolling slightly
-                setTimeout(() => {
-                    // Check if still active after potential quick navigation
-                    if (node === currentReplayNode) {
-                        moveEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }, 50);
-            }
-
-            moveEl.addEventListener('click', (e) => {
-                e.stopPropagation();
-                displayReplayState(node);
-            });
-
-            container.appendChild(moveEl);
-
-             // Find the next node in the main line sequence *relative to this node*
-             let mainContinuation = null;
-             if(node.children.length > 0){
-                 mainContinuation = node.children[0];
-             }
-
-             // Render the main continuation (if it exists)
-             if(mainContinuation){
-                 renderNodeRecursive(mainContinuation, container, depth + (isFirstChildOfParent ? 0 : 1), true);
-             }
-
-             // Render other variations (branches) starting from this node
-             for (let i = 1; i < node.children.length; i++) {
-                 renderNodeRecursive(node.children[i], container, depth + 1, false);
-             }
+            return;
         }
 
-        renderNodeRecursive(replayGameTree, moveHistoryElement, 0, true); // Start rendering from root
+        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
+        moveWrapper.classList.add('move-wrapper');
+        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
+             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        } else if (depth > 0) {
+             // Indent main line continuations if they are nested under a branch display visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        }
+
+        const moveEl = document.createElement('span'); // Use span for the text part
+        moveEl.classList.add('move-node');
+
+        let moveText = node.moveNotation;
+        const stateBefore = node.parent.gameState;
+        const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
+        const wasWhiteMove = stateBefore.isWhiteTurn;
+
+         // Handle bonus move display - maybe combine? For now, show separately.
+         if (node.isBonusSecondMove) {
+             moveText = `> ${moveText}`; // Indicate continuation visually
+             // Don't add turn number/ellipsis to second part of bonus
+         } else if (wasWhiteMove) {
+             moveText = `${turnNum}. ${moveText}`;
+         } else {
+             moveText = `... ${moveText}`;
+         }
+
+        // Add parenthesis for the start of a branch variation
+        // Add only if it's the *first* move of a non-main-line variation
+        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
+        if (isBranchStartNode && !node.isBonusSecondMove) {
+             moveText = `( ${moveText}`;
+        }
+
+        moveEl.textContent = moveText + " "; // Add space after text
+
+        if (node === currentReplayNode) {
+            moveEl.classList.add('active-move');
+             // Scroll the wrapper into view
+            setTimeout(() => {
+                if (node === currentReplayNode) { // Check again in case of rapid navigation
+                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 50);
+        }
+
+        moveEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            displayReplayState(node);
+        });
+
+        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
+        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
+
+        // --- Render Children Recursively ---
+        if (node.children.length > 0) {
+            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
+            // Or create a new line container if branches DO exist
+             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
+             if (node.children.length > 1) { // If there are branches, create a sub-container
+                containerForChildren = document.createElement('div');
+                containerForChildren.classList.add('move-line-continuation');
+                moveWrapper.appendChild(containerForChildren); // Nest child container
+             }
+
+            // Render first child (main continuation)
+             renderNodeRecursive(node.children[0], containerForChildren, depth);
+
+            // Render other variations (branches)
+            for (let i = 1; i < node.children.length; i++) {
+                // Branches always start a new visual block/indent level
+                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
+            }
+        }
     }
+
+    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
+}
 
 
     // --- Updated handleReplaySquareClick ---
