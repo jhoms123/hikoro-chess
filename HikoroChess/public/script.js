@@ -1264,84 +1264,138 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Updated Notation Parser ---
     function parseNotation(notation, boardState, isWhiteTurn) {
-    // Requires gameLogic to be loaded
-    if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
-         console.error("parseNotation: gameLogic not available");
-         return null;
-    }
+    // Requires gameLogic to be loaded
+    if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
+         console.error("parseNotation: gameLogic not available");
+         return null;
+    }
 
-    const color = isWhiteTurn ? 'white' : 'black';
-    console.log(`Parsing notation: "${notation}" for ${color}`); // Log input
+    const color = isWhiteTurn ? 'white' : 'black';
+    console.log(`Parsing notation: "${notation}" for ${color}`); // Log input
 
-    // 1. Check for Drop
-    let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
-    if (match) {
-        const pieceAbbr = match[1];
-        const algTo = match[2];
-        const to = fromAlgebraic(algTo);
-        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-        if (!pieceType || !to) { console.warn(`Invalid drop notation or target: "${notation}"`); return null;}
-        console.log(` -> Parsed as Drop: type=${pieceType}, to=`, to);
-        return { type: 'drop', piece: { type: pieceType }, to: to };
-    }
+    // 1. Check for Drop
+    let match = notation.match(/^([A-Z][A-Za-z]*)\*([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const algTo = match[2];
+        const to = fromAlgebraic(algTo);
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        if (!pieceType || !to) { console.warn(`Invalid drop notation or target: "${notation}"`); return null;}
+        console.log(` -> Parsed as Drop: type=${pieceType}, to=`, to);
+        return { type: 'drop', piece: { type: pieceType }, to: to };
+    }
 
-    // 2. Check for Move
-    match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
-    if (match) {
-        const pieceAbbr = match[1];
-        const isCaptureNotation = match[2] === 'x'; // Check if 'x' is present
-        const algTo = match[3];
-        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-        const to = fromAlgebraic(algTo);
+    // 2. Check for Move
+    match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
+    if (match) {
+        const pieceAbbr = match[1];
+        const isCaptureNotation = match[2] === 'x'; // Check if 'x' is present
+        const algTo = match[3];
+        const pieceType = gameLogic.notationToPieceType[pieceAbbr];
+        const to = fromAlgebraic(algTo);
 
-        if (!pieceType || !to) { console.warn(`Invalid move notation or target: "${notation}"`); return null; }
-        console.log(` -> Attempting Move: type=${pieceType}, to=`, to, ` CaptureNotation=${isCaptureNotation}`);
+        if (!pieceType || !to) { console.warn(`Invalid move notation or target: "${notation}"`); return null; }
+        console.log(` -> Attempting Move: type=${pieceType}, to=`, to, ` CaptureNotation=${isCaptureNotation}`);
 
-        let foundMove = null;
-        for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
-            for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
-                const piece = boardState[y]?.[x];
-                if (piece && piece.color === color && piece.type === pieceType) {
-                    console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
-                     try {
-                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
-                        const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
-                        if (matchingMove) {
-                             console.log(`   -> Found valid move from ${toAlgebraic(x,y)} to ${algTo}. Is Attack=${matchingMove.isAttack}`);
-                            // Check consistency: notation says capture ('x'), but move logic says no attack? Or vice versa?
-                            if (isCaptureNotation && !matchingMove.isAttack) {
-                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
-                            } else if (!isCaptureNotation && matchingMove.isAttack) {
-                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
-                                 // Allow this, standard notation often omits 'x'
-                            }
+        let possibleMoves = []; // <-- Store all possible 'from' squares
 
-                             // If multiple pieces can move, this might overwrite a previous find, but usually only one is legal.
-                             foundMove = { type: 'board', from: { x, y }, to: to };
-                             // Don't break immediately, log all possibilities in case of ambiguity later
-                        } else {
-                             // console.log(`   -> No valid move to ${algTo} from ${toAlgebraic(x,y)}`);
-                        }
-                     } catch(e) {
-                         console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
-                     }
-                }
-            }
-        }
+        for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+            for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                const piece = boardState[y]?.[x];
+                // Check for the piece *type* from the notation
+                if (piece && piece.color === color && piece.type === pieceType) {
+                    console.log(` -> Checking piece at ${toAlgebraic(x,y)} (${piece.type})`);
+                     try {
+                        const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                        const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+                        if (matchingMove) {
+                             console.log(`   -> Found valid move from ${toAlgebraic(x,y)} to ${algTo}. Is Attack=${matchingMove.isAttack}`);
+                            
+                            if (isCaptureNotation && !matchingMove.isAttack) {
+                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates capture, but move logic says no attack.`);
+                            } else if (!isCaptureNotation && matchingMove.isAttack) {
+                                 console.warn(`   -> Mismatch: Notation "${notation}" indicates NO capture, but move logic says attack.`);
+                    _2_1}
+                            }
 
-        if (foundMove) {
-             console.log(` -> Successfully parsed "${notation}" as Move: from=`, foundMove.from, ` to=`, foundMove.to);
-             return foundMove;
-        } else {
-             console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color}`);
-             // Log board state for debugging
-             // console.log("Board state at time of failure:", JSON.stringify(boardState));
-             return null;
-        }
-    }
+                            possibleMoves.push({ type: 'board', from: { x, y }, to: to }); // <-- Add to list
+                        }
+                     } catch(e) {
+                         console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                     }
+                }
+            }
+        }
 
-     console.warn("Could not parse notation (doesn't match drop or move):", notation);
-    return null; // Doesn't match drop or move format
+        // --- Handle Ambiguity ---
+        if (possibleMoves.length === 1) {
+            console.log(` -> Successfully parsed "${notation}" as Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
+            return possibleMoves[0]; // Unambiguous, correct move
+        } else if (possibleMoves.length > 1) {
+            console.warn(`AMBIGUOUS MOVE: "${notation}". Multiple pieces (${pieceType}) can move to ${algTo}. Defaulting to the first one found.`);
+            return possibleMoves[0]; // Kifu is ambiguous, make a best guess
+        } else {
+            // --- CHECK FOR PROMOTION-RELATED NOTATION ---
+            // This handles the case "Duxe12" where the piece was a "Cr" on the *previous* move
+            // We re-scan, looking for pieces that *promote* to this piece type
+            console.log(` -> No ${pieceType} found. Checking for pieces that *promote* to ${pieceType}`);
+            const promotingTypes = [];
+            if (pieceType === 'chair') promotingTypes.push('sult', 'pawn');
+            if (pieceType === 'greatshield') promotingTypes.push('pilut');
+            if (pieceType === 'finor') promotingTypes.push('fin');
+            if (pieceType === 'cthulhu') promotingTypes.push('greathorsegeneral');
+            if (pieceType === 'neptune') promotingTypes.push('mermaid');
+
+            for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
+                for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
+                    const piece = boardState[y]?.[x];
+                    // Check if this piece is one that *could* promote to the piece in the notation
+                    if (piece && piece.color === color && promotingTypes.includes(piece.type)) {
+                        console.log(` -> Checking promoting piece at ${toAlgebraic(x,y)} (${piece.type})`);
+                        try {
+                            const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
+                            const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+                            if (matchingMove) {
+                                // Found a move. Now, does this move *result* in the correct promotion?
+                                const inPromotionZone = (color === 'white' && to.y > 8) || (color === 'black' && to.y < 7);
+                                const wasCapture = matchingMove.isAttack;
+                                let promotedType = piece.type;
+
+                                // Test promotion logic
+                                if (piece.type === 'fin' && wasCapture) promotedType = 'finor';
+                                else if ((piece.type === 'sult' || piece.type === 'pawn') && inPromotionZone) promotedType = 'chair';
+                                else if (piece.type === 'pilut' && inPromotionZone) promotedType = 'greatshield';
+                                else if (piece.type === 'greathorsegeneral' && wasCapture) promotedType = 'cthulhu';
+                                else if (piece.type === 'mermaid' && wasCapture) promotedType = 'neptune';
+
+                                if (promotedType === pieceType) {
+                nbsp;                console.log(`   -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
+                                    possibleMoves.push({ type: 'board', from: { x, y }, to: to });
+                                }
+                nbsp;           }
+                        } catch(e) {
+                            console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                        }
+                    }
+                }
+            }
+            
+            // Check possibilities from the *second* scan
+            if (possibleMoves.length === 1) {
+                console.log(` -> Successfully parsed "${notation}" as Promoting Move: from=`, possibleMoves[0].from, ` to=`, possibleMoves[0].to);
+                return possibleMoves[0];
+            } else if (possibleMoves.length > 1) {
+                console.warn(`AMBIGUOUS PROMOTING MOVE: "${notation}". Multiple pieces can move to ${algTo} and promote to ${pieceType}. Defaulting to first.`);
+                return possibleMoves[0];
+            } else {
+                console.warn(`Could not find a valid 'from' square for move: "${notation}" for ${color} (checked promotions)`);
+                return null; // Truly failed
+            }
+        }
+    }
+
+     console.warn("Could not parse notation (doesn't match drop or move):", notation);
+    return null; // Doesn't match drop or move format
 }
 
 function handlePromotion(piece, y, wasCapture) {
@@ -1544,105 +1598,105 @@ function handlePromotion(piece, y, wasCapture) {
 
     // --- Updated Move History Renderer ---
     function renderReplayMoveHistory() {
-    if (!moveHistoryElement) return;
-    moveHistoryElement.innerHTML = ''; // Clear previous history
+    if (!moveHistoryElement) return;
+    moveHistoryElement.innerHTML = ''; // Clear previous history
 
-    // Recursive function to render nodes and their variations
-    function renderNodeRecursive(node, parentDOMElement, depth) {
-        // Skip root node itself, start with its direct children
-        if (!node || node === replayGameTree) {
-             if(node && node.children.length > 0){
-                // Create a container for the main line moves starting from root
-                const mainLineContainer = document.createElement('div');
-                mainLineContainer.classList.add('move-line');
-                parentDOMElement.appendChild(mainLineContainer);
+    // Recursive function to render nodes and their variations
+    function renderNodeRecursive(node, parentDOMElement, depth) {
+        // Skip root node itself, start with its direct children
+        if (!node || node === replayGameTree) {
+             if(node && node.children.length > 0){
+                // Create a container for the main line moves starting from root
+                const mainLineContainer = document.createElement('div');
+                mainLineContainer.classList.add('move-line');
+                parentDOMElement.appendChild(mainLineContainer);
 
-                // Render children into the main container
-                node.children.forEach((child, index) => {
-                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
-                });
-             }
-            return;
-        }
+                // Render children into the main container
+                node.children.forEach((child, index) => {
+                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
+                });
+             }
+            return;
+        }
 
-        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
-        moveWrapper.classList.add('move-wrapper');
-        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
-             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        } else if (depth > 0) {
-             // Indent main line continuations if they are nested under a branch display visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        }
+        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
+        moveWrapper.classList.add('move-wrapper');
+        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
+             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        } else if (depth > 0) {
+             // Indent main line continuations if they are nested under a branch display visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        }
 
-        const moveEl = document.createElement('span'); // Use span for the text part
-        moveEl.classList.add('move-node');
+        const moveEl = document.createElement('span'); // Use span for the text part
+        moveEl.classList.add('move-node');
 
-        let moveText = node.moveNotation;
-        const stateBefore = node.parent.gameState;
-        const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
-        const wasWhiteMove = stateBefore.isWhiteTurn;
+        let moveText = node.moveNotation;
+        const stateBefore = node.parent.gameState;
+        const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
+        const wasWhiteMove = stateBefore.isWhiteTurn;
 
-         // Handle bonus move display - maybe combine? For now, show separately.
-         if (node.isBonusSecondMove) {
-             moveText = `> ${moveText}`; // Indicate continuation visually
-             // Don't add turn number/ellipsis to second part of bonus
-         } else if (wasWhiteMove) {
-             moveText = `${turnNum}. ${moveText}`;
-         } else {
-             moveText = `... ${moveText}`;
-         }
+         // Handle bonus move display - maybe combine? For now, show separately.
+         if (node.isBonusSecondMove) {
+             moveText = `> ${moveText}`; // Indicate continuation visually
+             // Don't add turn number/ellipsis to second part of bonus
+         } else if (wasWhiteMove) {
+             moveText = `${turnNum}. ${moveText}`;
+         } else {
+             moveText = `... ${moveText}`;
+         }
 
-        // Add parenthesis for the start of a branch variation
-        // Add only if it's the *first* move of a non-main-line variation
-        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
-        if (isBranchStartNode && !node.isBonusSecondMove) {
-             moveText = `( ${moveText}`;
-        }
+        // Add parenthesis for the start of a branch variation
+        // Add only if it's the *first* move of a non-main-line variation
+        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
+        if (isBranchStartNode && !node.isBonusSecondMove) {
+             moveText = `( ${moveText}`;
+        }
 
-        moveEl.textContent = moveText + " "; // Add space after text
+        moveEl.textContent = moveText + " "; // Add space after text
 
-        if (node === currentReplayNode) {
-            moveEl.classList.add('active-move');
-             // Scroll the wrapper into view
-            setTimeout(() => {
-                if (node === currentReplayNode) { // Check again in case of rapid navigation
-                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }, 50);
-        }
+        if (node === currentReplayNode) {
+            moveEl.classList.add('active-move');
+             // Scroll the wrapper into view
+            setTimeout(() => {
+                if (node === currentReplayNode) { // Check again in case of rapid navigation
+                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 50);
+        }
 
-        moveEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            displayReplayState(node);
-        });
+        moveEl.addEventListener('click', (e) => {
+i;
+            displayReplayState(node);
+        });
 
-        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
-        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
+        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
+        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
 
-        // --- Render Children Recursively ---
-        if (node.children.length > 0) {
-            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
-            // Or create a new line container if branches DO exist
-             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
-             if (node.children.length > 1) { // If there are branches, create a sub-container
-                containerForChildren = document.createElement('div');
-                containerForChildren.classList.add('move-line-continuation');
-                moveWrapper.appendChild(containerForChildren); // Nest child container
-             }
+        // --- Render Children Recursively ---
+        if (node.children.length > 0) {
+            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
+            // Or create a new line container if branches DO exist
+             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
+             if (node.children.length > 1) { // If there are branches, create a sub-container
+                containerForChildren = document.createElement('div');
+                containerForChildren.classList.add('move-line-continuation');
+                moveWrapper.appendChild(containerForChildren); // Nest child container
+             }
 
-            // Render first child (main continuation)
-             renderNodeRecursive(node.children[0], containerForChildren, depth);
+            // Render first child (main continuation)
+             renderNodeRecursive(node.children[0], containerForChildren, depth);
 
-            // Render other variations (branches)
-            for (let i = 1; i < node.children.length; i++) {
-                // Branches always start a new visual block/indent level
-                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
-            }
-        }
-    }
+            // Render other variations (branches)
+            for (let i = 1; i < node.children.length; i++) {
+        _1}
+                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
+            }
+        }
+    }
 
-    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
+    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
 }
 
 
