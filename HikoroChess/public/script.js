@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         botBonusState = null;
                     }
                 } else {
-                       botBonusState = null;
+                        botBonusState = null;
                 }
 
 
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-     // --- Updated Replay Navigation Listeners ---
+       // --- Updated Replay Navigation Listeners ---
     replayFirstBtn.addEventListener('click', () => {
         if (!isReplayMode || !replayGameTree) return;
         displayReplayState(replayGameTree); // Go to the root node (before first move)
@@ -711,40 +711,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         const isTopHandClickable = (isSinglePlayer && !isBotGame && gameState.isWhiteTurn === isBottomHandWhite) || // Allow clicking black in pass-and-play
-                                   (isReplayMode) ||
-                                   (!isSinglePlayer && myColor === topHandColor);
+                                  (isReplayMode) ||
+                                  (!isSinglePlayer && myColor === topHandColor);
 
 
         // --- Render Captured Pieces (Group by type) ---
-         const groupPieces = (pieces) => {
-             const counts = {};
-             pieces.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1; });
-             return Object.entries(counts).sort(([typeA], [typeB]) => typeA.localeCompare(typeB)); // Sort alphabetically
-         };
+          const groupPieces = (pieces) => {
+               const counts = {};
+               pieces.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1; });
+               return Object.entries(counts).sort(([typeA], [typeB]) => typeA.localeCompare(typeB)); // Sort alphabetically
+           };
 
-         groupPieces(bottomHandPieces).forEach(([type, count]) => {
-             const pieceData = { type }; // Pass just the type
-             const pieceEl = createCapturedPieceElement(pieceData, bottomHandColor, isBottomHandClickable);
-             if (count > 1) {
-                  const countBadge = document.createElement('span');
-                  countBadge.classList.add('piece-count');
-                  countBadge.textContent = count;
-                  pieceEl.appendChild(countBadge);
-             }
-             bottomHandEl.appendChild(pieceEl);
-         });
+           groupPieces(bottomHandPieces).forEach(([type, count]) => {
+               const pieceData = { type }; // Pass just the type
+               const pieceEl = createCapturedPieceElement(pieceData, bottomHandColor, isBottomHandClickable);
+               if (count > 1) {
+                    const countBadge = document.createElement('span');
+                    countBadge.classList.add('piece-count');
+                    countBadge.textContent = count;
+                    pieceEl.appendChild(countBadge);
+               }
+               bottomHandEl.appendChild(pieceEl);
+           });
 
-         groupPieces(topHandPieces).forEach(([type, count]) => {
-             const pieceData = { type };
-             const pieceEl = createCapturedPieceElement(pieceData, topHandColor, isTopHandClickable);
-              if (count > 1) {
-                  const countBadge = document.createElement('span');
-                  countBadge.classList.add('piece-count');
-                  countBadge.textContent = count;
-                  pieceEl.appendChild(countBadge);
-             }
-             topHandEl.appendChild(pieceEl);
-         });
+           groupPieces(topHandPieces).forEach(([type, count]) => {
+               const pieceData = { type };
+               const pieceEl = createCapturedPieceElement(pieceData, topHandColor, isTopHandClickable);
+                if (count > 1) {
+                    const countBadge = document.createElement('span');
+                    countBadge.classList.add('piece-count');
+                    countBadge.textContent = count;
+                    pieceEl.appendChild(countBadge);
+               }
+               topHandEl.appendChild(pieceEl);
+           });
     }
 
     // --- Uses element fetching inside ---
@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
             winnerTextEl.textContent = ''; // Clear winner text
             if (isSinglePlayer || isReplayMode) {
                  // Use gameState which is updated globally
-                turnIndicatorEl.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
+                 turnIndicatorEl.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
                 const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
                 turnIndicatorEl.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
@@ -1035,8 +1035,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         const isPlayerAllowedToMove = (isSinglePlayer && !isBotGame) ||
-                                    (isBotGame && gameState.isWhiteTurn) ||
-                                    (!isSinglePlayer && myColor === activeColor);
+                                      (isBotGame && gameState.isWhiteTurn) ||
+                                      (!isSinglePlayer && myColor === activeColor);
 
         if (!isPlayerAllowedToMove) {
             return;
@@ -1075,9 +1075,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.move-plate').forEach(p => p.remove());
 
          const isPlayerTurn = (isReplayMode) ||
-                               (isSinglePlayer && !isBotGame) ||
-                               (isBotGame && gameState.isWhiteTurn) ||
-                               (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+                                (isSinglePlayer && !isBotGame) ||
+                                (isBotGame && gameState.isWhiteTurn) ||
+                                (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
 
 
         for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -1202,18 +1202,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
      function isPositionValid(x, y) {
-        if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
-        if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
-        if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
-        return true;
-     }
+         if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
+         if ((x <= 1 && y <= 2) || (x >= 8 && y <= 2)) return false;
+         if ((x <= 1 && y >= 13) || (x >= 8 && y >= 13)) return false;
+         return true;
+      }
 
-     // --- Replay Helper Functions ---
+       // --- Replay Helper Functions ---
 	 function toAlgebraic(x, y) {
-        const file = String.fromCharCode('a'.charCodeAt(0) + x);
-        const rank = y + 1; // y=0 is rank 1
-        return `${file}${rank}`;
-    }
+         const file = String.fromCharCode('a'.charCodeAt(0) + x);
+         const rank = y + 1; // y=0 is rank 1
+         return `${file}${rank}`;
+     }
 
     function fromAlgebraic(alg) {
         if (!alg || alg.length < 2) return null;
@@ -1262,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return moves;
     }
 
-   
+    
 function parseNotation(notation, boardState, isWhiteTurn) {
     // Requires gameLogic to be loaded
     if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
@@ -1432,277 +1432,275 @@ function handlePromotion(piece, y, wasCapture) {
      }
 
 
-     // --- Updated Apply Move Function ---
-    function applyMoveToState(oldGameState, moveObj) {
-        if (!moveObj) {
+       // --- Updated Apply Move Function ---
+     function applyMoveToState(oldGameState, moveObj) {
+         if (!moveObj) {
              console.error("applyMoveToState received null moveObj");
              return oldGameState;
-        }
-        let newGameState = JSON.parse(JSON.stringify(oldGameState)); // Deep copy is crucial
-        let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
-        const color = isWhiteTurn ? 'white' : 'black';
-        let pieceMovedOriginal = null; // Store original piece info before mutation
-        let wasCapture = false;
+         }
+         let newGameState = JSON.parse(JSON.stringify(oldGameState)); // Deep copy is crucial
+         let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
+         const color = isWhiteTurn ? 'white' : 'black';
+         let pieceMovedOriginal = null; // Store original piece info before mutation
+         let wasCapture = false;
 
-        // Apply the move
-        if (moveObj.type === 'drop') {
-            const droppedPiece = { type: moveObj.piece.type, color: color };
-             if(!boardState[moveObj.to.y]){ console.error("Invalid 'to.y' in drop:", moveObj); return oldGameState;}
-            boardState[moveObj.to.y][moveObj.to.x] = droppedPiece;
-            const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-            const pieceIndex = hand.findIndex(p => p.type === moveObj.piece.type);
-            if (pieceIndex > -1) {
+         // Apply the move
+         if (moveObj.type === 'drop') {
+             const droppedPiece = { type: moveObj.piece.type, color: color };
+              if(!boardState[moveObj.to.y]){ console.error("Invalid 'to.y' in drop:", moveObj); return oldGameState;}
+             boardState[moveObj.to.y][moveObj.to.x] = droppedPiece;
+             const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+             const pieceIndex = hand.findIndex(p => p.type === moveObj.piece.type);
+             if (pieceIndex > -1) {
                  hand.splice(pieceIndex, 1);
-            } else {
+             } else {
                  console.warn("ApplyMove: Drop piece type not found in hand", moveObj, hand);
                  // Proceed anyway for replay robustness, but log warning
-            }
-            pieceMovedOriginal = droppedPiece;
-            newGameState.lastMove = { from: null, to: moveObj.to };
+             }
+             pieceMovedOriginal = droppedPiece;
+             newGameState.lastMove = { from: null, to: moveObj.to };
 
-        } else if (moveObj.type === 'board') {
-            const piece = boardState[moveObj.from.y]?.[moveObj.from.x];
-            if (!piece) {
+         } else if (moveObj.type === 'board') {
+             const piece = boardState[moveObj.from.y]?.[moveObj.from.x];
+             if (!piece) {
                  console.error("ApplyMove: Piece not found at source", moveObj);
                  return oldGameState;
-            }
-            pieceMovedOriginal = {...piece}; // Clone piece info *before* potential promotion
+             }
+             pieceMovedOriginal = {...piece}; // Clone piece info *before* potential promotion
 
-            const targetPiece = boardState[moveObj.to.y]?.[moveObj.to.x];
-            wasCapture = targetPiece !== null;
+             const targetPiece = boardState[moveObj.to.y]?.[moveObj.to.x];
+             wasCapture = targetPiece !== null;
 
-            if (targetPiece) {
-                if (targetPiece.type !== 'lupa' && targetPiece.type !== 'prince') {
-                    const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-                     let capturedType = targetPiece.type;
-                     // Handle Neptune -> Mermaid capture specifically
-                     if (targetPiece.type === 'neptune') {
-                          capturedType = 'mermaid';
-                          // Mermaid goes back to original owner's hand, but client just needs type
-                     }
-                    if (hand.length < 6) {
+             if (targetPiece) {
+                 if (targetPiece.type !== 'lupa' && targetPiece.type !== 'prince') {
+                     const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+                      let capturedType = targetPiece.type;
+                       // Handle Neptune -> Mermaid capture specifically
+                       if (targetPiece.type === 'neptune') {
+                           capturedType = 'mermaid';
+                           // Mermaid goes back to original owner's hand, but client just needs type
+                       }
+                     if (hand.length < 6) {
                          hand.push({ type: capturedType }); // Client only needs type for display
-                    }
-                }
-            }
-
-            const movingPieceObject = boardState[moveObj.from.y][moveObj.from.x];
-            boardState[moveObj.to.y][moveObj.to.x] = movingPieceObject;
-            boardState[moveObj.from.y][moveObj.from.x] = null;
-            newGameState.lastMove = { from: moveObj.from, to: moveObj.to };
-
-            // Handle promotions *after* move
-             const pieceNowAtTarget = boardState[moveObj.to.y]?.[moveObj.to.x];
-             if (pieceNowAtTarget) {
-                 handlePromotion(pieceNowAtTarget, moveObj.to.y, wasCapture); // Mutates piece
-             } else {
-                 console.error("ApplyMove: Piece disappeared after move!", moveObj);
-                 return oldGameState; // State is inconsistent
+                     }
+                 }
              }
 
-        } else {
+             const movingPieceObject = boardState[moveObj.from.y][moveObj.from.x];
+             boardState[moveObj.to.y][moveObj.to.x] = movingPieceObject;
+             boardState[moveObj.from.y][moveObj.from.x] = null;
+             newGameState.lastMove = { from: moveObj.from, to: moveObj.to };
+
+             // Handle promotions *after* move
+              const pieceNowAtTarget = boardState[moveObj.to.y]?.[moveObj.to.x];
+              if (pieceNowAtTarget) {
+                 handlePromotion(pieceNowAtTarget, moveObj.to.y, wasCapture); // Mutates piece
+              } else {
+                 console.error("ApplyMove: Piece disappeared after move!", moveObj);
+                 return oldGameState; // State is inconsistent
+              }
+
+         } else {
              console.error("ApplyMove: Unknown move type", moveObj);
              return oldGameState;
-        }
+         }
 
-        // --- Update Bonus Move Info & Turn (Crucial Logic) ---
-        const isBonusContinuation = !!oldGameState.bonusMoveInfo; // Was previous state waiting?
+         // --- Update Bonus Move Info & Turn (Crucial Logic) ---
+         const isBonusContinuation = !!oldGameState.bonusMoveInfo; // Was previous state waiting?
 
-        let triggersBonus = false;
-        if (pieceMovedOriginal && !isBonusContinuation) { // Check on first move only
-            const isCopeBonusTrigger = pieceMovedOriginal.type === 'cope' && wasCapture;
-            const isGHGBonusTrigger = (pieceMovedOriginal.type === 'greathorsegeneral' || pieceMovedOriginal.type === 'cthulhu') && !wasCapture && moveObj.type === 'board';
-            triggersBonus = isCopeBonusTrigger || isGHGBonusTrigger;
-        }
+         let triggersBonus = false;
+         if (pieceMovedOriginal && !isBonusContinuation) { // Check on first move only
+             const isCopeBonusTrigger = pieceMovedOriginal.type === 'cope' && wasCapture;
+             const isGHGBonusTrigger = (pieceMovedOriginal.type === 'greathorsegeneral' || pieceMovedOriginal.type === 'cthulhu') && !wasCapture && moveObj.type === 'board';
+             triggersBonus = isCopeBonusTrigger || isGHGBonusTrigger;
+         }
 
-        if (triggersBonus) {
-            newGameState.bonusMoveInfo = { pieceX: moveObj.to.x, pieceY: moveObj.to.y };
-            newGameState.isWhiteTurn = oldGameState.isWhiteTurn; // Turn does NOT change yet
-             // turnCount doesn't increment yet
-        } else if (isBonusContinuation) {
-            newGameState.bonusMoveInfo = null; // Bonus finished
-            newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; // Turn changes AFTER bonus
-            newGameState.turnCount++; // Increment turn count AFTER bonus
-        } else {
-            newGameState.bonusMoveInfo = null; // Normal move
-            newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; // Turn changes
-            newGameState.turnCount++; // Increment turn count
-        }
+         if (triggersBonus) {
+             newGameState.bonusMoveInfo = { pieceX: moveObj.to.x, pieceY: moveObj.to.y };
+             newGameState.isWhiteTurn = oldGameState.isWhiteTurn; // Turn does NOT change yet
+              // turnCount doesn't increment yet
+         } else if (isBonusContinuation) {
+             newGameState.bonusMoveInfo = null; // Bonus finished
+             newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; // Turn changes AFTER bonus
+             newGameState.turnCount++; // Increment turn count AFTER bonus
+         } else {
+             newGameState.bonusMoveInfo = null; // Normal move
+             newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; // Turn changes
+             newGameState.turnCount++; // Increment turn count
+         }
 
-        newGameState.gameOver = false; // Reset game over status for branching
-        newGameState.winner = null;
-        newGameState.reason = null;
+         newGameState.gameOver = false; // Reset game over status for branching
+         newGameState.winner = null;
+         newGameState.reason = null;
 
-        return newGameState;
-    }
+         return newGameState;
+     }
 
 
-     // --- Updated Build Replay Tree ---
-    function buildReplayTree(kifuText) {
-        const moveNotations = parseKifuToMoveList(kifuText);
-        if (moveNotations.length === 0) {
-            alert("Invalid or empty kifu. Please check format (e.g., '1. MoveW MoveB').");
-            return null;
-        }
+       // --- Updated Build Replay Tree ---
+     function buildReplayTree(kifuText) {
+         const moveNotations = parseKifuToMoveList(kifuText);
+         if (moveNotations.length === 0) {
+             alert("Invalid or empty kifu. Please check format (e.g., '1. MoveW MoveB').");
+             return null;
+         }
 
-        const initialBoard = gameLogic.getInitialBoard();
-        const rootNode = {
-            moveNotation: "Start", moveObj: null,
-            gameState: {
-                boardState: initialBoard, whiteCaptured: [], blackCaptured: [],
-                isWhiteTurn: true, turnCount: 0, gameOver: false, lastMove: null, bonusMoveInfo: null
-            },
-            parent: null, children: [], isBonusSecondMove: false
-        };
+         const initialBoard = gameLogic.getInitialBoard();
+         const rootNode = {
+             moveNotation: "Start", moveObj: null,
+             gameState: {
+                 boardState: initialBoard, whiteCaptured: [], blackCaptured: [],
+                 isWhiteTurn: true, turnCount: 0, gameOver: false, lastMove: null, bonusMoveInfo: null
+             },
+             parent: null, children: [], isBonusSecondMove: false
+         };
 
-        let currentNode = rootNode;
+         let currentNode = rootNode;
 
-        for (let i = 0; i < moveNotations.length; i++) {
-            const notation = moveNotations[i];
-            const currentGameState = currentNode.gameState; // State *before* this move
-            const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
+         for (let i = 0; i < moveNotations.length; i++) {
+             const notation = moveNotations[i];
+             const currentGameState = currentNode.gameState; // State *before* this move
+             const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
 
-            if (!moveObj) {
-                console.error(`Failed to parse move: "${notation}" (move index ${i}). Stopping tree build.`);
-                alert(`Error parsing move "${notation}" (approx move ${Math.floor(i/2)+1}). Replay might be incomplete or incorrect.`);
-                break; // Stop building if parsing fails
-            }
+             if (!moveObj) {
+                 console.error(`Failed to parse move: "${notation}" (move index ${i}). Stopping tree build.`);
+                 alert(`Error parsing move "${notation}" (approx move ${Math.floor(i/2)+1}). Replay might be incomplete or incorrect.`);
+                 break; // Stop building if parsing fails
+             }
 
-            const newGameState = applyMoveToState(currentGameState, moveObj);
+             const newGameState = applyMoveToState(currentGameState, moveObj);
 
-            // Basic check if state actually changed
-            if (JSON.stringify(newGameState.boardState) === JSON.stringify(currentGameState.boardState) &&
-                JSON.stringify(newGameState.whiteCaptured) === JSON.stringify(currentGameState.whiteCaptured) &&
-                JSON.stringify(newGameState.blackCaptured) === JSON.stringify(currentGameState.blackCaptured)) {
+             // Basic check if state actually changed
+             if (JSON.stringify(newGameState.boardState) === JSON.stringify(currentGameState.boardState) &&
+                 JSON.stringify(newGameState.whiteCaptured) === JSON.stringify(currentGameState.whiteCaptured) &&
+                 JSON.stringify(newGameState.blackCaptured) === JSON.stringify(currentGameState.blackCaptured)) {
                  console.error(`Applying move "${notation}" did not change game state. Stopping build.`, {oldState: currentGameState, move: moveObj, newState: newGameState});
                  alert(`Error applying move "${notation}" (approx move ${Math.floor(i/2)+1}). State did not change. Replay might be incomplete or incorrect.`);
                  break; // Stop if move application seems faulty
-            }
+             }
 
-            const newNode = {
-                moveNotation: notation, moveObj: moveObj, gameState: newGameState,
-                parent: currentNode, children: [],
-                // Mark if this node represents the state *after* a bonus move was completed
-                isBonusSecondMove: !!currentGameState.bonusMoveInfo && !newGameState.bonusMoveInfo
-            };
+             const newNode = {
+                 moveNotation: notation, moveObj: moveObj, gameState: newGameState,
+                 parent: currentNode, children: [],
+                 // Mark if this node represents the state *after* a bonus move was completed
+                 isBonusSecondMove: !!currentGameState.bonusMoveInfo && !newGameState.bonusMoveInfo
+             };
 
-            currentNode.children.push(newNode);
-            currentNode = newNode; // Move to the newly created node for the next iteration
-        }
+             currentNode.children.push(newNode);
+             currentNode = newNode; // Move to the newly created node for the next iteration
+         }
 
-        // Build flatMoveList AFTER the tree is constructed
-        flatMoveList = [rootNode];
-        let node = rootNode;
-        while(node.children.length > 0) {
-             node = node.children[0]; // Always follow the first child
-             flatMoveList.push(node);
-        }
-        console.log("Built tree, main line length:", flatMoveList.length);
+         // Build flatMoveList AFTER the tree is constructed
+         flatMoveList = [rootNode];
+         let node = rootNode;
+         while(node.children.length > 0) {
+              node = node.children[0]; // Always follow the first child
+              flatMoveList.push(node);
+         }
+         console.log("Built tree, main line length:", flatMoveList.length);
 
-        return rootNode;
-    }
+         return rootNode;
+     }
 
     // --- Updated Move History Renderer ---
     function renderReplayMoveHistory() {
-    if (!moveHistoryElement) return;
-    moveHistoryElement.innerHTML = ''; // Clear previous history
+    if (!moveHistoryElement) return;
+    moveHistoryElement.innerHTML = ''; // Clear previous history
 
-    // Recursive function to render nodes and their variations
-    function renderNodeRecursive(node, parentDOMElement, depth) {
-        // Skip root node itself, start with its direct children
-        if (!node || node === replayGameTree) {
-             if(node && node.children.length > 0){
-                // Create a container for the main line moves starting from root
-                const mainLineContainer = document.createElement('div');
-                mainLineContainer.classList.add('move-line');
-                parentDOMElement.appendChild(mainLineContainer);
+    // Recursive function to render nodes and their variations
+    function renderNodeRecursive(node, parentDOMElement, depth) {
+        // Skip root node itself, start with its direct children
+        if (!node || node === replayGameTree) {
+             if(node && node.children.length > 0){
+                 // Create a container for the main line moves starting from root
+                 const mainLineContainer = document.createElement('div');
+                 mainLineContainer.classList.add('move-line');
+                 parentDOMElement.appendChild(mainLineContainer);
 
-                // Render children into the main container
-                node.children.forEach((child, index) => {
-                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
-                });
-             }
-            return;
-        }
+                 // Render children into the main container
+                 node.children.forEach((child, index) => {
+                     renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
+                 });
+             }
+            return;
+        }
 
-        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
-        moveWrapper.classList.add('move-wrapper');
-        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
-             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        } else if (depth > 0) {
-             // Indent main line continuations if they are nested under a branch display visually
-             moveWrapper.style.marginLeft = `${depth * 15}px`;
-        }
+        const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
+        moveWrapper.classList.add('move-wrapper');
+        if (node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node) {
+             moveWrapper.classList.add('branch-start'); // Mark the start of a variation branch visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        } else if (depth > 0) {
+             // Indent main line continuations if they are nested under a branch display visually
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+        }
 
-        const moveEl = document.createElement('span'); // Use span for the text part
-        moveEl.classList.add('move-node');
+        const moveEl = document.createElement('span'); // Use span for the text part
+        moveEl.classList.add('move-node');
 
-        let moveText = node.moveNotation;
-        const stateBefore = node.parent.gameState;
-        const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
-        const wasWhiteMove = stateBefore.isWhiteTurn;
+        let moveText = node.moveNotation;
+        const stateBefore = node.parent.gameState;
+        const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
+        const wasWhiteMove = stateBefore.isWhiteTurn;
 
-         // Handle bonus move display - maybe combine? For now, show separately.
-         if (node.isBonusSecondMove) {
-             moveText = `> ${moveText}`; // Indicate continuation visually
-             // Don't add turn number/ellipsis to second part of bonus
-         } else if (wasWhiteMove) {
-             moveText = `${turnNum}. ${moveText}`;
-         } else {
-             moveText = `... ${moveText}`;
-         }
+         // Handle bonus move display - maybe combine? For now, show separately.
+         if (node.isBonusSecondMove) {
+             moveText = `> ${moveText}`; // Indicate continuation visually
+             // Don't add turn number/ellipsis to second part of bonus
+         } else if (wasWhiteMove) {
+             moveText = `${turnNum}. ${moveText}`;
+         } else {
+             moveText = `... ${moveText}`;
+         }
 
-        // Add parenthesis for the start of a branch variation
-        // Add only if it's the *first* move of a non-main-line variation
-        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
-        if (isBranchStartNode && !node.isBonusSecondMove) {
-             moveText = `( ${moveText}`;
-        }
+        // Add parenthesis for the start of a branch variation
+        // Add only if it's the *first* move of a non-main-line variation
+        const isBranchStartNode = node.parent && node.parent.children[0] !== node && (!node.parent.parent || node.parent.parent.children[0] === node.parent || node.parent === replayGameTree);
+        if (isBranchStartNode && !node.isBonusSecondMove) {
+             moveText = `( ${moveText}`;
+        }
 
-        moveEl.textContent = moveText + " "; // Add space after text
+        moveEl.textContent = moveText + " "; // Add space after text
 
-        if (node === currentReplayNode) {
-            moveEl.classList.add('active-move');
-             // Scroll the wrapper into view
-            setTimeout(() => {
-                if (node === currentReplayNode) { // Check again in case of rapid navigation
-                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }, 50);
-        }
+        if (node === currentReplayNode) {
+            moveEl.classList.add('active-move');
+             // Scroll the wrapper into view
+             setTimeout(() => {
+                 if (node === currentReplayNode) { // Check again in case of rapid navigation
+                     moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                 }
+             }, 50);
+        }
 
-        moveEl.addEventListener('click', (e) => {
-i;
-            displayReplayState(node);
-        });
+        moveEl.addEventListener('click', (e) => {
+            displayReplayState(node);
+        });
 
-        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
-        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
+        moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
+        parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
 
-        // --- Render Children Recursively ---
-        if (node.children.length > 0) {
-            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
-            // Or create a new line container if branches DO exist
-             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
-             if (node.children.length > 1) { // If there are branches, create a sub-container
-                containerForChildren = document.createElement('div');
-                containerForChildren.classList.add('move-line-continuation');
-                moveWrapper.appendChild(containerForChildren); // Nest child container
-             }
+        // --- Render Children Recursively ---
+        if (node.children.length > 0) {
+            // Main continuation (child 0) - Render directly after the current move text if no branches exist yet for it
+            // Or create a new line container if branches DO exist
+             let containerForChildren = moveWrapper; // Default to adding inside current wrapper
+             if (node.children.length > 1) { // If there are branches, create a sub-container
+                 containerForChildren = document.createElement('div');
+                 containerForChildren.classList.add('move-line-continuation');
+                 moveWrapper.appendChild(containerForChildren); // Nest child container
+             }
 
-            // Render first child (main continuation)
-             renderNodeRecursive(node.children[0], containerForChildren, depth);
+            // Render first child (main continuation)
+             renderNodeRecursive(node.children[0], containerForChildren, depth);
 
-            // Render other variations (branches)
-            for (let i = 1; i < node.children.length; i++) {
-        _1}
-                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
-            }
-        }
-    }
+            // Render other variations (branches)
+            for (let i = 1; i < node.children.length; i++) {
+                renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
+            }
+        }
+    }
 
-    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
+    renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
 }
 
 
