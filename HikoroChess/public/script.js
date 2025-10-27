@@ -1376,8 +1376,9 @@ document.addEventListener('DOMContentLoaded', () => {
         goBoardContainer.style.padding = `${paddingPx}px`;
 
         // Set dynamic grid size in CSS (Use 1fr for flexible cells)
-        goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
-        goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, 1fr)`;
+        // Set dynamic grid size in CSS (Use FIXED cell size)
+    goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
+    goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
 
         // Calculate and set the size for the ::before pseudo-element
         const linesWidth = cellSizePx * (boardSize - 1);
