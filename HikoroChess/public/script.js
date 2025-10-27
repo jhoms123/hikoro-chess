@@ -1360,55 +1360,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderGoBoard() {
-        clearGoHighlights(); // Clear previous highlights and selections
-        if (!gameState || !gameState.boardState) {
-            console.error("renderGoBoard: gameState or boardState missing!");
-            return;
-        }
+        clearGoHighlights(); // Clear previous highlights and selections
+        if (!gameState || !gameState.boardState) {
+            console.error("renderGoBoard: gameState or boardState missing!");
+            return;
+        }
 
-        for (let y = 0; y < GO_BOARD_SIZE; y++) {
-            for (let x = 0; x < GO_BOARD_SIZE; x++) {
-                // Find the specific intersection element
-                const intersection = document.querySelector(`#go-board-container .intersection[data-x='${x}'][data-y='${y}']`);
-                if (!intersection) continue; // Skip if element not found (shouldn't happen)
-                intersection.innerHTML = ''; // Clear previous stone/highlight
+        for (let y = 0; y < GO_BOARD_SIZE; y++) {
+            for (let x = 0; x < GO_BOARD_SIZE; x++) {
+                const intersection = document.querySelector(`#go-board-container .intersection[data-x='${x}'][data-y='${y}']`);
+                if (!intersection) continue;
+                intersection.innerHTML = ''; // Clear previous stone/highlight
 
-                const stoneType = gameState.boardState[y][x]; // Get state from global gameState
-                let stone = null;
+                const stoneType = gameState.boardState[y][x];
+                let stone = null;
 
-                // Create stone element if the spot is occupied
-                if (stoneType > 0) {
-                    stone = document.createElement('div');
-                    stone.classList.add('stone');
+                if (stoneType > 0) {
+                    stone = document.createElement('div');
+                    stone.classList.add('stone'); // Base class
 
-                    // Add classes for color and shield status
-                    if (stoneType === 1) stone.classList.add('black');
-                    else if (stoneType === 2) stone.classList.add('white');
-                    else if (stoneType === 3) stone.classList.add('black-shield');
-                    else if (stoneType === 4) stone.classList.add('white-shield');
-
-                    intersection.appendChild(stone); // Add stone to the intersection
-
-                    // Add last move highlight if applicable
-                    if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
-                        stone.classList.add('last-move');
+                    // --- MODIFICATION START ---
+                    // Add classes based on stoneType for background images
+                    switch (stoneType) {
+                        case 1: // Black
+                            stone.classList.add('go-black');
+                            break;
+                        case 2: // White
+                            stone.classList.add('go-white');
+                            break;
+                        case 3: // Black Shield
+                            stone.classList.add('go-black-shield');
+                            break;
+                        case 4: // White Shield
+                            stone.classList.add('go-white-shield');
+                            break;
                     }
-                    // Add selected highlight if applicable (using goSelectedPiece state)
-                    if (goSelectedPiece && goSelectedPiece.x === x && goSelectedPiece.y === y) {
-                        stone.classList.add('selected');
-                    }
-                }
-            }
-        }
-        // If a piece is selected, request valid moves from the server
-        if (goSelectedPiece) {
-            socket.emit('getValidMoves', {
-                gameId,
-                data: { x: goSelectedPiece.x, y: goSelectedPiece.y } // Send coords in 'data'
-            });
-            // Highlights will be drawn when server responds
-        }
-    }
+                    // --- MODIFICATION END ---
+
+                    intersection.appendChild(stone);
+
+                    // Add last move highlight if applicable
+                    if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
+                        stone.classList.add('last-move');
+                    }
+                    // Add selected highlight if applicable
+                    if (goSelectedPiece && goSelectedPiece.x === x && goSelectedPiece.y === y) {
+                        stone.classList.add('selected');
+                    }
+                }
+            }
+        }
+        // If a piece is selected, request valid moves from the server
+        if (goSelectedPiece) {
+            socket.emit('getValidMoves', {
+                gameId,
+                data: { x: goSelectedPiece.x, y: goSelectedPiece.y }
+            });
+        }
+    }
 
     function renderGoScore() {
         // Check if score data is available in gameState

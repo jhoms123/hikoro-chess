@@ -1,4 +1,3 @@
-
 .square.palace-square {
     background-color: #f2c96c !important;
 }
@@ -21,14 +20,14 @@ body {
     box-sizing: border-box;
     min-height: 100vh;
 
-   
+
     background-image: url('sprites/lobby_background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    
+
     background-attachment: fixed;
-  
+
     position: relative;
 }
 
@@ -129,14 +128,14 @@ body {
 
 body::before {
     content: "";
-    position: fixed; 
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    
+
     background-color: rgba(0, 0, 0, 0.6);
-    z-index: -1; 
+    z-index: -1;
 }
 
 
@@ -149,7 +148,7 @@ body::before {
 }
 
 #board-container {
-    
+
     display: grid;
     grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
     grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
@@ -158,18 +157,18 @@ body::before {
 
 #game-board {
     display: grid;
-    
+
     grid-template-columns: repeat(10, var(--square-size));
     grid-template-rows: repeat(16, var(--square-size));
     width: calc(var(--square-size) * 10);
     height: calc(var(--square-size) * 16);
-    
+
     grid-column: 2;
     grid-row: 2;
-    
-    background-color: #d6b36b; 
 
-   
+    background-color: #d6b36b;
+
+
     position: relative;
 }
 
@@ -180,29 +179,29 @@ body::before {
     justify-content: center;
     align-items: center;
     position: relative;
-    
-    border: 1px solid #4a2a00; 
-    box-sizing: border-box; 
-    
-    
+
+    border: 1px solid #4a2a00;
+    box-sizing: border-box;
+
+
     background-color: #f9d892;
 }
 
 
 
 .square.invalid {
-    
+
     background-color: #555;
-    border-color: #555; 
+    border-color: #555;
 }
 .sanctuary-square {
-    
-    background-color: #e5b045 !important; 
+
+    background-color: #e5b045 !important;
 }
 
 
 .square.palace-square {
-    
+
     background-color: #f2c96c !important;
 }
 
@@ -229,9 +228,9 @@ body::before {
 
 .flying-piece {
     position: absolute;
-    z-index: 1001; 
-    pointer-events: none; 
-    transition: all 0.25s ease-out; 
+    z-index: 1001;
+    pointer-events: none;
+    transition: all 0.25s ease-out;
 }
 
 
@@ -245,13 +244,13 @@ body::before {
 #create-game-btn,
 #single-player-btn,
 #play-bot-btn {
-    
+
     padding: 10px 20px;
     font-size: 16px;
-    
-    min-width: 200px; 
-    box-sizing: border-box; 
-    margin: 5px 0; 
+
+    min-width: 200px;
+    box-sizing: border-box;
+    margin: 5px 0;
 }
 
 
@@ -303,7 +302,7 @@ body::before {
 
 
 .captured-area {
-    width: calc(var(--square-size) * 4); 
+    width: calc(var(--square-size) * 4);
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -336,15 +335,15 @@ body::before {
 
 
 #turn-indicator-container {
-    background-color: rgba(30, 30, 30, 0.8); 
+    background-color: rgba(30, 30, 30, 0.8);
     padding: 15px;
     border-radius: 8px;
     border: 1px solid #777;
     margin-top: 20px;
     text-align: center;
-    
+
     max-width: 500px;
-    
+
     margin-left: auto;
     margin-right: auto;
 }
@@ -352,9 +351,9 @@ body::before {
 
 #turn-indicator-container p#winner-text {
     margin-top: 5px;
-    font-size: 1.5em; 
-    color: #4CAF50;   
-    font-weight: bold; 
+    font-size: 1.5em;
+    color: #4CAF50;
+    font-weight: bold;
 }
 
 
@@ -418,19 +417,19 @@ body::before {
 
 
 .captured-area h3 {
-    background-color: rgba(30, 30, 30, 0.8); 
+    background-color: rgba(30, 30, 30, 0.8);
     padding: 5px 10px;
     border-radius: 5px;
     border: 1px solid #666;
-    margin-bottom: 10px; 
-    
+    margin-bottom: 10px;
+
     display: inline-block;
     font-weight: normal;
 }
 
 #white-time, #black-time {
-    vertical-align: middle; 
-    margin-left: 5px; 
+    vertical-align: middle;
+    margin-left: 5px;
     font-size: 1.2em;
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace;
@@ -452,7 +451,7 @@ body::before {
 .notation-files {
     grid-column: 2;
     display: flex;
-    background-color: #d6b36b; 
+    background-color: #d6b36b;
 }
 .notation-files-top { grid-row: 1; }
 .notation-files-bottom { grid-row: 3; }
@@ -527,66 +526,106 @@ h1 {
     padding: 10px 20px;
     border-radius: 8px;
     border: 1px solid #777;
-    display: inline-block; 
-    margin-bottom: 20px; 
+    display: inline-block;
+    margin-bottom: 20px;
 }
 
 
 @media (orientation: portrait) {
     :root {
-        
+
         --square-size: 9vw;
-        
+
         --notation-size: calc(var(--square-size) * 0.75);
     }
 
     body {
-        justify-content: flex-start; 
+        justify-content: flex-start;
     }
 
+    /* Keep #game-container for general structure, but use specific wrappers for layout */
     #game-container {
-        
+        /* Remove portrait flex settings if they conflict */
+    }
+
+    #hikoro-game-wrapper { /* Add specific portrait layout for Hikoro */
         flex-direction: column;
-        align-items: center; 
+        align-items: center;
         gap: 10px;
     }
 
-    
     #black-captured-area { order: 1; }
-    #board-container { order: 2; }
+    #board-container { order: 2; } /* Only applies inside #hikoro-game-wrapper */
     #white-captured-area { order: 3; }
-    #move-history-container { order: 4; } 
+    #move-history-container { order: 4; }
 
     .captured-area {
-        
+
         width: 90vw;
     }
 
-    
+
     #move-history-container {
         width: 90vw;
-        height: 150px; 
+        height: 150px;
     }
 
-    
+
     #board-container {
         grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
         grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
     }
 
     .captured-pieces-box {
-        
+
         min-height: auto;
-        flex-wrap: nowrap; 
-        overflow-x: auto; 
+        flex-wrap: nowrap;
+        overflow-x: auto;
         justify-content: flex-start;
     }
 
-    .timer {
+    /* .timer selector might need adjustment if timer IDs changed */
+    #white-time-hikoro, #black-time-hikoro, #white-time, #black-time {
         margin-top: 0;
-        margin-bottom: 5px; 
+        margin-bottom: 5px;
         font-size: 1.5em;
         padding: 5px;
+    }
+
+    /* Add scaling for Go board in portrait */
+    #go-board-container {
+        --go-cell-size: 4.5vw;
+        grid-template-columns: repeat(19, var(--go-cell-size));
+        grid-template-rows: repeat(19, var(--go-cell-size));
+        padding: calc(var(--go-cell-size) / 2);
+        width: fit-content; /* Adjust width */
+        height: fit-content; /* Adjust height */
+    }
+    #go-board-container::before {
+        width: calc(var(--go-cell-size) * 18);
+        height: calc(var(--go-cell-size) * 18);
+        background-size: var(--go-cell-size) var(--go-cell-size);
+        top: calc(var(--go-cell-size) / 2);
+        left: calc(var(--go-cell-size) / 2);
+    }
+    #go-game-wrapper .intersection {
+        width: var(--go-cell-size);
+        height: var(--go-cell-size);
+        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
+    }
+    #go-game-wrapper .stone {
+        width: calc(var(--go-cell-size) * 0.85); /* Adjust multiplier if needed */
+        height: calc(var(--go-cell-size) * 0.85);
+    }
+    /* Removed ::before scaling rule as it's no longer used */
+    #go-score-display-container {
+        flex-direction: column; /* Stack score boxes vertically */
+        align-items: center;
+        gap: 10px;
+        width: 90vw; /* Take more width */
+    }
+    .go-score-box {
+        width: 80%; /* Adjust width for portrait */
     }
 }
 
@@ -601,20 +640,20 @@ h1 {
 }
 
 .modal {
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
+    display: none;
+    position: fixed;
+    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.6); 
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
 }
 
 .modal-content {
     background-color: #2c2c2c;
-    margin: 5% auto; 
+    margin: 5% auto;
     padding: 25px;
     border: 1px solid #888;
     width: 90%;
@@ -622,8 +661,8 @@ h1 {
     border-radius: 10px;
     position: relative;
     color: #eee;
-    max-height: 85vh; 
-    overflow-y: auto; 
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .close-btn {
@@ -692,7 +731,8 @@ h1 {
 }
 
 #main-menu-btn,
-#rules-btn-ingame {
+#rules-btn-ingame,
+#resign-button { /* Added resign button to this shared style */
     padding: 8px 16px;
     font-size: 14px;
     cursor: pointer;
@@ -704,31 +744,42 @@ h1 {
 }
 
 #main-menu-btn:hover,
-#rules-btn-ingame:hover {
+#rules-btn-ingame:hover,
+#resign-button:hover { /* Added resign button hover */
     background-color: #666;
 }
 
 #main-menu-btn {
-    background-color: #a13a3a; 
+    background-color: #a13a3a;
 }
 
 #main-menu-btn:hover {
     background-color: #c04848;
 }
 
-/* Modify Hikoro wrapper ID */
+.game-control-btn.resign { /* Keep specific resign color */
+    background-color: #b92a2a;
+    color: white;
+}
+.game-control-btn.resign:hover {
+    background-color: #d93a3a;
+}
+
+
+/* Hikoro wrapper ID (keep as is) */
 #hikoro-game-wrapper {
-    display: flex;
+    display: flex; /* Kept flex for default landscape */
     gap: 20px;
     align-items: flex-start;
     justify-content: center;
     width: 100%;
 }
 
-/* Modify timer selectors to be shared */
-#white-time-hikoro, #black-time-hikoro {
-    vertical-align: middle; 
-    margin-left: 5px; 
+/* Shared timer styles (keep as is) */
+#white-time-hikoro, #black-time-hikoro,
+#white-time, #black-time { /* Grouped selectors for shared styles */
+    vertical-align: middle;
+    margin-left: 5px;
     font-size: 1.2em;
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace;
@@ -740,19 +791,22 @@ h1 {
     transition: background-color 0.3s, border-color 0.3s;
 }
 
-#white-time-hikoro.active, #black-time-hikoro.active {
+/* Active state for ALL timers */
+#white-time-hikoro.active, #black-time-hikoro.active,
+#white-time.active, #black-time.active {
     background-color: #4a2a00;
     color: #fff;
     border-color: #ff9800;
 }
 
-/* --- STYLES FOR NEW GO GAME --- */
+/* --- STYLES FOR GO GAME --- */
 
 #go-game-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    width: 100%; /* Ensure it takes width */
 }
 
 #go-score-display-container {
@@ -787,56 +841,54 @@ h1 {
     border-bottom: 5px solid #ddd;
 }
 
-/* Shared timer styles for Go layout */
+/* Go timer styles (now uses shared selectors above) */
 .go-timer {
-    vertical-align: middle; 
     margin-top: 10px;
     font-size: 1.4em;
-    font-weight: bold;
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #222;
-    color: #ddd;
-    padding: 3px 8px;
-    border-radius: 5px;
-    border: 2px solid #555;
-    transition: background-color 0.3s, border-color 0.3s;
+    /* Other specific adjustments if needed */
 }
 
-#white-time.active, #black-time.active {
-    background-color: #4a2a00;
-    color: #fff;
-    border-color: #ff9800;
+/* Go specific controls container */
+.go-controls { /* Changed ID to class */
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    height: auto; /* Allow height to adjust */
 }
 
-#go-controls {
-    margin: 5px 0;
-    height: 30px; 
-}
-#go-shield-button {
-    display: none; 
-    padding: 5px 10px;
+/* Shared style for Go action buttons */
+.go-action-btn { /* Changed ID selectors to use this class */
+    padding: 8px 12px;
     font-size: 14px;
-    cursor: pointer;
-    background-color: #4a69bd;
+    background-color: #4a4a4a;
+    border: 1px solid #666;
     color: white;
-    border: none;
+    cursor: pointer;
     border-radius: 4px;
 }
-#go-shield-button:hover { background-color: #3b538c; }
+.go-action-btn:hover {
+    background-color: #5a5a5a;
+}
 
+/* Specific button styles if needed */
+#go-shield-button {
+    background-color: #4a69bd;
+}
+#go-shield-button:hover { background-color: #3b538c; }
 
 /* --- Go Board Specifics --- */
 
 #go-board-container {
     display: grid;
-    /* 19x19, 30px squares */
     grid-template-columns: repeat(19, 30px);
     grid-template-rows: repeat(19, 30px);
     border: 2px solid #555;
-    background-color: #d2b48c; 
+    background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
-    padding: 15px; 
+    padding: 15px;
+    width: fit-content; /* Ensure container fits content */
+    height: fit-content;
 }
 
 #go-board-container.disabled {
@@ -855,50 +907,44 @@ h1 {
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
-    border: 1px solid #333; 
+    border: 1px solid #333;
+    z-index: 0; /* Make sure lines are behind intersections */
 }
 
 #go-game-wrapper .intersection {
     width: 30px;
     height: 30px;
     position: relative;
-    z-index: 1; 
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    /* Translate to center on grid lines */
     transform: translate(-15px, -15px);
 }
 
+/* --- NEW Go Stone Image Styling --- */
 #go-game-wrapper .stone {
-    width: 26px;
+    width: 26px; /* Adjust size to fit your image */
     height: 26px;
-    border-radius: 50%;
-    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+    background-size: contain; /* Scale image to fit */
+    background-repeat: no-repeat;
+    background-position: center;
     z-index: 2;
-    position: relative; 
+    position: relative;
+    /* Remove properties handled by images */
+    /* border-radius: 50%; */
+    /* box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); */
 }
 
-#go-game-wrapper .black { background-color: #111; }
-#go-game-wrapper .white { background-color: #fff; }
+/* Assign background images */
+#go-game-wrapper .go-white { background-image: url('sprites/white_go.png'); }
+#go-game-wrapper .go-black { background-image: url('sprites/black_go.png'); }
+#go-game-wrapper .go-white-shield { background-image: url('sprites/white_go_shield.png'); }
+#go-game-wrapper .go-black-shield { background-image: url('sprites/black_go_shield.png'); }
+/* --- END NEW Go Stone Image Styling --- */
 
-#go-game-wrapper .black-shield { background-color: #111; }
-#go-game-wrapper .white-shield { background-color: #fff; }
-
-#go-game-wrapper .black-shield::before,
-#go-game-wrapper .white-shield::before {
-    content: "盾"; 
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%); 
-    color: red; 
-    font-size: 16px; 
-    font-weight: bold;
-    line-height: 1; 
-    z-index: 3; 
-    text-shadow: 0 0 2px rgba(0,0,0,0.5); 
-}
 
 #go-game-wrapper .last-move {
     outline: 3px solid rgba(255, 0, 0, 0.7);
@@ -913,86 +959,5 @@ h1 {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-}
-
-.intersection {
-    /* ... your existing styles (width, height, border) ... */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* ADD these new rules for the buttons */
-.go-controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.go-action-btn {
-    padding: 8px 12px;
-    font-size: 14px;
-    background-color: #4a4a4a;
-    border: 1px solid #666;
-    color: white;
-    cursor: pointer;
-}
-.go-action-btn:hover {
-    background-color: #5a5a5a;
-}
-
-.game-control-btn.resign {
-    background-color: #b92a2a;
-    color: white;
-}
-.game-control-btn.resign:hover {
-    background-color: #d93a3a;
-}
-
-/* Ensure portrait mode for Hikoro also uses the renamed wrapper */
-@media (orientation: portrait) {
-    #hikoro-game-wrapper {
-        flex-direction: column;
-        align-items: center; 
-        gap: 10px;
-    }
-    
-    /* ... (all your other existing @media (orientation: portrait) rules) ... */
-    
-    /* Add scaling for Go board in portrait */
-    #go-board-container {
-        --go-cell-size: 4.5vw;
-        grid-template-columns: repeat(19, var(--go-cell-size));
-        grid-template-rows: repeat(19, var(--go-cell-size));
-        padding: calc(var(--go-cell-size) / 2);
-    }
-    #go-board-container::before {
-        width: calc(var(--go-cell-size) * 18);
-        height: calc(var(--go-cell-size) * 18);
-        background-size: var(--go-cell-size) var(--go-cell-size);
-        top: calc(var(--go-cell-size) / 2);
-        left: calc(var(--go-cell-size) / 2);
-    }
-    #go-game-wrapper .intersection {
-        width: var(--go-cell-size);
-        height: var(--go-cell-size);
-        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
-    }
-    #go-game-wrapper .stone {
-        width: calc(var(--go-cell-size) * 0.85);
-        height: calc(var(--go-cell-size) * 0.85);
-    }
-    #go-game-wrapper .black-shield::before,
-    #go-game-wrapper .white-shield::before {
-        font-size: calc(var(--go-cell-size) * 0.5);
-    }
-    #go-game-wrapper .valid-move {
-        width: calc(var(--go-cell-size) * 0.7);
-        height: calc(var(--go-cell-size) * 0.7);
-    }
-    #go-score-display-container {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-    }
+    z-index: 3; /* Ensure it's above potential stone images */
 }
