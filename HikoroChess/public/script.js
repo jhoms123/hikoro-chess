@@ -478,11 +478,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isSinglePlayer) {
             myColor = 'white'; // Default view for single player
-            isBotGame = initialGameState.isBotGame; // Set bot status if applicable
+            // isBotGame is set by the button click, check gameType later if needed
+            isBotGame = initialGameState.isBotGame || false; // Ensure it's defined
         } else {
             isBotGame = false;
             if (!myColor) myColor = 'black'; // Assume joined as black if not creator
         }
+
+        // --- FIX FOR SCORE WARNING ---
+        // Ensure the score object exists for Go games before rendering
+        if (gameState.gameType === 'go' && (!gameState.score || !gameState.score.details)) {
+            gameState.score = {
+                black: 0, white: 0,
+                details: {
+                    black: { stones: 0, territory: 0, lost: 0 },
+                    white: { stones: 0, territory: 0, lost: 0 }
+                }
+            };
+            console.log("Initialized default score object for Go game start.");
+        }
+        // --- END FIX ---
+
 
         lobbyElement.style.display = 'none';
         gameControls.style.display = 'flex';
@@ -558,10 +574,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const capturedPiecesForBot = gameState.blackCaptured;
             currentTurnHadBonusState = !!botBonusState;
 
-            // Use structuredClone for potentially better performance/handling complex objects if needed
-            // const safeGameState = structuredClone(gameState);
-            // const safeCapturedPieces = structuredClone(capturedPiecesForBot);
-            // const safeBonusState = botBonusState ? structuredClone(botBonusState) : null;
              const safeGameState = JSON.parse(JSON.stringify(gameState));
              const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
              const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
@@ -1121,7 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Client-side check for valid target (primarily for animation)
                 const isBonusActive = !!gameState.bonusMoveInfo && gameState.bonusMoveInfo.pieceX === selectedSquare.x && gameState.bonusMoveInfo.pieceY === selectedSquare.y;
-                const validMoves = gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, isBonusActive);
+                // Use gameLogic for validation
+                const validMoves = typeof gameLogic !== 'undefined' ? gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, isBonusActive) : [];
                 const isValidTarget = validMoves.some(m => m.x === x && m.y === y);
 
                 if (isValidTarget) {
@@ -1154,7 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => {
              }
 
              // Client-side check for valid drop location (empty and valid square)
-             if (gameState.boardState[y]?.[x] === null && gameLogic.isPositionValid(x,y)) {
+             if (gameState.boardState[y]?.[x] === null && (typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x,y) : true) ) {
                 // Determine drop color based on context
                 const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
                 const spriteType = isDroppingPiece.type;
@@ -1182,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Determine if this piece can be selected by the current player
             let canSelectPiece;
              if (isSinglePlayer) { // Allow selecting either color in pass-and-play, unless vs bot
-                 canSelectPiece = !isBotGame || piece.color === 'white'; // Only allow selecting white vs bot
+                 canSelectPiece = !isBotGame || (piece.color === 'white' && gameState.isWhiteTurn); // Only allow selecting white vs bot if it's white's turn
              } else { // Multiplayer
                  canSelectPiece = piece.color === myColor; // Can only select your own color
              }
@@ -1275,8 +1288,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedSquare = null; // Clear any board selection
         isDroppingPiece = { type: pieceData.type }; // Store just the type for dropping
         clearHikoroHighlights(); // Clear board highlights
-        clickedElement.classList.add('selected-drop'); // Add visual selection to piece
-        highlightHikoroDropSquares(); // Highlight valid drop squares on the board
+        // Remove selection from previously selected captured piece
+        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        clickedElement.classList.add('selected-drop'); // Add visual selection to this piece
+        highlightHikoroDropSquares(); // Highlight valid drop squares on the board (uses global gameState)
     }
 
     // --- NEW: All Go-specific client functions ---
@@ -1394,17 +1409,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const cellState = gameState.boardState[y][x];
             // Determine the player whose turn it is (1 for black, 2 for white)
             const player = gameState.isWhiteTurn ? 2 : 1;
-            // Determine the color this client controls (in multiplayer) or the active player (in single player)
-            let myPlayerColor;
-             if (isSinglePlayer) {
-                 myPlayerColor = player; // In single player, you control whoever's turn it is
-             } else {
-                 myPlayerColor = (myColor === 'white' ? 2 : 1); // Your assigned color
-             }
+            // Determine the color this client controls (in multiplayer)
+            const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-            // --- REMOVED THE CHECK: if (player !== myPlayerColor) return; ---
-            // In single player, this check was preventing black moves.
-            // In multiplayer, the server handles turn validation anyway.
+            // --- CHECK IF ALLOWED TO MOVE ---
+            // In multiplayer, check if it's our turn. In single player, allow any move.
+            if (!isSinglePlayer && player !== myPlayerColor) {
+                 console.log("Not your turn (Go).");
+                 return; // Not your turn in multiplayer
+            }
 
             // --- Logic if a Go piece is already selected ---
             if (goSelectedPiece) {
@@ -1423,16 +1436,12 @@ document.addEventListener('DOMContentLoaded', () => {
             else {
                 if (cellState === 0) {
                     // --- Place a new stone ---
-                     // Check if it's the client's turn before emitting (for multiplayer responsiveness)
-                     if (!isSinglePlayer && player !== myPlayerColor) return;
                     socket.emit('makeGameMove', {
                         gameId,
                         move: { type: 'place', to: { x, y } }
                     });
                 } else if (cellState === player) {
                     // --- Select this piece (only allow selecting current player's stone) ---
-                     // Check if it's the client's turn before allowing selection
-                     if (!isSinglePlayer && player !== myPlayerColor) return;
                     selectGoPiece(x, y);
                 }
                  // If clicked opponent stone or a shield, do nothing
@@ -1458,21 +1467,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Determine the player whose turn it is
         const player = gameState.isWhiteTurn ? 2 : 1;
         // Determine the color this client controls
-        let myPlayerColor;
-         if (isSinglePlayer) {
-             myPlayerColor = player; // Control the active player
-         } else {
-             myPlayerColor = (myColor === 'white' ? 2 : 1); // Your assigned color
-         }
+        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-        // --- REMOVED THE CHECK: if (player !== myPlayerColor) return; ---
-        // Allow shielding in single player regardless of whose turn (server validates)
+        // --- CHECK IF ALLOWED TO MOVE ---
+        if (!isSinglePlayer && player !== myPlayerColor) {
+             console.log("Not your turn to shield (Go).");
+             return; // Not your turn in multiplayer
+        }
 
         // Check if the double-clicked piece is the current player's *stone* (not shield)
         if (cellState === player) {
-             // Check client turn for multiplayer responsiveness before emitting
-             if (!isSinglePlayer && player !== myPlayerColor) return;
-
             if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
             // --- Emit Turn to Shield move ---
             socket.emit('makeGameMove', {
@@ -1490,12 +1494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Determine the player whose turn it is
         const player = gameState.isWhiteTurn ? 2 : 1;
         // Determine the color this client controls
-        let myPlayerColor;
-        if (isSinglePlayer) {
-            myPlayerColor = player;
-        } else {
-            myPlayerColor = (myColor === 'white' ? 2 : 1);
-        }
+        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
         // Check if it's the player's turn before emitting (for multiplayer responsiveness)
         if (!isSinglePlayer && player !== myPlayerColor) {
@@ -1507,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if the selected piece is actually the current player's stone
         if (gameState.boardState[y]?.[x] !== player) {
-             console.log("Cannot shield opponent's piece or empty square.");
+             console.log("Cannot shield opponent's piece, shield, or empty square.");
              deselectGoPiece(); // Deselect invalid piece
              return;
         }
@@ -1551,22 +1550,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Draw move plates (green circles) on valid target intersections
         moves.forEach(move => {
             const cell = document.querySelector(`#go-board-container .intersection[data-x='${move.x}'][data-y='${move.y}']`);
-            if (cell && !cell.querySelector('.stone')) { // Only draw on empty intersections
+            // Ensure cell exists and doesn't already contain a stone visual
+            if (cell && !cell.querySelector('.stone')) {
                 cell.innerHTML = '<div class="valid-move"></div>';
             }
         });
     }
 
     // --- RENAMING your original click handlers ---
-    // This allows the correct function (handleHikoroClick or handleGoClick) to be called
-    // based on which board elements are currently visible and have listeners.
     const original_onSquareClick = typeof onSquareClick !== 'undefined' ? onSquareClick : null;
     const original_onCapturedClick = typeof onCapturedClick !== 'undefined' ? onCapturedClick : null;
 
-    // Now we assign the renamed functions BACK to the global scope IF NEEDED,
-    // but it's better practice to ensure event listeners call the correct specific handler.
-    // We already added listeners in renderHikoroBoard and createGoBoard correctly.
-    // So, we just keep the renamed functions available.
+    // Assign the specific handlers (listeners added dynamically based on game type)
     onSquareClick = handleHikoroClick;
     onCapturedClick = handleHikoroCapturedClick;
 
@@ -1838,19 +1833,21 @@ document.addEventListener('DOMContentLoaded', () => {
                  if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) { // Was a jump
                      let cx = from.x + dx, cy = from.y + dy;
                      while (cx !== to.x || cy !== to.y) {
-                         if (isPositionValid(cx, cy)) {
-                             const iPiece = boardState[cy][cx];
-                             if (iPiece && iPiece.color === color && iPiece.type !== 'greathorsegeneral' && iPiece.type !== 'cthulhu') {
-                                 const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-                                 if (hand.length < 6) hand.push({ type: iPiece.type });
-                                 boardState[cy][cx] = null; // Remove jumped piece
-                             }
+                         // Check bounds before accessing boardState
+                         if (cy >= 0 && cy < HIKORO_BOARD_HEIGHT && cx >= 0 && cx < HIKORO_BOARD_WIDTH) {
+                            const iPiece = boardState[cy][cx];
+                            if (iPiece && iPiece.color === color && iPiece.type !== 'greathorsegeneral' && iPiece.type !== 'cthulhu') {
+                                const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+                                if (hand.length < 6) hand.push({ type: iPiece.type });
+                                boardState[cy][cx] = null; // Remove jumped piece
+                            }
                          }
                          cx += dx; cy += dy;
                      }
                  }
              }
              // --- End Jotu ---
+
 
              // --- Standard Capture Logic ---
              if (targetPiece) {
@@ -1924,15 +1921,8 @@ document.addEventListener('DOMContentLoaded', () => {
              newGameState.bonusMoveInfo = null; // Clear bonus flag
              newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; // Turn changes
              // Increment turn count only AFTER bonus move completes or for normal moves
-             if (!isBonusContinuation) {
-                  newGameState.turnCount++;
-             } else {
-                  // If it WAS a bonus continuation, turnCount was already incremented effectively
-                  // by not decrementing it on the first bonus move part.
-                  // We might need to increment here IF the Kifu counts bonus as a full turn move.
-                  // Let's assume Kifu counts pairs: Increment only if turn changes.
-                  newGameState.turnCount++; // Increment after bonus completes
-             }
+             // (Turn count represents completed turns by *both* players or single moves in sequence)
+             newGameState.turnCount++;
          }
 
          // Reset game over status for branching in replay
@@ -1941,11 +1931,10 @@ document.addEventListener('DOMContentLoaded', () => {
          newGameState.reason = null;
 
          // Optional: Recalculate winner state here if needed for immediate feedback in replay
-         // checkForWinner(newGameState);
+         // checkForWinner(newGameState); // Assumes checkForWinner exists
 
          return newGameState;
      }
-
 
        // --- Updated Build Replay Tree ---
      function buildReplayTree(kifuText) {
@@ -1984,6 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const newGameState = applyMoveToState(currentGameState, moveObj);
 
              // Basic check if state actually changed (helps catch errors in applyMove)
+             // Use a more reliable deep comparison if necessary
              if (JSON.stringify(newGameState.boardState) === JSON.stringify(currentGameState.boardState) &&
                  JSON.stringify(newGameState.whiteCaptured) === JSON.stringify(currentGameState.whiteCaptured) &&
                  JSON.stringify(newGameState.blackCaptured) === JSON.stringify(currentGameState.blackCaptured)) {
@@ -2050,6 +2040,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let moveText = node.moveNotation;
             const stateBefore = node.parent.gameState; // State *before* this move
+            // Calculate turn number based on the state *before* the move
             const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
             const wasWhiteMove = stateBefore.isWhiteTurn;
 
@@ -2062,13 +2053,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
              // Prepend ">" if it's the second part of a bonus move
              if (node.isBonusSecondMove) {
-                 moveText = `> ${node.moveNotation}`; // Overwrite number/ellipsis if bonus
+                 // Overwrite number/ellipsis if it's a bonus continuation
+                 moveText = `> ${node.moveNotation}`;
              }
 
 
             // Add parenthesis for the start of a branch variation
             // A node starts a branch if it's not the first child of its parent
-            const isBranchStartNode = node.parent && node.parent.children[0] !== node;
+            const isBranchStartNode = node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node;
             if (isBranchStartNode && !node.isBonusSecondMove) { // Don't add '(' to bonus continuations
                  moveText = `( ${moveText}`; // Add opening parenthesis
                  // Closing parenthesis is harder, maybe add visually via CSS border/line
@@ -2099,7 +2091,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Render Children Recursively ---
             if (node.children.length > 0) {
                  let containerForChildren = moveWrapper; // By default, nest directly
-                 // Create a new sub-container for branches visually
+                 // Create a new sub-container for branches visually if needed
                  if (node.children.length > 1) {
                      containerForChildren = document.createElement('div');
                      containerForChildren.classList.add('move-line-continuation');
