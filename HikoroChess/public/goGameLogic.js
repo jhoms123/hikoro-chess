@@ -57,7 +57,11 @@ exports.makeGoMove = function(game, move, playerColor) {
         // --- >>> ADD LOG <<< ---
         console.log(`  [goLogic] Move success. Toggling turn from ${newGame.isWhiteTurn} to ${!newGame.isWhiteTurn}`);
         // --- >>> END LOG <<< ---
-        moveResult.updatedGame.score = calculateScore(/*...*/);
+        moveResult.updatedGame.score = calculateScore(
+            moveResult.updatedGame.boardState, 
+            moveResult.updatedGame.blackPiecesLost, 
+            moveResult.updatedGame.whitePiecesLost
+        );
         if (move.type !== 'resign') {
             moveResult.updatedGame.lastMove = move.to || move.at;
             moveResult.updatedGame.isWhiteTurn = !newGame.isWhiteTurn; // Toggle turn
@@ -405,20 +409,25 @@ function updateMoveList(game, move) {
     const turnNum = Math.floor(game.turnCount / 2) + 1;
     let notationString = "";
 
-    switch (move.type) {
-        case 'place':
-            notationString = `P@${move.to.x},${move.to.y}`;
-            break;
-        case 'move':
-            notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
-            break;
-        case 'shield':
-            notationString = `S@${move.at.x},${move.at.y}`;
-            break;
-        case 'resign':
-            notationString = `Resign`;
-            break;
-    }
+    let moveResult = { success: false, error: "Unknown move type." }; // <-- Good to initialize
+
+    switch (move.type) {
+        case 'place':
+            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
+            // ...
+            break;
+        
+        // --- ADD THESE CASES ---
+        case 'move': 
+            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
+            break;
+        case 'shield':
+            moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
+            break;
+        case 'resign':
+            moveResult = handleResign(newGame, player);
+            break;
+    }
 
     if (game.isWhiteTurn) {
         game.moveList.push(`${turnNum}. ${notationString}`);
