@@ -1387,71 +1387,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderGoBoard() {
-        clearGoHighlights(); // Clear previous highlights and selections
-        if (!gameState || !gameState.boardState) {
-            console.error("renderGoBoard: gameState or boardState missing!");
-            return;
-        }
-		
+        clearGoHighlights(); // Clear previous highlights and selections
+        if (!gameState || !gameState.boardState) {
+            console.error("renderGoBoard: gameState or boardState missing!");
+            return;
+        }
+
         // ✅ GET boardSize from game state
-        const boardSize = gameState.boardSize || 19;
+        const boardSize = gameState.boardSize || 19;
 
-        // ✅ USE dynamic boardSize in loops
-        for (let y = 0; y < boardSize; y++) {
-            for (let x = 0; x < boardSize; x++) {
-                const intersection = document.querySelector(`#go-board-container .intersection[data-x='${x}'][data-y='${y}']`);
-                if (!intersection) continue;
-                intersection.innerHTML = ''; // Clear previous stone/highlight
+        // ✅ USE dynamic boardSize in loops
+        for (let y = 0; y < boardSize; y++) {
+            for (let x = 0; x < boardSize; x++) {
+                const intersection = document.querySelector(`#go-board-container .intersection[data-x='${x}'][data-y='${y}']`);
+                if (!intersection) continue;
+                intersection.innerHTML = ''; // Clear previous stone/highlight
 
-                const stoneType = gameState.boardState[y][x];
-                let stone = null;
+                const stoneType = gameState.boardState[y][x];
+                let stone = null;
 
-                if (stoneType > 0) {
-                    stone = document.createElement('div');
-                    stone.classList.add('stone'); // Base class
+                if (stoneType > 0) {
+                    stone = document.createElement('div');
+                    stone.classList.add('stone'); // Base class
 
-                    // --- MODIFICATION START ---
-                    // Add classes based on stoneType for background images
-transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Dynamic centering */
-                    switch (stoneType) {
-                        case 1: // Black
-                            stone.classList.add('go-black');
-                            break;
-                        case 2: // White
-                            stone.classList.add('go-white');
-                            break;
-                        case 3: // Black Shield
-                            stone.classList.add('go-black-shield');
-                            break;
-                        case 4: // White Shield
-                            stone.classList.add('go-white-shield');
-                            break;
-                    }
-                    // --- MODIFICATION END ---
+                    // Add classes based on stoneType for background images
+                    // ⛔ REMOVED STRAY CSS LINE FROM HERE
+                    switch (stoneType) {
+                        case 1: // Black
+                            stone.classList.add('go-black');
+                            break;
+                        case 2: // White
+                            stone.classList.add('go-white');
+                            break;
+                        case 3: // Black Shield
+                            stone.classList.add('go-black-shield');
+                            break;
+                        case 4: // White Shield
+                            stone.classList.add('go-white-shield');
+                            break;
+                    }
+                    // --- MODIFICATION END ---
 
-                    intersection.appendChild(stone);
+                    intersection.appendChild(stone);
 
-                    // Add last move highlight if applicable
-                    if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
-                    TML
-                        stone.classList.add('last-move');
-                    }
-                    // Add selected highlight if applicable
-                    if (goSelectedPiece && goSelectedPiece.x === x && goSelectedPiece.y === y) {
-                        stone.classList.add('selected');
-                    }
-                }
-            }
-        }
-        // If a piece is selected, request valid moves from the server
-        if (goSelectedPiece) {
-            socket.emit('getValidMoves', {
-                gameId,
-                data: { x: goSelectedPiece.x, y: goSelectedPiece.y }
-Section
-            });
-        }
-    }
+                    // Add last move highlight if applicable
+                    if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
+                        // ⛔ REMOVED STRAY 'TML' FROM HERE
+                        stone.classList.add('last-move');
+                    }
+                    // Add selected highlight if applicable
+                    if (goSelectedPiece && goSelectedPiece.x === x && goSelectedPiece.y === y) {
+                        stone.classList.add('selected');
+                    }
+                }
+            }
+        }
+        // If a piece is selected, request valid moves from the server
+        if (goSelectedPiece) {
+            socket.emit('getValidMoves', {
+                gameId,
+                data: { x: goSelectedPiece.x, y: goSelectedPiece.y }
+                // ⛔ REMOVED STRAY 'Section' FROM HERE
+            });
+        }
+    }
 
     function renderGoScore() {
         // Check if score data is available in gameState
