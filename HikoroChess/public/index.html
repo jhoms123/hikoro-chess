@@ -13,6 +13,13 @@
         <h2>Game Lobby</h2>
         <div id="time-controls">
             <div>
+                <label for="game-type-select">Game Type:</label>
+                <select id="game-type-select">
+                    <option value="hikoro" selected>Hikoro Chess</option>
+                    <option value="go">Go Variant</option>
+                </select>
+            </div>
+            <div>
                 <label for="time-control">Main Time:</label>
                 <select id="time-control">
                     <option value="-1">Unlimited</option>
@@ -53,9 +60,9 @@
         <div id="game-list"></div>
     </div>
 
-    <div id="game-container" style="display: none;">
+    <div id="hikoro-game-wrapper" style="display: none;">
         <div class="captured-area" id="black-captured-area">
-            <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time">--:--</span>)</h3>
+            <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time-hikoro">--:--</span>)</h3>
             <div class="captured-pieces-box" id="black-captured"></div>
         </div>
         
@@ -73,11 +80,32 @@
         </div>
 
         <div class="captured-area" id="white-captured-area">
-            <h3><span class="hand-label">Your Hand</span> (<span id="white-time">--:--</span>)</h3>
+            <h3><span class="hand-label">Your Hand</span> (<span id="white-time-hikoro">--:--</span>)</h3>
             <div class="captured-pieces-box" id="white-captured"></div>
         </div>
     </div>
     
+    <div id="go-game-wrapper" style="display: none;">
+        <div id="go-score-display-container">
+            <div class="go-score-box" id="go-black-score-box">
+                <strong>Black: <span id="go-black-score">0</span></strong>
+                <span id="go-black-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
+                <span id="black-time" class="go-timer">--:--</span>
+            </div>
+            
+            <div id="go-board-container">
+                </div>
+            
+            <div class="go-score-box" id="go-white-score-box">
+                <strong>White: <span id="go-white-score">0</span></strong>
+                <span id="go-white-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
+                <span id="white-time" class="go-timer">--:--</span>
+            </div>
+        </div>
+         <div id="go-controls">
+            <button id="go-shield-button">Turn to Shield</button>
+        </div>
+    </div>
     <div id="turn-indicator-container">
         <h2 id="turn-indicator"></h2>
         <p id="winnerText"></p>
@@ -110,7 +138,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="gamelogic.js"></script> <script src="bot.js"></script> 
+    <script src="gamelogic.js"></script> 
     <script src="script.js"></script> 
 </body>
 </html>

@@ -715,3 +715,250 @@ h1 {
 #main-menu-btn:hover {
     background-color: #c04848;
 }
+
+/* Modify Hikoro wrapper ID */
+#hikoro-game-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Modify timer selectors to be shared */
+#white-time-hikoro, #black-time-hikoro {
+    vertical-align: middle; 
+    margin-left: 5px; 
+    font-size: 1.2em;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #222;
+    color: #ddd;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 2px solid #555;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#white-time-hikoro.active, #black-time-hikoro.active {
+    background-color: #4a2a00;
+    color: #fff;
+    border-color: #ff9800;
+}
+
+/* --- STYLES FOR NEW GO GAME --- */
+
+#go-game-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#go-score-display-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 800px;
+}
+
+.go-score-box {
+    padding: 10px;
+    border-radius: 5px;
+    width: 180px;
+    text-align: center;
+}
+.go-score-box span {
+    display: block;
+    font-size: 0.8em;
+    color: #ccc;
+}
+.go-score-box strong {
+    font-size: 1.1em;
+    color: #fff;
+}
+#go-black-score-box {
+    background-color: #333;
+    border-bottom: 5px solid #111;
+}
+#go-white-score-box {
+    background-color: #555;
+    border-bottom: 5px solid #ddd;
+}
+
+/* Shared timer styles for Go layout */
+.go-timer {
+    vertical-align: middle; 
+    margin-top: 10px;
+    font-size: 1.4em;
+    font-weight: bold;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #222;
+    color: #ddd;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 2px solid #555;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#white-time.active, #black-time.active {
+    background-color: #4a2a00;
+    color: #fff;
+    border-color: #ff9800;
+}
+
+#go-controls {
+    margin: 5px 0;
+    height: 30px; 
+}
+#go-shield-button {
+    display: none; 
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: #4a69bd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+#go-shield-button:hover { background-color: #3b538c; }
+
+
+/* --- Go Board Specifics --- */
+
+#go-board-container {
+    display: grid;
+    /* 19x19, 30px squares */
+    grid-template-columns: repeat(19, 30px);
+    grid-template-rows: repeat(19, 30px);
+    border: 2px solid #555;
+    background-color: #d2b48c; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+    padding: 15px; 
+}
+
+#go-board-container.disabled {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+#go-board-container::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 540px;  /* 18 intervals * 30px */
+    height: 540px; /* 18 intervals * 30px */
+    background-size: 30px 30px;
+    background-image:
+        linear-gradient(to right, #333 1px, transparent 1px),
+        linear-gradient(to bottom, #333 1px, transparent 1px);
+    border: 1px solid #333; 
+}
+
+#go-game-wrapper .intersection {
+    width: 30px;
+    height: 30px;
+    position: relative;
+    z-index: 1; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translate(-15px, -15px);
+}
+
+#go-game-wrapper .stone {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+    position: relative; 
+}
+
+#go-game-wrapper .black { background-color: #111; }
+#go-game-wrapper .white { background-color: #fff; }
+
+#go-game-wrapper .black-shield { background-color: #111; }
+#go-game-wrapper .white-shield { background-color: #fff; }
+
+#go-game-wrapper .black-shield::before,
+#go-game-wrapper .white-shield::before {
+    content: "盾"; 
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    color: red; 
+    font-size: 16px; 
+    font-weight: bold;
+    line-height: 1; 
+    z-index: 3; 
+    text-shadow: 0 0 2px rgba(0,0,0,0.5); 
+}
+
+#go-game-wrapper .last-move {
+    outline: 3px solid rgba(255, 0, 0, 0.7);
+    outline-offset: 2px;
+}
+#go-game-wrapper .selected {
+    outline: 3px solid rgba(0, 100, 255, 0.8);
+    outline-offset: 2px;
+}
+#go-game-wrapper .valid-move {
+    background-color: rgba(0, 255, 0, 0.3);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+/* Ensure portrait mode for Hikoro also uses the renamed wrapper */
+@media (orientation: portrait) {
+    #hikoro-game-wrapper {
+        flex-direction: column;
+        align-items: center; 
+        gap: 10px;
+    }
+    
+    /* ... (all your other existing @media (orientation: portrait) rules) ... */
+    
+    /* Add scaling for Go board in portrait */
+    #go-board-container {
+        --go-cell-size: 4.5vw;
+        grid-template-columns: repeat(19, var(--go-cell-size));
+        grid-template-rows: repeat(19, var(--go-cell-size));
+        padding: calc(var(--go-cell-size) / 2);
+    }
+    #go-board-container::before {
+        width: calc(var(--go-cell-size) * 18);
+        height: calc(var(--go-cell-size) * 18);
+        background-size: var(--go-cell-size) var(--go-cell-size);
+        top: calc(var(--go-cell-size) / 2);
+        left: calc(var(--go-cell-size) / 2);
+    }
+    #go-game-wrapper .intersection {
+        width: var(--go-cell-size);
+        height: var(--go-cell-size);
+        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
+    }
+    #go-game-wrapper .stone {
+        width: calc(var(--go-cell-size) * 0.85);
+        height: calc(var(--go-cell-size) * 0.85);
+    }
+    #go-game-wrapper .black-shield::before,
+    #go-game-wrapper .white-shield::before {
+        font-size: calc(var(--go-cell-size) * 0.5);
+    }
+    #go-game-wrapper .valid-move {
+        width: calc(var(--go-cell-size) * 0.7);
+        height: calc(var(--go-cell-size) * 0.7);
+    }
+    #go-score-display-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+}
