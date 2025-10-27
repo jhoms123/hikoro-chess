@@ -36,41 +36,70 @@ exports.getValidMoves = function(game, data) {
  * | { type: 'resign' }
  */
 exports.makeGoMove = function(game, move, playerColor) {
-    const newGame = JSON.parse(JSON.stringify(game));
-    const player = (playerColor === 'white' ? 2 : 1);
-    let moveResult;
+    const newGame = JSON.parse(JSON.stringify(game));
+    const player = (playerColor === 'white' ? 2 : 1);
+    
+    // Initialize moveResult here
+    let moveResult = { success: false, error: "Unknown move type." }; 
+
     // --- >>> ADD LOG <<< ---
     console.log(`  [goLogic] makeGoMove called. Type: ${move.type}, Player: ${player} (${playerColor})`);
     // --- >>> END LOG <<< ---
 
-    switch (move.type) {
-        case 'place':
-            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
+    // This is the CORRECT place for the switch statement
+    switch (move.type) {
+        case 'place':
+            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
             // --- >>> ADD LOG <<< ---
             console.log(`  [goLogic] placeStone result: success=${moveResult.success}, error=${moveResult.error}`);
             // --- >>> END LOG <<< ---
-            break;
-       // ... other cases ...
-    }
+            break;
+        case 'move':
+            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
+            break;
+        case 'shield':
+            moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
+            break;
+        case 'resign':
+            moveResult = handleResign(newGame, player);
+            break;
+    }
 
-    if (moveResult.success) {
+    if (moveResult.success) {
         // --- >>> ADD LOG <<< ---
         console.log(`  [goLogic] Move success. Toggling turn from ${newGame.isWhiteTurn} to ${!newGame.isWhiteTurn}`);
         // --- >>> END LOG <<< ---
-        moveResult.updatedGame.score = calculateScore(
-            moveResult.updatedGame.boardState, 
-            moveResult.updatedGame.blackPiecesLost, 
-            moveResult.updatedGame.whitePiecesLost
-        );
-        if (move.type !== 'resign') {
-            moveResult.updatedGame.lastMove = move.to || move.at;
-            moveResult.updatedGame.isWhiteTurn = !newGame.isWhiteTurn; // Toggle turn
-            moveResult.updatedGame.turnCount++;
-            updateMoveList(moveResult.updatedGame, move);
-        }
-    }
-    
-    return moveResult;
+        
+        // Note: game state was already updated inside placeStone/movePiece
+        const updatedGame = moveResult.updatedGame; 
+
+        // Update score
+        updatedGame.score = calculateScore(
+            updatedGame.boardState,
+            updatedGame.blackPiecesLost,
+            updatedGame.whitePiecesLost
+        );
+
+        if (move.type !== 'resign') {
+            // Set lastMove
+            if (move.type === 'place' || move.type === 'move') {
+                 updatedGame.lastMove = move.to;
+            } else if (move.type === 'shield') {
+                 updatedGame.lastMove = move.at;
+            }
+
+            // Update move list *before* toggling turn
+            updateMoveList(updatedGame, move); 
+            // Now toggle turn
+            updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
+            updatedGame.turnCount++;
+        }
+        
+        return { success: true, updatedGame: updatedGame }; // Return the modified game
+    }
+    
+    // If success was false, just return the result from placeStone/movePiece
+    return moveResult;
 }
 
 function placeStone(game, x, y, player) {
@@ -409,7 +438,7 @@ function updateMoveList(game, move) {
     const turnNum = Math.floor(game.turnCount / 2) + 1;
     let notationString = "";
 
-    // This switch's job is ONLY to create the string
+    // This switch's job is ONLY to create the notation string
     switch (move.type) {
         case 'place':
             notationString = `P@${move.to.x},${move.to.y}`;
@@ -427,7 +456,8 @@ function updateMoveList(game, move) {
              notationString = `Unknown`;
     }
 
-    if (game.isWhiteTurn) { // This logic was wrong before, should be based on whose turn it *was*
+    // game.isWhiteTurn is the turn *before* it gets toggled
+    if (game.isWhiteTurn) {
         // This is White's move, so start a new line
         game.moveList.push(`${turnNum}. ${notationString}`);
     } else {
