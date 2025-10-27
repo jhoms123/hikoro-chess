@@ -23,7 +23,7 @@
                 <label for="time-control">Main Time:</label>
                 <select id="time-control">
                     <option value="-1">Unlimited</option>
-                    <option value="0">Byoyomi Only</option> 
+                    <option value="0">Byoyomi Only</option>
                     <option value="300">5 Minutes</option>
                     <option value="900">15 Minutes</option>
                     <option value="1800">30 Minutes</option>
@@ -43,7 +43,7 @@
         <button id="create-game-btn">Create New Game</button>
         <button id="single-player-btn">Single Player (Pass & Play)</button>
         <button id="play-bot-btn">Play Against Bot</button>
-        <button id="rules-btn">Rules & Movesets</button> 
+        <button id="rules-btn">Rules & Movesets</button>
 
         <div id="replay-section" style="margin-top: 20px; border-top: 1px solid #777; padding-top: 15px; width: 90%; margin-left: auto; margin-right: auto;">
             <h3>Replay Game</h3>
@@ -65,7 +65,7 @@
             <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time-hikoro">--:--</span>)</h3>
             <div class="captured-pieces-box" id="black-captured"></div>
         </div>
-        
+
         <div id="board-container">
             <div class="notation-files notation-files-top"></div>
             <div class="notation-ranks notation-ranks-left"></div>
@@ -73,7 +73,7 @@
             <div class="notation-ranks notation-ranks-right"></div>
             <div class="notation-files notation-files-bottom"></div>
         </div>
-        
+
         <div id="move-history-container">
             <h3>Move History</h3>
             <div id="move-history"></div>
@@ -84,7 +84,7 @@
             <div class="captured-pieces-box" id="white-captured"></div>
         </div>
     </div>
-    
+
     <div id="go-game-wrapper" style="display: none;">
         <div id="go-score-display-container">
             <div class="go-score-box" id="go-black-score-box">
@@ -92,24 +92,25 @@
                 <span id="go-black-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
                 <span id="black-time" class="go-timer">--:--</span>
             </div>
-            
+
             <div id="go-board-container">
                 </div>
-            
+
             <div class="go-score-box" id="go-white-score-box">
                 <strong>White: <span id="go-white-score">0</span></strong>
                 <span id="go-white-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
                 <span id="white-time" class="go-timer">--:--</span>
             </div>
         </div>
-         <div id="go-controls">
-            <button id="go-shield-button">Turn to Shield</button>
+         <div class="go-controls"> <button id="go-shield-button" class="go-action-btn" style="display: none;">Turn to Shield</button>
+            <button id="go-pass-button" class="go-action-btn" style="display: none;">Pass Turn</button>
         </div>
     </div>
+
     <div id="turn-indicator-container">
         <h2 id="turn-indicator"></h2>
         <p id="winnerText"></p>
-        
+
         <div id="post-game-controls" style="display: none; justify-content: center; gap: 15px; margin-top: 10px;">
             <button id="copy-kifu-btn">Copy Kifu (Notation)</button>
             <button id="download-kifu-btn">Download Kifu</button>
@@ -122,10 +123,11 @@
             <button id="replay-next-btn" title="Next Move">&gt;</button>
             <button id="replay-last-btn" title="Last Move">&gt;|</button>
         </div>
-        
+
         <div id="game-controls" style="display: none;">
-             <button id="rules-btn-ingame">Rules & Movesets</button>
-             <button id="main-menu-btn">Back to Main Menu</button>
+             <button id="rules-btn-ingame" class="game-control-btn">Rules & Movesets</button>
+             <button id="main-menu-btn" class="game-control-btn">Back to Main Menu</button>
+             <button id="resign-button" class="game-control-btn resign">Resign</button>
         </div>
     </div>
 
@@ -138,22 +140,8 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="gamelogic.js"></script> 
-    <script src="script.js"></script> 
-	
-	<div id="game-controls">
-        <button id="main-menu-btn" class="game-control-btn">Main Menu</button>
-        <button id="rules-btn-ingame" class="game-control-btn">Rules</button>
-        
-        <button id="resign-button" class="game-control-btn resign">Resign</button>
-    </div>
+    <script src="gamelogic.js"></script>
+    <script src="goGameLogic.js"></script> <script src="script.js"></script>
 
-    <div id="go-game-wrapper" class="game-wrapper" style="display: none;">
-        <div class="go-controls">
-            <button id="go-shield-button" class="go-action-btn" style="display: none;">Turn to Shield</button>
-            
-            <button id="go-pass-button" class="go-action-btn" style="display: none;">Pass Turn</button>
-        </div>
-    </div>
-</body>
+    </body>
 </html>
