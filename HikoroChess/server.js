@@ -243,6 +243,13 @@ io.on('connection', (socket) => {
     socket.on('makeGameMove', (data) => {
         const { gameId, move } = data;
         const game = games[gameId];
+
+
+if (!game) {
+            console.error(`[Server] Move failed: Game ${gameId} not found. Server may have restarted.`);
+            socket.emit('errorMsg', 'Game not found. The server may have restarted. Please return to the main menu.');
+            return; // Stop execution to prevent the crash
+        }
         // --- >>> ADD SERVER LOGS <<< ---
         console.log(`[Server] Received makeGameMove for ${gameId}: ${JSON.stringify(move)}`);
         // --- >>> END SERVER LOGS <<< ---
