@@ -260,11 +260,11 @@ io.on('connection', (socket) => {
             isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
         }
 
-        if (!isTurn && !game.isSinglePlayer) { // Allow single player moves regardless of socket ID
-            console.log(`Not player ${socket.id}'s turn in game ${gameId}`);
-            socket.emit('errorMsg', "It's not your turn.");
-            return;
-        }
+        if (!isTurn) { // This check now works for both modes
+            console.log(`Not player ${socket.id}'s turn in game ${gameId}`);
+            socket.emit('errorMsg', "It's not your turn.");
+            return;
+        }
 
         // Update time *before* processing the move
         updateTimeOnMove(game);
