@@ -409,32 +409,33 @@ function updateMoveList(game, move) {
     const turnNum = Math.floor(game.turnCount / 2) + 1;
     let notationString = "";
 
-    let moveResult = { success: false, error: "Unknown move type." }; // <-- Good to initialize
+    // This switch's job is ONLY to create the string
+    switch (move.type) {
+        case 'place':
+            notationString = `P@${move.to.x},${move.to.y}`;
+            break;
+        case 'move':
+            notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
+            break;
+        case 'shield':
+            notationString = `S@${move.at.x},${move.at.y}`;
+            break;
+        case 'resign':
+            notationString = `Resign`;
+            break;
+        default:
+             notationString = `Unknown`;
+    }
 
-    switch (move.type) {
-        case 'place':
-            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
-            // ...
-            break;
-        
-        // --- ADD THESE CASES ---
-        case 'move': 
-            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
-            break;
-        case 'shield':
-            moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
-            break;
-        case 'resign':
-            moveResult = handleResign(newGame, player);
-            break;
-    }
-
-    if (game.isWhiteTurn) {
+    if (game.isWhiteTurn) { // This logic was wrong before, should be based on whose turn it *was*
+        // This is White's move, so start a new line
         game.moveList.push(`${turnNum}. ${notationString}`);
     } else {
+        // This is Black's move, so append to the last line
         if (game.moveList.length > 0) {
             game.moveList[game.moveList.length - 1] += ` ${notationString}`;
         } else {
+            // Should not happen if white moves first, but good to have
             game.moveList.push(`${turnNum}... ${notationString}`);
         }
     }
