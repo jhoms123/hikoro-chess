@@ -36,57 +36,60 @@ exports.getValidMoves = function(game, data) {
  * | { type: 'resign' }
  */
 exports.makeGoMove = function(game, move, playerColor) {
-    // Deep clone the game state to prevent mutation issues
-    const newGame = JSON.parse(JSON.stringify(game));
-    const player = (playerColor === 'white' ? 2 : 1);
-    let moveResult;
+    const newGame = JSON.parse(JSON.stringify(game));
+    const player = (playerColor === 'white' ? 2 : 1);
+    let moveResult;
+    // --- >>> ADD LOG <<< ---
+    console.log(`  [goLogic] makeGoMove called. Type: ${move.type}, Player: ${player} (${playerColor})`);
+    // --- >>> END LOG <<< ---
 
-    switch (move.type) {
-        case 'place':
-            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
-            break;
-        case 'move':
-            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
-            break;
-        case 'shield':
-            moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
-            break;
-        case 'resign':
-            moveResult = handleResign(newGame, player);
-            break;
-        default:
-            return { success: false, error: "Unknown move type for Go." };
-    }
+    switch (move.type) {
+        case 'place':
+            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
+            // --- >>> ADD LOG <<< ---
+            console.log(`  [goLogic] placeStone result: success=${moveResult.success}, error=${moveResult.error}`);
+            // --- >>> END LOG <<< ---
+            break;
+       // ... other cases ...
+    }
 
-    if (moveResult.success) {
-        // Update score and last move on success
-        moveResult.updatedGame.score = calculateScore(moveResult.updatedGame.boardState, moveResult.updatedGame.blackPiecesLost, moveResult.updatedGame.whitePiecesLost);
-        if (move.type !== 'resign') {
-            moveResult.updatedGame.lastMove = move.to || move.at;
-            moveResult.updatedGame.isWhiteTurn = !newGame.isWhiteTurn;
-            moveResult.updatedGame.turnCount++;
-            updateMoveList(moveResult.updatedGame, move);
-        }
-    }
-    
-    return moveResult;
+    if (moveResult.success) {
+        // --- >>> ADD LOG <<< ---
+        console.log(`  [goLogic] Move success. Toggling turn from ${newGame.isWhiteTurn} to ${!newGame.isWhiteTurn}`);
+        // --- >>> END LOG <<< ---
+        moveResult.updatedGame.score = calculateScore(/*...*/);
+        if (move.type !== 'resign') {
+            moveResult.updatedGame.lastMove = move.to || move.at;
+            moveResult.updatedGame.isWhiteTurn = !newGame.isWhiteTurn; // Toggle turn
+            moveResult.updatedGame.turnCount++;
+            updateMoveList(moveResult.updatedGame, move);
+        }
+    }
+    
+    return moveResult;
 }
 
-// --- INTERNAL MOVE FUNCTIONS ---
-
 function placeStone(game, x, y, player) {
-    if (game.boardState[y][x] !== 0) {
-        return { success: false, error: "Spot is occupied." };
-    }
-    
-    game.boardState[y][x] = player;
-    
-    if (!processCapturesAndSuicide(game, x, y, player)) {
-        // Suicide move, it was undone by the function
-        return { success: false, error: "Illegal suicide move." };
-    }
-    
-    return { success: true, updatedGame: game };
+    // --- >>> ADD LOG <<< ---
+    console.log(`    [goLogic] placeStone: Placing ${player} at ${x},${y}. Current occupant: ${game.boardState[y]?.[x]}`);
+    // --- >>> END LOG <<< ---
+    if (game.boardState[y]?.[x] !== 0) { // Added safety check
+        console.log(`    [goLogic] placeStone failed: Spot occupied.`); // Added log
+        return { success: false, error: "Spot is occupied." };
+    }
+    
+    game.boardState[y][x] = player;
+    
+    // --- >>> ADD LOG <<< ---
+    console.log(`    [goLogic] placeStone: Placed stone. Checking captures/suicide...`);
+    // --- >>> END LOG <<< ---
+    if (!processCapturesAndSuicide(game, x, y, player)) {
+        console.log(`    [goLogic] placeStone failed: Suicide move detected and reverted.`); // Added log
+        return { success: false, error: "Illegal suicide move." };
+    }
+    
+    console.log(`    [goLogic] placeStone success.`); // Added log
+    return { success: true, updatedGame: game };
 }
 
 function movePiece(game, fromX, fromY, toX, toY, player) {

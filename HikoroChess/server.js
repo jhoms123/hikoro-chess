@@ -241,64 +241,67 @@ io.on('connection', (socket) => {
 
     // --- NEW: Generic makeGameMove handler (replaces makeMove and makeDrop) ---
     socket.on('makeGameMove', (data) => {
-        const { gameId, move } = data; // Client sends { gameId, move: { ... } }
-        const game = games[gameId];
-        // Basic validation
-        if (!game || game.gameOver || !move || !game.logic || !game.logic.makeMove) {
-             console.log(`makeGameMove rejected: gameId=${gameId}, gameOver=${game?.gameOver}, moveExists=${!!move}, logicExists=${!!game?.logic?.makeMove}`);
-             return;
-        }
+        const { gameId, move } = data;
+        const game = games[gameId];
+        // --- >>> ADD SERVER LOGS <<< ---
+        console.log(`[Server] Received makeGameMove for ${gameId}: ${JSON.stringify(move)}`);
+        // --- >>> END SERVER LOGS <<< ---
 
-        let playerColor;
-        let isTurn = false;
-        // Determine player and check if it's their turn
-        if (game.isSinglePlayer) {
-            playerColor = game.isWhiteTurn ? 'white' : 'black';
-            isTurn = true; // Allow any move in single player (pass & play)
-        } else {
-            playerColor = game.players.white === socket.id ? 'white' : 'black';
-            isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-        }
+        if (!game || /*... other checks ...*/) {
+             console.log(`[Server] Move rejected early: gameId=${gameId}, gameOver=${game?.gameOver}, ...`);
+             return;
+        }
 
-        if (!isTurn) { // This check now works for both modes
-            console.log(`Not player ${socket.id}'s turn in game ${gameId}`);
+        let playerColor;
+        let isTurn = false;
+        if (game.isSinglePlayer) {
+            playerColor = game.isWhiteTurn ? 'white' : 'black';
+            isTurn = true;
+        } else {
+            playerColor = game.players.white === socket.id ? 'white' : 'black';
+            isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
+        }
+        // --- >>> ADD SERVER LOGS <<< ---
+        console.log(`[Server] Determined: isSinglePlayer=${game.isSinglePlayer}, playerColor=${playerColor}, isTurn=${isTurn}`);
+        // --- >>> END SERVER LOGS <<< ---
+
+        if (!isTurn) {
+            console.log(`[Server] Move rejected: Not player ${socket.id}'s turn.`);
             socket.emit('errorMsg', "It's not your turn.");
             return;
         }
 
-        // Update time *before* processing the move
-        updateTimeOnMove(game);
-        // Check if timeout occurred during updateTimeOnMove
-        if (game.gameOver) {
-            console.log(`Game ${gameId} ended due to timeout during move.`);
-            io.to(gameId).emit('gameStateUpdate', game); // Broadcast timeout state
-            return;
-        }
-        
-        // --- Delegate move logic to the specific game module ---
-        try {
-            const result = game.logic.makeMove(game, move, playerColor);
+        updateTimeOnMove(game);
+        if (game.gameOver) { /* ... handle timeout ... */ return; }
 
-            if (result.success) {
-                // Update the authoritative game state on the server
-                games[gameId] = result.updatedGame;
-                // Broadcast the new state to all clients in the room
-                // Make sure to remove the server-side logic functions before sending
-                const stateToSend = { ...result.updatedGame };
-                delete stateToSend.logic; // Don't send logic functions to client
-                io.to(gameId).emit('gameStateUpdate', stateToSend);
-                 console.log(`Move successful in ${gameId} (${game.gameType}) by ${playerColor}. Turn: ${result.updatedGame.turnCount}`);
-            } else {
-                // Send error message back to the player who tried to move
-                console.log(`Move failed for ${gameId} (${game.gameType}): ${result.error}`);
-                socket.emit('errorMsg', result.error || "Invalid move.");
+        try {
+            // --- >>> ADD SERVER LOGS <<< ---
+            console.log(`[Server] Calling ${game.gameType} logic makeMove with color: ${playerColor}`);
+            // --- >>> END SERVER LOGS <<< ---
+            const result = game.logic.makeMove(game, move, playerColor);
+
+            // --- >>> ADD SERVER LOGS <<< ---
+            console.log(`[Server] Logic result: success=${result.success}, error=${result.error}`);
+            if(result.success) {
+                console.log(`[Server] New state: isWhiteTurn=${result.updatedGame.isWhiteTurn}, turnCount=${result.updatedGame.turnCount}`);
+                // Optional: Log board state at the move location
+                if (move.to) console.log(`       Board[${move.to.y}][${move.to.x}]=${result.updatedGame.boardState[move.to.y]?.[move.to.x]}`);
+                else if (move.at) console.log(`       Board[${move.at.y}][${move.at.x}]=${result.updatedGame.boardState[move.at.y]?.[move.at.x]}`);
             }
-        } catch (error) {
-             console.error(`CRITICAL ERROR during makeMove for ${gameId} (${game.gameType}):`, error);
-             socket.emit('errorMsg', "An internal server error occurred processing your move.");
-             // Potentially need to handle game state recovery or termination here
-        }
-    });
+            // --- >>> END SERVER LOGS <<< ---
+
+            if (result.success) {
+                games[gameId] = result.updatedGame;
+                const stateToSend = { ...result.updatedGame };
+                delete stateToSend.logic;
+                io.to(gameId).emit('gameStateUpdate', stateToSend);
+                console.log(`[Server] Move successful for ${playerColor}. Emitted gameStateUpdate.`); // Added confirmation
+            } else {
+                console.log(`[Server] Move failed: ${result.error}`);
+                socket.emit('errorMsg', result.error || "Invalid move.");
+            }
+        } catch (error) { /* ... handle error ... */ }
+    });
 
 	// --- MODIFIED: createSinglePlayerGame is now generic ---
     socket.on('createSinglePlayerGame', (data) => {
