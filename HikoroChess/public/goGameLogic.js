@@ -292,7 +292,7 @@ function processCapturesAndSuicide(game, x, y, player) {
     let capturedStones = false;
 
     // 1. Check adjacent *enemy* groups for capture
-    const neighbors = getNeighbors(x, y, boardState);
+    const neighbors = getNeighbors(x, y, game.boardState);
     for (const n of neighbors) {
         const state = game.boardState[n.y][n.x];
         if (state > 0) { 
