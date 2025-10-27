@@ -612,7 +612,7 @@ h1 {
     #go-game-wrapper .intersection {
         width: var(--go-cell-size);
         height: var(--go-cell-size);
-        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
+        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Dynamic centering */
     }
     #go-game-wrapper .stone {
         width: calc(var(--go-cell-size) * 0.85); /* Adjust multiplier if needed */
@@ -858,14 +858,15 @@ h1 {
 
 #go-board-container {
     display: grid;
-    grid-template-columns: repeat(19, 30px);
-    grid-template-rows: repeat(19, 30px);
+    grid-template-columns: repeat(19, 30px); /* Base cell size */
+    grid-template-rows: repeat(19, 30px);   /* Base cell size */
+    --go-cell-size: 30px; /* Define custom property for Go cell size */
     border: 2px solid #555;
     background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
-    padding: 15px;
-    width: fit-content; /* Ensure container fits content */
+    padding: 15px; /* Padding for the board lines */
+    width: fit-content;
     height: fit-content;
 }
 
@@ -879,9 +880,9 @@ h1 {
     position: absolute;
     top: 15px;
     left: 15px;
-    width: 540px;  /* 18 intervals * 30px */
-    height: 540px; /* 18 intervals * 30px */
-    background-size: 30px 30px;
+    width: calc(var(--go-cell-size) * 18);  /* 18 intervals */
+    height: calc(var(--go-cell-size) * 18); /* 18 intervals */
+    background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
@@ -890,23 +891,23 @@ h1 {
 }
 
 #go-game-wrapper .intersection {
-    width: 30px;
-    height: 30px;
+    width: var(--go-cell-size); /* Use custom property */
+    height: var(--go-cell-size); /* Use custom property */
     position: relative;
     z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    /* Translate to center on grid lines - start with -15px */
-    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* NEW: Dynamic Centering */
-    box-sizing: border-sizing;
+    /* Translate to center on grid lines using dynamic value */
+    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
+    box-sizing: border-box;
 }
 
 /* --- Go Stone Image Styling --- */
 #go-game-wrapper .stone {
-    width: 26px; /* Adjust size to fit your image */
-    height: 26px;
+    width: calc(var(--go-cell-size) * 0.85); /* Adjust size to fit your image relative to cell */
+    height: calc(var(--go-cell-size) * 0.85); /* Adjust size to fit your image relative to cell */
     background-size: contain; /* Scale image to fit */
     background-repeat: no-repeat;
     background-position: center;
@@ -925,16 +926,17 @@ h1 {
 
 /* --- Updated Highlight Styles --- */
 #go-game-wrapper .last-move {
-    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.7); /* NEW: Thinner highlight */
+    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.7); /* Thinner circular red shadow */
 }
 #go-game-wrapper .selected {
-    box-shadow: 0 0 0 3px rgba(0, 100, 255, 0.8); /* NEW: Thinner highlight */
+    box-shadow: 0 0 0 3px rgba(0, 100, 255, 0.8); /* Thinner circular blue shadow */
 }
 
+/* Smaller valid-move highlight */
 #go-game-wrapper .valid-move {
     background-color: rgba(0, 255, 0, 0.3);
-    width: 22px;  /* NEW: Smaller size */
-    height: 22px; /* NEW: Smaller size */
+    width: calc(var(--go-cell-size) * 0.73);  /* Smaller, relative to cell size, e.g., 22px for a 30px cell */
+    height: calc(var(--go-cell-size) * 0.73); /* Smaller, relative to cell size */
     border-radius: 50%;
     z-index: 3;
 }
