@@ -288,11 +288,16 @@ io.on('connection', (socket) => {
             // --- >>> END SERVER LOGS <<< ---
 
             if (result.success) {
+                // --- FIX: Preserve the logic functions ---
+                const originalLogic = games[gameId].logic;
                 games[gameId] = result.updatedGame;
+                games[gameId].logic = originalLogic;
+                // --- END FIX ---
+
                 const stateToSend = { ...result.updatedGame };
-                delete stateToSend.logic;
+                delete stateToSend.logic; // This removes it for the client
                 io.to(gameId).emit('gameStateUpdate', stateToSend);
-                console.log(`[Server] Move successful for ${playerColor}. Emitted gameStateUpdate.`); // Added confirmation
+                console.log(`[Server] Move successful for ${playerColor}. Emitted gameStateUpdate.`);
             } else {
                 console.log(`[Server] Move failed: ${result.error}`);
                 socket.emit('errorMsg', result.error || "Invalid move.");
