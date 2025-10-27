@@ -60,6 +60,9 @@ exports.makeGoMove = function(game, move, playerColor) {
         case 'shield':
             moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
             break;
+		case 'pass': // <-- ADD THIS CASE
+            moveResult = { success: true, updatedGame: newGame }; // A pass is a valid move that does nothing
+            break;
         case 'resign':
             moveResult = handleResign(newGame, player);
             break;
@@ -448,6 +451,9 @@ function updateMoveList(game, move) {
             break;
         case 'shield':
             notationString = `S@${move.at.x},${move.at.y}`;
+            break;
+		case 'pass': // <-- ADD THIS
+            notationString = `Pass`;
             break;
         case 'resign':
             notationString = `Resign`;

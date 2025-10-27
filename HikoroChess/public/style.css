@@ -915,6 +915,40 @@ h1 {
     border-radius: 50%;
 }
 
+.intersection {
+    /* ... your existing styles (width, height, border) ... */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ADD these new rules for the buttons */
+.go-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.go-action-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: #4a4a4a;
+    border: 1px solid #666;
+    color: white;
+    cursor: pointer;
+}
+.go-action-btn:hover {
+    background-color: #5a5a5a;
+}
+
+.game-control-btn.resign {
+    background-color: #b92a2a;
+    color: white;
+}
+.game-control-btn.resign:hover {
+    background-color: #d93a3a;
+}
+
 /* Ensure portrait mode for Hikoro also uses the renamed wrapper */
 @media (orientation: portrait) {
     #hikoro-game-wrapper {

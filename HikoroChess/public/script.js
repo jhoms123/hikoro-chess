@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const goBlackScoreDetails = document.getElementById('go-black-score-details');
     const goWhiteScoreDisplay = document.getElementById('go-white-score');
     const goWhiteScoreDetails = document.getElementById('go-white-score-details');
+	const goPassButton = document.getElementById('go-pass-button');
 
     // --- Shared UI Elements ---
     const turnIndicator = document.getElementById('turn-indicator');
@@ -105,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainMenuBtn = document.getElementById('main-menu-btn');
     const rulesBtnIngame = document.getElementById('rules-btn-ingame');
     const moveHistoryElement = document.getElementById('move-history');
+	const resignButton = document.getElementById('resign-button');
 
     const postGameControls = document.getElementById('post-game-controls');
     const copyKifuBtn = document.getElementById('copy-kifu-btn');
@@ -229,6 +231,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.location.reload();
     });
+	
+	if (resignButton) {
+        resignButton.addEventListener('click', () => {
+            if (gameState.gameOver || isReplayMode || !gameId) return;
+
+            // Don't allow resigning in single-player (pass-and-play)
+            if (isSinglePlayer && !isBotGame) {
+                alert("Cannot resign in a local pass-and-play game.");
+                return;
+            }
+
+            if (confirm("Are you sure you want to resign?")) {
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: { type: 'resign' }
+                });
+            }
+        });
+    }
+
+    if (goPassButton) {
+        goPassButton.addEventListener('click', () => {
+            if (gameState.gameOver || isReplayMode) return;
+            
+            // Client-side turn check for responsiveness
+            const isMyTurn = (isSinglePlayer) || 
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+            
+            if (isMyTurn) {
+                console.log("Emitting pass move");
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: { type: 'pass' }
+                });
+            } else {
+                console.log("Not your turn to pass.");
+            }
+        });
+    }
 
     if (copyKifuBtn) {
         copyKifuBtn.addEventListener('click', () => {
@@ -545,10 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- NEW: Render based on gameType ---
         if (gameState.gameType === 'go') {
-            renderGoBoard();
-            renderGoScore();
-            // Show shield button if a piece is selected
-            goShieldButton.style.display = goSelectedPiece ? 'block' : 'none';
+            renderGoBoard();
+            renderGoScore();
+            // Show shield button if a piece is selected
+            goShieldButton.style.display = goSelectedPiece && !gameState.gameOver ? 'block' : 'none';
+            // Show pass button if it's a Go game and not over
+            goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
+            
             if (newGameState.gameOver) { // Disable board for Go
                 goBoardContainer.classList.add('disabled');
             } else {

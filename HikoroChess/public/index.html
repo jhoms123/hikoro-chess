@@ -140,5 +140,20 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="gamelogic.js"></script> 
     <script src="script.js"></script> 
+	
+	<div id="game-controls">
+        <button id="main-menu-btn" class="game-control-btn">Main Menu</button>
+        <button id="rules-btn-ingame" class="game-control-btn">Rules</button>
+        
+        <button id="resign-button" class="game-control-btn resign">Resign</button>
+    </div>
+
+    <div id="go-game-wrapper" class="game-wrapper" style="display: none;">
+        <div class="go-controls">
+            <button id="go-shield-button" class="go-action-btn" style="display: none;">Turn to Shield</button>
+            
+            <button id="go-pass-button" class="go-action-btn" style="display: none;">Pass Turn</button>
+        </div>
+    </div>
 </body>
 </html>

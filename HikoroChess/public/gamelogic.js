@@ -552,7 +552,17 @@ exports.makeMove = function(game, move, playerColor) {
 
         return { success: true, updatedGame: newGame };
 
-    } else if (move.type === 'drop') {
+    } 
+	
+	else if (move.type === 'resign') { // <-- ADD THIS ENTIRE BLOCK
+        newGame.gameOver = true;
+        newGame.winner = (playerColor === 'white') ? 'black' : 'white';
+        newGame.reason = "Resignation";
+        return { success: true, updatedGame: newGame };
+
+    }
+	
+	else if (move.type === 'drop') {
         const { piece, to } = move; // piece only contains { type }
 
         // --- Input Validation ---
