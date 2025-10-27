@@ -2478,67 +2478,129 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Cthulhu', type: 'cthulhu', notation: 'Ct', desc: "Combines moves of Ancient Creature and Mermaid. Retains AC's bonus non-capture move." }
     ];
 
-    function populateRulesModal() {
+    function populateGoRules() {
         rulesBody.innerHTML = `
-            <h2>Winning the Game</h2>
+            <h2>Go Variant Rules</h2>
+            <p>This is a fast-paced Go variant combining elements of Go and Chess.</p>
+
+            <h3>Objective</h3>
+            <p>The goal is to have a higher score than your opponent. Your score is the sum of:</p>
             <ul>
-                <li><strong>Royalty Capture:</strong> Capture **both** the opponent's King Kraken and Kraken Prince.</li>
-                <li><strong>Sanctuary Victory:</strong> Move your King Kraken OR Kraken Prince onto one of the eight golden "Sanctuary" squares.</li>
+                <li><strong>Territory:</strong> Empty intersections you have surrounded.</li>
+                <li><strong>Stones:</strong> The number of your stones on the board.</li>
+                <li><strong>(Penalty):</strong> You lose 1 point for every stone you've had captured (either by a jump or a Go capture).</li>
             </ul>
-            <h2>Special Mechanics</h2>
-            <h3><span style="color: #FF5722;">👑</span> The Royal Family & The Palace</h3>
+
+            <h3>Gameplay</h3>
+            <p>On your turn, you can choose one of four actions:</p>
+            
+            <h4>1. Place a Stone (Default Click)</h4>
+            <p>Click on any empty intersection to place one of your stones. This is the most common move.</p>
+
+            <h4>2. Move a Stone (Click to Select, Click to Move)</h4>
+            <p>Click one of your existing stones (not a Shield) to select it. Click a valid empty square to move it. Valid moves are:</p>
             <ul>
-                <li><strong>King Kraken Palace Rule:</strong> Confined to its starting 4x2 Palace area.</li>
-                <li><strong>Prince's Freedom:</strong> If your Prince is captured, your King is freed from the Palace.</li>
-                <li><strong>Royal Capture Rule:</strong> Captured Kings/Princes are removed, not added to hand.</li>
+                <li>One square in any orthogonal direction (up, down, left, right).</li>
+                <li>A two-square jump over an <strong>enemy</strong> stone, capturing it (like in Checkers). This is only allowed if the landing spot is empty.</li>
             </ul>
-            <h3><span style="color: #4CAF50;">🛡️</span> Piece Protection</h3>
-              <ul>
-                  <li><strong>Squid (Pilut):</strong> Protects friendly piece directly behind it.</li>
-                  <li><strong>Shield Squid (Greatshield):</strong> Protects adjacent friendly pieces on sides/behind (5 squares).</li>
-              </ul>
-              <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
-            <ul>
-                <li><strong>Narwhal (Cope):</strong> After a capture, gets a second non-capture move.</li>
-                <li><strong>Ancient Creature / Cthulhu:</strong> After a non-capture move, gets a second non-capture move.</li>
-            </ul>
-            <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
-            <p>Captured pieces (except royalty) go to your Hand. On your turn, drop a piece from hand onto any empty, valid square (max 6 pieces in hand).</p>
-            <h2>Piece Movesets</h2>
-            <div class="piece-list" id="piece-list-container"></div>
+
+            <h4>3. Turn to Shield (Double-Click or Select + Button)</h4>
+            <p>Double-click one of your stones (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot move, be captured, or be used to capture, but it counts for territory and score. It acts as a permanent wall.</p>
+
+            <h4>4. Resign</h4>
+            <p>You can go to the Main Menu and leave the game to resign.</p>
+
+            <h3>Capture Rules</h3>
+            <p>There are two ways to capture stones:</p>
+            <ol>
+                <li><strong>Jump Capture (via Move):</strong> As described above, jumping over a single enemy stone captures it.</li>
+                <li><strong>Go Capture (via Placement or Move):</strong> If any of your moves (placing or moving) results in an enemy group having no "liberties" (empty adjacent spaces), that entire group is captured and removed from the board.</li>
+            </ol>
+
+            <h3><span style="color: #FF5722;">⚠️</span> Suicide Rule</h3>
+            <p>You cannot make a move (place or move a stone) that results in your own group having zero liberties, <em>unless</em> that move also captures an enemy group at the same time.</p>
         `;
+    }
+	
+	
+	function populateRulesModal() {
+        // Check the global gameState to decide which rules to show
+        if (gameState && gameState.gameType === 'go') {
+            populateGoRules();
+        } else {
+            // Default to Hikoro rules
+            populateHikoroRules();
+        }
+    }
 
-        const pieceListContainer = document.getElementById('piece-list-container');
-        if (!pieceListContainer) return;
-        pieceListContainer.innerHTML = '';
+    // --- RENAMED HIKORO RULES (Your old function) ---
+    function populateHikoroRules() {
+        rulesBody.innerHTML = `
+            <h2>Winning the Game</h2>
+            <ul>
+                <li><strong>Royalty Capture:</strong> Capture **both** the opponent's King Kraken and Kraken Prince.</li>
+                <li><strong>Sanctuary Victory:</strong> Move your King Kraken OR Kraken Prince onto one of the eight golden "Sanctuary" squares.</li>
+            </ul>
+            <h2>Special Mechanics</h2>
+            <h3><span style="color: #FF5722;">👑</span> The Royal Family & The Palace</h3>
+            <ul>
+                <li><strong>King Kraken Palace Rule:</strong> Confined to its starting 4x2 Palace area.</li>
+                <li><strong>Prince's Freedom:</strong> If your Prince is captured, your King is freed from the Palace.</li>
+                <li><strong>Royal Capture Rule:</strong> Captured Kings/Princes are removed, not added to hand.</li>
+            </ul>
+            <h3><span style="color: #4CAF50;">🛡️</span> Piece Protection</h3>
+              <ul>
+                  <li><strong>Squid (Pilut):</strong> Protects friendly piece directly behind it.</li>
+                  <li><strong>Shield Squid (Greatshield):</strong> Protects adjacent friendly pieces on sides/behind (5 squares).</li>
+              </ul>
+              <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
+            <ul>
+                <li><strong>Narwhal (Cope):</strong> After a capture, gets a second non-capture move.</li>
+                <li><strong>Ancient Creature / Cthulhu:</strong> After a non-capture move, gets a second non-capture move.</li>
+            </ul>
+            <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
+            <p>Captured pieces (except royalty) go to your Hand. On your turn, drop a piece from hand onto any empty, valid square (max 6 pieces in hand).</p>
+            <h2>Piece Movesets</h2>
+            <div class="piece-list" id="piece-list-container"></div>
+        `;
 
-        [...pieceInfo].sort((a, b) => {
-            if (a.type === 'lupa') return -1; if (b.type === 'lupa') return 1;
-            if (a.type === 'prince') return -1; if (b.type === 'prince') return 1;
-            return a.name.localeCompare(b.name);
-        }).forEach(p => {
-            const entry = document.createElement('div');
-            entry.className = 'piece-entry';
-            const notation = p.notation || '?';
-            entry.innerHTML = `
-                <div class="piece-header">
-                    <img src="sprites/${p.type}_white.png" alt="${p.name}">
-                    <span>${p.name} (${notation})</span>
-                </div>
-                <p>${p.desc}</p>
-                ${p.special ? `<p><em><strong>Note:</strong> ${p.special}</em></p>` : ''}
-            `;
-            pieceListContainer.appendChild(entry);
-        });
+        const pieceListContainer = document.getElementById('piece-list-container');
+        if (!pieceListContainer) return;
+        pieceListContainer.innerHTML = '';
+
+        [...pieceInfo].sort((a, b) => {
+            if (a.type === 'lupa') return -1; if (b.type === 'lupa') return 1;
+            if (a.type === 'prince') return -1; if (b.type === 'prince') return 1;
+            return a.name.localeCompare(b.name);
+        }).forEach(p => {
+            const entry = document.createElement('div');
+            entry.className = 'piece-entry';
+            const notation = p.notation || '?';
+            entry.innerHTML = `
+                <div class="piece-header">
+                    <img src="sprites/${p.type}_white.png" alt="${p.name}">
+                  - <span>${p.name} (${notation})</span>
+                </div>
+                <p>${p.desc}</p>
+                ${p.special ? `<p><em><strong>Note:</strong> ${p.special}</em></p>` : ''}
+            `;
+            pieceListContainer.appendChild(entry);
+        });
     }
 
     // Ensure rulesBtn exists before adding listener
      if (rulesBtn) {
-        rulesBtn.addEventListener('click', () => {
-            populateRulesModal();
-            if (rulesModal) rulesModal.style.display = 'block';
-        });
-    } else {
+        rulesBtn.addEventListener('click', () => {
+            // --- MODIFIED: Check the lobby dropdown to show correct rules ---
+            const gameType = gameTypeSelect.value; 
+            if (gameType === 'go') {
+                populateGoRules();
+            } else {
+                populateHikoroRules();
+            }
+            if (rulesModal) rulesModal.style.display = 'block';
+        });
+    } else {
          console.warn("Rules button (#rules-btn) not found in lobby.");
     }
 
