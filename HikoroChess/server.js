@@ -247,10 +247,7 @@ io.on('connection', (socket) => {
         console.log(`[Server] Received makeGameMove for ${gameId}: ${JSON.stringify(move)}`);
         // --- >>> END SERVER LOGS <<< ---
 
-        if (!game || /*... other checks ...*/) {
-             console.log(`[Server] Move rejected early: gameId=${gameId}, gameOver=${game?.gameOver}, ...`);
-             return;
-        }
+        
 
         let playerColor;
         let isTurn = false;
