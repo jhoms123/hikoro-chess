@@ -427,6 +427,8 @@ body::before {
     font-weight: normal;
 }
 
+/* Grouped shared timer styles */
+#white-time-hikoro, #black-time-hikoro,
 #white-time, #black-time {
     vertical-align: middle;
     margin-left: 5px;
@@ -441,6 +443,8 @@ body::before {
     transition: background-color 0.3s, border-color 0.3s;
 }
 
+/* Active state for ALL timers */
+#white-time-hikoro.active, #black-time-hikoro.active,
 #white-time.active, #black-time.active {
     background-color: #4a2a00;
     color: #fff;
@@ -512,11 +516,11 @@ body::before {
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.9em;
 }
-#move-history div {
+#move-history div { /* This might conflict with .move-wrapper if not specific enough */
     padding: 2px 5px;
     border-radius: 3px;
 }
-#move-history div:nth-child(even) {
+#move-history div:nth-child(even) { /* Consider using .move-wrapper:nth-child(even) */
     background-color: #3a3a3a;
 }
 
@@ -533,9 +537,7 @@ h1 {
 
 @media (orientation: portrait) {
     :root {
-
         --square-size: 9vw;
-
         --notation-size: calc(var(--square-size) * 0.75);
     }
 
@@ -554,52 +556,51 @@ h1 {
         gap: 10px;
     }
 
-    #black-captured-area { order: 1; }
-    #board-container { order: 2; } /* Only applies inside #hikoro-game-wrapper */
-    #white-captured-area { order: 3; }
-    #move-history-container { order: 4; }
+    /* Ordering for Hikoro in portrait */
+    #hikoro-game-wrapper #black-captured-area { order: 1; }
+    #hikoro-game-wrapper #board-container { order: 2; }
+    #hikoro-game-wrapper #white-captured-area { order: 3; }
+    #hikoro-game-wrapper #move-history-container { order: 4; }
 
     .captured-area {
-
         width: 90vw;
     }
-
 
     #move-history-container {
         width: 90vw;
         height: 150px;
     }
 
-
-    #board-container {
+    /* Hikoro board sizing in portrait */
+    #hikoro-game-wrapper #board-container {
         grid-template-columns: var(--notation-size) calc(var(--square-size) * 10) var(--notation-size);
         grid-template-rows: var(--notation-size) calc(var(--square-size) * 16) var(--notation-size);
     }
 
     .captured-pieces-box {
-
         min-height: auto;
         flex-wrap: nowrap;
         overflow-x: auto;
         justify-content: flex-start;
     }
 
-    /* .timer selector might need adjustment if timer IDs changed */
-    #white-time-hikoro, #black-time-hikoro, #white-time, #black-time {
+    /* Portrait timer styles */
+    #white-time-hikoro, #black-time-hikoro,
+    #white-time, #black-time {
         margin-top: 0;
         margin-bottom: 5px;
         font-size: 1.5em;
         padding: 5px;
     }
 
-    /* Add scaling for Go board in portrait */
+    /* Go board scaling in portrait */
     #go-board-container {
         --go-cell-size: 4.5vw;
         grid-template-columns: repeat(19, var(--go-cell-size));
         grid-template-rows: repeat(19, var(--go-cell-size));
         padding: calc(var(--go-cell-size) / 2);
-        width: fit-content; /* Adjust width */
-        height: fit-content; /* Adjust height */
+        width: fit-content;
+        height: fit-content;
     }
     #go-board-container::before {
         width: calc(var(--go-cell-size) * 18);
@@ -617,7 +618,8 @@ h1 {
         width: calc(var(--go-cell-size) * 0.85); /* Adjust multiplier if needed */
         height: calc(var(--go-cell-size) * 0.85);
     }
-    /* Removed ::before scaling rule as it's no longer used */
+
+    /* Go score display in portrait */
     #go-score-display-container {
         flex-direction: column; /* Stack score boxes vertically */
         align-items: center;
@@ -775,30 +777,6 @@ h1 {
     width: 100%;
 }
 
-/* Shared timer styles (keep as is) */
-#white-time-hikoro, #black-time-hikoro,
-#white-time, #black-time { /* Grouped selectors for shared styles */
-    vertical-align: middle;
-    margin-left: 5px;
-    font-size: 1.2em;
-    font-weight: bold;
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #222;
-    color: #ddd;
-    padding: 3px 8px;
-    border-radius: 5px;
-    border: 2px solid #555;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-/* Active state for ALL timers */
-#white-time-hikoro.active, #black-time-hikoro.active,
-#white-time.active, #black-time.active {
-    background-color: #4a2a00;
-    color: #fff;
-    border-color: #ff9800;
-}
-
 /* --- STYLES FOR GO GAME --- */
 
 #go-game-wrapper {
@@ -920,12 +898,12 @@ h1 {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    /* Translate to center on grid lines */
+    /* Translate to center on grid lines - start with -15px */
     transform: translate(-15px, -15px);
-    box-sizing: border-box; /* <-- ADD THIS LINE */
+    box-sizing: border-box;
 }
 
-/* --- NEW Go Stone Image Styling --- */
+/* --- Go Stone Image Styling --- */
 #go-game-wrapper .stone {
     width: 26px; /* Adjust size to fit your image */
     height: 26px;
@@ -934,9 +912,7 @@ h1 {
     background-position: center;
     z-index: 2;
     position: relative;
-    /* Remove properties handled by images */
-    /* border-radius: 50%; */
-    /* box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4); */
+    border-radius: 50%; /* Make the element circular for box-shadow */
 }
 
 /* Assign background images */
@@ -944,21 +920,24 @@ h1 {
 #go-game-wrapper .go-black { background-image: url('sprites/black_go.png'); }
 #go-game-wrapper .go-white-shield { background-image: url('sprites/white_go_shield.png'); }
 #go-game-wrapper .go-black-shield { background-image: url('sprites/black_go_shield.png'); }
-/* --- END NEW Go Stone Image Styling --- */
+/* --- END Go Stone Image Styling --- */
 
 
+/* --- Updated Highlight Styles --- */
 #go-game-wrapper .last-move {
-    outline: 3px solid rgba(255, 0, 0, 0.7);
-    outline-offset: 2px;
+    /* No outline */
+    box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.7); /* Circular red shadow */
 }
 #go-game-wrapper .selected {
-    outline: 3px solid rgba(0, 100, 255, 0.8);
-    outline-offset: 2px;
+    /* No outline */
+    box-shadow: 0 0 0 4px rgba(0, 100, 255, 0.8); /* Circular blue shadow */
 }
+
+/* Correct valid-move highlight size */
 #go-game-wrapper .valid-move {
     background-color: rgba(0, 255, 0, 0.3);
-    width: 20px;  /* Increased size */
-    height: 20px; /* Increased size */
+    width: 30px;  /* Correct size */
+    height: 30px; /* Correct size */
     border-radius: 50%;
-    z-index: 3; /* Ensure it's above potential stone images */
+    z-index: 3;
 }
