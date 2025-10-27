@@ -899,8 +899,8 @@ h1 {
     justify-content: center;
     cursor: pointer;
     /* Translate to center on grid lines - start with -15px */
-    transform: translate(-15px, -15px);
-    box-sizing: border-box;
+    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* NEW: Dynamic Centering */
+    box-sizing: border-sizing;
 }
 
 /* --- Go Stone Image Styling --- */
@@ -925,19 +925,16 @@ h1 {
 
 /* --- Updated Highlight Styles --- */
 #go-game-wrapper .last-move {
-    /* No outline */
-    box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.7); /* Circular red shadow */
+    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.7); /* NEW: Thinner highlight */
 }
 #go-game-wrapper .selected {
-    /* No outline */
-    box-shadow: 0 0 0 4px rgba(0, 100, 255, 0.8); /* Circular blue shadow */
+    box-shadow: 0 0 0 3px rgba(0, 100, 255, 0.8); /* NEW: Thinner highlight */
 }
 
-/* Correct valid-move highlight size */
 #go-game-wrapper .valid-move {
     background-color: rgba(0, 255, 0, 0.3);
-    width: 30px;  /* Correct size */
-    height: 30px; /* Correct size */
+    width: 22px;  /* NEW: Smaller size */
+    height: 22px; /* NEW: Smaller size */
     border-radius: 50%;
     z-index: 3;
 }
