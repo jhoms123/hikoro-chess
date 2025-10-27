@@ -1361,14 +1361,48 @@ document.addEventListener('DOMContentLoaded', () => {
     function createGoBoard() {
         goBoardContainer.innerHTML = ''; // Clear previous board if any
 
-        // ✅ GET boardSize from the game state (sent by server)
         const boardSize = gameState.boardSize || 19; // Default to 19 if missing
+        
+        // --- ✅ START: Dynamic Size Adjustments ---
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        // Calculate cell size based on orientation (adjust values as needed)
+        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30; // 4.5vw or 30px
+        const paddingPx = cellSizePx / 2;
 
-        // ✅ SET dynamic grid size in CSS
+        // Set the CSS variable for cell size
+        goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
+
+        // Set padding on the container
+        goBoardContainer.style.padding = `${paddingPx}px`;
+
+        // Set dynamic grid size in CSS (Use 1fr for flexible cells)
         goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
         goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, 1fr)`;
 
-        // ✅ USE dynamic boardSize in loops
+        // Calculate and set the size for the ::before pseudo-element
+        const linesWidth = cellSizePx * (boardSize - 1);
+        const linesHeight = cellSizePx * (boardSize - 1);
+
+        // We need to inject a style rule to target ::before
+        const styleSheetId = 'go-board-lines-style';
+        let styleSheet = document.getElementById(styleSheetId);
+        if (!styleSheet) {
+            styleSheet = document.createElement('style');
+            styleSheet.id = styleSheetId;
+            document.head.appendChild(styleSheet);
+        }
+        // Update the rule - IMPORTANT: Adjust top/left based on padding!
+        styleSheet.textContent = `
+            #go-board-container::before {
+                width: ${linesWidth}px;
+                height: ${linesHeight}px;
+                top: ${paddingPx}px;
+                left: ${paddingPx}px;
+            }
+        `;
+        // --- ✅ END: Dynamic Size Adjustments ---
+
+        // USE dynamic boardSize in loops
         for (let y = 0; y < boardSize; y++) {
             for (let x = 0; x < boardSize; x++) {
                 const intersection = document.createElement('div');
@@ -1381,8 +1415,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 goBoardContainer.appendChild(intersection);
             }
         }
-        // Add listener to the shield button (ensure it's only added once)
-        goShieldButton.removeEventListener('click', handleGoShieldClick); // Remove previous if exists
+        // Add listener to the shield button
+        goShieldButton.removeEventListener('click', handleGoShieldClick);
         goShieldButton.addEventListener('click', handleGoShieldClick);
     }
 
