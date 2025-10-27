@@ -900,7 +900,7 @@ h1 {
     justify-content: center;
     cursor: pointer;
     /* Translate to center on grid lines using dynamic value */
-    transform: translate(calc(var(--go-cell-size) / -2 + 1px), calc(var(--go-cell-size) / 0));
+    transform: translate(calc(var(--go-cell-size) / -2 + 1px), calc(var(--go-cell-size) / 0.5));
     box-sizing: border-box;
 }
 
