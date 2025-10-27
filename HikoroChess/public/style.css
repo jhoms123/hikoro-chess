@@ -922,6 +922,7 @@ h1 {
     cursor: pointer;
     /* Translate to center on grid lines */
     transform: translate(-15px, -15px);
+    box-sizing: border-box; /* <-- ADD THIS LINE */
 }
 
 /* --- NEW Go Stone Image Styling --- */
