@@ -2505,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </ul>
 
             <h4>3. Turn to Shield (Double-Click or Select + Button)</h4>
-            <p>Double-click one of your stones (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot move, be captured, or be used to capture, but it counts for territory and score. It acts as a permanent wall.</p>
+            <p>Double-click one of your stones (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot move, be captured thorugh jumb capture, or be used to capture, but it counts for territory and score. It acts as a wall.</p>
 
             <h4>4. Resign</h4>
             <p>You can go to the Main Menu and leave the game to resign.</p>
