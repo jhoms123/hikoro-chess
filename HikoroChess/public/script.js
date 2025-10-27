@@ -72,9 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const HIKORO_BOARD_WIDTH = 10;
     const HIKORO_BOARD_HEIGHT = 16;
-    const GO_BOARD_SIZE = 19; // NEW
 
     const lobbyElement = document.getElementById('lobby');
+	const goBoardSizeWrapper = document.getElementById('go-board-size-wrapper');
     const createGameBtn = document.getElementById('create-game-btn');
     const gameListElement = document.getElementById('game-list');
     const singlePlayerBtn = document.getElementById('single-player-btn');
@@ -155,46 +155,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NEW: Disable bot/replay for Go
     gameTypeSelect.addEventListener('change', () => {
-        const gameType = gameTypeSelect.value;
-        if (gameType === 'go') {
-            playBotBtn.disabled = true;
-            playBotBtn.title = "Bot is not available for Go Variant";
-            startReplayBtn.disabled = true;
-            startReplayBtn.title = "Replay is not available for Go Variant";
-            kifuPasteArea.disabled = true;
-        } else {
-            playBotBtn.disabled = false;
-            playBotBtn.title = "Play Against Bot";
-            startReplayBtn.disabled = false;
-            startReplayBtn.title = "";
-            kifuPasteArea.disabled = false;
-        }
-    });
+        const gameType = gameTypeSelect.value;
+        if (gameType === 'go') {
+            goBoardSizeWrapper.style.display = 'block'; // Show size selector
+            playBotBtn.disabled = true;
+            playBotBtn.title = "Bot is not available for Go Variant";
+            startReplayBtn.disabled = true;
+            startReplayBtn.title = "Replay is not available for Go Variant";
+            kifuPasteArea.disabled = true;
+        } else {
+            goBoardSizeWrapper.style.display = 'none'; // Hide size selector
+            playBotBtn.disabled = false;
+            playBotBtn.title = "Play Against Bot";
+            startReplayBtn.disabled = false;
+            startReplayBtn.title = "";
+            kifuPasteArea.disabled = false;
+        }
+    });
 
     createGameBtn.addEventListener('click', () => {
-        const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
-        const mainTime = parseInt(document.getElementById('time-control').value, 10);
-        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
-        const gameType = gameTypeSelect.value; // NEW
+        const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
+        const mainTime = parseInt(document.getElementById('time-control').value, 10);
+        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+        const gameType = gameTypeSelect.value;
+        // ✅ ADDED these 2 lines
+        const goBoardSizeSelect = document.getElementById('go-board-size-select');
+        const boardSize = parseInt(goBoardSizeSelect.value, 10);
 
-        if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
-        const timeControl = {
-            main: mainTime,
-            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime,
-            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
-        };
+        if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
+        const timeControl = {
+            main: mainTime,
+            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime,
+            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
+        };
 
-        const dataToSend = { playerName, timeControl, gameType }; // NEW
-        socket.emit('createGame', dataToSend);
-    });
+        // ✅ MODIFIED dataToSend
+        const dataToSend = { playerName, timeControl, gameType };
+        if (gameType === 'go') {
+            dataToSend.boardSize = boardSize; // Add boardSize if it's a Go game
+        }
+        socket.emit('createGame', dataToSend);
+    });
 
     singlePlayerBtn.addEventListener('click', () => {
-        isSinglePlayer = true;
-        isBotGame = false;
-        botBonusState = null;
-        const gameType = gameTypeSelect.value; // NEW
-        socket.emit('createSinglePlayerGame', { gameType }); // NEW
-    });
+        isSinglePlayer = true;
+        isBotGame = false;
+        botBonusState = null;
+        const gameType = gameTypeSelect.value;
+        // ✅ ADDED these 2 lines
+        const goBoardSizeSelect = document.getElementById('go-board-size-select');
+        const boardSize = parseInt(goBoardSizeSelect.value, 10);
+
+        // ✅ MODIFIED dataToSend
+        const dataToSend = { gameType };
+        if (gameType === 'go') {
+            dataToSend.boardSize = boardSize;
+        }
+        socket.emit('createSinglePlayerGame', dataToSend);
+    });
 
     playBotBtn.addEventListener('click', () => {
         const gameType = gameTypeSelect.value; // NEW
@@ -1341,23 +1359,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- NEW: All Go-specific client functions ---
 
     function createGoBoard() {
-        goBoardContainer.innerHTML = ''; // Clear previous board if any
-        for (let y = 0; y < GO_BOARD_SIZE; y++) {
-            for (let x = 0; x < GO_BOARD_SIZE; x++) {
-                const intersection = document.createElement('div');
-                intersection.classList.add('intersection');
-                intersection.dataset.x = x;
-                intersection.dataset.y = y;
-                // Add event listeners for clicks
-                intersection.addEventListener('click', handleGoClick);
-                intersection.addEventListener('dblclick', handleGoDblClick);
-                goBoardContainer.appendChild(intersection);
-            }
-        }
-        // Add listener to the shield button (ensure it's only added once)
-        goShieldButton.removeEventListener('click', handleGoShieldClick); // Remove previous if exists
-        goShieldButton.addEventListener('click', handleGoShieldClick);
-    }
+        goBoardContainer.innerHTML = ''; // Clear previous board if any
+
+        // ✅ GET boardSize from the game state (sent by server)
+        const boardSize = gameState.boardSize || 19; // Default to 19 if missing
+
+        // ✅ SET dynamic grid size in CSS
+        goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+        goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, 1fr)`;
+
+        // ✅ USE dynamic boardSize in loops
+        for (let y = 0; y < boardSize; y++) {
+            for (let x = 0; x < boardSize; x++) {
+                const intersection = document.createElement('div');
+                intersection.classList.add('intersection');
+                intersection.dataset.x = x;
+                intersection.dataset.y = y;
+                // Add event listeners for clicks
+                intersection.addEventListener('click', handleGoClick);
+                intersection.addEventListener('dblclick', handleGoDblClick);
+                goBoardContainer.appendChild(intersection);
+            }
+        }
+        // Add listener to the shield button (ensure it's only added once)
+        goShieldButton.removeEventListener('click', handleGoShieldClick); // Remove previous if exists
+        goShieldButton.addEventListener('click', handleGoShieldClick);
+    }
 
     function renderGoBoard() {
         clearGoHighlights(); // Clear previous highlights and selections
@@ -1365,9 +1392,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("renderGoBoard: gameState or boardState missing!");
             return;
         }
+		
+        // ✅ GET boardSize from game state
+        const boardSize = gameState.boardSize || 19;
 
-        for (let y = 0; y < GO_BOARD_SIZE; y++) {
-            for (let x = 0; x < GO_BOARD_SIZE; x++) {
+        // ✅ USE dynamic boardSize in loops
+        for (let y = 0; y < boardSize; y++) {
+            for (let x = 0; x < boardSize; x++) {
                 const intersection = document.querySelector(`#go-board-container .intersection[data-x='${x}'][data-y='${y}']`);
                 if (!intersection) continue;
                 intersection.innerHTML = ''; // Clear previous stone/highlight
@@ -1379,28 +1410,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     stone = document.createElement('div');
                     stone.classList.add('stone'); // Base class
 
-                    // --- MODIFICATION START ---
-                    // Add classes based on stoneType for background images
-                    switch (stoneType) {
-                        case 1: // Black
-                            stone.classList.add('go-black');
-                            break;
-                        case 2: // White
-                            stone.classList.add('go-white');
-                            break;
-                        case 3: // Black Shield
-                            stone.classList.add('go-black-shield');
-                            break;
-                        case 4: // White Shield
-                            stone.classList.add('go-white-shield');
-                            break;
-                    }
-                    // --- MODIFICATION END ---
+                    // --- MODIFICATION START ---
+                    // Add classes based on stoneType for background images
+transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Dynamic centering */
+                    switch (stoneType) {
+                        case 1: // Black
+                            stone.classList.add('go-black');
+                            break;
+                        case 2: // White
+                            stone.classList.add('go-white');
+                            break;
+                        case 3: // Black Shield
+                            stone.classList.add('go-black-shield');
+                            break;
+                        case 4: // White Shield
+                            stone.classList.add('go-white-shield');
+                            break;
+                    }
+                    // --- MODIFICATION END ---
 
                     intersection.appendChild(stone);
 
                     // Add last move highlight if applicable
                     if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
+                    TML
                         stone.classList.add('last-move');
                     }
                     // Add selected highlight if applicable
@@ -1415,6 +1448,7 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('getValidMoves', {
                 gameId,
                 data: { x: goSelectedPiece.x, y: goSelectedPiece.y }
+Section
             });
         }
     }

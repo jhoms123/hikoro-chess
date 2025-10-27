@@ -131,7 +131,7 @@ io.on('connection', (socket) => {
 
     // --- MODIFIED: createGame is now generic ---
     socket.on('createGame', (data) => {
-		const { playerName, timeControl, gameType } = data || {}; // gameType added
+		const { playerName, timeControl, gameType, boardSize: clientBoardSize } = data || {}; // gameType added
         
         if (!gameType || (gameType !== 'hikoro' && gameType !== 'go')) {
             socket.emit('errorMsg', 'Invalid game type specified.');
@@ -143,13 +143,15 @@ io.on('connection', (socket) => {
 
         // --- Assign logic and board based on type ---
         const logic = (gameType === 'hikoro') ? hikoroLogic : goLogic;
-        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard();
-        const makeMoveFunction = (gameType === 'hikoro') ? hikoroLogic.makeMove : goLogic.makeGoMove; // Assign correct function
+        const boardSize = (gameType === 'go' && clientBoardSize) ? clientBoardSize : 19;
+        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard(boardSize);
+        const makeMoveFunction = (gameType === 'hikoro') ? hikoroLogic.makeMove : goLogic.makeGoMove; // Assign correct function
         const getValidMovesFunction = (gameType === 'hikoro') ? hikoroLogic.getValidMoves : goLogic.getValidMoves; // Assign correct function
 
 		const game = {
 			id: gameId,
             gameType: gameType, // Store the type
+			boardSize: (gameType === 'go') ? boardSize : null,
             logic: { // Store the functions needed by the server
                 makeMove: makeMoveFunction,
                 getValidMoves: getValidMovesFunction,
@@ -314,7 +316,7 @@ if (!game) {
 
 	// --- MODIFIED: createSinglePlayerGame is now generic ---
     socket.on('createSinglePlayerGame', (data) => {
-        const { gameType } = data || {}; // gameType added
+        const { gameType, boardSize: clientBoardSize } = data || {};
         
         if (!gameType || (gameType !== 'hikoro' && gameType !== 'go')) {
             socket.emit('errorMsg', 'Invalid game type specified.');
@@ -326,13 +328,16 @@ if (!game) {
 
         // --- Assign logic and board based on type ---
         const logic = (gameType === 'hikoro') ? hikoroLogic : goLogic;
-        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard();
+        // ✅ MODIFIED: Use clientBoardSize, default to 19
+        const boardSize = (gameType === 'go' && clientBoardSize) ? clientBoardSize : 19;
+        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard(boardSize);
         const makeMoveFunction = (gameType === 'hikoro') ? hikoroLogic.makeMove : goLogic.makeGoMove;
         const getValidMovesFunction = (gameType === 'hikoro') ? hikoroLogic.getValidMoves : goLogic.getValidMoves;
         
         const game = {
             id: gameId,
             gameType: gameType,
+			boardSize: (gameType === 'go') ? boardSize : null,
             logic: { // Store functions
                  makeMove: makeMoveFunction,
                  getValidMoves: getValidMovesFunction,

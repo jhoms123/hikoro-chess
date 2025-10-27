@@ -1,13 +1,13 @@
 (function(exports) {
 
-const BOARD_SIZE = 19;
+
 
 /**
  * Creates the initial board state for the Go Variant
  */
-exports.getInitialGoBoard = function() {
-    // 0 = Empty, 1 = Black, 2 = White, 3 = Black Shield, 4 = White Shield
-    return Array(BOARD_SIZE).fill(0).map(() => Array(BOARD_SIZE).fill(0));
+exports.getInitialGoBoard = function(boardSize = 19) { // Accept boardSize as an argument
+    // 0 = Empty, 1 = Black, 2 = White, 3 = Black Shield, 4 = White Shield
+    return Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
 }
 
 /**
@@ -209,17 +209,19 @@ function handleResign(game, player) {
 
 // --- GO LOGIC (LIBERTIES, CAPTURES, SCORING) ---
 
-function getNeighbors(x, y) {
-    const neighbors = [];
-    if (isValid(x, y - 1)) neighbors.push({ x: x, y: y - 1 }); 
-    if (isValid(x, y + 1)) neighbors.push({ x: x, y: y + 1 }); 
-    if (isValid(x - 1, y)) neighbors.push({ x: x - 1, y: y }); 
-    if (isValid(x + 1, y)) neighbors.push({ x: x + 1, y: y }); 
-    return neighbors;
+function getNeighbors(x, y, boardState) { // Pass in boardState
+    const neighbors = [];
+    // Pass boardState to isValid
+    if (isValid(x, y - 1, boardState)) neighbors.push({ x: x, y: y - 1 }); 
+    if (isValid(x, y + 1, boardState)) neighbors.push({ x: x, y: y + 1 }); 
+    if (isValid(x - 1, y, boardState)) neighbors.push({ x: x - 1, y: y }); 
+    if (isValid(x + 1, y, boardState)) neighbors.push({ x: x + 1, y: y }); 
+    return neighbors;
 }
 
-function isValid(x, y) {
-    return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
+function isValid(x, y, boardState) { // Pass in boardState
+    const boardSize = boardState.length; // Get size from the board itself
+    return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
 }
 
 function findGroup(boardState, startX, startY) {
@@ -235,7 +237,7 @@ function findGroup(boardState, startX, startY) {
     while (queue.length > 0) {
         const { x, y } = queue.shift();
         stones.push({ x, y });
-        const neighbors = getNeighbors(x, y);
+        const neighbors = getNeighbors(x, y, boardState);
 
         for (const n of neighbors) {
             const key = `${n.x},${n.y}`;
@@ -261,7 +263,7 @@ function findGroup(boardState, startX, startY) {
  */
 function processCaptures(game, x, y, player) {
     const isBlackTeam = (player === 1 || player === 3);
-    const neighbors = getNeighbors(x, y);
+    const neighbors = getNeighbors(x, y, game.boardState);
     
     for (const n of neighbors) {
         const state = game.boardState[n.y][n.x];
@@ -290,7 +292,7 @@ function processCapturesAndSuicide(game, x, y, player) {
     let capturedStones = false;
 
     // 1. Check adjacent *enemy* groups for capture
-    const neighbors = getNeighbors(x, y);
+    const neighbors = getNeighbors(x, y, boardState);
     for (const n of neighbors) {
         const state = game.boardState[n.y][n.x];
         if (state > 0) { 
@@ -327,7 +329,7 @@ function getValidMovesForGoPiece(x, y, boardState, player) {
     const enemyPlayer = (player === 1) ? 2 : 1;
 
     // 1. Check simple 1-square moves
-    const neighbors = getNeighbors(x, y);
+    const neighbors = getNeighbors(x, y, boardState);
     for (const move of neighbors) {
         if (boardState[move.y][move.x] === 0) {
             validMoves.push({ x: move.x, y: move.y, type: 'move' });
@@ -345,11 +347,12 @@ function getValidMovesForGoPiece(x, y, boardState, player) {
         const midX = x + jump.dx / 2;
         const midY = y + jump.dy / 2;
 
-        if (isValid(landX, landY) && boardState[landY][landX] === 0) {
-            if (isValid(midX, midY) && boardState[midY][midX] === enemyPlayer) {
-                validMoves.push({ x: landX, y: landY, type: 'jump' });
-            }
-        }
+        if (isValid(landX, landY, boardState) && boardState[landY][landX] === 0) {
+            
+            if (isValid(midX, midY, boardState) && boardState[midY][midX] === enemyPlayer) {
+                validMoves.push({ x: landX, y: landY, type: 'jump' });
+            }
+        }
     }
     return validMoves;
 }
@@ -361,6 +364,7 @@ function calculateTerritory(boardState) {
     let blackTerritory = 0;
     let whiteTerritory = 0;
     const visited = new Set();
+	const BOARD_SIZE = boardState.length;
 
     for (let y = 0; y < BOARD_SIZE; y++) {
         for (let x = 0; x < BOARD_SIZE; x++) {
@@ -377,7 +381,7 @@ function calculateTerritory(boardState) {
                     const { x: cx, y: cy } = queue.shift();
                     region.push({ x: cx, y: cy });
 
-                    const neighbors = getNeighbors(cx, cy);
+                    const neighbors = getNeighbors(cx, cy, boardState);
                     for (const n of neighbors) {
                         const nKey = `${n.x},${n.y}`;
                         const state = boardState[n.y][n.x];
@@ -410,6 +414,7 @@ function calculateTerritory(boardState) {
 function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
     let blackStones = 0;
     let whiteStones = 0;
+	const BOARD_SIZE = boardState.length;
 
     for (let y = 0; y < BOARD_SIZE; y++) {
         for (let x = 0; x < BOARD_SIZE; x++) {
