@@ -1,157 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hikoro Chess - Online</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hikoro Chess - Online</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Hikoro Chess</h1>
+    <h1>Hikoro Chess</h1>
 
-    <div id="lobby">
-        <h2>Game Lobby</h2>
-        <div id="time-controls">
-            <div>
-                <label for="game-type-select">Game Type:</label>
-                <select id="game-type-select">
-                    <option value="hikoro" selected>Hikoro Chess</option>
-                    <option value="go">Go Variant</option>
-                </select>
-            </div>
-            <div>
-                <label for="time-control">Main Time:</label>
-                <select id="time-control">
-                    <option value="-1">Unlimited</option>
-                    <option value="0">Byoyomi Only</option>
-                    <option value="300">5 Minutes</option>
-                    <option value="900">15 Minutes</option>
-                    <option value="1800">30 Minutes</option>
-                    <option value="3600">1 Hour</option>
-                </select>
-            </div>
-            <div>
-                <label for="byoyomi-control">Byoyomi (per move):</label>
-                <select id="byoyomi-control">
-                    <option value="0">None</option>
-                    <option value="15">15 Seconds</option>
-                    <option value="30" selected>30 Seconds</option>
-                    <option value="60">60 Seconds</option>
-                </select>
-            </div>
-			<div id="go-board-size-wrapper" style="display: none;">
-    <label for="go-board-size-select">Board Size (Go): </label>
-    <select id="go-board-size-select">
-        <option value="19" selected>19x19 (Standard)</option>
-        <option value="13">13x13</option>
-        <option value="9">9x9</option>
-    </select>
-</div>
-        </div>
-        <button id="create-game-btn">Create New Game</button>
-        <button id="single-player-btn">Single Player (Pass & Play)</button>
-        <button id="play-bot-btn">Play Against Bot</button>
-        <button id="rules-btn">Rules & Movesets</button>
+    <div id="lobby">
+        <h2>Game Lobby</h2>
+        <div id="time-controls">
+            <div> <label for="game-type-select">Game Type:</label>
+                <select id="game-type-select">
+                    <option value="hikoro" selected>Hikoro Chess</option>
+                    <option value="go">Go Variant</option>
+                </select>
 
-        <div id="replay-section" style="margin-top: 20px; border-top: 1px solid #777; padding-top: 15px; width: 90%; margin-left: auto; margin-right: auto;">
-            <h3>Replay Game</h3>
-            <textarea id="kifu-paste-area" placeholder="Paste Kifu notation here...&#10;Example:&#10;1. S*e10 S*f7&#10;2. B*c5 KPa8" rows="5" style="width: 100%; background-color: #555; color: #eee; border: 1px solid #777; box-sizing: border-box;"></textarea>
-            <button id="start-replay-btn" style="margin-top: 10px; padding: 8px 16px;">Start Replay</button>
-        </div>
+                <div id="go-board-size-wrapper" style="display: none; margin-top: 10px;">
+                   <label for="go-board-size-select">Board Size (Go): </label>
+                   <select id="go-board-size-select">
+                       <option value="19" selected>19x19 (Standard)</option>
+                       <option value="13">13x13</option>
+                       <option value="9">9x9</option>
+                   </select>
+               </div>
+            </div> <div> <label for="time-control">Main Time:</label>
+                <select id="time-control">
+                    <option value="-1">Unlimited</option>
+                    <option value="0">Byoyomi Only</option>
+                    <option value="300">5 Minutes</option>
+                    <option value="900">15 Minutes</option>
+                    <option value="1800">30 Minutes</option>
+                    <option value="3600">1 Hour</option>
+                </select>
+            </div>
 
-        <div style="margin: 15px 0;">
-            <label for="player-name">Your Name:</label>
-            <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
-        </div>
+            <div> <label for="byoyomi-control">Byoyomi (per move):</label>
+                <select id="byoyomi-control">
+                    <option value="0">None</option>
+                    <option value="15">15 Seconds</option>
+                    <option value="30" selected>30 Seconds</option>
+                    <option value="60">60 Seconds</option>
+                </select>
+            </div>
 
-        <h3>Available Games:</h3>
-        <div id="game-list"></div>
-    </div>
+        </div>
+        <button id="create-game-btn">Create New Game</button>
+        <button id="single-player-btn">Single Player (Pass & Play)</button>
+        <button id="play-bot-btn">Play Against Bot</button>
+        <button id="rules-btn">Rules & Movesets</button>
 
-    <div id="hikoro-game-wrapper" style="display: none;">
-        <div class="captured-area" id="black-captured-area">
-            <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time-hikoro">--:--</span>)</h3>
-            <div class="captured-pieces-box" id="black-captured"></div>
-        </div>
+        <div id="replay-section" style="margin-top: 20px; border-top: 1px solid #777; padding-top: 15px; width: 90%; margin-left: auto; margin-right: auto;">
+            <h3>Replay Game</h3>
+            <textarea id="kifu-paste-area" placeholder="Paste Kifu notation here...&#10;Example:&#10;1. S*e10 S*f7&#10;2. B*c5 KPa8" rows="5" style="width: 100%; background-color: #555; color: #eee; border: 1px solid #777; box-sizing: border-box;"></textarea>
+            <button id="start-replay-btn" style="margin-top: 10px; padding: 8px 16px;">Start Replay</button>
+        </div>
 
-        <div id="board-container">
-            <div class="notation-files notation-files-top"></div>
-            <div class="notation-ranks notation-ranks-left"></div>
-            <div id="game-board"></div>
-            <div class="notation-ranks notation-ranks-right"></div>
-            <div class="notation-files notation-files-bottom"></div>
-        </div>
+        <div style="margin: 15px 0;">
+            <label for="player-name">Your Name:</label>
+            <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
+        </div>
 
-        <div id="move-history-container">
-            <h3>Move History</h3>
-            <div id="move-history"></div>
-        </div>
+        <h3>Available Games:</h3>
+        <div id="game-list"></div>
+    </div>
 
-        <div class="captured-area" id="white-captured-area">
-            <h3><span class="hand-label">Your Hand</span> (<span id="white-time-hikoro">--:--</span>)</h3>
-            <div class="captured-pieces-box" id="white-captured"></div>
-        </div>
-    </div>
+    <div id="hikoro-game-wrapper" style="display: none;">
+        <div class="captured-area" id="black-captured-area">
+            <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time-hikoro">--:--</span>)</h3>
+            <div class="captured-pieces-box" id="black-captured"></div>
+        </div>
 
-    <div id="go-game-wrapper" style="display: none;">
-        <h2>Go Variant</h2>
-        <div id="go-score-display-container">
-            <div class="go-score-box" id="go-black-score-box">
-                <strong>Black: <span id="go-black-score">0</span></strong>
-                <span id="go-black-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
-                <span id="black-time" class="go-timer">--:--</span>
-            </div>
+        <div id="board-container">
+            <div class="notation-files notation-files-top"></div>
+            <div class="notation-ranks notation-ranks-left"></div>
+            <div id="game-board"></div>
+            <div class="notation-ranks notation-ranks-right"></div>
+            <div class="notation-files notation-files-bottom"></div>
+        </div>
 
-            <div id="go-board-container">
-                </div>
+        <div id="move-history-container">
+            <h3>Move History</h3>
+            <div id="move-history"></div>
+        </div>
 
-            <div class="go-score-box" id="go-white-score-box">
-                <strong>White: <span id="go-white-score">0</span></strong>
-                <span id="go-white-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
-                <span id="white-time" class="go-timer">--:--</span>
-            </div>
-        </div>
-         <div class="go-controls"> <button id="go-shield-button" class="go-action-btn" style="display: none;">Turn to Shield</button>
-          <button id="go-pass-button" class="go-action-btn" style="display: none;">Pass Turn</button>
-        </div>
-    </div>
+        <div class="captured-area" id="white-captured-area">
+            <h3><span class="hand-label">Your Hand</span> (<span id="white-time-hikoro">--:--</span>)</h3>
+            <div class="captured-pieces-box" id="white-captured"></div>
+        </div>
+    </div>
 
-    <div id="turn-indicator-container">
-        <h2 id="turn-indicator"></h2>
-        <p id="winnerText"></p>
+    <div id="go-game-wrapper" style="display: none;">
+        <h2>Go Variant</h2>
+        <div id="go-score-display-container">
+            <div class="go-score-box" id="go-black-score-box">
+                <strong>Black: <span id="go-black-score">0</span></strong>
+                <span id="go-black-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
+                <span id="black-time" class="go-timer">--:--</span>
+            </div>
 
-        <div id="post-game-controls" style="display: none; justify-content: center; gap: 15px; margin-top: 10px;">
-           <button id="copy-kifu-btn">Copy Kifu (Notation)</button>
-            <button id="download-kifu-btn">Download Kifu</button>
-        </div>
+            <div id="go-board-container">
+                </div>
 
-        <div id="replay-controls" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
-            <button id="replay-first-btn" title="First Move">|&lt;</button>
-            <button id="replay-prev-btn" title="Previous Move">&lt;</button>
-            <span id="replay-move-number">0 / 0</span>
-            <button id="replay-next-btn" title="Next Move">&gt;</button>
-            <button id="replay-last-btn" title="Last Move">&gt;|</button>
-        </div>
+            <div class="go-score-box" id="go-white-score-box">
+                <strong>White: <span id="go-white-score">0</span></strong>
+                <span id="go-white-score-details">(Stones: 0, Terr: 0, Lost: 0)</span>
+                <span id="white-time" class="go-timer">--:--</span>
+            </div>
+        </div>
+         <div class="go-controls">
+            <button id="go-shield-button" class="go-action-btn" style="display: none;">Turn to Shield</button>
+            <button id="go-pass-button" class="go-action-btn" style="display: none;">Pass Turn</button>
+        </div>
+    </div>
 
-        <div id="game-controls" style="display: none;">
-             <button id="rules-btn-ingame" class="game-control-btn">Rules & Movesets</button>
-             <button id="main-menu-btn" class="game-control-btn">Back to Main Menu</button>
-             <button id="resign-button" class="game-control-btn resign">Resign</button>
-        </div>
-    </div>
+    <div id="turn-indicator-container">
+        <h2 id="turn-indicator"></h2>
+        <p id="winnerText"></p>
 
-    <div id="rules-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="close-rules-btn">&times;</span>
-           <div id="rules-body">
-                </div>
-        </div>
-    </div>
+        <div id="post-game-controls" style="display: none; justify-content: center; gap: 15px; margin-top: 10px;">
+           <button id="copy-kifu-btn">Copy Kifu (Notation)</button>
+            <button id="download-kifu-btn">Download Kifu</button>
+        </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="gamelogic.js"></script>
-    <script src="goGameLogic.js"></script>
-    <script src="script.js"></script>
+        <div id="replay-controls" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
+            <button id="replay-first-btn" title="First Move">|&lt;</button>
+            <button id="replay-prev-btn" title="Previous Move">&lt;</button>
+            <span id="replay-move-number">0 / 0</span>
+            <button id="replay-next-btn" title="Next Move">&gt;</button>
+            <button id="replay-last-btn" title="Last Move">&gt;|</button>
+        </div>
+
+        <div id="game-controls" style="display: none;">
+             <button id="rules-btn-ingame" class="game-control-btn">Rules & Movesets</button>
+             <button id="main-menu-btn" class="game-control-btn">Back to Main Menu</button>
+             <button id="resign-button" class="game-control-btn resign">Resign</button>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-rules-btn">&times;</span>
+           <div id="rules-body">
+                </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="gamelogic.js"></script>
+    <script src="goGameLogic.js"></script>
+    <script src="script.js"></script>
 
 </body>
 </html>
