@@ -8,10 +8,8 @@ exports.getInitialGoBoard = function(boardSize = 19) { // Accept boardSize as an
     return Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
 }
 
-/**
- * Public-facing function for the server to get valid moves.
- * data: { x, y }
- */
+
+
 exports.getValidMoves = function(game, data) {
     if (!game || !data || data.x === undefined || data.y === undefined) return [];
     
@@ -23,9 +21,11 @@ exports.getValidMoves = function(game, data) {
     const player = (game.isWhiteTurn ? 2 : 1);
     
     // Check if it's the correct player's piece (normal or shield)
-    if (piece !== player && piece !== (player + 2)) return [];
+    if (piece !== player && piece !== (player + 2)) {
+        console.log(`getValidMoves: Piece ${piece} does not belong to player ${player}`);
+        return [];
+    }
 
-    // **NEW CHAIN CAPTURE LOGIC**
     // If a chain capture is pending, you can ONLY move that piece
     if (game.pendingChainCapture) {
         if (x !== game.pendingChainCapture.x || y !== game.pendingChainCapture.y) {
@@ -116,7 +116,6 @@ exports.makeGoMove = function(game, move, playerColor) {
             // Update move list *before* toggling turn
             updateMoveList(updatedGame, move); 
             
-            // **NEW TURN TOGGLE LOGIC**
             // Only toggle turn if it's not an ongoing chain capture
             if (!moveResult.isChain) {
                 updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
