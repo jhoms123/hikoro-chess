@@ -1664,44 +1664,81 @@ if (gameState.pendingChainCapture) {
     }
 
 
-    function handleGoShieldClick() {
-        if (gameState.gameOver || !goSelectedPiece) return; // Check if a piece is selected
+    exports.makeGoMove = function(game, move, playerColor) {
+    const newGame = JSON.parse(JSON.stringify(game));
+    
+    // ✅ FIX: Determine the active player from the game state for most moves
+    const activePlayer = (newGame.isWhiteTurn ? 2 : 1);
+    // ✅ FIX: Determine the player *making* the request (for resignation)
+    const requestingPlayer = (playerColor === 'white' ? 2 : 1);
 
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
+    let moveResult = { success: false, error: "Unknown move type." }; 
 
-        // Check if it's the player's turn before emitting (for multiplayer responsiveness)
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("Not your turn to shield.");
-             return;
-        }
-
-        // --- THIS IS THE FIX ---
-        // 1. Check if a chain capture is pending
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
-            return;
-        }
-
-        const { x, y } = goSelectedPiece;
-
-        // 2. Check if the selected piece is actually the current player's NORMAL stone
-        if (gameState.boardState[y]?.[x] !== player) { 
-             console.log("Cannot shield opponent's piece, shield, or empty square.");
-             deselectGoPiece(); // Deselect invalid piece
-             return;
-        }
-        // --- END OF FIX ---
-
-        // Emit shield move
-        socket.emit('makeGameMove', {
-            gameId,
-            move: { type: 'shield', at: { x, y } }
-        });
-        deselectGoPiece(); // Deselect after sending request
+    switch (move.type) {
+        case 'place':
+            // Use the activePlayer
+            moveResult = placeStone(newGame, move.to.x, move.to.y, activePlayer); 
+            break;
+        case 'move':
+            // Use the activePlayer
+            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, activePlayer);
+            break;
+        case 'shield':
+            // Use the activePlayer
+            moveResult = turnToShield(newGame, move.at.x, move.at.y, activePlayer);
+            break;
+        case 'pass':
+            // No player needed, just pass the turn
+            newGame.pendingChainCapture = null; 
+            moveResult = { success: true, updatedGame: newGame, isChain: false };
+            break;
+        case 'resign':
+            // Use the requestingPlayer
+            moveResult = handleResign(newGame, requestingPlayer); 
+            break;
+        default:
+             moveResult = { success: false, error: "Unknown move type." };
     }
+
+    if (moveResult.success) {
+        const updatedGame = moveResult.updatedGame; 
+
+        // Update score
+        updatedGame.score = calculateScore(
+            updatedGame.boardState,
+            updatedGame.blackPiecesLost,
+            updatedGame.whitePiecesLost
+        );
+
+        if (move.type !== 'resign') {
+            // Set lastMove
+            if (move.type === 'place' || move.type === 'move') {
+                updatedGame.lastMove = move.to;
+            } else if (move.type === 'shield') {
+                updatedGame.lastMove = move.at;
+            } else {
+                updatedGame.lastMove = null; // Pass has no 'to'
+            }
+
+            // Update move list *before* toggling turn
+            updateMoveList(updatedGame, move); 
+            
+            // **NEW TURN TOGGLE LOGIC**
+            // Only toggle turn if it's not an ongoing chain capture
+            if (!moveResult.isChain) {
+                updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
+                updatedGame.turnCount++;
+                // Ensure pending capture is clear if the chain ends
+                updatedGame.pendingChainCapture = null; 
+            }
+        }
+        
+        return { success: true, updatedGame: updatedGame }; // Return the modified game
+    }
+    
+    // If success was false, just return the result
+    return moveResult;
+}
 
     function selectGoPiece(x, y) {
         goSelectedPiece = { x, y };
