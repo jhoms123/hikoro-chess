@@ -1358,7 +1358,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- NEW: All Go-specific client functions ---
 
-    goBoardContainer.innerHTML = ''; // Clear previous board if any
+    function createGoBoard() {
+        goBoardContainer.innerHTML = ''; // Clear previous board if any
 
         const boardSize = gameState.boardSize || 19;
 
