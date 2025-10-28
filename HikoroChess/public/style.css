@@ -877,8 +877,6 @@ h1 {
 #go-board-container::before {
     content: '';
     position: absolute;
-    top: 15px;
-    left: 15px;
     
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
