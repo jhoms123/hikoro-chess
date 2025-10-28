@@ -144,9 +144,13 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
     let jumpedPieceState = 0;
 
     // Check for valid move type
-    if (dx + dy === 1 && destState === 0) {
-        // Simple 1-square move
-    } else if (((dx === 2 && dy === 0) || (dx === 0 && dy === 2)) && destState === 0) {
+    // --- THIS IS THE FIX ---
+    // Allow 1-square orthogonal (dx+dy === 1) OR 1-square diagonal (dx===1 && dy===1)
+    if ((dx + dy === 1 || (dx === 1 && dy === 1)) && destState === 0) {
+        // Simple 1-square move (ortho or diag)
+    } 
+    // --- END FIX ---
+    else if (((dx === 2 && dy === 0) || (dx === 0 && dy === 2)) && destState === 0) {
         // 2-square jump
         const midX = fromX + (toX - fromX) / 2;
         const midY = fromY + (toY - fromY) / 2;
