@@ -1358,53 +1358,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- NEW: All Go-specific client functions ---
 
-    function createGoBoard() {
-        goBoardContainer.innerHTML = ''; // Clear previous board if any
+    goBoardContainer.innerHTML = ''; // Clear previous board if any
 
-        const boardSize = gameState.boardSize || 19;
-        
-        // --- Dynamic Size Adjustments ---
-        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30;
-        // const paddingPx = cellSizePx / 2; // No longer needed
+        const boardSize = gameState.boardSize || 19;
 
-        // Set the CSS variable for cell size
-        goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
+        // --- Dynamic Size Adjustments ---
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30;
+        const paddingPx = cellSizePx / 2; // RE-ADD padding calculation
 
-        // Set padding on the container - REMOVE THIS LINE
-        // goBoardContainer.style.padding = `${paddingPx}px`;
+        // Set CSS variables for cell size and padding
+        goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
+        goBoardContainer.style.setProperty('--go-padding', `${paddingPx}px`); // SET padding variable
 
-        // Set dynamic grid size in CSS (Use FIXED cell size)
-        goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
-        goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
+        // Set dynamic grid size in CSS (Use FIXED cell size)
+        goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
+        goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
 
-        // Calculate size for the ::before pseudo-element
-        const linesWidth = cellSizePx * (boardSize - 1);
-        const linesHeight = cellSizePx * (boardSize - 1);
+        // Calculate size for the ::before pseudo-element's lines area
+        const linesWidth = cellSizePx * (boardSize - 1);
+        const linesHeight = cellSizePx * (boardSize - 1);
 
-        
-        goBoardContainer.style.setProperty('--lines-width', `${linesWidth}px`);
-    
-		goBoardContainer.style.setProperty('--lines-height', `${linesHeight}px`);
-        
+        // REMOVE the lines setting --lines-width and --lines-height
+        // goBoardContainer.style.setProperty('--lines-width', `${linesWidth}px`); // REMOVE
+        // goBoardContainer.style.setProperty('--lines-height', `${linesHeight}px`); // REMOVE
 
-        // USE dynamic boardSize in loops
-        for (let y = 0; y < boardSize; y++) {
-            for (let x = 0; x < boardSize; x++) {
-                const intersection = document.createElement('div');
-                intersection.classList.add('intersection');
-                intersection.dataset.x = x;
-                intersection.dataset.y = y;
-                // Add event listeners for clicks
-                intersection.addEventListener('click', handleGoClick);
-                intersection.addEventListener('dblclick', handleGoDblClick);
-                goBoardContainer.appendChild(intersection);
-            }
-        }
-        // Add listener to the shield button
-        goShieldButton.removeEventListener('click', handleGoShieldClick);
-        goShieldButton.addEventListener('click', handleGoShieldClick);
-    }
+        // RE-ADD code to inject style rule for ::before width and height
+        const styleSheetId = 'go-board-lines-style';
+        let styleSheet = document.getElementById(styleSheetId);
+        if (!styleSheet) {
+            styleSheet = document.createElement('style');
+            styleSheet.id = styleSheetId;
+            document.head.appendChild(styleSheet);
+        }
+        // Update the rule to set width and height for ::before
+        styleSheet.textContent = `
+            #go-board-container::before {
+                width: ${linesWidth}px;
+                height: ${linesHeight}px;
+            }
+        `;
+        // --- End Dynamic Size Adjustments ---
+
+        // Add intersections (rest of function remains the same)
+        for (let y = 0; y < boardSize; y++) {
+            for (let x = 0; x < boardSize; x++) {
+                const intersection = document.createElement('div');
+                intersection.classList.add('intersection');
+                intersection.dataset.x = x;
+                intersection.dataset.y = y;
+                intersection.addEventListener('click', handleGoClick);
+                intersection.addEventListener('dblclick', handleGoDblClick);
+                goBoardContainer.appendChild(intersection);
+            }
+        }
+        // Add shield button listener (remains the same)
+        goShieldButton.removeEventListener('click', handleGoShieldClick);
+        goShieldButton.addEventListener('click', handleGoShieldClick);
+    }
 
     function renderGoBoard() {
         clearGoHighlights(); // Clear previous highlights and selections

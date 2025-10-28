@@ -854,17 +854,17 @@ h1 {
 
 #go-board-container {
     display: grid;
-    /* grid-template-columns set by JS */
-    /* grid-template-rows set by JS */
+    /* grid-template-columns/rows set by JS */
     --go-cell-size: 30px; /* Base size, JS might override */
-    border: 1px solid #333; /* Use this border for the edge */
+    --go-padding: 15px;  /* Default padding, JS will override */
+    /* border: 1px solid #333; */ /* REMOVE border from container */
     background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
-    /* padding: 15px; */ /* Padding removed */
+    padding: var(--go-padding); /* ADD padding back using variable */
     width: fit-content;
     height: fit-content;
-    box-sizing: content-box; /* Ensure border doesn't add to JS size calculations */
+    /* box-sizing: content-box; */ /* Can likely remove this now */
 }
 
 
@@ -876,29 +876,29 @@ h1 {
 #go-board-container::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--lines-width);  /* ADD THIS LINE */
-    height: var(--lines-height); /* ADD THIS LINE */
+    top: var(--go-padding);  /* Position using padding variable */
+    left: var(--go-padding); /* Position using padding variable */
+    /* width/height will be set by JS via injected style */
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
+    border: 1px solid #333; /* ADD border to ::before to draw the outer lines */
     z-index: 0;
 }
 
 
 #go-game-wrapper .intersection {
-    width: var(--go-cell-size); /* Use custom property */
-    height: var(--go-cell-size); /* Use custom property */
+    width: var(--go-cell-size);
+    height: var(--go-cell-size);
     position: relative;
     z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    /* Translate to center on grid lines - Adjust for NO padding */
-    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Adjusted */
+    /* Should already be correct: centers on the line intersection */
+    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2));
     box-sizing: border-box;
 }
 
