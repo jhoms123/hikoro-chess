@@ -1515,64 +1515,99 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function handleGoClick(e) {
-        if (gameState.gameOver || isReplayMode) return;
+        // Ignore clicks if game is over or in replay
+        if (gameState.gameOver || isReplayMode) return;
 
-        if (goClickTimer) {
-            clearTimeout(goClickTimer);
-            goClickTimer = null;
-        }
+        // Clear any existing double-click timer
+        if (goClickTimer) {
+            clearTimeout(goClickTimer);
+            goClickTimer = null;
+        }
 
-        const target = e.currentTarget;
-        const x = parseInt(target.dataset.x, 10);
-        const y = parseInt(target.dataset.y, 10);
+        const target = e.currentTarget;
+        const x = parseInt(target.dataset.x, 10);
+        const y = parseInt(target.dataset.y, 10);
 
-        goClickTimer = setTimeout(() => {
-            if (gameState.gameOver) return;
+        // Set a timer to distinguish single click from double click
+        goClickTimer = setTimeout(() => {
+            // Double-check game state in case it ended during the timeout
+            if (gameState.gameOver) return;
 
-            const cellState = gameState.boardState[y]?.[x]; // Added safety check ?
-            const player = gameState.isWhiteTurn ? 2 : 1;
-            const myPlayerColorValue = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null; // Renamed variable
+            const cellState = gameState.boardState[y]?.[x];
+            const player = gameState.isWhiteTurn ? 2 : 1; // 1 for Black, 2 for White
+            const myPlayerColorValue = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-            // --- >>> ADD DEBUG LOGS HERE <<< ---
-            console.log(`handleGoClick: isSinglePlayer=${isSinglePlayer}, isWhiteTurn=${gameState.isWhiteTurn}, myColor=${myColor}`);
-            console.log(`             => player (whose turn): ${player}, myPlayerColorValue: ${myPlayerColorValue}`);
-            console.log(`             => Clicked: x=${x}, y=${y}, cellState=${cellState}`);
-            // --- >>> END DEBUG LOGS <<< ---
-
-            // --- CHECK IF ALLOWED TO MOVE ---
-            if (!isSinglePlayer && player !== myPlayerColorValue) { // Used renamed variable
-                 console.log("CLIENT BLOCKED: Not your turn (Go)."); // Added identifier
-                 return;
-            }
-
-            // --- Move Logic ---
-            if (goSelectedPiece) {
-                console.log("             Attempting to move selected piece..."); // Added log
-                const from = goSelectedPiece;
-                const to = { x, y };
-                socket.emit('makeGameMove', {
-                    gameId,
-                    move: { type: 'move', from, to }
-                });
-                deselectGoPiece();
-            }
-            else { // If NO piece is selected...
-                if (cellState === 0) {
-                    console.log("             Attempting to place stone..."); // Added log
-                    socket.emit('makeGameMove', {
-                        gameId,
-                        move: { type: 'place', to: { x, y } }
-                    });
-                } else if (cellState === player) {
-                    console.log("             Attempting to select piece..."); // Added log
-                    selectGoPiece(x, y);
-                } else {
-                    console.log("             Clicked opponent piece or shield - doing nothing."); // Added log
+            // --- Client-side Turn Check ---
+            // Prevent actions if it's not the client's turn in multiplayer
+            if (!isSinglePlayer && player !== myPlayerColorValue) {
+                console.log("CLIENT BLOCKED: Not your turn (Go).");
+                // If opponent clicks while *you* have something selected, deselect it.
+                if (goSelectedPiece) {
+                    deselectGoPiece();
                 }
-            }
-            goClickTimer = null;
-        }, 200);
-    }
+                return;
+            }
+
+            // --- Main Click Logic ---
+
+            if (goSelectedPiece) {
+                // A piece IS currently selected
+
+                // 1. Check if clicking the SAME selected piece again
+                if (goSelectedPiece.x === x && goSelectedPiece.y === y) {
+                    console.log("Clicked selected piece again. Deselecting.");
+                    deselectGoPiece(); // Deselect it
+                }
+                // 2. Check if clicking an EMPTY square (potential move target)
+                else if (cellState === 0) {
+                    console.log("Attempting to move selected piece...");
+                    const from = goSelectedPiece;
+                    const to = { x, y };
+                    // Emit the move attempt to the server for validation
+                    socket.emit('makeGameMove', {
+                        gameId,
+                        move: { type: 'move', from, to }
+                    });
+                    // Deselect immediately after sending the attempt. Server response will update board.
+                    deselectGoPiece();
+                }
+                // 3. Clicked any OTHER square (opponent piece, shield, invalid target)
+                else {
+                    console.log("Clicked invalid target/occupied square while piece selected. Deselecting.");
+                    deselectGoPiece(); // Deselect the piece
+                }
+
+            } else {
+                // NO piece is currently selected
+
+                // 4. Check if clicking an EMPTY square
+                if (cellState === 0) {
+                    console.log("Attempting to place stone...");
+                    // Emit place request
+                    socket.emit('makeGameMove', {
+                        gameId,
+                        move: { type: 'place', to: { x, y } }
+                    });
+                    // No need to deselect, nothing was selected
+                }
+                // 5. Check if clicking YOUR OWN stone (not a shield)
+                else if (cellState === player) {
+                    console.log("Attempting to select piece...");
+                    selectGoPiece(x, y); // Select the clicked piece
+                }
+                // 6. Clicked opponent piece or ANY shield
+                else {
+                    console.log("Clicked opponent piece or shield - doing nothing.");
+                    // Ensure nothing stays visually selected if it shouldn't
+                    if (goSelectedPiece) { // Should be null here, but just in case
+                         deselectGoPiece();
+                     }
+                }
+            }
+
+            goClickTimer = null; // Clear timer reference after executing
+        }, 200); // 200ms delay to allow for double-click detection
+    }
 
     function handleGoDblClick(e) {
         if (gameState.gameOver || isReplayMode) return; // Prevent actions
