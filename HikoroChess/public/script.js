@@ -1641,16 +1641,26 @@ if (gameState.pendingChainCapture) {
              return; // Not your turn in multiplayer
         }
 
-        // Check if the double-clicked piece is the current player's *stone* (not shield)
-        if (cellState === player) {
-            if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
-            // --- Emit Turn to Shield move ---
-            socket.emit('makeGameMove', {
-                gameId,
-                move: { type: 'shield', at: { x, y } }
-            });
-            // State update will come from server
+        // --- THIS IS THE FIX ---
+        // 1. Check if a chain capture is pending (blocks shielding)
+        if (gameState.pendingChainCapture) {
+            console.log("Cannot shield, must complete chain capture.");
+            return;
         }
+
+        // 2. Check if the double-clicked piece is the current player's *stone* (not shield)
+        if (cellState === player) { 
+             if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
+             // --- Emit Turn to Shield move ---
+             socket.emit('makeGameMove', {
+                 gameId,
+                 move: { type: 'shield', at: { x, y } }
+             });
+             // State update will come from server
+        } else {
+            console.log("Can only turn your own NORMAL stones into shields.");
+        }
+        // --- END OF FIX ---
     }
 
 
@@ -1668,14 +1678,22 @@ if (gameState.pendingChainCapture) {
              return;
         }
 
+        // --- THIS IS THE FIX ---
+        // 1. Check if a chain capture is pending
+        if (gameState.pendingChainCapture) {
+            console.log("Cannot shield, must complete chain capture.");
+            return;
+        }
+
         const { x, y } = goSelectedPiece;
 
-        // Check if the selected piece is actually the current player's stone
-        if (gameState.boardState[y]?.[x] !== player) {
+        // 2. Check if the selected piece is actually the current player's NORMAL stone
+        if (gameState.boardState[y]?.[x] !== player) { 
              console.log("Cannot shield opponent's piece, shield, or empty square.");
              deselectGoPiece(); // Deselect invalid piece
              return;
         }
+        // --- END OF FIX ---
 
         // Emit shield move
         socket.emit('makeGameMove', {
