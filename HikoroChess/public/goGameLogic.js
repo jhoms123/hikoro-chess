@@ -324,38 +324,51 @@ function processCapturesAndSuicide(game, x, y, player) {
 /**
  * Gets valid moves for a standard (non-shield) Go piece.
  */
-function getValidMovesForGoPiece(x, y, boardState, player) {
-    const validMoves = [];
-    const enemyPlayer = (player === 1) ? 2 : 1;
+	function getValidMovesForGoPiece(x, y, boardState, player) {
+		const validMoves = [];
+		const enemyPlayer = (player === 1) ? 2 : 1;
+		const boardSize = boardState.length; // Get board size
 
-    // 1. Check simple 1-square moves
-    const neighbors = getNeighbors(x, y, boardState);
-    for (const move of neighbors) {
-        if (boardState[move.y][move.x] === 0) {
-            validMoves.push({ x: move.x, y: move.y, type: 'move' });
-        }
-    }
+		// 1. Check simple 1-square moves (Orthogonal AND Diagonal)
+		const potentialMoves = [
+			{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, // Orthogonal
+			{ dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }  // Diagonal (NEW)
+		];
 
-    // 2. Check 2-square jump captures
-    const jumps = [
-        { dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
-    ];
+		for (const moveOffset of potentialMoves) {
+			const moveX = x + moveOffset.dx;
+			const moveY = y + moveOffset.dy;
 
-    for (const jump of jumps) {
-        const landX = x + jump.dx;
-        const landY = y + jump.dy;
-        const midX = x + jump.dx / 2;
-        const midY = y + jump.dy / 2;
+			// Check if the move is within bounds
+			if (isValid(moveX, moveY, boardState)) {
+				// Check if the destination square is empty
+				if (boardState[moveY][moveX] === 0) {
+					validMoves.push({ x: moveX, y: moveY, type: 'move' });
+				}
+			}
+		}
 
-        if (isValid(landX, landY, boardState) && boardState[landY][landX] === 0) {
-            
-            if (isValid(midX, midY, boardState) && boardState[midY][midX] === enemyPlayer) {
-                validMoves.push({ x: landX, y: landY, type: 'jump' });
-            }
-        }
-    }
-    return validMoves;
-}
+		// 2. Check 2-square orthogonal jump captures (No change here)
+		const jumps = [
+			{ dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
+		];
+
+		for (const jump of jumps) {
+			const landX = x + jump.dx;
+			const landY = y + jump.dy;
+			const midX = x + jump.dx / 2;
+			const midY = y + jump.dy / 2;
+
+			if (isValid(landX, landY, boardState) && boardState[landY][landX] === 0) {
+				// Check if the middle square is valid and contains an enemy piece
+				if (isValid(midX, midY, boardState) && boardState[midY][midX] === enemyPlayer) {
+					validMoves.push({ x: landX, y: landY, type: 'jump' });
+				}
+			}
+		}
+
+		return validMoves;
+	}
 
 /**
  * Runs a flood-fill (BFS) on all empty spots to find territory
