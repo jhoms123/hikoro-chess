@@ -857,14 +857,12 @@ h1 {
     /* grid-template-columns/rows set by JS */
     --go-cell-size: 30px; /* Base size, JS might override */
     --go-padding: 15px;  /* Default padding, JS will override */
-    /* border removed */
     background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
     padding: var(--go-padding); /* Keep padding */
-    width: fit-content;
-    height: fit-content;
-    box-sizing: content-box; /* ADD THIS BACK */
+    /* width/height explicitly set by JS */
+    box-sizing: border-box; /* ADD THIS */
 }
 
 
@@ -876,8 +874,8 @@ h1 {
 #go-board-container::before {
     content: '';
     position: absolute;
-    top: var(--go-padding);  /* Position using padding variable */
-    left: var(--go-padding); /* Position using padding variable */
+    top: var(--go-padding);
+    left: var(--go-padding);
     /* width/height set by JS via injected style */
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
@@ -885,6 +883,7 @@ h1 {
         linear-gradient(to bottom, #333 1px, transparent 1px);
     border: 1px solid #333; /* Keep border on ::before */
     z-index: 0;
+    box-sizing: border-box; /* Add this to ::before too */
 }
 
 

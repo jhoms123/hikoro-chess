@@ -1365,26 +1365,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Dynamic Size Adjustments ---
         const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30;
-        const paddingPx = cellSizePx / 2; // RE-ADD padding calculation
+        // Adjust base size if needed, especially for smaller screens
+        const baseCellSize = isPortrait ? (window.innerWidth * 0.045) : 30;
+        // Ensure cellSizePx is an integer for cleaner calculations
+        const cellSizePx = Math.floor(baseCellSize);
+        const paddingPx = cellSizePx / 2;
 
         // Set CSS variables for cell size and padding
         goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
-        goBoardContainer.style.setProperty('--go-padding', `${paddingPx}px`); // SET padding variable
+        goBoardContainer.style.setProperty('--go-padding', `${paddingPx}px`);
 
-        // Set dynamic grid size in CSS (Use FIXED cell size)
+        // Set grid dimensions
         goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
         goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
 
-        // Calculate size for the ::before pseudo-element's lines area
+        // Calculate size for the ::before element's lines area
         const linesWidth = cellSizePx * (boardSize - 1);
         const linesHeight = cellSizePx * (boardSize - 1);
 
-        // REMOVE the lines setting --lines-width and --lines-height
-        // goBoardContainer.style.setProperty('--lines-width', `${linesWidth}px`); // REMOVE
-        // goBoardContainer.style.setProperty('--lines-height', `${linesHeight}px`); // REMOVE
+        // --- Calculate and Set Explicit Container Size ---
+        const borderThickness = 2; // 1px border on left/right or top/bottom
+        const totalWidth = linesWidth + (2 * paddingPx) + borderThickness;
+        const totalHeight = linesHeight + (2 * paddingPx) + borderThickness;
+        goBoardContainer.style.width = `${totalWidth}px`;
+        goBoardContainer.style.height = `${totalHeight}px`;
+        // --- End Container Size Calculation ---
 
-        // RE-ADD code to inject style rule for ::before width and height
+        // Inject style rule for ::before width and height
         const styleSheetId = 'go-board-lines-style';
         let styleSheet = document.getElementById(styleSheetId);
         if (!styleSheet) {
