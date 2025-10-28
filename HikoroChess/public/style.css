@@ -857,14 +857,14 @@ h1 {
     /* grid-template-columns/rows set by JS */
     --go-cell-size: 30px; /* Base size, JS might override */
     --go-padding: 15px;  /* Default padding, JS will override */
-    /* border: 1px solid #333; */ /* REMOVE border from container */
+    /* border removed */
     background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
-    padding: var(--go-padding); /* ADD padding back using variable */
+    padding: var(--go-padding); /* Keep padding */
     width: fit-content;
     height: fit-content;
-    /* box-sizing: content-box; */ /* Can likely remove this now */
+    box-sizing: content-box; /* ADD THIS BACK */
 }
 
 
@@ -878,12 +878,12 @@ h1 {
     position: absolute;
     top: var(--go-padding);  /* Position using padding variable */
     left: var(--go-padding); /* Position using padding variable */
-    /* width/height will be set by JS via injected style */
+    /* width/height set by JS via injected style */
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
-    border: 1px solid #333; /* ADD border to ::before to draw the outer lines */
+    border: 1px solid #333; /* Keep border on ::before */
     z-index: 0;
 }
 
