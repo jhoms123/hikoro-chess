@@ -19,6 +19,7 @@ exports.getValidMoves = function(game, data) {
     const piece = game.boardState[y][x];
     if (!piece) return [];
     
+    // ✅ FIX: Determine player from game state, not passed-in color
     const player = (game.isWhiteTurn ? 2 : 1);
     
     // Check if it's the correct player's piece (normal or shield)
@@ -50,41 +51,46 @@ exports.getValidMoves = function(game, data) {
  */
 exports.makeGoMove = function(game, move, playerColor) {
     const newGame = JSON.parse(JSON.stringify(game));
-    const player = (playerColor === 'white' ? 2 : 1);
     
+    // ✅✅✅ THE MAIN FIX IS HERE ✅✅✅
+    // We determine the active player from the GAME STATE, not the socket's playerColor.
+    const activePlayer = (newGame.isWhiteTurn ? 2 : 1);
+    // We only use playerColor to see who is *requesting* a resign.
+    const requestingPlayer = (playerColor === 'white' ? 2 : 1);
+
     let moveResult = { success: false, error: "Unknown move type." }; 
 
     switch (move.type) {
         case 'place':
-            moveResult = placeStone(newGame, move.to.x, move.to.y, player);
+            // Use the activePlayer
+            moveResult = placeStone(newGame, move.to.x, move.to.y, activePlayer); 
             break;
         case 'move':
-            // **NEW CHAIN CAPTURE VALIDATION**
-            // Check if this move is part of a chain
+            // Check for chain capture first
             if (newGame.pendingChainCapture) {
                 if (move.from.x !== newGame.pendingChainCapture.x || move.from.y !== newGame.pendingChainCapture.y) {
-                    // This can happen if the user tries to end the chain by passing
-                    // We will just clear the pending capture and let the turn end.
-                    // If they try to move *another* piece, it's an error.
-                    // For simplicity, we'll just check if the move *starts* from the right spot.
                     return { success: false, error: "Invalid chain capture. Must move from the last landing spot." };
                 }
-                // It's a valid chain move, clear the pending flag *before* the move
                 newGame.pendingChainCapture = null;
             }
-            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
+            // Use the activePlayer
+            moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, activePlayer);
             break;
         case 'shield':
-            moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
+            // Use the activePlayer
+            moveResult = turnToShield(newGame, move.at.x, move.at.y, activePlayer);
             break;
         case 'pass':
-            // **NEW**: If you pass, you forfeit any pending chain captures
+            // If you pass, you forfeit any pending chain captures
             newGame.pendingChainCapture = null; 
             moveResult = { success: true, updatedGame: newGame, isChain: false };
             break;
         case 'resign':
-            moveResult = handleResign(newGame, player);
+            // Use the requestingPlayer
+            moveResult = handleResign(newGame, requestingPlayer); 
             break;
+        default:
+             moveResult = { success: false, error: "Unknown move type." };
     }
 
     if (moveResult.success) {
@@ -154,7 +160,6 @@ function placeStone(game, x, y, player) {
 function movePiece(game, fromX, fromY, toX, toY, player) {
     const piece = game.boardState[fromY][fromX];
     const enemyPlayer = (player === 1) ? 2 : 1;
-    // const enemyShield = (player === 1) ? 4 : 3; // Not needed for capture
     
     // Check if it's the player's piece (normal or shield)
     if (piece !== player && piece !== (player + 2)) {
@@ -268,7 +273,7 @@ function handleResign(game, player) {
 
 
 // --- GO LOGIC (LIBERTIES, CAPTURES, SCORING) ---
-// (These functions are unchanged)
+// (These functions are unchanged from your file)
 
 function getNeighbors(x, y, boardState) {
     const neighbors = [];
