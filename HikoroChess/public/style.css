@@ -593,30 +593,27 @@ h1 {
         padding: 5px;
     }
 
-    /* Go board scaling in portrait */
+    /* Go board scaling in portrait needs to use the correct variable */
     #go-board-container {
-        --go-cell-size: 4.5vw;
-        grid-template-columns: repeat(19, var(--go-cell-size));
-        grid-template-rows: repeat(19, var(--go-cell-size));
-        padding: calc(var(--go-cell-size) / 2);
+        /* No need to redeclare --go-cell-size here if set globally or in body */
+        grid-template-columns: repeat(var(--board-size-js, 19), var(--go-cell-size)); /* Fallback for size */
+        grid-template-rows: repeat(var(--board-size-js, 19), var(--go-cell-size));
+        /* padding adjustment removed, handled by JS if needed */
         width: fit-content;
         height: fit-content;
     }
-    #go-board-container::before {
-        
-        background-size: var(--go-cell-size) var(--go-cell-size);
-        top: calc(var(--go-cell-size) / 2);
-        left: calc(var(--go-cell-size) / 2);
+     #go-board-container::before {
+        /* background-size set via JS */
+        /* top/left set via JS */
     }
-    #go-game-wrapper .intersection {
-        width: var(--go-cell-size);
-        height: var(--go-cell-size);
-        transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Dynamic centering */
+     #go-game-wrapper .intersection {
+        /* width/height via JS */
+        /* transform via JS */
     }
-    #go-game-wrapper .stone {
-        width: calc(var(--go-cell-size) * 0.85); /* Adjust multiplier if needed */
-        height: calc(var(--go-cell-size) * 0.85);
+     #go-game-wrapper .stone {
+        /* width/height via JS */
     }
+
 
     /* Go score display in portrait */
     #go-score-display-container {
@@ -857,17 +854,19 @@ h1 {
 
 #go-board-container {
     display: grid;
-    grid-template-columns: repeat(19, 30px); /* Base cell size */
-    grid-template-rows: repeat(19, 30px);   /* Base cell size */
-    --go-cell-size: 30px; /* Define custom property for Go cell size */
-    border: 2px solid #555;
+    /* grid-template-columns set by JS */
+    /* grid-template-rows set by JS */
+    --go-cell-size: 30px; /* Base size, JS might override */
+    border: 1px solid #333; /* Use this border for the edge */
     background-color: #d2b48c;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     position: relative;
-    padding: 15px; /* Padding for the board lines */
+    /* padding: 15px; */ /* Padding removed */
     width: fit-content;
     height: fit-content;
+    box-sizing: content-box; /* Ensure border doesn't add to JS size calculations */
 }
+
 
 #go-board-container.disabled {
     pointer-events: none;
@@ -877,14 +876,17 @@ h1 {
 #go-board-container::before {
     content: '';
     position: absolute;
-    
+    top: 0;  /* Lines start at the edge */
+    left: 0; /* Lines start at the edge */
+    /* width and height set by JS */
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
-    
+    /* border removed */
     z-index: 0; /* Make sure lines are behind intersections */
 }
+
 
 #go-game-wrapper .intersection {
     width: var(--go-cell-size); /* Use custom property */
@@ -895,8 +897,8 @@ h1 {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    /* Translate to center on grid lines using dynamic value */
-    transform: translate(calc(var(--go-cell-size) / -2 + 1px), calc(var(--go-cell-size) / -2 + 1px));
+    /* Translate to center on grid lines - Adjust for NO padding */
+    transform: translate(calc(var(--go-cell-size) / -2), calc(var(--go-cell-size) / -2)); /* Adjusted */
     box-sizing: border-box;
 }
 

@@ -1361,46 +1361,44 @@ document.addEventListener('DOMContentLoaded', () => {
     function createGoBoard() {
         goBoardContainer.innerHTML = ''; // Clear previous board if any
 
-        const boardSize = gameState.boardSize || 19; // Default to 19 if missing
-        
-        // --- ✅ START: Dynamic Size Adjustments ---
-        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        // Calculate cell size based on orientation (adjust values as needed)
-        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30; // 4.5vw or 30px
-        const paddingPx = cellSizePx / 2;
+        const boardSize = gameState.boardSize || 19;
+        
+        // --- Dynamic Size Adjustments ---
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        const cellSizePx = isPortrait ? (window.innerWidth * 0.045) : 30;
+        // const paddingPx = cellSizePx / 2; // No longer needed
 
-        // Set the CSS variable for cell size
-        goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
+        // Set the CSS variable for cell size
+        goBoardContainer.style.setProperty('--go-cell-size', `${cellSizePx}px`);
 
-        // Set padding on the container
-        goBoardContainer.style.padding = `${paddingPx}px`;
+        // Set padding on the container - REMOVE THIS LINE
+        // goBoardContainer.style.padding = `${paddingPx}px`;
 
-        // Set dynamic grid size in CSS (Use 1fr for flexible cells)
         // Set dynamic grid size in CSS (Use FIXED cell size)
-    goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
-    goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
+        goBoardContainer.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSizePx}px)`;
+        goBoardContainer.style.gridTemplateRows = `repeat(${boardSize}, ${cellSizePx}px)`;
 
-        // Calculate and set the size for the ::before pseudo-element
-        const linesWidth = cellSizePx * (boardSize - 1);
-        const linesHeight = cellSizePx * (boardSize - 1);
+        // Calculate size for the ::before pseudo-element
+        const linesWidth = cellSizePx * (boardSize - 1);
+        const linesHeight = cellSizePx * (boardSize - 1);
 
-        // We need to inject a style rule to target ::before
-        const styleSheetId = 'go-board-lines-style';
-        let styleSheet = document.getElementById(styleSheetId);
-        if (!styleSheet) {
-            styleSheet = document.createElement('style');
-            styleSheet.id = styleSheetId;
-            document.head.appendChild(styleSheet);
-        }
-        // Update the rule - IMPORTANT: Adjust top/left based on padding!
-        styleSheet.textContent = `
-            #go-board-container::before {
-                width: ${linesWidth}px;
-                height: ${linesHeight}px;
-                top: ${paddingPx}px;
-                left: ${paddingPx}px;
-            }
-        `;
+        // Inject style rule to target ::before
+        const styleSheetId = 'go-board-lines-style';
+        let styleSheet = document.getElementById(styleSheetId);
+        if (!styleSheet) {
+            styleSheet = document.createElement('style');
+            styleSheet.id = styleSheetId;
+            document.head.appendChild(styleSheet);
+        }
+        // Update the rule - REMOVE top and left
+        styleSheet.textContent = `
+            #go-board-container::before {
+                width: ${linesWidth}px;
+                height: ${linesHeight}px;
+                /* top: ${paddingPx}px; */  /* REMOVED */
+                /* left: ${paddingPx}px; */ /* REMOVED */
+            }
+        `;
         // --- ✅ END: Dynamic Size Adjustments ---
 
         // USE dynamic boardSize in loops
