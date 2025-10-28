@@ -527,67 +527,124 @@ function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
     };
 }
 
-/**
- * Generates a simple notation for the move list.
- */
 function updateMoveList(game, move) {
-    // This logic needs to account for pendingChainCapture
-    // If a chain is pending, the turn *hasn't* incremented yet.
-    
-    // Find the turn number based on the *actual* turn count, not just isWhiteTurn
-    const turnNum = Math.floor(game.turnCount / 2) + 1;
-    let notationString = "";
+    // This logic needs to account for pendingChainCapture
+    // If a chain is pending, the turn *hasn't* incremented yet.
+    
+    // Find the turn number based on the *actual* turn count
+    // The turn has already toggled, so we use isWhiteTurn to see who *just* moved
+    const turnNum = game.isWhiteTurn ? Math.floor(game.turnCount / 2) : Math.floor((game.turnCount -1) / 2) + 1;
+    let notationString = "";
 
-    switch (move.type) {
-        case 'place':
-            notationString = `P@${move.to.x},${move.to.y}`;
-            break;
-        case 'move':
-            notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
-            break;
-        case 'shield':
-            notationString = `S@${move.at.x},${move.at.y}`;
-            break;
-        case 'pass': 
-            notationString = `Pass`;
-            break;
-        case 'resign':
-            notationString = `Resign`;
-            break;
-        default:
-            notationString = `Unknown`;
-    }
-    
-    // **NEW CHAIN CAPTURE NOTATION**
-    // Check if the *previous* state was a pending chain
-    // We can infer this if isChain is true in the moveResult, but we don't have that here.
-    // Let's check game.isWhiteTurn.
-    
-    if (game.isWhiteTurn) {
-        // This is White's move.
-        // Is it a *new* move or a chain?
-        if (game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
-             // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
-        } else {
-             // Start a new line for White's turn
-            game.moveList.push(`${turnNum}. ${notationString}`);
-        }
-    } else {
-        // This is Black's move.
-        // Is it a *new* move or a chain?
-        if (game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
-             // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
-        } else {
-            // Append Black's first move to the line
-            if (game.moveList.length > 0) {
-                game.moveList[game.moveList.length - 1] += ` ${notationString}`;
-            } else {
-                game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
-            }
-        }
-    }
+    switch (move.type) {
+        case 'place':
+            notationString = `P@${move.to.x},${move.to.y}`;
+            break;
+        case 'move':
+            notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
+            break;
+        case 'shield':
+            notationString = `S@${move.at.x},${move.at.y}`;
+            break;
+        case 'pass': 
+            notationString = `Pass`;
+            break;
+        case 'resign':
+            notationString = `Resign`;
+            break;
+        default:
+            notationString = `Unknown`;
+    }
+    
+    // **NEW CHAIN CAPTURE NOTATION**
+    // ✅ FIX 2: Only check for chain if it's a 'move' type
+    const isChainMove = (move.type === 'move' && move.to);
+
+    // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
+    if (!game.isWhiteTurn) {
+        // This was White's move.
+        // Is it a *new* move or a chain?
+        if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+        } else {
+             // Start a new line for White's turn
+            game.moveList.push(`${turnNum}. ${notationString}`);
+        }
+    } else {
+        // This was Black's move.
+        // Is it a *new* move or a chain?
+        if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+        } else {
+            // Append Black's first move to the line
+            if (game.moveList.length > 0 && game.moveList[game.moveList.length -1].startsWith(`${turnNum}.`)) {
+                game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+            } else {
+                game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
+            }
+        }
+    }
+}function updateMoveList(game, move) {
+    // This logic needs to account for pendingChainCapture
+    // If a chain is pending, the turn *hasn't* incremented yet.
+    
+    // Find the turn number based on the *actual* turn count
+    // The turn has already toggled, so we use isWhiteTurn to see who *just* moved
+    const turnNum = game.isWhiteTurn ? Math.floor(game.turnCount / 2) : Math.floor((game.turnCount -1) / 2) + 1;
+    let notationString = "";
+
+    switch (move.type) {
+        case 'place':
+            notationString = `P@${move.to.x},${move.to.y}`;
+            break;
+        case 'move':
+            notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
+            break;
+        case 'shield':
+            notationString = `S@${move.at.x},${move.at.y}`;
+            break;
+        case 'pass': 
+            notationString = `Pass`;
+            break;
+        case 'resign':
+            notationString = `Resign`;
+            break;
+        default:
+            notationString = `Unknown`;
+    }
+    
+    // **NEW CHAIN CAPTURE NOTATION**
+    // ✅ FIX 2: Only check for chain if it's a 'move' type
+    const isChainMove = (move.type === 'move' && move.to);
+
+    // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
+    if (!game.isWhiteTurn) {
+        // This was White's move.
+        // Is it a *new* move or a chain?
+        if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+        } else {
+             // Start a new line for White's turn
+            game.moveList.push(`${turnNum}. ${notationString}`);
+        }
+    } else {
+        // This was Black's move.
+        // Is it a *new* move or a chain?
+        if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+        } else {
+            // Append Black's first move to the line
+            if (game.moveList.length > 0 && game.moveList[game.moveList.length -1].startsWith(`${turnNum}.`)) {
+                game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+            } else {
+                game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
+            }
+        }
+    }
 }
 
 
