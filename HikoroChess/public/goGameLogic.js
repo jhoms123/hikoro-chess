@@ -514,8 +514,8 @@ function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
 
     const territory = calculateTerritory(boardState);
     
-    const blackScore = blackStones + territory.black - blackPiecesLost;
-    const whiteScore = whiteStones + territory.white - whitePiecesLost;
+    const blackScore = blackStones + territory.black;
+    const whiteScore = whiteStones + territory.white;
 
     return {
         black: blackScore,

@@ -1504,9 +1504,9 @@ if (gameState.pendingChainCapture) {
              console.warn("renderGoScore: Score data incomplete in gameState.");
              // Optionally set default text
              goBlackScoreDisplay.textContent = '0';
-             goBlackScoreDetails.textContent = `(Stones: 0, Terr: 0, Lost: 0)`;
+             goBlackScoreDetails.textContent = `(Stones: 0, Terr: 0)`;
              goWhiteScoreDisplay.textContent = '0';
-             goWhiteScoreDetails.textContent = `(Stones: 0, Terr: 0, Lost: 0)`;
+             goWhiteScoreDetails.textContent = `(Stones: 0, Terr: 0)`;
              return;
         }
 
@@ -1514,10 +1514,10 @@ if (gameState.pendingChainCapture) {
 
         // Update score display elements
         goBlackScoreDisplay.textContent = black;
-        goBlackScoreDetails.textContent = `(Stones: ${details.black.stones}, Terr: ${details.black.territory}, Lost: ${details.black.lost})`;
+        goBlackScoreDetails.textContent = `(Stones: ${details.black.stones}, Terr: ${details.black.territory})`;
 
         goWhiteScoreDisplay.textContent = white;
-        goWhiteScoreDetails.textContent = `(Stones: ${details.white.stones}, Terr: ${details.white.territory}, Lost: ${details.white.lost})`;
+        goWhiteScoreDetails.textContent = `(Stones: ${details.white.stones}, Terr: ${details.white.territory})`;
     }
 
 
