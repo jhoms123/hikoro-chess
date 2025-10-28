@@ -1665,43 +1665,43 @@ if (gameState.pendingChainCapture) {
 
 
     function handleGoShieldClick() {
-        if (gameState.gameOver || !goSelectedPiece) return; // Check if a piece is selected
+        if (gameState.gameOver || !goSelectedPiece) return; // Check if a piece is selected
 
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
+        // Determine the player whose turn it is
+        const player = gameState.isWhiteTurn ? 2 : 1;
+        // Determine the color this client controls
+        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-        // Check if it's the player's turn before emitting (for multiplayer responsiveness)
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("Not your turn to shield.");
-             return;
-        }
+        // Check if it's the player's turn before emitting (for multiplayer responsiveness)
+        if (!isSinglePlayer && player !== myPlayerColor) {
+             console.log("Not your turn to shield.");
+             return;
+        }
 
-        // --- CHAIN CAPTURE CHECK ---
-        // 1. Check if a chain capture is pending
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
-            return;
-        }
+        // --- CHAIN CAPTURE CHECK ---
+        // 1. Check if a chain capture is pending
+        if (gameState.pendingChainCapture) {
+            console.log("Cannot shield, must complete chain capture.");
+            return;
+        }
 
-        const { x, y } = goSelectedPiece;
+        const { x, y } = goSelectedPiece;
 
-        // 2. Check if the selected piece is actually the current player's NORMAL stone
-        if (gameState.boardState[y]?.[x] !== player) { 
-            console.log("Cannot shield opponent's piece, shield, or empty square.");
-            deselectGoPiece(); // Deselect invalid piece
-            return;
-        }
-        // --- END CHAIN CAPTURE CHECK ---
+        // 2. Check if the selected piece is actually the current player's NORMAL stone
+        if (gameState.boardState[y]?.[x] !== player) { 
+            console.log("Cannot shield opponent's piece, shield, or empty square.");
+            deselectGoPiece(); // Deselect invalid piece
+            return;
+        }
+        // --- END CHAIN CAPTURE CHECK ---
 
-        // Emit shield move
-        socket.emit('makeGoMove', {
-            gameId,
-            move: { type: 'shield', at: { x, y } }
-        });
-        deselectGoPiece(); // Deselect after sending request
-    }
+        // Emit shield move
+        socket.emit('makeGameMove', { // <--- ⛔️ THIS WAS THE BUG (was 'makeGoMove')
+            gameId,
+            move: { type: 'shield', at: { x, y } }
+        });
+        deselectGoPiece(); // Deselect after sending request
+    }
 
     function selectGoPiece(x, y) {
         goSelectedPiece = { x, y };
