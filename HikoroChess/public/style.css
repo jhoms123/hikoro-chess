@@ -903,8 +903,8 @@ h1 {
 
 /* --- Go Stone Image Styling --- */
 #go-game-wrapper .stone {
-    width: calc(var(--go-cell-size) * 0.85); /* Adjust size to fit your image relative to cell */
-    height: calc(var(--go-cell-size) * 0.85); /* Adjust size to fit your image relative to cell */
+    width: calc(var(--go-cell-size) * 0.8); /* Adjust size to fit your image relative to cell */
+    height: calc(var(--go-cell-size) * 0.8); /* Adjust size to fit your image relative to cell */
     background-size: contain; /* Scale image to fit */
     background-repeat: no-repeat;
     background-position: center;
