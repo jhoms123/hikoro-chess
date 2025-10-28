@@ -1598,7 +1598,7 @@ if (gameState.pendingChainCapture) {
                     // No need to deselect, nothing was selected
                 }
                 // 5. Check if clicking YOUR OWN stone (not a shield)
-                else if (cellState === player) {
+                else if (cellState === player || cellState === player + 2) {
                     console.log("Attempting to select piece...");
                     selectGoPiece(x, y); // Select the clicked piece
                 }
