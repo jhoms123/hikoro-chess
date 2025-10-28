@@ -1395,8 +1395,6 @@ document.addEventListener('DOMContentLoaded', () => {
             #go-board-container::before {
                 width: ${linesWidth}px;
                 height: ${linesHeight}px;
-                /* top: ${paddingPx}px; */  /* REMOVED */
-                /* left: ${paddingPx}px; */ /* REMOVED */
             }
         `;
         // --- ✅ END: Dynamic Size Adjustments ---
