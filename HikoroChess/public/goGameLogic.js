@@ -50,57 +50,68 @@ exports.getValidMoves = function(game, data) {
  * | { type: 'resign' }
  */
 exports.makeGoMove = function(game, move, playerColor) {
+    // Ensure game and move objects exist
+    if (!game || !move) {
+        return { success: false, error: "Invalid game or move object." };
+    }
+
     const newGame = JSON.parse(JSON.stringify(game));
-    
-    // ✅✅✅ THE MAIN FIX IS HERE ✅✅✅
-    // We determine the active player from the GAME STATE, not the socket's playerColor.
-    const activePlayer = (newGame.isWhiteTurn ? 2 : 1);
-    // We only use playerColor to see who is *requesting* a resign.
+
+    // ✅✅✅ THIS IS THE CRITICAL PART ✅✅✅
+    // Determine the player whose turn it ACTUALLY IS from the game state.
+    const activePlayer = (newGame.isWhiteTurn ? 2 : 1); // 2 for White, 1 for Black
+    // Determine the player making the request (only needed for resign)
     const requestingPlayer = (playerColor === 'white' ? 2 : 1);
 
-    let moveResult = { success: false, error: "Unknown move type." }; 
+    // --- Add this console log for debugging ---
+    console.log(`[makeGoMove] Turn: ${newGame.isWhiteTurn ? 'White' : 'Black'}, ActivePlayer: ${activePlayer}, RequestingPlayer: ${requestingPlayer}, Move: `, move);
+    // -----------------------------------------
+
+    let moveResult = { success: false, error: "Unknown move type." };
 
     switch (move.type) {
         case 'place':
-            // Use the activePlayer
-            moveResult = placeStone(newGame, move.to.x, move.to.y, activePlayer); 
+            // Use activePlayer
+            moveResult = placeStone(newGame, move.to.x, move.to.y, activePlayer);
             break;
         case 'move':
-            // Check for chain capture first
             if (newGame.pendingChainCapture) {
-                if (move.from.x !== newGame.pendingChainCapture.x || move.from.y !== newGame.pendingChainCapture.y) {
+                if (!move.from || move.from.x !== newGame.pendingChainCapture.x || move.from.y !== newGame.pendingChainCapture.y) {
                     return { success: false, error: "Invalid chain capture. Must move from the last landing spot." };
                 }
-                newGame.pendingChainCapture = null;
+                newGame.pendingChainCapture = null; // Clear before moving
             }
-            // Use the activePlayer
+            // Use activePlayer
             moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, activePlayer);
             break;
         case 'shield':
-            // Use the activePlayer
+            // Use activePlayer
             moveResult = turnToShield(newGame, move.at.x, move.at.y, activePlayer);
             break;
         case 'pass':
-            // If you pass, you forfeit any pending chain captures
-            newGame.pendingChainCapture = null; 
+            newGame.pendingChainCapture = null;
             moveResult = { success: true, updatedGame: newGame, isChain: false };
             break;
         case 'resign':
-            // Use the requestingPlayer
-            moveResult = handleResign(newGame, requestingPlayer); 
+            // Use requestingPlayer
+            moveResult = handleResign(newGame, requestingPlayer);
             break;
         default:
              moveResult = { success: false, error: "Unknown move type." };
     }
 
+    // --- Process the result ---
     if (moveResult.success) {
-        const updatedGame = moveResult.updatedGame; 
+        const updatedGame = moveResult.updatedGame;
 
-        // Update score
+        // Ensure score object exists before calculation
+         if (!updatedGame.score) {
+            updatedGame.score = { black: 0, white: 0, details: { black: {}, white: {} } };
+         }
         updatedGame.score = calculateScore(
             updatedGame.boardState,
-            updatedGame.blackPiecesLost,
-            updatedGame.whitePiecesLost
+            updatedGame.blackPiecesLost || 0, // Default to 0 if undefined
+            updatedGame.whitePiecesLost || 0  // Default to 0 if undefined
         );
 
         if (move.type !== 'resign') {
@@ -113,23 +124,27 @@ exports.makeGoMove = function(game, move, playerColor) {
                 updatedGame.lastMove = null; // Pass has no 'to'
             }
 
-            // Update move list *before* toggling turn
-            updateMoveList(updatedGame, move); 
-            
-            // Only toggle turn if it's not an ongoing chain capture
+            // Ensure moveList exists
+            if (!updatedGame.moveList) {
+                updatedGame.moveList = [];
+            }
+            updateMoveList(updatedGame, move);
+
+            // Toggle turn only if it's not a continuing chain capture
             if (!moveResult.isChain) {
-                updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
-                updatedGame.turnCount++;
-                // Ensure pending capture is clear if the chain ends
-                updatedGame.pendingChainCapture = null; 
+                updatedGame.isWhiteTurn = !newGame.isWhiteTurn;
+                updatedGame.turnCount = (updatedGame.turnCount || 0) + 1; // Ensure turnCount exists
+                updatedGame.pendingChainCapture = null; // Clear chain flag when turn ends
             }
         }
-        
-        return { success: true, updatedGame: updatedGame }; // Return the modified game
+
+        return { success: true, updatedGame: updatedGame };
+    } else {
+        // --- Add this console log for debugging failures ---
+        console.error(`[makeGoMove] Failed: ${moveResult.error}`);
+        // ----------------------------------------------
+        return moveResult; // Return the failure result (contains error message)
     }
-    
-    // If success was false, just return the result
-    return moveResult;
 }
 
 function placeStone(game, x, y, player) {
