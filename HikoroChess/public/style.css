@@ -876,15 +876,15 @@ h1 {
 #go-board-container::before {
     content: '';
     position: absolute;
-    top: 0;  /* Lines start at the edge */
-    left: 0; /* Lines start at the edge */
-    /* width and height set by JS */
+    top: 0;
+    left: 0;
+    width: var(--lines-width);  /* ADD THIS LINE */
+    height: var(--lines-height); /* ADD THIS LINE */
     background-size: var(--go-cell-size) var(--go-cell-size);
     background-image:
         linear-gradient(to right, #333 1px, transparent 1px),
         linear-gradient(to bottom, #333 1px, transparent 1px);
-    /* border removed */
-    z-index: 0; /* Make sure lines are behind intersections */
+    z-index: 0;
 }
 
 

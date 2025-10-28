@@ -1382,22 +1382,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const linesWidth = cellSizePx * (boardSize - 1);
         const linesHeight = cellSizePx * (boardSize - 1);
 
-        // Inject style rule to target ::before
-        const styleSheetId = 'go-board-lines-style';
-        let styleSheet = document.getElementById(styleSheetId);
-        if (!styleSheet) {
-            styleSheet = document.createElement('style');
-            styleSheet.id = styleSheetId;
-            document.head.appendChild(styleSheet);
-        }
-        // Update the rule - REMOVE top and left
-        styleSheet.textContent = `
-            #go-board-container::before {
-                width: ${linesWidth}px;
-                height: ${linesHeight}px;
-            }
-        `;
-        // --- ✅ END: Dynamic Size Adjustments ---
+        
+        goBoardContainer.style.setProperty('--lines-width', `${linesWidth}px`);
+    
+		goBoardContainer.style.setProperty('--lines-height', `${linesHeight}px`);
+        
 
         // USE dynamic boardSize in loops
         for (let y = 0; y < boardSize; y++) {
