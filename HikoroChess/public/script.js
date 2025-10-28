@@ -610,6 +610,13 @@ document.addEventListener('DOMContentLoaded', () => {
             goShieldButton.style.display = goSelectedPiece && !gameState.gameOver ? 'block' : 'none';
             // Show pass button if it's a Go game and not over
             goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
+
+if (gameState.pendingChainCapture) {
+                console.log("Chain capture pending! Re-selecting piece.");
+                // Automatically select the piece at its new landing spot
+                // This will trigger getValidMoves, which will now only return new jumps
+                selectGoPiece(gameState.pendingChainCapture.x, gameState.pendingChainCapture.y);
+            }
             
             if (newGameState.gameOver) { // Disable board for Go
                 goBoardContainer.classList.add('disabled');

@@ -1,13 +1,11 @@
 (function(exports) {
 
-
-
 /**
  * Creates the initial board state for the Go Variant
  */
 exports.getInitialGoBoard = function(boardSize = 19) { // Accept boardSize as an argument
-    // 0 = Empty, 1 = Black, 2 = White, 3 = Black Shield, 4 = White Shield
-    return Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
+    // 0 = Empty, 1 = Black, 2 = White, 3 = Black Shield, 4 = White Shield
+    return Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
 }
 
 /**
@@ -21,11 +19,25 @@ exports.getValidMoves = function(game, data) {
     const piece = game.boardState[y][x];
     if (!piece) return [];
     
-    // Check if it's the correct player's piece
     const player = (game.isWhiteTurn ? 2 : 1);
-    if (piece !== player) return []; // Can only select non-shield pieces
+    
+    // Check if it's the correct player's piece (normal or shield)
+    if (piece !== player && piece !== (player + 2)) return [];
 
-    return getValidMovesForGoPiece(x, y, game.boardState, player);
+    // **NEW CHAIN CAPTURE LOGIC**
+    // If a chain capture is pending, you can ONLY move that piece
+    if (game.pendingChainCapture) {
+        if (x !== game.pendingChainCapture.x || y !== game.pendingChainCapture.y) {
+            return []; // Can't select any other piece
+        }
+        // If it IS the correct piece, only return jump moves
+        const allMoves = getValidMovesForGoPiece(x, y, game.boardState, piece);
+        // Filter for orthogonal jumps only
+        return allMoves.filter(m => m.type === 'jump');
+    }
+    
+    // Not a chain, just return all valid moves for the selected piece
+    return getValidMovesForGoPiece(x, y, game.boardState, piece);
 }
 
 /**
@@ -33,35 +45,42 @@ exports.getValidMoves = function(game, data) {
  * move: { type: 'place', to: {x,y} }
  * | { type: 'move', from: {x,y}, to: {x,y} }
  * | { type: 'shield', at: {x,y} }
+ * | { type: 'pass' }
  * | { type: 'resign' }
  */
 exports.makeGoMove = function(game, move, playerColor) {
     const newGame = JSON.parse(JSON.stringify(game));
     const player = (playerColor === 'white' ? 2 : 1);
     
-    // Initialize moveResult here
     let moveResult = { success: false, error: "Unknown move type." }; 
 
-    // --- >>> ADD LOG <<< ---
-    console.log(`  [goLogic] makeGoMove called. Type: ${move.type}, Player: ${player} (${playerColor})`);
-    // --- >>> END LOG <<< ---
-
-    // This is the CORRECT place for the switch statement
     switch (move.type) {
         case 'place':
             moveResult = placeStone(newGame, move.to.x, move.to.y, player);
-            // --- >>> ADD LOG <<< ---
-            console.log(`  [goLogic] placeStone result: success=${moveResult.success}, error=${moveResult.error}`);
-            // --- >>> END LOG <<< ---
             break;
         case 'move':
+            // **NEW CHAIN CAPTURE VALIDATION**
+            // Check if this move is part of a chain
+            if (newGame.pendingChainCapture) {
+                if (move.from.x !== newGame.pendingChainCapture.x || move.from.y !== newGame.pendingChainCapture.y) {
+                    // This can happen if the user tries to end the chain by passing
+                    // We will just clear the pending capture and let the turn end.
+                    // If they try to move *another* piece, it's an error.
+                    // For simplicity, we'll just check if the move *starts* from the right spot.
+                    return { success: false, error: "Invalid chain capture. Must move from the last landing spot." };
+                }
+                // It's a valid chain move, clear the pending flag *before* the move
+                newGame.pendingChainCapture = null;
+            }
             moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, player);
             break;
         case 'shield':
             moveResult = turnToShield(newGame, move.at.x, move.at.y, player);
             break;
-		case 'pass': // <-- ADD THIS CASE
-            moveResult = { success: true, updatedGame: newGame }; // A pass is a valid move that does nothing
+        case 'pass':
+            // **NEW**: If you pass, you forfeit any pending chain captures
+            newGame.pendingChainCapture = null; 
+            moveResult = { success: true, updatedGame: newGame, isChain: false };
             break;
         case 'resign':
             moveResult = handleResign(newGame, player);
@@ -69,11 +88,6 @@ exports.makeGoMove = function(game, move, playerColor) {
     }
 
     if (moveResult.success) {
-        // --- >>> ADD LOG <<< ---
-        console.log(`  [goLogic] Move success. Toggling turn from ${newGame.isWhiteTurn} to ${!newGame.isWhiteTurn}`);
-        // --- >>> END LOG <<< ---
-        
-        // Note: game state was already updated inside placeStone/movePiece
         const updatedGame = moveResult.updatedGame; 
 
         // Update score
@@ -86,98 +100,120 @@ exports.makeGoMove = function(game, move, playerColor) {
         if (move.type !== 'resign') {
             // Set lastMove
             if (move.type === 'place' || move.type === 'move') {
-                 updatedGame.lastMove = move.to;
+                updatedGame.lastMove = move.to;
             } else if (move.type === 'shield') {
-                 updatedGame.lastMove = move.at;
+                updatedGame.lastMove = move.at;
+            } else {
+                updatedGame.lastMove = null; // Pass has no 'to'
             }
 
             // Update move list *before* toggling turn
             updateMoveList(updatedGame, move); 
-            // Now toggle turn
-            updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
-            updatedGame.turnCount++;
+            
+            // **NEW TURN TOGGLE LOGIC**
+            // Only toggle turn if it's not an ongoing chain capture
+            if (!moveResult.isChain) {
+                updatedGame.isWhiteTurn = !newGame.isWhiteTurn; 
+                updatedGame.turnCount++;
+                // Ensure pending capture is clear if the chain ends
+                updatedGame.pendingChainCapture = null; 
+            }
         }
         
         return { success: true, updatedGame: updatedGame }; // Return the modified game
     }
     
-    // If success was false, just return the result from placeStone/movePiece
+    // If success was false, just return the result
     return moveResult;
 }
 
 function placeStone(game, x, y, player) {
-    // --- >>> ADD LOG <<< ---
-    console.log(`    [goLogic] placeStone: Placing ${player} at ${x},${y}. Current occupant: ${game.boardState[y]?.[x]}`);
-    // --- >>> END LOG <<< ---
-    if (game.boardState[y]?.[x] !== 0) { // Added safety check
-        console.log(`    [goLogic] placeStone failed: Spot occupied.`); // Added log
-        return { success: false, error: "Spot is occupied." };
-    }
-    
-    game.boardState[y][x] = player;
-    
-    // --- >>> ADD LOG <<< ---
-    console.log(`    [goLogic] placeStone: Placed stone. Checking captures/suicide...`);
-    // --- >>> END LOG <<< ---
-    if (!processCapturesAndSuicide(game, x, y, player)) {
-        console.log(`    [goLogic] placeStone failed: Suicide move detected and reverted.`); // Added log
-        return { success: false, error: "Illegal suicide move." };
-    }
-    
-    console.log(`    [goLogic] placeStone success.`); // Added log
-    return { success: true, updatedGame: game };
+    if (game.boardState[y]?.[x] !== 0) { 
+        return { success: false, error: "Spot is occupied." };
+    }
+    
+    // **NEW RULE**: If chain capture is pending, you cannot place a stone.
+    if (game.pendingChainCapture) {
+        return { success: false, error: "Must complete chain capture or pass." };
+    }
+
+    game.boardState[y][x] = player;
+    
+    if (!processCapturesAndSuicide(game, x, y, player)) {
+        return { success: false, error: "Illegal suicide move." };
+    }
+    
+    // A regular 'place' move cannot be a chain
+    return { success: true, updatedGame: game, isChain: false };
 }
 
+/**
+ * **HEAVILY MODIFIED**
+ * This function now handles moves for BOTH Normal and Shield stones.
+ */
 function movePiece(game, fromX, fromY, toX, toY, player) {
     const piece = game.boardState[fromY][fromX];
-    if (piece !== player) {
+    const enemyPlayer = (player === 1) ? 2 : 1;
+    // const enemyShield = (player === 1) ? 4 : 3; // Not needed for capture
+    
+    // Check if it's the player's piece (normal or shield)
+    if (piece !== player && piece !== (player + 2)) {
         return { success: false, error: "Not your piece." };
     }
 
-    const enemyPlayer = (player === 1) ? 2 : 1;
     const destState = game.boardState[toY][toX];
     
     const dx = Math.abs(toX - fromX);
     const dy = Math.abs(toY - fromY);
 
     let jumpedPiece = null;
-    let jumpedPieceState = 0;
+    let moveType = null; // 'jump' or 'move'
 
-    // Check for valid move type
-    // --- THIS IS THE FIX ---
-    // Allow 1-square orthogonal (dx+dy === 1) OR 1-square diagonal (dx===1 && dy===1)
-    if ((dx + dy === 1 || (dx === 1 && dy === 1)) && destState === 0) {
-        // Simple 1-square move (ortho or diag)
-    } 
-    // --- END FIX ---
-    else if (((dx === 2 && dy === 0) || (dx === 0 && dy === 2)) && destState === 0) {
-        // 2-square jump
-        const midX = fromX + (toX - fromX) / 2;
-        const midY = fromY + (toY - fromY) / 2;
-        jumpedPieceState = game.boardState[midY][midX];
+    // --- LOGIC FOR NORMAL STONE ---
+    if (piece === player) {
+        // Orthogonal jump check (2 squares)
+        if (((dx === 2 && dy === 0) || (dx === 0 && dy === 2)) && destState === 0) {
+            const midX = fromX + (toX - fromX) / 2;
+            const midY = fromY + (toY - fromY) / 2;
+            const jumpedPieceState = game.boardState[midY][midX];
 
-        if (jumpedPieceState === enemyPlayer) {
-            jumpedPiece = { x: midX, y: midY, state: jumpedPieceState };
+            // Can only jump enemy NORMAL stones
+            if (jumpedPieceState === enemyPlayer) {
+                jumpedPiece = { x: midX, y: midY, state: jumpedPieceState };
+                moveType = 'jump';
+            } else {
+                return { success: false, error: "Invalid jump. Can only jump enemy normal stones." };
+            }
         } else {
-            return { success: false, error: "Invalid jump." };
+            // **NEW RULE**: Normal stones cannot move, only capture.
+            return { success: false, error: "Invalid move. Normal stones can only move by capturing." };
         }
-    } else {
-        return { success: false, error: "Invalid move." };
+    } 
+    // --- LOGIC FOR SHIELD STONE ---
+    else if (piece === player + 2) {
+        // **NEW RULE**: Shields can move 1 square (ortho or diag) but not capture.
+        if ((dx + dy === 1 || (dx === 1 && dy === 1)) && destState === 0) {
+            // Valid 1-square move to an empty spot
+            moveType = 'move';
+        } else {
+            return { success: false, error: "Invalid move. Shields can only move 1 square to an empty space." };
+        }
     }
     
-    // Make the move
+    // --- EXECUTE THE MOVE ---
     game.boardState[fromY][fromX] = 0;
     if (jumpedPiece) {
         game.boardState[jumpedPiece.y][jumpedPiece.x] = 0;
         if (jumpedPiece.state === 1) game.blackPiecesLost++;
         if (jumpedPiece.state === 2) game.whitePiecesLost++;
     }
-    game.boardState[toY][toX] = player;
+    // Move the original piece (Normal or Shield)
+    game.boardState[toY][toX] = piece; 
 
     // Check for Go-captures and suicide
     if (!processCapturesAndSuicide(game, toX, toY, player)) {
         // Illegal suicide move, revert!
-        game.boardState[fromY][fromX] = player;
+        game.boardState[fromY][fromX] = piece; // Put original piece back
         game.boardState[toY][toX] = 0; // It was an empty spot
         if (jumpedPiece) {
             game.boardState[jumpedPiece.y][jumpedPiece.x] = jumpedPiece.state;
@@ -186,13 +222,33 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
         }
         return { success: false, error: "Illegal suicide move." };
     }
+
+    // --- **NEW CHAIN CAPTURE CHECK** ---
+    let isChain = false;
+    // Only check for chains if this move was a jump
+    if (moveType === 'jump') {
+        // Check for new *orthogonal* jumps from the *landing spot*
+        const allNewMoves = getValidMovesForGoPiece(toX, toY, game.boardState, piece);
+        const availableChainJumps = allNewMoves.filter(m => m.type === 'jump');
+        
+        if (availableChainJumps.length > 0) {
+            // **Mark the game as pending a chain capture**
+            game.pendingChainCapture = { x: toX, y: toY };
+            isChain = true; // Signal to makeGoMove NOT to toggle the turn
+        }
+    }
     
-    return { success: true, updatedGame: game };
+    return { success: true, updatedGame: game, isChain: isChain };
 }
 
 function turnToShield(game, x, y, player) {
     if (game.boardState[y][x] !== player) {
         return { success: false, error: "Not your piece." };
+    }
+
+    // **NEW RULE**: If chain capture is pending, you cannot turn to shield.
+    if (game.pendingChainCapture) {
+        return { success: false, error: "Must complete chain capture or pass." };
     }
     
     game.boardState[y][x] = (player === 1) ? 3 : 4; // 3: Black Shield, 4: White Shield
@@ -200,7 +256,7 @@ function turnToShield(game, x, y, player) {
     // Shielding can cause captures
     processCaptures(game, x, y, player);
 
-    return { success: true, updatedGame: game };
+    return { success: true, updatedGame: game, isChain: false };
 }
 
 function handleResign(game, player) {
@@ -212,20 +268,20 @@ function handleResign(game, player) {
 
 
 // --- GO LOGIC (LIBERTIES, CAPTURES, SCORING) ---
+// (These functions are unchanged)
 
-function getNeighbors(x, y, boardState) { // Pass in boardState
-    const neighbors = [];
-    // Pass boardState to isValid
-    if (isValid(x, y - 1, boardState)) neighbors.push({ x: x, y: y - 1 }); 
-    if (isValid(x, y + 1, boardState)) neighbors.push({ x: x, y: y + 1 }); 
-    if (isValid(x - 1, y, boardState)) neighbors.push({ x: x - 1, y: y }); 
-    if (isValid(x + 1, y, boardState)) neighbors.push({ x: x + 1, y: y }); 
-    return neighbors;
+function getNeighbors(x, y, boardState) {
+    const neighbors = [];
+    if (isValid(x, y - 1, boardState)) neighbors.push({ x: x, y: y - 1 }); 
+    if (isValid(x, y + 1, boardState)) neighbors.push({ x: x, y: y + 1 }); 
+    if (isValid(x - 1, y, boardState)) neighbors.push({ x: x - 1, y: y }); 
+    if (isValid(x + 1, y, boardState)) neighbors.push({ x: x + 1, y: y }); 
+    return neighbors;
 }
 
-function isValid(x, y, boardState) { // Pass in boardState
-    const boardSize = boardState.length; // Get size from the board itself
-    return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
+function isValid(x, y, boardState) {
+    const boardSize = boardState.length;
+    return x >= 0 && x < boardSize && y >= 0 && y < boardSize;
 }
 
 function findGroup(boardState, startX, startY) {
@@ -262,9 +318,6 @@ function findGroup(boardState, startX, startY) {
     return { stones, liberties };
 }
 
-/**
- * Checks and processes only enemy captures. Used by turnToShield.
- */
 function processCaptures(game, x, y, player) {
     const isBlackTeam = (player === 1 || player === 3);
     const neighbors = getNeighbors(x, y, game.boardState);
@@ -287,12 +340,8 @@ function processCaptures(game, x, y, player) {
     }
 }
 
-/**
- * Checks for enemy captures AND self-suicide.
- * Returns false if move is illegal suicide.
- */
 function processCapturesAndSuicide(game, x, y, player) {
-    const isBlackTeam = (player === 1);
+    const isBlackTeam = (player === 1 || player === 3); // Check based on *acting* player's team
     let capturedStones = false;
 
     // 1. Check adjacent *enemy* groups for capture
@@ -319,60 +368,63 @@ function processCapturesAndSuicide(game, x, y, player) {
     const myGroup = findGroup(game.boardState, x, y);
     if (myGroup && myGroup.liberties.size === 0 && !capturedStones) {
         // Suicide! Undo the move.
-        game.boardState[y][x] = 0; 
+        // Note: The revert logic is now in movePiece, this just signals failure
         return false; // Illegal move
     }
     return true; // Legal move
 }
 
 /**
- * Gets valid moves for a standard (non-shield) Go piece.
+ * **HEAVILY MODIFIED**
+ * Gets valid moves for a *specific piece* (Normal or Shield).
  */
-	function getValidMovesForGoPiece(x, y, boardState, player) {
-		const validMoves = [];
-		const enemyPlayer = (player === 1) ? 2 : 1;
-		const boardSize = boardState.length; // Get board size
+function getValidMovesForGoPiece(x, y, boardState, piece) {
+    const validMoves = [];
+    const player = (piece === 1 || piece === 3) ? 1 : 2; // Get player's base color
+    const enemyPlayer = (player === 1) ? 2 : 1;
+    const boardSize = boardState.length;
 
-		// 1. Check simple 1-square moves (Orthogonal AND Diagonal)
-		const potentialMoves = [
-			{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, // Orthogonal
-			{ dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }  // Diagonal (NEW)
-		];
+    // --- LOGIC FOR NORMAL STONE (Captures Only) ---
+    if (piece === player) {
+        const jumps = [
+            { dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
+        ];
 
-		for (const moveOffset of potentialMoves) {
-			const moveX = x + moveOffset.dx;
-			const moveY = y + moveOffset.dy;
+        for (const jump of jumps) {
+            const landX = x + jump.dx;
+            const landY = y + jump.dy;
+            const midX = x + jump.dx / 2;
+            const midY = y + jump.dy / 2;
 
-			// Check if the move is within bounds
-			if (isValid(moveX, moveY, boardState)) {
-				// Check if the destination square is empty
-				if (boardState[moveY][moveX] === 0) {
-					validMoves.push({ x: moveX, y: moveY, type: 'move' });
-				}
-			}
-		}
+            if (isValid(landX, landY, boardState) && boardState[landY][landX] === 0) {
+                // Check if the middle square contains an enemy NORMAL stone
+                if (isValid(midX, midY, boardState) && boardState[midY][midX] === enemyPlayer) {
+                    validMoves.push({ x: landX, y: landY, type: 'jump' });
+                }
+            }
+        }
+    } 
+    // --- LOGIC FOR SHIELD STONE (Moves Only) ---
+    else if (piece === player + 2) {
+        const potentialMoves = [
+            { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, // Orthogonal
+            { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }  // Diagonal
+        ];
 
-		// 2. Check 2-square orthogonal jump captures (No change here)
-		const jumps = [
-			{ dx: 0, dy: -2 }, { dx: 0, dy: 2 }, { dx: -2, dy: 0 }, { dx: 2, dy: 0 }
-		];
+        for (const moveOffset of potentialMoves) {
+            const moveX = x + moveOffset.dx;
+            const moveY = y + moveOffset.dy;
 
-		for (const jump of jumps) {
-			const landX = x + jump.dx;
-			const landY = y + jump.dy;
-			const midX = x + jump.dx / 2;
-			const midY = y + jump.dy / 2;
+            // Check if the move is within bounds and the destination is empty
+            if (isValid(moveX, moveY, boardState) && boardState[moveY][moveX] === 0) {
+                validMoves.push({ x: moveX, y: moveY, type: 'move' });
+            }
+        }
+    }
+    
+    return validMoves;
+}
 
-			if (isValid(landX, landY, boardState) && boardState[landY][landX] === 0) {
-				// Check if the middle square is valid and contains an enemy piece
-				if (isValid(midX, midY, boardState) && boardState[midY][midX] === enemyPlayer) {
-					validMoves.push({ x: landX, y: landY, type: 'jump' });
-				}
-			}
-		}
-
-		return validMoves;
-	}
 
 /**
  * Runs a flood-fill (BFS) on all empty spots to find territory
@@ -381,7 +433,7 @@ function calculateTerritory(boardState) {
     let blackTerritory = 0;
     let whiteTerritory = 0;
     const visited = new Set();
-	const BOARD_SIZE = boardState.length;
+    const BOARD_SIZE = boardState.length;
 
     for (let y = 0; y < BOARD_SIZE; y++) {
         for (let x = 0; x < BOARD_SIZE; x++) {
@@ -431,7 +483,7 @@ function calculateTerritory(boardState) {
 function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
     let blackStones = 0;
     let whiteStones = 0;
-	const BOARD_SIZE = boardState.length;
+    const BOARD_SIZE = boardState.length;
 
     for (let y = 0; y < BOARD_SIZE; y++) {
         for (let x = 0; x < BOARD_SIZE; x++) {
@@ -460,10 +512,13 @@ function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
  * Generates a simple notation for the move list.
  */
 function updateMoveList(game, move) {
+    // This logic needs to account for pendingChainCapture
+    // If a chain is pending, the turn *hasn't* incremented yet.
+    
+    // Find the turn number based on the *actual* turn count, not just isWhiteTurn
     const turnNum = Math.floor(game.turnCount / 2) + 1;
     let notationString = "";
 
-    // This switch's job is ONLY to create the notation string
     switch (move.type) {
         case 'place':
             notationString = `P@${move.to.x},${move.to.y}`;
@@ -474,27 +529,44 @@ function updateMoveList(game, move) {
         case 'shield':
             notationString = `S@${move.at.x},${move.at.y}`;
             break;
-		case 'pass': // <-- ADD THIS
+        case 'pass': 
             notationString = `Pass`;
             break;
         case 'resign':
             notationString = `Resign`;
             break;
         default:
-             notationString = `Unknown`;
+            notationString = `Unknown`;
     }
-
-    // game.isWhiteTurn is the turn *before* it gets toggled
+    
+    // **NEW CHAIN CAPTURE NOTATION**
+    // Check if the *previous* state was a pending chain
+    // We can infer this if isChain is true in the moveResult, but we don't have that here.
+    // Let's check game.isWhiteTurn.
+    
     if (game.isWhiteTurn) {
-        // This is White's move, so start a new line
-        game.moveList.push(`${turnNum}. ${notationString}`);
-    } else {
-        // This is Black's move, so append to the last line
-        if (game.moveList.length > 0) {
-            game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+        // This is White's move.
+        // Is it a *new* move or a chain?
+        if (game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
         } else {
-            // Should not happen if white moves first, but good to have
-            game.moveList.push(`${turnNum}... ${notationString}`);
+             // Start a new line for White's turn
+            game.moveList.push(`${turnNum}. ${notationString}`);
+        }
+    } else {
+        // This is Black's move.
+        // Is it a *new* move or a chain?
+        if (game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
+             // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+        } else {
+            // Append Black's first move to the line
+            if (game.moveList.length > 0) {
+                game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+            } else {
+                game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
+            }
         }
     }
 }
