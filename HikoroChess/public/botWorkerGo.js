@@ -274,14 +274,10 @@ function getAllPossibleMoves(gameState) {
 
             if (piece === 0) {
                 // --- A. Place Moves ---
-                // Try placing a stone here
-                const move = { type: 'place', to: { x, y } };
-                // Pre-validate the move to avoid illegal suicides in simulation
-                const testState = JSON.parse(JSON.stringify(state));
-                const result = goGameLogic.makeGoMove(testState, move, player === 2 ? 'white' : 'black');
-                if (result.success) {
-                    moves.push(move);
-                }
+                // Add placing a stone on any empty square as a possible move.
+                // The simulation/expansion phase will handle validation (e.g., suicide).
+                moves.push({ type: 'place', to: { x, y } });
+
             } else if (piece === player) {
                 // --- B. Normal Stone Moves (Shield or Jump) ---
                 
