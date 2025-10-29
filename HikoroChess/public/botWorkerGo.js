@@ -78,17 +78,30 @@ class Node {
         }
 
         // Pop a move to try
-        const move = moves.pop();
+        const move = moves.pop(); // Take one move off the list
         const playerColor = this.state.isWhiteTurn ? 'white' : 'black';
 
         // Simulate the move using the imported game logic
-        const result = goGameLogic.makeGoMove(this.state, move, playerColor);
+        // Use a DEEP COPY of the state for simulation
+        const stateCopy = typeof structuredClone === 'function' 
+            ? structuredClone(this.state) 
+            : JSON.parse(JSON.stringify(this.state));
+
+        const result = goGameLogic.makeGoMove(stateCopy, move, playerColor);
 
         if (!result.success) {
-            // This move was illegal (e.g., suicide), try expanding again
-            return this.expand();
+            // This move was illegal (e.g., suicide).
+            // Log it (optional)
+            // console.warn(`MCTS Expand: Illegal move discarded: ${JSON.stringify(move)}, Error: ${result.error}`);
+
+            // Instead of recursing infinitely, just try expanding again on the *next* call.
+            // The current call effectively discards this illegal move.
+            // We return null for this specific attempt, but the untriedMoves list
+            // for the parent node now has one fewer move. The MCTS loop will continue.
+            return null; 
         }
 
+        // Move was successful, create the child node
         const newState = result.updatedGame;
         const childNode = new Node(newState, this, move);
         this.children.push(childNode);
