@@ -309,8 +309,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (gameState.gameOver || isReplayMode) return;
             
             // Client-side turn check for responsiveness
-            const isMyTurn = (isSinglePlayer) || 
-                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+			const isMyTurn = 
+			                // 1. Is it pass-and-play? (Allow always)
+			                (isSinglePlayer && !isBotGame) || 
+			                // 2. Is it a bot game AND white's (human's) turn?
+			                (isSinglePlayer && isBotGame && gameState.isWhiteTurn) ||
+			                // 3. Is it multiplayer AND my turn?
+			                (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
             
             if (isMyTurn) {
                 console.log("Emitting pass move");
@@ -1594,14 +1599,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Client-side Turn Check ---
             // Prevent actions if it's not the client's turn in multiplayer
             if (!isSinglePlayer && player !== myPlayerColorValue) {
-                console.log("CLIENT BLOCKED: Not your turn (Go).");
-                // If opponent clicks while *you* have something selected, deselect it.
-                if (goSelectedPiece) {
-                    deselectGoPiece();
-                }
-                return;
-            }
+                console.log("CLIENT BLOCKED: Not your turn (Go Multiplayer).");
+                if (goSelectedPiece) {
+                    deselectGoPiece();
+                }
+                return;
+            }
 
+            // 2. Bot Game check (THIS IS THE FIX)
+            // If it's a bot game AND it's black's turn (the bot's turn)
+            if (isBotGame && !gameState.isWhiteTurn) {
+                console.log("CLIENT BLOCKED: Bot is thinking.");
+                return; // Just ignore the click
+            }
             // --- Main Click Logic ---
 
             if (goSelectedPiece) {
@@ -1684,9 +1694,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- CHECK IF ALLOWED TO MOVE ---
         if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("Not your turn to shield (Go).");
-             return; // Not your turn in multiplayer
-        }
+             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
+             return; // Not your turn in multiplayer
+        }
+        if (isBotGame && !gameState.isWhiteTurn) {
+            console.log("CLIENT BLOCKED: Bot is thinking (shield dblclick).");
+            return; // Bot's turn
+        }
 
         // --- THIS IS THE FIX ---
         // 1. Check if a chain capture is pending (blocks shielding)
@@ -1721,8 +1735,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if it's the player's turn before emitting (for multiplayer responsiveness)
         if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("Not your turn to shield.");
+             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
              return;
+        }
+        if (isBotGame && !gameState.isWhiteTurn) {
+            console.log("CLIENT BLOCKED: Bot is thinking (shield button).");
+            return; // Bot's turn
         }
 
         // --- CHAIN CAPTURE CHECK ---
