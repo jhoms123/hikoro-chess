@@ -647,5 +647,6 @@ function updateMoveList(game, move) {
     }
 }
 
-
+exports.calculateScore = calculateScore;
 })(typeof module === 'undefined' ? (this.goGameLogic = {}) : module.exports);
+
