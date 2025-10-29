@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     let botWorker = null;
+	let botWorkerGo = null;
     try {
         botWorker = new Worker('botWorker.js');
         console.log("Bot Worker created successfully.");
@@ -62,6 +63,31 @@ document.addEventListener('DOMContentLoaded', () => {
         botWorker.onerror = function(error) {
             console.error("Error in Bot Worker:", error.message, error);
 
+        };
+		
+		botWorkerGo = new Worker('botWorkerGo.js');
+        console.log("Bot Worker (Go) created successfully.");
+
+        botWorkerGo.onmessage = function(e) {
+            const bestMove = e.data;
+            console.log("Received best move from Go worker:", bestMove);
+
+            if (bestMove) {
+                // Go bot is simpler, just emit the move
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: bestMove 
+                });
+            } else if (e.data && e.data.error) {
+                 console.error("Go Bot Worker failed to load:", e.data.error);
+                 alert("Go Bot failed to load. Please check console.");
+            } else {
+                console.error("Go Bot worker returned no move.");
+            }
+        };
+
+        botWorkerGo.onerror = function(error) {
+            console.error("Error in Go Bot Worker:", error.message, error);
         };
 
     } catch (e) {
@@ -158,8 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const gameType = gameTypeSelect.value;
         if (gameType === 'go') {
             goBoardSizeWrapper.style.display = 'block'; // Show size selector
-            playBotBtn.disabled = true;
-            playBotBtn.title = "Bot is not available for Go Variant";
+            playBotBtn.disabled = false; // <-- SET TO false
+            playBotBtn.title = "Play Against Bot"; // <-- UPDATE TITLE
             startReplayBtn.disabled = true;
             startReplayBtn.title = "Replay is not available for Go Variant";
             kifuPasteArea.disabled = true;
@@ -611,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show pass button if it's a Go game and not over
             goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
 
-if (gameState.pendingChainCapture) {
+				if (gameState.pendingChainCapture) {
                 console.log("Chain capture pending! Re-selecting piece.");
                 // Automatically select the piece at its new landing spot
                 // This will trigger getValidMoves, which will now only return new jumps
@@ -640,20 +666,32 @@ if (gameState.pendingChainCapture) {
         if (isBotGame && gameState.gameType === 'hikoro' && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
             console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
 
-            const capturedPiecesForBot = gameState.blackCaptured;
-            currentTurnHadBonusState = !!botBonusState;
+				const capturedPiecesForBot = gameState.blackCaptured;
+				currentTurnHadBonusState = !!botBonusState;
 
-             const safeGameState = JSON.parse(JSON.stringify(gameState));
-             const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
-             const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
+				 const safeGameState = JSON.parse(JSON.stringify(gameState));
+				 const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
+				 const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
 
-            console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
+				console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
 
-            botWorker.postMessage({
-                gameState: safeGameState,
-                capturedPieces: safeCapturedPieces,
-                bonusMoveState: safeBonusState
+				botWorker.postMessage({
+					gameState: safeGameState,
+					capturedPieces: safeCapturedPieces,
+					bonusMoveState: safeBonusState
             });
+			
+			} else if (isBotGame && gameState.gameType === 'go' && !gameState.gameOver && !gameState.isWhiteTurn && botWorkerGo) {
+            console.log("Go Bot's turn. Sending state to worker.");
+            
+            // The bot only needs the game state.
+            // We must clone it to avoid transferring an un-clonable object.
+            const safeGameState = JSON.parse(JSON.stringify(gameState));
+            
+            botWorkerGo.postMessage({
+                gameState: safeGameState
+            });
+        // --- END OF NEW BLOCK ---
 
         } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
             console.error("Bot's turn, but worker is not available!");
