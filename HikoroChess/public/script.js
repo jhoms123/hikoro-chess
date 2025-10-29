@@ -576,13 +576,14 @@ document.addEventListener('DOMContentLoaded', () => {
         isSinglePlayer = initialGameState.isSinglePlayer;
 
         if (isSinglePlayer) {
-            myColor = 'white'; // Default view for single player
-            // isBotGame is set by the button click, check gameType later if needed
-            isBotGame = initialGameState.isBotGame || false; // Ensure it's defined
-        } else {
-            isBotGame = false;
-            if (!myColor) myColor = 'black'; // Assume joined as black if not creator
-        }
+            myColor = 'white'; // Default view for single player
+            // The 'isBotGame' flag is ALREADY set correctly by the
+            // playBotBtn or singlePlayerBtn click listener.
+            // We DO NOT overwrite it here.
+        } else {
+            isBotGame = false; // This is correct (multiplayer is not a bot game)
+            if (!myColor) myColor = 'black'; // Assume joined as black if not creator
+        }
 
         // --- FIX FOR SCORE WARNING ---
         // Ensure the score object exists for Go games before rendering
