@@ -241,16 +241,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playBotBtn.addEventListener('click', () => {
-        const gameType = gameTypeSelect.value; // NEW
-        if (gameType === 'go') { // NEW check
-            alert("Bot is not yet available for Go Variant.");
-            return;
-        }
+        const gameType = gameTypeSelect.value; 
+    
+        // The "if (gameType === 'go')" block that showed the alert is now removed.
+    
         isSinglePlayer = true;
-        isBotGame = true;
+        isBotGame = true; // This client-side flag is crucial
         botBonusState = null;
-        socket.emit('createSinglePlayerGame', { gameType }); // NEW
-    });
+    
+        // We must also send the board size, just like the 'singlePlayerBtn' does
+        const goBoardSizeSelect = document.getElementById('go-board-size-select');
+        const boardSize = parseInt(goBoardSizeSelect.value, 10);
+        
+        const dataToSend = { gameType };
+        if (gameType === 'go') {
+            dataToSend.boardSize = boardSize;
+        }
+
+        socket.emit('createSinglePlayerGame', dataToSend); // Send the correct data
+    });
 
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
