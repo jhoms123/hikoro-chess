@@ -1,3 +1,5 @@
+//gogamelogic
+
 (function(exports) {
 
 /**
