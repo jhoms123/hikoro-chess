@@ -2730,48 +2730,49 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     function populateGoRules() {
-        rulesBody.innerHTML = `
-            <h2>Go Variant Rules</h2>
-            <p>This is a fast-paced Go variant combining elements of Go and Chess.</p>
+        rulesBody.innerHTML = `
+            <h2>Go Variant Rules</h2>
+            <p>This is a fast-paced Go variant combining elements of Go and Chess.</p>
 
-            <h3>Objective</h3>
-            <p>The goal is to have a higher score than your opponent. Your score is the sum of:</p>
-            <ul>
-                <li><strong>Territory:</strong> Empty intersections you have surrounded.</li>
-                <li><strong>Stones:</strong> The number of your stones on the board.</li>
-                <li><strong>(Penalty):</strong> You lose 1 point for every stone you've had captured (either by a jump or a Go capture).</li>
-            </ul>
+            <h3>Objective</h3>
+            <p>The goal is to have a higher score than your opponent. Your score is the sum of:</p>
+            <ul>
+                <li><strong>Territory:</strong> Empty intersections you have surrounded.</li>
+                <li><strong>Stones:</strong> The number of your stones on the board.</li>
+                <li><strong>(Penalty):</strong> You lose 1 point for every stone you've had captured (either by a jump or a Go capture).</li>
+            </ul>
 
-            <h3>Gameplay</h3>
-            <p>On your turn, you can choose one of four actions:</p>
-            
-            <h4>1. Place a Stone (Default Click)</h4>
-            <p>Click on any empty intersection to place one of your stones. This is the most common move.</p>
+            <h3>Gameplay</h3>
+            <p>On your turn, you can choose one of four actions:</p>
+            
+            <h4>1. Place a Stone (Default Click)</h4>
+            <p>Click on any empty intersection to place one of your stones. This is the most common move.</p>
 
-            <h4>2. Move a Stone (Click to Select, Click to Move)</h4>
-            <p>Click one of your existing stones (not a Shield) to select it. Click a valid empty square to move it. Valid moves are:</p>
-            <ul>
-                <li>One square in any orthogonal direction (up, down, left, right).</li>
-                <li>A two-square jump over an <strong>enemy</strong> stone, capturing it (like in Checkers). This is only allowed if the landing spot is empty.</li>
-            </ul>
+            <h4>2. Move a Stone (Click to Select, Click to Move)</h4>
+            <p>Click one of your existing stones to select it. Click a valid empty square to move it. Valid moves depend on the piece type:</p>
+            <ul>
+                <li><strong>Normal Stone:</strong> Can only move by making a <strong>Jump Capture</strong>. A jump is a two-square orthogonal move over a single <strong>enemy</strong> stone, landing on an empty space (like in Checkers).</li>
+                <li><strong>Shield Stone:</strong> Can move one square <strong>orthogonally</strong> (up, down, left, or right) to an empty space. It cannot capture.</li>
+            </ul>
 
-            <h4>3. Turn to Shield (Double-Click or Select + Button)</h4>
-            <p>Double-click one of your stones (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot move, be captured thorugh jumb capture, or be used to capture, but it counts for territory and score. It acts as a wall.</p>
+            <h4>3. Turn to Shield (Double-Click or Select + Button)</h4>
+            <p>Double-click one of your <strong>normal stones</strong> (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot be captured by a jump, but it can be captured by the Go Capture rule. It counts for territory and score.</p>
 
-            <h4>4. Resign</h4>
-            <p>You can go to the Main Menu and leave the game to resign.</p>
+            <h4>4. Pass Turn</h4>
+            <p>You can click the 'Pass Turn' button. This is required if you are in a chain capture and do not wish to continue jumping.</p>
 
-            <h3>Capture Rules</h3>
-            <p>There are two ways to capture stones:</p>
-            <ol>
-                <li><strong>Jump Capture (via Move):</strong> As described above, jumping over a single enemy stone captures it.</li>
-                <li><strong>Go Capture (via Placement or Move):</strong> If any of your moves (placing or moving) results in an enemy group having no "liberties" (empty adjacent spaces), that entire group is captured and removed from the board.</li>
-            </ol>
+            <h3>Capture Rules</h3>
+            <p>There are two ways to capture stones:</p>
+            <ol>
+                <li><strong>Jump Capture (via Move):</strong> As described above, jumping over a single enemy stone captures it. You can chain multiple jumps together in one turn.</li>
+                <li><strong>Go Capture (via Placement or Move):</strong> If any of your moves (placing or moving) results in an enemy group having no "liberties" (empty adjacent spaces), that entire group is captured and removed from the board.</li>
+            </ol>
 
-            <h3><span style="color: #FF5722;">⚠️</span> Suicide Rule</h3>
-            <p>You cannot make a move (place or move a stone) that results in your own group having zero liberties, <em>unless</em> that move also captures an enemy group at the same time.</p>
-        `;
-    }
+            <h3><span style="color: #FF5722;">⚠️</span> Special Rules</h3>
+            <p><strong>Suicide Rule:</strong> You cannot make a move (place or move a stone) that results in your own group having zero liberties, <em>unless</em> that move also captures an enemy group at the same time.</p>
+            <p><strong>Ko Rule:</strong> You cannot make a move that would return the board to the <strong>exact state</strong> it was in just before your opponent's last move. This prevents infinite loops.</p>
+        `;
+    }
 	
 	
 	function populateRulesModal() {
