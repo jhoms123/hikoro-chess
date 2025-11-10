@@ -2739,7 +2739,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <ul>
                 <li><strong>Territory:</strong> Empty intersections you have surrounded.</li>
                 <li><strong>Stones:</strong> The number of your stones on the board.</li>
-                <li><strong>(Penalty):</strong> You lose 1 point for every stone you've had captured (either by a jump or a Go capture).</li>
             </ul>
 
             <h3>Gameplay</h3>
