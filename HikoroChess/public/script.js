@@ -814,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHikoroBoard() {
         hikoroBoardElement.innerHTML = ''; // Clear previous board state
         // Use global gameState which is updated by updateLocalState or displayReplayState
-        if (!gameState || !gameState.boardState) {
+        if (!gameState || !Array.isArray(gameState.boardState) || gameState.boardState.length === 0) {
             console.error("renderHikoroBoard: gameState or boardState is missing!");
             return;
         }
