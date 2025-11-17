@@ -8,6 +8,29 @@ exports.getInitialGoBoard = function(boardSize = 19) { // Accept boardSize as an
     return Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
 }
 
+// --- NEW HELPER FUNCTION for Ko Rule ---
+/**
+ * Compares two board states for equality.
+ * @param {Array} boardA The first board state.
+ * @param {Array} boardB The second board state.
+ * @returns {boolean} True if the boards are identical, false otherwise.
+ */
+function isBoardStateEqual(boardA, boardB) {
+    if (!boardA || !boardB) return false; // Not equal if one is missing
+    if (boardA.length !== boardB.length) return false; // Different sizes
+    
+    const boardSize = boardA.length;
+    for (let y = 0; y < boardSize; y++) {
+        if (!boardA[y] || !boardB[y] || boardA[y].length !== boardB[y].length) return false; // Row length mismatch
+        for (let x = 0; x < boardSize; x++) {
+            if (boardA[y][x] !== boardB[y][x]) {
+                return false; // Found a difference
+            }
+        }
+    }
+    return true; // No differences found
+}
+// --- END HELPER FUNCTION ---
 
 
 exports.getValidMoves = function(game, data) {
@@ -45,7 +68,7 @@ exports.getValidMoves = function(game, data) {
  * Public-facing function for the server to make a move.
  * move: { type: 'place', to: {x,y} }
  * | { type: 'move', from: {x,y}, to: {x,y} }
- * | { type: 'shieldStop', at: {x,y} } // <-- RENAMED
+ * | { type: 'shield', at: {x,y} }
  * | { type: 'pass' }
  * | { type: 'resign' }
  */
@@ -55,9 +78,13 @@ exports.makeGoMove = function(game, move, playerColor) {
         return { success: false, error: "Invalid game or move object." };
     }
 
+    // --- MODIFIED: Store the state *before* the move for Ko rule ---
+    // This is the state we will save as the new 'previousBoardState' if the move is legal
+    const boardStateBeforeMove = JSON.parse(JSON.stringify(game.boardState));
+    
+    // Create a deep copy of the game to modify.
     const newGame = JSON.parse(JSON.stringify(game));
 
-    // ✅✅✅ THIS IS THE CRITICAL PART ✅✅✅
     // Determine the player whose turn it ACTUALLY IS from the game state.
     const activePlayer = (newGame.isWhiteTurn ? 2 : 1); // 2 for White, 1 for Black
     // Determine the player making the request (only needed for resign)
@@ -84,9 +111,9 @@ exports.makeGoMove = function(game, move, playerColor) {
             // Use activePlayer
             moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, activePlayer);
             break;
-        case 'shieldStop': // <-- RENAMED
+        case 'shield':
             // Use activePlayer
-            moveResult = turnToShieldStop(newGame, move.at.x, move.at.y, activePlayer); // <-- RENAMED
+            moveResult = turnToShield(newGame, move.at.x, move.at.y, activePlayer);
             break;
         case 'pass':
             newGame.pendingChainCapture = null;
@@ -97,17 +124,29 @@ exports.makeGoMove = function(game, move, playerColor) {
             moveResult = handleResign(newGame, requestingPlayer);
             break;
         default:
-             moveResult = { success: false, error: "Unknown move type." };
+            moveResult = { success: false, error: "Unknown move type." };
     }
 
     // --- Process the result ---
     if (moveResult.success) {
         const updatedGame = moveResult.updatedGame;
 
+        // --- NEW KO RULE CHECK ---
+        // Check if the *resulting* board state is identical to the *original* game's previous state
+        // This check is skipped for 'pass' and 'resign' moves
+        if (move.type === 'place' || move.type === 'move' || move.type === 'shield') {
+            if (isBoardStateEqual(updatedGame.boardState, game.previousBoardState)) {
+                 // --- Add this console log for debugging failures ---
+                console.error(`[makeGoMove] Failed: Illegal move (Ko rule).`);
+                return { success: false, error: "Illegal move (Ko rule)." };
+            }
+        }
+        // --- END KO RULE CHECK ---
+
         // Ensure score object exists before calculation
-         if (!updatedGame.score) {
+        if (!updatedGame.score) {
             updatedGame.score = { black: 0, white: 0, details: { black: {}, white: {} } };
-         }
+        }
         updatedGame.score = calculateScore(
             updatedGame.boardState,
             updatedGame.blackPiecesLost || 0, // Default to 0 if undefined
@@ -118,7 +157,7 @@ exports.makeGoMove = function(game, move, playerColor) {
             // Set lastMove
             if (move.type === 'place' || move.type === 'move') {
                 updatedGame.lastMove = move.to;
-            } else if (move.type === 'shieldStop') { // <-- RENAMED
+            } else if (move.type === 'shield') {
                 updatedGame.lastMove = move.at;
             } else {
                 updatedGame.lastMove = null; // Pass has no 'to'
@@ -129,6 +168,10 @@ exports.makeGoMove = function(game, move, playerColor) {
                 updatedGame.moveList = [];
             }
             updateMoveList(updatedGame, move);
+
+            // --- NEW: Store the state *before* this move as the new 'previous' state ---
+            updatedGame.previousBoardState = boardStateBeforeMove;
+            // --- END NEW ---
 
             // Toggle turn only if it's not a continuing chain capture
             if (!moveResult.isChain) {
@@ -154,12 +197,14 @@ function placeStone(game, x, y, player) {
     
     // **NEW RULE**: If chain capture is pending, you cannot place a stone.
     if (game.pendingChainCapture) {
-        return { success: false, error: "Must complete chain capture or stop." }; // <-- MODIFIED
+        return { success: false, error: "Must complete chain capture or pass." };
     }
 
     game.boardState[y][x] = player;
     
     if (!processCapturesAndSuicide(game, x, y, player)) {
+        // Illegal suicide move, revert!
+        game.boardState[y][x] = 0; // Revert
         return { success: false, error: "Illegal suicide move." };
     }
     
@@ -211,96 +256,80 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
     // --- LOGIC FOR SHIELD STONE ---
     else if (piece === player + 2) {
         // **NEW RULE**: Shields can move 1 square (ortho or diag) but not capture.
-        if ((dx + dy === 1 || (dx === 1 && dy === 1)) && destState === 0) {
-            // Valid 1-square move to an empty spot
+        // --- MODIFIED: Orthogonal only ---
+        if ((dx + dy === 1) && destState === 0) { 
+            // Valid 1-square orthogonal move to an empty spot
             moveType = 'move';
         } else {
-            return { success: false, error: "Invalid move. Shields can only move 1 square to an empty space." };
+            // --- MODIFIED: Updated error message ---
+            return { success: false, error: "Invalid move. Shields can only move 1 square orthogonally to an empty space." };
         }
     }
     
     // --- EXECUTE THE MOVE ---
+    // Store original state in case of suicide revert
+    const originalFromState = game.boardState[fromY][fromX];
+    const originalToState = game.boardState[toY][toX];
+    let originalJumpedState = 0;
+
     game.boardState[fromY][fromX] = 0;
     if (jumpedPiece) {
+        originalJumpedState = game.boardState[jumpedPiece.y][jumpedPiece.x]; // Store jumped piece state
         game.boardState[jumpedPiece.y][jumpedPiece.x] = 0;
         if (jumpedPiece.state === 1) game.blackPiecesLost++;
         if (jumpedPiece.state === 2) game.whitePiecesLost++;
     }
-    
     // Move the original piece (Normal or Shield)
-    // **NOTE**: If it was a jump, it lands as a NORMAL stone *temporarily*
     game.boardState[toY][toX] = piece; 
 
     // Check for Go-captures and suicide
     if (!processCapturesAndSuicide(game, toX, toY, player)) {
         // Illegal suicide move, revert!
-        game.boardState[fromY][fromX] = piece; // Put original piece back
-        game.boardState[toY][toX] = 0; // It was an empty spot
+        game.boardState[fromY][fromX] = originalFromState; // Put original piece back
+        game.boardState[toY][toX] = originalToState; // Revert destination
         if (jumpedPiece) {
-            game.boardState[jumpedPiece.y][jumpedPiece.x] = jumpedPiece.state;
+            game.boardState[jumpedPiece.y][jumpedPiece.x] = originalJumpedState; // Put jumped piece back
             if (jumpedPiece.state === 1) game.blackPiecesLost--;
             if (jumpedPiece.state === 2) game.whitePiecesLost--;
         }
         return { success: false, error: "Illegal suicide move." };
     }
 
-    // --- **NEW CHAIN CAPTURE CHECK** (MODIFIED) ---
+    // --- **NEW CHAIN CAPTURE CHECK** ---
     let isChain = false;
     // Only check for chains if this move was a jump
     if (moveType === 'jump') {
-        // The piece at [toY][toX] is still the normal stone ('piece')
-            
         // Check for new *orthogonal* jumps from the *landing spot*
         const allNewMoves = getValidMovesForGoPiece(toX, toY, game.boardState, piece);
         const availableChainJumps = allNewMoves.filter(m => m.type === 'jump');
         
         if (availableChainJumps.length > 0) {
-            // **Chain is possible!**
-            // Mark the game as pending a chain capture
+            // **Mark the game as pending a chain capture**
             game.pendingChainCapture = { x: toX, y: toY };
             isChain = true; // Signal to makeGoMove NOT to toggle the turn
-        } else {
-            // **Chain ends!**
-            // No more jumps. Force the piece to become a shield.
-            game.boardState[toY][toX] = piece + 2; // Convert 1->3 or 2->4
-            game.pendingChainCapture = null; // Ensure it's clear
-            isChain = false; // Turn will toggle
         }
     }
     
     return { success: true, updatedGame: game, isChain: isChain };
 }
 
-/**
- * **NEW FUNCTION** (Replaces `turnToShield`)
- * This function is *only* for stopping a pending capture chain.
- */
-function turnToShieldStop(game, x, y, player) {
-    // **NEW RULE**: Can only stop if a chain capture is pending.
-    if (!game.pendingChainCapture) {
-        return { success: false, error: "Can only turn to shield to end a capture chain." };
-    }
-
-    // Check if it's the correct piece
-    if (game.pendingChainCapture.x !== x || game.pendingChainCapture.y !== y) {
-         return { success: false, error: "Invalid piece. Must stop at the pending capture piece." };
-    }
-
-    // Check if the piece is the correct player's *normal* stone
+function turnToShield(game, x, y, player) {
     if (game.boardState[y][x] !== player) {
-        return { success: false, error: "Piece not found or is already a shield." };
+        return { success: false, error: "Not your piece." };
+    }
+
+    // **NEW RULE**: If chain capture is pending, you cannot turn to shield.
+    if (game.pendingChainCapture) {
+        return { success: false, error: "Must complete chain capture or pass." };
     }
     
-    // Convert to shield
     game.boardState[y][x] = (player === 1) ? 3 : 4; // 3: Black Shield, 4: White Shield
     
-    // Clear the pending capture
-    game.pendingChainCapture = null;
-    
-    // Shielding can cause captures (e.g., surrounding a piece)
+    // Shielding can cause captures
     processCaptures(game, x, y, player);
 
-    // Critically, isChain is false so the turn will end.
+    // Note: Shielding *could* create a Ko, but it's an edge case.
+    // The main makeGoMove function will catch it.
     return { success: true, updatedGame: game, isChain: false };
 }
 
@@ -388,6 +417,7 @@ function processCaptures(game, x, y, player) {
 function processCapturesAndSuicide(game, x, y, player) {
     const isBlackTeam = (player === 1 || player === 3); // Check based on *acting* player's team
     let capturedStones = false;
+    let capturedGroups = []; // --- Store captured groups to revert if suicide
 
     // 1. Check adjacent *enemy* groups for capture
     const neighbors = getNeighbors(x, y, game.boardState);
@@ -400,6 +430,7 @@ function processCapturesAndSuicide(game, x, y, player) {
                 if (group && group.liberties.size === 0) {
                     capturedStones = true;
                     const isCapturedBlack = (state === 1 || state === 3);
+                    capturedGroups.push({ group: group.stones, isBlack: isCapturedBlack }); // Store for revert
                     for (const stone of group.stones) {
                         game.boardState[stone.y][stone.x] = 0;
                         if (isCapturedBlack) game.blackPiecesLost++; else game.whitePiecesLost++;
@@ -412,8 +443,14 @@ function processCapturesAndSuicide(game, x, y, player) {
     // 2. Check *own* group for suicide
     const myGroup = findGroup(game.boardState, x, y);
     if (myGroup && myGroup.liberties.size === 0 && !capturedStones) {
-        // Suicide! Undo the move.
-        // Note: The revert logic is now in movePiece, this just signals failure
+        // Suicide! Revert captures (if any, though none should happen here) and return false
+        for (const captured of capturedGroups) {
+             const pieceType = captured.isBlack ? 1 : 2; // Note: Assumes captured pieces are non-shields. This holds for now.
+             for (const stone of captured.group) {
+                 game.boardState[stone.y][stone.x] = pieceType;
+                 if (captured.isBlack) game.blackPiecesLost--; else game.whitePiecesLost--;
+             }
+        }
         return false; // Illegal move
     }
     return true; // Legal move
@@ -451,9 +488,9 @@ function getValidMovesForGoPiece(x, y, boardState, piece) {
     } 
     // --- LOGIC FOR SHIELD STONE (Moves Only) ---
     else if (piece === player + 2) {
+        // --- MODIFIED: Orthogonal only ---
         const potentialMoves = [
-            { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }, // Orthogonal
-            { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }  // Diagonal
+            { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 } // Orthogonal
         ];
 
         for (const moveOffset of potentialMoves) {
@@ -553,16 +590,13 @@ function calculateScore(boardState, blackPiecesLost, whitePiecesLost) {
     };
 }
 
-//
-// --- THIS IS THE CLEANED FUNCTION ---
-//
 function updateMoveList(game, move) {
     // This logic needs to account for pendingChainCapture
     // If a chain is pending, the turn *hasn't* incremented yet.
     
     // Find the turn number based on the *actual* turn count
     // The turn has already toggled, so we use isWhiteTurn to see who *just* moved
-    const turnNum = game.isWhiteTurn ? Math.floor(game.turnCount / 2) : Math.floor((game.turnCount - 1) / 2) + 1;
+    const turnNum = game.isWhiteTurn ? Math.floor(game.turnCount / 2) : Math.floor((game.turnCount -1) / 2) + 1;
     let notationString = "";
 
     switch (move.type) {
@@ -572,8 +606,8 @@ function updateMoveList(game, move) {
         case 'move':
             notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
             break;
-        case 'shieldStop': // <-- RENAMED
-            notationString = `S-Stop@${move.at.x},${move.at.y}`; // <-- RENAMED
+        case 'shield':
+            notationString = `S@${move.at.x},${move.at.y}`;
             break;
         case 'pass': 
             notationString = `Pass`;
