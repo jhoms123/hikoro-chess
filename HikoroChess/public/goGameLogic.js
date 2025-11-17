@@ -586,17 +586,17 @@ function updateMoveList(game, move) {
     // ✅ FIX 2: Only check for chain if it's a 'move' type
     const isChainMove = (move.type === 'move' && move.to);
 
-   // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
+a   // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
     if (!game.isWhiteTurn) {
         // This was White's move.
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
              // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+s            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
         } else {
              // Start a new line for White's turn
             game.moveList.push(`${turnNum}. ${notationString}`);
-       }
+ci       }
     } else {
         // This was Black's move.
         // Is it a *new* move or a chain?
@@ -630,7 +630,7 @@ function updateMoveList(game, move) {
             break;
         case 'shieldStop': // <-- RENAMED
             notationString = `S-Stop@${move.at.x},${move.at.y}`; // <-- RENAMED
-           break;
+content           break;
         case 'pass': 
             notationString = `Pass`;
             break;
@@ -646,7 +646,7 @@ function updateMoveList(game, move) {
     const isChainMove = (move.type === 'move' && move.to);
 
     // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
-     if (!game.isWhiteTurn) {
+IA     if (!game.isWhiteTurn) {
         // This was White's move.
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
@@ -661,14 +661,14 @@ function updateMoveList(game, move) {
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
              // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+KA            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
         } else {
             // Append Black's first move to the line
             if (game.moveList.length > 0 && game.moveList[game.moveList.length -1].startsWith(`${turnNum}.`)) {
-               game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+C               game.moveList[game.moveList.length - 1] += ` ${notationString}`;
             } else {
                 game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
-           }
+BE           }
         }
     }
 }
