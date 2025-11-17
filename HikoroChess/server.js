@@ -186,9 +186,10 @@ io.on('connection', (socket) => {
             whitePrinceOnBoard: true,
             blackPrinceOnBoard: true,
             // Go-specific state (initialize anyway)
-            blackPiecesLost: 0,
+           blackPiecesLost: 0,
             whitePiecesLost: 0,
-            score: { black: 0, white: 0, details: {} }
+            score: { black: 0, white: 0, details: {} },
+            mustShieldAt: initialMustShieldAt // <-- ADD THIS LINE
 		};
         
         // Add initial score for Go
@@ -339,9 +340,19 @@ if (!game) {
         const logic = (gameType === 'hikoro') ? hikoroLogic : goLogic;
         // ✅ MODIFIED: Use clientBoardSize, default to 19
         const boardSize = (gameType === 'go' && clientBoardSize) ? clientBoardSize : 19;
-        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard(boardSize);
         const makeMoveFunction = (gameType === 'hikoro') ? hikoroLogic.makeMove : goLogic.makeGoMove;
         const getValidMovesFunction = (gameType === 'hikoro') ? hikoroLogic.getValidMoves : goLogic.getValidMoves;
+
+        // --- MODIFIED: Separate board initialization ---
+        let initialBoardState, initialMustShieldAt = null;
+        if (gameType === 'hikoro') {
+            initialBoardState = hikoroLogic.getInitialBoard();
+        } else {
+            const goBoardData = goLogic.getInitialGoBoard(boardSize);
+            initialBoardState = goBoardData.board;     // <-- Get the .board array
+            initialMustShieldAt = goBoardData.mustShieldAt; // <-- Get the mustShieldAt property
+        }
+        // --- END MODIFICATION ---
         
         const game = {
             id: gameId,
@@ -353,7 +364,7 @@ if (!game) {
                  calculateScore: (gameType === 'go') ? goLogic.calculateScore : undefined
             },
             players: { white: socket.id, black: socket.id }, // Same player
-            boardState: initialBoard,
+            boardState: initialBoardState, // <-- Assign the correct array
             isWhiteTurn: true,
             turnCount: 0,
             gameOver: false,
@@ -375,7 +386,8 @@ if (!game) {
             // Go-specific state
             blackPiecesLost: 0,
             whitePiecesLost: 0,
-            score: { black: 0, white: 0, details: {} }
+            score: { black: 0, white: 0, details: {} },
+            mustShieldAt: initialMustShieldAt // <-- ADD THIS LINE
         };
         
         if (gameType === 'go' && game.logic.calculateScore) {
