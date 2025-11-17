@@ -623,94 +623,120 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MODIFIED: Main State/Render Loop ---
 
     function updateLocalState(newGameState) {
-        const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
-        gameState = newGameState; // Update global state first
+    const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
+    gameState = newGameState; // Update global state first
 
-        // Update Game Over text
-        if (isNewGameOver && newGameState.winner) {
-            const winnerTextEl = document.getElementById('winnerText');
-            if (winnerTextEl) {
-                const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
-                winnerTextEl.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
-                if (newGameState.reason) {
-                    winnerTextEl.textContent += ` (${newGameState.reason})`;
-                }
-            } else {
-                console.error("updateLocalState (Game Over): winnerText element not found!");
+    // Update Game Over text
+    if (isNewGameOver && newGameState.winner) {
+        const winnerTextEl = document.getElementById('winnerText');
+        if (winnerTextEl) {
+            const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+            winnerTextEl.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
+            if (newGameState.reason) {
+                winnerTextEl.textContent += ` (${newGameState.reason})`;
             }
-            if (postGameControls) {
-                postGameControls.style.display = 'flex';
+        } else {
+            console.error("updateLocalState (Game Over): winnerText element not found!");
+        }
+        if (postGameControls) {
+            postGameControls.style.display = 'flex';
+        }
+    }
+
+    // --- NEW: Render based on gameType ---
+    if (gameState.gameType === 'go') {
+        renderGoBoard();
+        renderGoScore();
+        
+        // --- NEW/MODIFIED SHIELD BUTTON LOGIC ---
+        let showShield = false;
+        const player = gameState.isWhiteTurn ? 2 : 1;
+        
+        if (!gameState.gameOver) {
+            if (gameState.mustShieldAt) {
+                // Mandatory shield
+                const piece = gameState.boardState[gameState.mustShieldAt.y]?.[gameState.mustShieldAt.x];
+                if (piece === player) showShield = true;
+            } else if (gameState.pendingChainCapture) {
+                // Optional shield during chain
+                const piece = gameState.boardState[gameState.pendingChainCapture.y]?.[gameState.pendingChainCapture.x];
+                if (piece === player) showShield = true;
+            } else if (goSelectedPiece) {
+                // Voluntary shield on selected piece
+                const piece = gameState.boardState[goSelectedPiece.y]?.[goSelectedPiece.x];
+                if (piece === player) showShield = true;
             }
         }
+        goShieldButton.style.display = showShield ? 'block' : 'none';
+        // --- END MODIFIED LOGIC ---
 
-        // --- NEW: Render based on gameType ---
-        if (gameState.gameType === 'go') {
-            renderGoBoard();
-            renderGoScore();
-            // Show shield button if a piece is selected
-            goShieldButton.style.display = goSelectedPiece && !gameState.gameOver ? 'block' : 'none';
-            // Show pass button if it's a Go game and not over
-            goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
+        // Show pass button if it's a Go game and not over
+        goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
 
-				if (gameState.pendingChainCapture) {
+            // --- NEW: Handle auto-selection for mustShieldAt ---
+            if (gameState.mustShieldAt) {
+                console.log("Must shield! Auto-selecting piece.");
+                // Automatically select the piece that must be shielded
+                // This ensures highlights are drawn correctly by renderGoBoard
+                selectGoPiece(gameState.mustShieldAt.x, gameState.mustShieldAt.y);
+            } else if (gameState.pendingChainCapture) {
                 console.log("Chain capture pending! Re-selecting piece.");
                 // Automatically select the piece at its new landing spot
                 // This will trigger getValidMoves, which will now only return new jumps
                 selectGoPiece(gameState.pendingChainCapture.x, gameState.pendingChainCapture.y);
             }
-            
-            if (newGameState.gameOver) { // Disable board for Go
-                goBoardContainer.classList.add('disabled');
-            } else {
-                goBoardContainer.classList.remove('disabled'); // Ensure enabled if not over
-            }
+        
+        if (newGameState.gameOver) { // Disable board for Go
+            goBoardContainer.classList.add('disabled');
         } else {
-            renderHikoroBoard();
-            renderHikoroCaptured();
-            renderMoveHistory(gameState.moveList);
-             if (newGameState.gameOver) { // Disable board for Hikoro
-                 hikoroBoardElement.style.pointerEvents = 'none'; // Basic disable
-             } else {
-                 hikoroBoardElement.style.pointerEvents = 'auto'; // Re-enable
-             }
+            goBoardContainer.classList.remove('disabled'); // Ensure enabled if not over
         }
+    } else {
+        renderHikoroBoard();
+        renderHikoroCaptured();
+        renderMoveHistory(gameState.moveList);
+         if (newGameState.gameOver) { // Disable board for Hikoro
+             hikoroBoardElement.style.pointerEvents = 'none'; // Basic disable
+         } else {
+             hikoroBoardElement.style.pointerEvents = 'auto'; // Re-enable
+         }
+    }
 
-        updateTurnIndicator(); // This is shared
+    updateTurnIndicator(); // This is shared
 
-        // --- MODIFIED: Bot check ---
-        if (isBotGame && gameState.gameType === 'hikoro' && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
-            console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
+    // --- MODIFIED: Bot check ---
+    if (isBotGame && gameState.gameType === 'hikoro' && !gameState.gameOver && !gameState.isWhiteTurn && botWorker) {
+        console.log("Bot's turn. Sending state to worker. Bonus state:", botBonusState);
 
-				const capturedPiecesForBot = gameState.blackCaptured;
-				currentTurnHadBonusState = !!botBonusState;
+            const capturedPiecesForBot = gameState.blackCaptured;
+            currentTurnHadBonusState = !!botBonusState;
 
-				 const safeGameState = JSON.parse(JSON.stringify(gameState));
-				 const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
-				 const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
+             const safeGameState = JSON.parse(JSON.stringify(gameState));
+             const safeCapturedPieces = JSON.parse(JSON.stringify(capturedPiecesForBot));
+             const safeBonusState = botBonusState ? JSON.parse(JSON.stringify(botBonusState)) : null;
 
-				console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
+            console.log("Posting message to worker:", { gameState: safeGameState, capturedPieces: safeCapturedPieces, bonusMoveState: safeBonusState });
 
-				botWorker.postMessage({
-					gameState: safeGameState,
-					capturedPieces: safeCapturedPieces,
-					bonusMoveState: safeBonusState
-            });
-			
-			} else if (isBotGame && gameState.gameType === 'go' && !gameState.gameOver && !gameState.isWhiteTurn && botWorkerGo) {
-            console.log("Go Bot's turn. Sending state to worker.");
-            
-            // The bot only needs the game state.
-            // We must clone it to avoid transferring an un-clonable object.
-            const safeGameState = JSON.parse(JSON.stringify(gameState));
-            
-            botWorkerGo.postMessage({
-                gameState: safeGameState
-            });
-        // --- END OF NEW BLOCK ---
+            botWorker.postMessage({
+                gameState: safeGameState,
+                capturedPieces: safeCapturedPieces,
+                bonusMoveState: safeBonusState
+        });
+        
+        } else if (isBotGame && gameState.gameType === 'go' && !gameState.gameOver && !gameState.isWhiteTurn && botWorkerGo) {
+        console.log("Go Bot's turn. Sending state to worker.");
+        
+        // The bot only needs the game state.
+        // We must clone it to avoid transferring an un-clonable object.
+        const safeGameState = JSON.parse(JSON.stringify(gameState));
+        
+        botWorkerGo.postMessage({
+            gameState: safeGameState
+        });
+    // --- END OF NEW BLOCK ---
 
-        } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
-            console.error("Bot's turn, but worker is not available!");
-        }
+    } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
+        console.error("Bot's turn, but worker is not available!");
     }
 
     // Renamed from drawHighlights
@@ -1575,199 +1601,257 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     function handleGoClick(e) {
-        // Ignore clicks if game is over or in replay
-        if (gameState.gameOver || isReplayMode) return;
+    // Ignore clicks if game is over or in replay
+    if (gameState.gameOver || isReplayMode) return;
 
-        // Clear any existing double-click timer
-        if (goClickTimer) {
-            clearTimeout(goClickTimer);
-            goClickTimer = null;
-        }
-
-        const target = e.currentTarget;
-        const x = parseInt(target.dataset.x, 10);
-        const y = parseInt(target.dataset.y, 10);
-
-        // Set a timer to distinguish single click from double click
-        goClickTimer = setTimeout(() => {
-            // Double-check game state in case it ended during the timeout
-            if (gameState.gameOver) return;
-
-            const cellState = gameState.boardState[y]?.[x];
-            const player = gameState.isWhiteTurn ? 2 : 1; // 1 for Black, 2 for White
-            const myPlayerColorValue = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
-
-            // --- Client-side Turn Check ---
-            // Prevent actions if it's not the client's turn in multiplayer
-            if (!isSinglePlayer && player !== myPlayerColorValue) {
-                console.log("CLIENT BLOCKED: Not your turn (Go Multiplayer).");
-                if (goSelectedPiece) {
-                    deselectGoPiece();
-                }
-                return;
-            }
-
-            // 2. Bot Game check (THIS IS THE FIX)
-            // If it's a bot game AND it's black's turn (the bot's turn)
-            if (isBotGame && !gameState.isWhiteTurn) {
-                console.log("CLIENT BLOCKED: Bot is thinking.");
-                return; // Just ignore the click
-            }
-            // --- Main Click Logic ---
-
-            if (goSelectedPiece) {
-                // A piece IS currently selected
-
-                // 1. Check if clicking the SAME selected piece again
-                if (goSelectedPiece.x === x && goSelectedPiece.y === y) {
-                    console.log("Clicked selected piece again. Deselecting.");
-                    deselectGoPiece(); // Deselect it
-                }
-                // 2. Check if clicking an EMPTY square (potential move target)
-                else if (cellState === 0) {
-                    console.log("Attempting to move selected piece...");
-                    const from = goSelectedPiece;
-                    const to = { x, y };
-                    // Emit the move attempt to the server for validation
-                    socket.emit('makeGameMove', {
-                        gameId,
-                        move: { type: 'move', from, to }
-                    });
-                    // Deselect immediately after sending the attempt. Server response will update board.
-                    deselectGoPiece();
-                }
-                // 3. Clicked any OTHER square (opponent piece, shield, invalid target)
-                else {
-                    console.log("Clicked invalid target/occupied square while piece selected. Deselecting.");
-                    deselectGoPiece(); // Deselect the piece
-                }
-
-            } else {
-                // NO piece is currently selected
-
-                // 4. Check if clicking an EMPTY square
-                if (cellState === 0) {
-                    console.log("Attempting to place stone...");
-                    // Emit place request
-                    socket.emit('makeGameMove', {
-                        gameId,
-                        move: { type: 'place', to: { x, y } }
-                    });
-                    // No need to deselect, nothing was selected
-                }
-                // 5. Check if clicking YOUR OWN stone (not a shield)
-                else if (cellState === player || cellState === player + 2) {
-                    console.log("Attempting to select piece...");
-                    selectGoPiece(x, y); // Select the clicked piece
-                }
-                // 6. Clicked opponent piece or ANY shield
-                else {
-                    console.log("Clicked opponent piece or shield - doing nothing.");
-                    // Ensure nothing stays visually selected if it shouldn't
-                    if (goSelectedPiece) { // Should be null here, but just in case
-                         deselectGoPiece();
-                     }
-                }
-            }
-
-            goClickTimer = null; // Clear timer reference after executing
-        }, 200); // 200ms delay to allow for double-click detection
+    // Clear any existing double-click timer
+    if (goClickTimer) {
+        clearTimeout(goClickTimer);
+        goClickTimer = null;
     }
 
-    function handleGoDblClick(e) {
-        if (gameState.gameOver || isReplayMode) return; // Prevent actions
+    const target = e.currentTarget;
+    const x = parseInt(target.dataset.x, 10);
+    const y = parseInt(target.dataset.y, 10);
 
-        // Cancel the pending single-click timer
-        if (goClickTimer) {
-            clearTimeout(goClickTimer);
-            goClickTimer = null;
-        }
+    // Set a timer to distinguish single click from double click
+    goClickTimer = setTimeout(() => {
+        // Double-check game state in case it ended during the timeout
+        if (gameState.gameOver) return;
 
-        const target = e.currentTarget;
-        const x = parseInt(target.dataset.x, 10);
-        const y = parseInt(target.dataset.y, 10);
-        const cellState = gameState.boardState[y][x];
+        const cellState = gameState.boardState[y]?.[x];
+        const player = gameState.isWhiteTurn ? 2 : 1; // 1 for Black, 2 for White
+        const myPlayerColorValue = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
-
-        // --- CHECK IF ALLOWED TO MOVE ---
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
-             return; // Not your turn in multiplayer
-        }
-        if (isBotGame && !gameState.isWhiteTurn) {
-            console.log("CLIENT BLOCKED: Bot is thinking (shield dblclick).");
-            return; // Bot's turn
-        }
-
-        // --- THIS IS THE FIX ---
-        // 1. Check if a chain capture is pending (blocks shielding)
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
+        // --- Client-side Turn Check ---
+        // Prevent actions if it's not the client's turn in multiplayer
+        if (!isSinglePlayer && player !== myPlayerColorValue) {
+            console.log("CLIENT BLOCKED: Not your turn (Go Multiplayer).");
+            if (goSelectedPiece) {
+                deselectGoPiece();
+            }
             return;
         }
 
-        // 2. Check if the double-clicked piece is the current player's *stone* (not shield)
-        if (cellState === player) { 
-             if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
-             // --- Emit Turn to Shield move ---
-             socket.emit('makeGameMove', {
-                 gameId,
-                 move: { type: 'shield', at: { x, y } }
-             });
-             // State update will come from server
-        } else {
-            console.log("Can only turn your own NORMAL stones into shields.");
+        // 2. Bot Game check (THIS IS THE FIX)
+        // If it's a bot game AND it's black's turn (the bot's turn)
+        if (isBotGame && !gameState.isWhiteTurn) {
+            console.log("CLIENT BLOCKED: Bot is thinking.");
+            return; // Just ignore the click
         }
-        // --- END OF FIX ---
+        // --- Main Click Logic ---
+
+        // --- NEW: Forced Shield Check ---
+        if (gameState.mustShieldAt) {
+            // If a shield is mandatory, only allow clicking that *exact* piece
+            // (which will just re-select it). Block all other actions.
+            if (x === gameState.mustShieldAt.x && y === gameState.mustShieldAt.y) {
+                // This is the *only* allowed click.
+                // Let it fall through to the "select piece" logic.
+                console.log("Clicked the 'must shield' piece.");
+            } else {
+                console.log("CLIENT BLOCKED: Must shield piece at", gameState.mustShieldAt);
+                // TODO: Flash the required piece?
+                return; // Block all other clicks
+            }
+        }
+        // --- END NEW CHECK ---
+
+        if (goSelectedPiece) {
+            // A piece IS currently selected
+
+            // 1. Check if clicking the SAME selected piece again
+            if (goSelectedPiece.x === x && goSelectedPiece.y === y) {
+                console.log("Clicked selected piece again. Deselecting.");
+                deselectGoPiece(); // Deselect it
+            }
+            // 2. Check if clicking an EMPTY square (potential move target)
+            else if (cellState === 0) {
+                console.log("Attempting to move selected piece...");
+                const from = goSelectedPiece;
+                const to = { x, y };
+                // Emit the move attempt to the server for validation
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: { type: 'move', from, to }
+                });
+                // Deselect immediately after sending the attempt. Server response will update board.
+                deselectGoPiece();
+            }
+            // 3. Clicked any OTHER square (opponent piece, shield, invalid target)
+            else {
+                console.log("Clicked invalid target/occupied square while piece selected. Deselecting.");
+                deselectGoPiece(); // Deselect the piece
+            }
+
+        } else {
+            // NO piece is currently selected
+
+            // 4. Check if clicking an EMPTY square
+            if (cellState === 0) {
+                console.log("Attempting to place stone...");
+                // Emit place request
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: { type: 'place', to: { x, y } }
+                });
+                // No need to deselect, nothing was selected
+            }
+            // 5. Check if clicking YOUR OWN stone (not a shield)
+            else if (cellState === player || cellState === player + 2) {
+                console.log("Attempting to select piece...");
+                selectGoPiece(x, y); // Select the clicked piece
+            }
+            // 6. Clicked opponent piece or ANY shield
+            else {
+                console.log("Clicked opponent piece or shield - doing nothing.");
+                // Ensure nothing stays visually selected if it shouldn't
+                if (goSelectedPiece) { // Should be null here, but just in case
+                     deselectGoPiece();
+                 }
+            }
+        }
+
+        goClickTimer = null; // Clear timer reference after executing
+    }, 200); // 200ms delay to allow for double-click detection
+}
+
+    function handleGoDblClick(e) {
+    if (gameState.gameOver || isReplayMode) return; // Prevent actions
+
+    // Cancel the pending single-click timer
+    if (goClickTimer) {
+        clearTimeout(goClickTimer);
+        goClickTimer = null;
     }
+
+    const target = e.currentTarget;
+    const x = parseInt(target.dataset.x, 10);
+    const y = parseInt(target.dataset.y, 10);
+    const cellState = gameState.boardState[y][x];
+
+    // Determine the player whose turn it is
+    const player = gameState.isWhiteTurn ? 2 : 1;
+    // Determine the color this client controls
+    const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
+
+    // --- CHECK IF ALLOWED TO MOVE ---
+    if (!isSinglePlayer && player !== myPlayerColor) {
+         console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
+         return; // Not your turn in multiplayer
+    }
+    if (isBotGame && !gameState.isWhiteTurn) {
+         console.log("CLIENT BLOCKED: Bot is thinking (shield dblclick).");
+         return; // Bot's turn
+    }
+
+    // --- THIS IS THE FIX ---
+    // --- MODIFIED: Check Chain/Mandatory Shield logic ---
+
+    // 1. Check if a mandatory shield is active
+    if (gameState.mustShieldAt) {
+        if (x !== gameState.mustShieldAt.x || y !== gameState.mustShieldAt.y) {
+            console.log("Cannot shield. Must shield the piece at", gameState.mustShieldAt);
+            return;
+        }
+        // If they clicked the correct piece, fall through to shield it.
+        console.log("Performing mandatory shield via dblclick.");
+    }
+    // 2. Check if an optional chain shield is active
+    else if (gameState.pendingChainCapture) {
+        if (x !== gameState.pendingChainCapture.x || y !== gameState.pendingChainCapture.y) {
+            console.log("Can only shield the active capturing piece during a chain.");
+            return;
+        }
+        // If they clicked the correct piece, fall through to shield it.
+        console.log("Performing optional chain shield via dblclick.");
+    }
+    // 3. If no forced/chain state, this is a VOLUNTARY shield.
+    // The check for `cellState === player` below will handle it.
+    // --- END MODIFIED LOGIC ---
+
+    // 2. Check if the double-clicked piece is the current player's *stone* (not shield)
+    if (cellState === player) { 
+         if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
+         // --- Emit Turn to Shield move ---
+         socket.emit('makeGameMove', {
+             gameId,
+             move: { type: 'shield', at: { x, y } }
+         });
+         // State update will come from server
+    } else {
+        console.log("Can only turn your own NORMAL stones into shields.");
+    }
+    // --- END OF FIX ---
+}
 
 
     function handleGoShieldClick() {
-        if (gameState.gameOver || !goSelectedPiece) return; // Check if a piece is selected
+    if (gameState.gameOver) return; // Simpler check
 
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
+    // Determine the player whose turn it is
+    const player = gameState.isWhiteTurn ? 2 : 1;
+    // Determine the color this client controls
+    const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-        // Check if it's the player's turn before emitting (for multiplayer responsiveness)
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
-             return;
-        }
-        if (isBotGame && !gameState.isWhiteTurn) {
-            console.log("CLIENT BLOCKED: Bot is thinking (shield button).");
-            return; // Bot's turn
-        }
+    // Check if it's the player's turn before emitting (for multiplayer responsiveness)
+    if (!isSinglePlayer && player !== myPlayerColor) {
+         console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
+         return;
+    }
+    if (isBotGame && !gameState.isWhiteTurn) {
+         console.log("CLIENT BLOCKED: Bot is thinking (shield button).");
+         return; // Bot's turn
+    }
 
-        // --- CHAIN CAPTURE CHECK ---
-        // 1. Check if a chain capture is pending
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
-            return;
-        }
+    // --- NEW/MODIFIED SHIELD LOGIC ---
+    let shieldCoords = null;
+    let pieceToShield = null;
 
-        const { x, y } = goSelectedPiece;
+    if (gameState.mustShieldAt) {
+         // Case 1: Mandatory Shield
+         shieldCoords = gameState.mustShieldAt;
+         pieceToShield = gameState.boardState[shieldCoords.y]?.[shieldCoords.x];
+         console.log("Emitting mandatory shield at", shieldCoords);
 
-        // 2. Check if the selected piece is actually the current player's NORMAL stone
-        if (gameState.boardState[y]?.[x] !== player) { 
-            console.log("Cannot shield opponent's piece, shield, or empty square.");
-            deselectGoPiece(); // Deselect invalid piece
-            return;
-        }
-        // --- END CHAIN CAPTURE CHECK ---
+    } else if (gameState.pendingChainCapture) {
+         // Case 2: Optional Shield during chain
+         shieldCoords = gameState.pendingChainCapture;
+         pieceToShield = gameState.boardState[shieldCoords.y]?.[shieldCoords.x];
+         console.log("Emitting optional shield at", shieldCoords);
 
-        // Emit shield move
-        socket.emit('makeGameMove', { // <--- ⛔️ THIS WAS THE BUG (was 'makeGoMove')
-            gameId,
-            move: { type: 'shield', at: { x, y } }
-        });
-        deselectGoPiece(); // Deselect after sending request
-    }
+    } else if (goSelectedPiece) {
+         // Case 3: Voluntary Shield on selected piece
+         shieldCoords = goSelectedPiece;
+         pieceToShield = gameState.boardState[shieldCoords.y]?.[shieldCoords.x];
+         console.log("Emitting voluntary shield at", shieldCoords);
+    
+    } else {
+         console.log("Shield button clicked, but no piece is selected/pending/mandatory.");
+         return; // Nothing to shield
+    }
+
+    // Check if the piece at the coords is valid to be shielded
+    if (pieceToShield !== player) {
+         console.log("Cannot shield opponent's piece, shield, or empty square.");
+         // Don't deselect, the state might be forced
+         return;
+    }
+    // --- END NEW/MODIFIED LOGIC ---
+
+    // Emit shield move
+    socket.emit('makeGameMove', { 
+         gameId,
+         move: { type: 'shield', at: { x: shieldCoords.x, y: shieldCoords.y } }
+    });
+    
+    // Deselect *only* if it was a voluntary shield
+    if (!gameState.mustShieldAt && !gameState.pendingChainCapture) {
+         deselectGoPiece(); // Deselect after sending request
+    }
+    // If it was forced/chain, the server response will clear the state
+    // and updateLocalState will handle the UI.
+}
 
     function selectGoPiece(x, y) {
         goSelectedPiece = { x, y };
@@ -1790,22 +1874,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawGoHighlights(moves) {
-        clearGoHighlights(); // Clear previous highlights
-        if (!goSelectedPiece) return; // Need a selected piece to show moves for
+    clearGoHighlights(); // Clear previous highlights
+    
+    // --- NEW: Check for must-shield or selected state ---
+    const coords = gameState.mustShieldAt || goSelectedPiece;
+    if (!coords) return; // Nothing to highlight
 
-        // Highlight the selected stone itself
-        const stoneEl = document.querySelector(`#go-board-container .intersection[data-x='${goSelectedPiece.x}'][data-y='${goSelectedPiece.y}'] .stone`);
-        if (stoneEl) stoneEl.classList.add('selected');
-
-        // Draw move plates (green circles) on valid target intersections
-        moves.forEach(move => {
-            const cell = document.querySelector(`#go-board-container .intersection[data-x='${move.x}'][data-y='${move.y}']`);
-            // Ensure cell exists and doesn't already contain a stone visual
-            if (cell && !cell.querySelector('.stone')) {
-                cell.innerHTML = '<div class="valid-move"></div>';
-            }
-        });
+    // Highlight the selected/forced stone
+    const stoneEl = document.querySelector(`#go-board-container .intersection[data-x='${coords.x}'][data-y='${coords.y}'] .stone`);
+    
+    if (stoneEl) {
+         if (gameState.mustShieldAt) {
+             stoneEl.classList.add('must-shield'); // Use special class
+         } else if (goSelectedPiece) { // Only add 'selected' if it's a normal selection
+             stoneEl.classList.add('selected'); // Use normal class
+         }
     }
+    // --- END NEW ---
+
+    // Draw move plates (green circles) on valid target intersections
+    // This loop will be skipped if moves = [] (which it will be for mustShieldAt)
+    moves.forEach(move => {
+        const cell = document.querySelector(`#go-board-container .intersection[data-x='${move.x}'][data-y='${move.y}']`);
+        // Ensure cell exists and doesn't already contain a stone visual
+        if (cell && !cell.querySelector('.stone')) {
+            cell.innerHTML = '<div class="valid-move"></div>';
+        }
+    });
+}
 
     // --- RENAMING your original click handlers ---
     const original_onSquareClick = typeof onSquareClick !== 'undefined' ? onSquareClick : null;
