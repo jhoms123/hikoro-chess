@@ -1843,6 +1843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.emit('makeGameMove', { 
          gameId,
          move: { type: 'shield', at: { x: shieldCoords.x, y: shieldCoords.y } }
+    // --- THIS IS THE FIX: The stray '_B_' that was here is removed ---
     });
     
     // Deselect *only* if it was a voluntary shield
@@ -1874,34 +1875,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawGoHighlights(moves) {
-    clearGoHighlights(); // Clear previous highlights
-    
-    // --- NEW: Check for must-shield or selected state ---
-    const coords = gameState.mustShieldAt || goSelectedPiece;
-    if (!coords) return; // Nothing to highlight
+        clearGoHighlights(); // Clear previous highlights
+        if (!goSelectedPiece) return; // Need a selected piece to show moves for
 
-    // Highlight the selected/forced stone
-    const stoneEl = document.querySelector(`#go-board-container .intersection[data-x='${coords.x}'][data-y='${coords.y}'] .stone`);
-    
-    if (stoneEl) {
-         if (gameState.mustShieldAt) {
-             stoneEl.classList.add('must-shield'); // Use special class
-         } else if (goSelectedPiece) { // Only add 'selected' if it's a normal selection
-             stoneEl.classList.add('selected'); // Use normal class
-         }
+        // Highlight the selected stone itself
+        const stoneEl = document.querySelector(`#go-board-container .intersection[data-x='${goSelectedPiece.x}'][data-y='${goSelectedPiece.y}'] .stone`);
+        if (stoneEl) stoneEl.classList.add('selected');
+
+        // Draw move plates (green circles) on valid target intersections
+        moves.forEach(move => {
+            const cell = document.querySelector(`#go-board-container .intersection[data-x='${move.x}'][data-y='${move.y}']`);
+            // Ensure cell exists and doesn't already contain a stone visual
+            if (cell && !cell.querySelector('.stone')) {
+                cell.innerHTML = '<div class="valid-move"></div>';
+            }
+        });
     }
-    // --- END NEW ---
-
-    // Draw move plates (green circles) on valid target intersections
-    // This loop will be skipped if moves = [] (which it will be for mustShieldAt)
-    moves.forEach(move => {
-        const cell = document.querySelector(`#go-board-container .intersection[data-x='${move.x}'][data-y='${move.y}']`);
-        // Ensure cell exists and doesn't already contain a stone visual
-        if (cell && !cell.querySelector('.stone')) {
-            cell.innerHTML = '<div class="valid-move"></div>';
-        }
-    });
-}
 
     // --- RENAMING your original click handlers ---
     const original_onSquareClick = typeof onSquareClick !== 'undefined' ? onSquareClick : null;
