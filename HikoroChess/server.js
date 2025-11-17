@@ -141,12 +141,21 @@ io.on('connection', (socket) => {
 		const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
 		const tc = timeControl && timeControl.main !== undefined ? timeControl : { main: 300, byoyomiTime: 30, byoyomiPeriods: 3 };
 
-        // --- Assign logic and board based on type ---
         const logic = (gameType === 'hikoro') ? hikoroLogic : goLogic;
         const boardSize = (gameType === 'go' && clientBoardSize) ? clientBoardSize : 19;
-        const initialBoard = (gameType === 'hikoro') ? hikoroLogic.getInitialBoard() : goLogic.getInitialGoBoard(boardSize);
         const makeMoveFunction = (gameType === 'hikoro') ? hikoroLogic.makeMove : goLogic.makeGoMove; // Assign correct function
         const getValidMovesFunction = (gameType === 'hikoro') ? hikoroLogic.getValidMoves : goLogic.getValidMoves; // Assign correct function
+
+        // --- MODIFIED: Separate board initialization ---
+        let initialBoardState, initialMustShieldAt = null;
+        if (gameType === 'hikoro') {
+            initialBoardState = hikoroLogic.getInitialBoard();
+        } else {
+            const goBoardData = goLogic.getInitialGoBoard(boardSize);
+            initialBoardState = goBoardData.board;     // <-- Get the .board array
+            initialMustShieldAt = goBoardData.mustShieldAt; // <-- Get the mustShieldAt property
+        }
+        // --- END MODIFICATION ---
 
 		const game = {
 			id: gameId,
@@ -158,7 +167,7 @@ io.on('connection', (socket) => {
                 calculateScore: (gameType === 'go') ? goLogic.calculateScore : undefined // Only Go needs score calculation here
             },
 			players: { white: socket.id, black: null },
-			boardState: initialBoard,
+			boardState: initialBoardState, // <-- Assign the correct array
 			isWhiteTurn: true,
 			turnCount: 0,
 			gameOver: false,
