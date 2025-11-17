@@ -358,7 +358,7 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
 }
 
 function turnToShield(game, x, y, player) {
-    // --- NEW FORCED SHIELD LOGIC ---
+    // --- NEW LOGIC: Only allow shield if forced or during a chain ---
     if (game.mustShieldAt) {
         if (game.mustShieldAt.x !== x || game.mustShieldAt.y !== y) {
             return { success: false, error: "Must shield the piece at the capture landing spot." };
@@ -366,28 +366,25 @@ function turnToShield(game, x, y, player) {
         // This is the correct, forced shield. Clear the flag.
         game.mustShieldAt = null;
     } 
-    // --- NEW OPTIONAL SHIELD-DURING-CHAIN LOGIC ---
     else if (game.pendingChainCapture) {
         if (game.pendingChainCapture.x !== x || game.pendingChainCapture.y !== y) {
             return { success: false, error: "Can only shield the active capturing piece during a chain." };
         }
         // Player *chose* to shield during a chain. Clear the flag.
         game.pendingChainCapture = null;
+    } else {
+        // --- THIS IS THE FIX ---
+        // If neither flag is set, voluntary shielding is illegal.
+        return { success: false, error: "You can only turn a piece into a shield after a capture." };
     }
     // --- END NEW LOGIC ---
 
+    // We can now safely assume that the piece at (x,y) *should* be the player's.
+    // This check is now a safety net for our own logic.
     if (game.boardState[y][x] !== player) {
-        // This check is now after the special logic, but it's still needed
-        // for a *voluntary* shield (not forced, not chain).
-        if (!game.mustShieldAt && !game.pendingChainCapture) {
-             return { success: false, error: "Not your piece." };
-        }
-        // If we are here, it means mustShieldAt or pendingChainCapture was set,
-        // but the piece on that spot isn't the player's. This is a logic error,
-        // but we'll catch it.
-        if (game.boardState[y][x] !== player) {
-             return { success: false, error: "Not your piece." };
-        }
+        // This should not be reachable if logic is correct, but good to have.
+        console.error(`[goGameLogic] Shield logic error: Attempted to shield non-player piece at ${x},${y}`);
+        return { success: false, error: "Not your piece." };
     }
     
     game.boardState[y][x] = (player === 1) ? 3 : 4; // 3: Black Shield, 4: White Shield
