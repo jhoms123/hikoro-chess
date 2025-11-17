@@ -45,7 +45,7 @@ exports.getValidMoves = function(game, data) {
  * Public-facing function for the server to make a move.
  * move: { type: 'place', to: {x,y} }
  * | { type: 'move', from: {x,y}, to: {x,y} }
- * | { type: 'shield', at: {x,y} }
+ * | { type: 'shieldStop', at: {x,y} } // <-- RENAMED
  * | { type: 'pass' }
  * | { type: 'resign' }
  */
@@ -84,9 +84,9 @@ exports.makeGoMove = function(game, move, playerColor) {
             // Use activePlayer
             moveResult = movePiece(newGame, move.from.x, move.from.y, move.to.x, move.to.y, activePlayer);
             break;
-        case 'shield':
+        case 'shieldStop': // <-- RENAMED
             // Use activePlayer
-            moveResult = turnToShield(newGame, move.at.x, move.at.y, activePlayer);
+            moveResult = turnToShieldStop(newGame, move.at.x, move.at.y, activePlayer); // <-- RENAMED
             break;
         case 'pass':
             newGame.pendingChainCapture = null;
@@ -118,7 +118,7 @@ exports.makeGoMove = function(game, move, playerColor) {
             // Set lastMove
             if (move.type === 'place' || move.type === 'move') {
                 updatedGame.lastMove = move.to;
-            } else if (move.type === 'shield') {
+            } else if (move.type === 'shieldStop') { // <-- RENAMED
                 updatedGame.lastMove = move.at;
             } else {
                 updatedGame.lastMove = null; // Pass has no 'to'
@@ -154,7 +154,7 @@ function placeStone(game, x, y, player) {
     
     // **NEW RULE**: If chain capture is pending, you cannot place a stone.
     if (game.pendingChainCapture) {
-        return { success: false, error: "Must complete chain capture or pass." };
+        return { success: false, error: "Must complete chain capture or stop." }; // <-- MODIFIED
     }
 
     game.boardState[y][x] = player;
@@ -226,7 +226,9 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
         if (jumpedPiece.state === 1) game.blackPiecesLost++;
         if (jumpedPiece.state === 2) game.whitePiecesLost++;
     }
+    
     // Move the original piece (Normal or Shield)
+    // **NOTE**: If it was a jump, it lands as a NORMAL stone *temporarily*
     game.boardState[toY][toX] = piece; 
 
     // Check for Go-captures and suicide
@@ -242,39 +244,63 @@ function movePiece(game, fromX, fromY, toX, toY, player) {
         return { success: false, error: "Illegal suicide move." };
     }
 
-    // --- **NEW CHAIN CAPTURE CHECK** ---
+    // --- **NEW CHAIN CAPTURE CHECK** (MODIFIED) ---
     let isChain = false;
     // Only check for chains if this move was a jump
     if (moveType === 'jump') {
+        // The piece at [toY][toX] is still the normal stone ('piece')
+            
         // Check for new *orthogonal* jumps from the *landing spot*
         const allNewMoves = getValidMovesForGoPiece(toX, toY, game.boardState, piece);
         const availableChainJumps = allNewMoves.filter(m => m.type === 'jump');
         
         if (availableChainJumps.length > 0) {
-            // **Mark the game as pending a chain capture**
+            // **Chain is possible!**
+            // Mark the game as pending a chain capture
             game.pendingChainCapture = { x: toX, y: toY };
             isChain = true; // Signal to makeGoMove NOT to toggle the turn
+        } else {
+            // **Chain ends!**
+            // No more jumps. Force the piece to become a shield.
+            game.boardState[toY][toX] = piece + 2; // Convert 1->3 or 2->4
+            game.pendingChainCapture = null; // Ensure it's clear
+            isChain = false; // Turn will toggle
         }
     }
     
     return { success: true, updatedGame: game, isChain: isChain };
 }
 
-function turnToShield(game, x, y, player) {
-    if (game.boardState[y][x] !== player) {
-        return { success: false, error: "Not your piece." };
+/**
+ * **NEW FUNCTION** (Replaces `turnToShield`)
+ * This function is *only* for stopping a pending capture chain.
+ */
+function turnToShieldStop(game, x, y, player) {
+    // **NEW RULE**: Can only stop if a chain capture is pending.
+    if (!game.pendingChainCapture) {
+        return { success: false, error: "Can only turn to shield to end a capture chain." };
     }
 
-    // **NEW RULE**: If chain capture is pending, you cannot turn to shield.
-    if (game.pendingChainCapture) {
-        return { success: false, error: "Must complete chain capture or pass." };
+    // Check if it's the correct piece
+    if (game.pendingChainCapture.x !== x || game.pendingChainCapture.y !== y) {
+         return { success: false, error: "Invalid piece. Must stop at the pending capture piece." };
+    }
+
+    // Check if the piece is the correct player's *normal* stone
+    if (game.boardState[y][x] !== player) {
+        return { success: false, error: "Piece not found or is already a shield." };
     }
     
+    // Convert to shield
     game.boardState[y][x] = (player === 1) ? 3 : 4; // 3: Black Shield, 4: White Shield
     
-    // Shielding can cause captures
+    // Clear the pending capture
+    game.pendingChainCapture = null;
+    
+    // Shielding can cause captures (e.g., surrounding a piece)
     processCaptures(game, x, y, player);
 
+    // Critically, isChain is false so the turn will end.
     return { success: true, updatedGame: game, isChain: false };
 }
 
@@ -543,8 +569,8 @@ function updateMoveList(game, move) {
         case 'move':
             notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
             break;
-        case 'shield':
-            notationString = `S@${move.at.x},${move.at.y}`;
+        case 'shieldStop': // <-- RENAMED
+            notationString = `S-Stop@${move.at.x},${move.at.y}`; // <-- RENAMED
             break;
         case 'pass': 
             notationString = `Pass`;
@@ -554,23 +580,23 @@ function updateMoveList(game, move) {
             break;
         default:
             notationString = `Unknown`;
-    }
+}
     
     // **NEW CHAIN CAPTURE NOTATION**
     // ✅ FIX 2: Only check for chain if it's a 'move' type
     const isChainMove = (move.type === 'move' && move.to);
 
-    // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
+   // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
     if (!game.isWhiteTurn) {
         // This was White's move.
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
              // This is a chain capture (e.g., "1. M@1,1>1,3" exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
         } else {
              // Start a new line for White's turn
             game.moveList.push(`${turnNum}. ${notationString}`);
-        }
+       }
     } else {
         // This was Black's move.
         // Is it a *new* move or a chain?
@@ -602,9 +628,9 @@ function updateMoveList(game, move) {
         case 'move':
             notationString = `M@${move.from.x},${move.from.y}>${move.to.x},${move.to.y}`;
             break;
-        case 'shield':
-            notationString = `S@${move.at.x},${move.at.y}`;
-            break;
+        case 'shieldStop': // <-- RENAMED
+            notationString = `S-Stop@${move.at.x},${move.at.y}`; // <-- RENAMED
+           break;
         case 'pass': 
             notationString = `Pass`;
             break;
@@ -620,7 +646,7 @@ function updateMoveList(game, move) {
     const isChainMove = (move.type === 'move' && move.to);
 
     // ✅ FIX 1: Logic is inverted because game.isWhiteTurn has already been toggled
-    if (!game.isWhiteTurn) {
+     if (!game.isWhiteTurn) {
         // This was White's move.
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && !game.moveList[game.moveList.length - 1].includes(" ")) {
@@ -635,18 +661,17 @@ function updateMoveList(game, move) {
         // Is it a *new* move or a chain?
         if (isChainMove && game.moveList.length > 0 && game.moveList[game.moveList.length - 1].startsWith(`${turnNum}.`) && game.moveList[game.moveList.length - 1].includes(" ")) {
              // This is a chain capture (e.g., "1. M@... M@..." exists, add ">1,5")
-            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
+            game.moveList[game.moveList.length - 1] += `>${move.to.x},${move.to.y}`;
         } else {
             // Append Black's first move to the line
             if (game.moveList.length > 0 && game.moveList[game.moveList.length -1].startsWith(`${turnNum}.`)) {
-                game.moveList[game.moveList.length - 1] += ` ${notationString}`;
+               game.moveList[game.moveList.length - 1] += ` ${notationString}`;
             } else {
                 game.moveList.push(`${turnNum}... ${notationString}`); // Black moved first
-            }
+           }
         }
     }
 }
 
 exports.calculateScore = calculateScore;
 })(typeof module === 'undefined' ? (this.goGameLogic = {}) : module.exports);
-

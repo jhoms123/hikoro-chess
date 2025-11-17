@@ -181,64 +181,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NEW: Disable bot/replay for Go
     gameTypeSelect.addEventListener('change', () => {
-        const gameType = gameTypeSelect.value;
-        if (gameType === 'go') {
-            goBoardSizeWrapper.style.display = 'block'; // Show size selector
-            playBotBtn.disabled = false; // <-- SET TO false
+        const gameType = gameTypeSelect.value;
+        if (gameType === 'go') {
+            goBoardSizeWrapper.style.display = 'block'; // Show size selector
+            playBotBtn.disabled = false; // <-- SET TO false
             playBotBtn.title = "Play Against Bot"; // <-- UPDATE TITLE
-            startReplayBtn.disabled = true;
-            startReplayBtn.title = "Replay is not available for Go Variant";
-            kifuPasteArea.disabled = true;
-        } else {
-            goBoardSizeWrapper.style.display = 'none'; // Hide size selector
-            playBotBtn.disabled = false;
-            playBotBtn.title = "Play Against Bot";
-            startReplayBtn.disabled = false;
-            startReplayBtn.title = "";
-            kifuPasteArea.disabled = false;
-        }
-    });
+            startReplayBtn.disabled = true;
+            startReplayBtn.title = "Replay is not available for Go Variant";
+            kifuPasteArea.disabled = true;
+        } else {
+            goBoardSizeWrapper.style.display = 'none'; // Hide size selector
+            playBotBtn.disabled = false;
+            playBotBtn.title = "Play Against Bot";
+            startReplayBtn.disabled = false;
+            startReplayBtn.title = "";
+            kifuPasteArea.disabled = false;
+        }
+    });
 
     createGameBtn.addEventListener('click', () => {
-        const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
-        const mainTime = parseInt(document.getElementById('time-control').value, 10);
-        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
-        const gameType = gameTypeSelect.value;
-        // ✅ ADDED these 2 lines
-        const goBoardSizeSelect = document.getElementById('go-board-size-select');
-        const boardSize = parseInt(goBoardSizeSelect.value, 10);
+        const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
+        const mainTime = parseInt(document.getElementById('time-control').value, 10);
+        let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+        const gameType = gameTypeSelect.value;
+        // ✅ ADDED these 2 lines
+        const goBoardSizeSelect = document.getElementById('go-board-size-select');
+        const boardSize = parseInt(goBoardSizeSelect.value, 10);
 
-        if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
-        const timeControl = {
-            main: mainTime,
-            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime,
-            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
-        };
+        if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
+        const timeControl = {
+            main: mainTime,
+            byoyomiTime: mainTime === -1 ? 0 : byoyomiTime,
+            byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
+        };
 
-        // ✅ MODIFIED dataToSend
-        const dataToSend = { playerName, timeControl, gameType };
-        if (gameType === 'go') {
-            dataToSend.boardSize = boardSize; // Add boardSize if it's a Go game
-        }
-        socket.emit('createGame', dataToSend);
-    });
+        // ✅ MODIFIED dataToSend
+        const dataToSend = { playerName, timeControl, gameType };
+        if (gameType === 'go') {
+            dataToSend.boardSize = boardSize; // Add boardSize if it's a Go game
+        }
+        socket.emit('createGame', dataToSend);
+    });
 
     singlePlayerBtn.addEventListener('click', () => {
-        isSinglePlayer = true;
-        isBotGame = false;
-        botBonusState = null;
-        const gameType = gameTypeSelect.value;
-        // ✅ ADDED these 2 lines
-        const goBoardSizeSelect = document.getElementById('go-board-size-select');
-        const boardSize = parseInt(goBoardSizeSelect.value, 10);
+        isSinglePlayer = true;
+        isBotGame = false;
+        botBonusState = null;
+        const gameType = gameTypeSelect.value;
+        // ✅ ADDED these 2 lines
+        const goBoardSizeSelect = document.getElementById('go-board-size-select');
+        const boardSize = parseInt(goBoardSizeSelect.value, 10);
 
-        // ✅ MODIFIED dataToSend
-        const dataToSend = { gameType };
-        if (gameType === 'go') {
-            dataToSend.boardSize = boardSize;
-        }
-        socket.emit('createSinglePlayerGame', dataToSend);
-    });
+        // ✅ MODIFIED dataToSend
+        const dataToSend = { gameType };
+        if (gameType === 'go') {
+            dataToSend.boardSize = boardSize;
+        }
+        socket.emit('createSinglePlayerGame', dataToSend);
+    });
 
     playBotBtn.addEventListener('click', () => {
         const gameType = gameTypeSelect.value; 
@@ -255,11 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const dataToSend = { gameType };
         if (gameType === 'go') {
-            dataToSend.boardSize = boardSize;
+            dataToSend.boardSize = boardSize;
         }
 
-        socket.emit('createSinglePlayerGame', dataToSend); // Send the correct data
-    });
+        socket.emit('createSinglePlayerGame', dataToSend); // Send the correct data
+    });
 
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
@@ -308,14 +308,21 @@ document.addEventListener('DOMContentLoaded', () => {
         goPassButton.addEventListener('click', () => {
             if (gameState.gameOver || isReplayMode) return;
             
+            // --- NEW: Check for pending chain capture ---
+            if (gameState.pendingChainCapture) {
+                console.log("Cannot pass during a chain capture.");
+                return; // Do not allow passing
+            }
+            // --- End of new check ---
+
             // Client-side turn check for responsiveness
 			const isMyTurn = 
-			                // 1. Is it pass-and-play? (Allow always)
-			                (isSinglePlayer && !isBotGame) || 
-			                // 2. Is it a bot game AND white's (human's) turn?
-			                (isSinglePlayer && isBotGame && gameState.isWhiteTurn) ||
-			                // 3. Is it multiplayer AND my turn?
-			                (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+			    // 1. Is it pass-and-play? (Allow always)
+			    (isSinglePlayer && !isBotGame) || 
+			    // 2. Is it a bot game AND white's (human's) turn?
+			    (isSinglePlayer && isBotGame && gameState.isWhiteTurn) ||
+			    // 3. Is it multiplayer AND my turn?
+			    (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
             
             if (isMyTurn) {
                 console.log("Emitting pass move");
@@ -576,14 +583,14 @@ document.addEventListener('DOMContentLoaded', () => {
         isSinglePlayer = initialGameState.isSinglePlayer;
 
         if (isSinglePlayer) {
-            myColor = 'white'; // Default view for single player
-            // The 'isBotGame' flag is ALREADY set correctly by the
+            myColor = 'white'; // Default view for single player
+            // The 'isBotGame' flag is ALREADY set correctly by the
             // playBotBtn or singlePlayerBtn click listener.
             // We DO NOT overwrite it here.
-        } else {
-            isBotGame = false; // This is correct (multiplayer is not a bot game)
-            if (!myColor) myColor = 'black'; // Assume joined as black if not creator
-        }
+        } else {
+            isBotGame = false; // This is correct (multiplayer is not a bot game)
+            if (!myColor) myColor = 'black'; // Assume joined as black if not creator
+        }
 
         // --- FIX FOR SCORE WARNING ---
         // Ensure the score object exists for Go games before rendering
@@ -645,20 +652,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- NEW: Render based on gameType ---
         if (gameState.gameType === 'go') {
-            renderGoBoard();
-            renderGoScore();
-            // Show shield button if a piece is selected
-            goShieldButton.style.display = goSelectedPiece && !gameState.gameOver ? 'block' : 'none';
-            // Show pass button if it's a Go game and not over
-            goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
+            renderGoBoard();
+            renderGoScore();
+            renderMoveHistory(gameState.moveList); // Also render move list for Go
 
-				if (gameState.pendingChainCapture) {
-                console.log("Chain capture pending! Re-selecting piece.");
+            // --- NEW CHAIN CAPTURE UI LOGIC ---
+            if (gameState.pendingChainCapture) {
+                console.log("Chain capture pending! Updating UI.");
+                // Show shield button, hide pass
+                goShieldButton.style.display = 'block';
+                goShieldButton.textContent = 'Stop Chain & Shield'; // Change text
+                goPassButton.style.display = 'none';
+                
                 // Automatically select the piece at its new landing spot
                 // This will trigger getValidMoves, which will now only return new jumps
                 selectGoPiece(gameState.pendingChainCapture.x, gameState.pendingChainCapture.y);
+            } else {
+                // Not in a chain capture
+                // Hide shield button, show pass button
+                goShieldButton.style.display = 'none';
+                goShieldButton.textContent = 'Turn to Shield'; // Reset text
+                // Show pass button if it's a Go game and not over
+                goPassButton.style.display = (gameState.gameOver || isReplayMode) ? 'none' : 'block';
+
+                // If a piece was selected but it's *not* a chain, ensure button is hidden
+                if (goSelectedPiece) {
+                     goShieldButton.style.display = 'none'; // OLD shield logic is gone
+                }
             }
-            
+            // --- END CHAIN CAPTURE UI LOGIC ---
+            
             if (newGameState.gameOver) { // Disable board for Go
                 goBoardContainer.classList.add('disabled');
             } else {
@@ -694,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					gameState: safeGameState,
 					capturedPieces: safeCapturedPieces,
 					bonusMoveState: safeBonusState
-            });
+                });
 			
 			} else if (isBotGame && gameState.gameType === 'go' && !gameState.gameOver && !gameState.isWhiteTurn && botWorkerGo) {
             console.log("Go Bot's turn. Sending state to worker.");
@@ -767,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     function renderMoveHistory(moves) {
-        if (isReplayMode) {
+        if (isReplayMode && gameState.gameType !== 'go') { // Go doesn't use replay tree
             renderReplayMoveHistory(); // Special renderer for replay tree
             return;
         }
@@ -881,21 +904,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(selSquareEl) selSquareEl.classList.add('selected'); // Re-select
              }
          } else if (selectedSquare || isDroppingPiece) {
-              // Reapply highlights if a piece was selected before re-render
-              if (selectedSquare) {
-                  const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
-                  if (piece) {
-                       // Get moves based on current bonus state
-                       const bonusActive = !!gameState.bonusMoveInfo && gameState.bonusMoveInfo.pieceX === selectedSquare.x && gameState.bonusMoveInfo.pieceY === selectedSquare.y;
-                       const validMoves = gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, bonusActive);
-                       drawHikoroHighlights(validMoves);
-                  }
-              } else if (isDroppingPiece) {
-                  highlightHikoroDropSquares();
-                  // Re-highlight selected captured piece
-                  const dropEl = document.querySelector(`.captured-piece .piece img[alt$="${isDroppingPiece.type}"]`)?.closest('.captured-piece');
-                  if(dropEl) dropEl.classList.add('selected-drop');
-              }
+             // Reapply highlights if a piece was selected before re-render
+             if (selectedSquare) {
+                 const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
+                 if (piece) {
+                         // Get moves based on current bonus state
+                         const bonusActive = !!gameState.bonusMoveInfo && gameState.bonusMoveInfo.pieceX === selectedSquare.x && gameState.bonusMoveInfo.pieceY === selectedSquare.y;
+                         const validMoves = gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, bonusActive);
+                         drawHikoroHighlights(validMoves);
+                 }
+             } else if (isDroppingPiece) {
+                 highlightHikoroDropSquares();
+                 // Re-highlight selected captured piece
+                 const dropEl = document.querySelector(`.captured-piece .piece img[alt$="${isDroppingPiece.type}"]`)?.closest('.captured-piece');
+                 if(dropEl) dropEl.classList.add('selected-drop');
+             }
          }
     }
 
@@ -965,8 +988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                        (!isSinglePlayer && myColor === bottomHandColor && gameState.isWhiteTurn === (myColor === 'white')))); // Multiplayer, your hand, your turn
 
         const isTopHandClickable = (!isReplayMode && // Not clickable in replay
-                                    ((isSinglePlayer && gameState.isWhiteTurn !== isBottomHandWhite && !isBotGame) || // Single player, other turn, not bot
-                                    (!isSinglePlayer && myColor === topHandColor && gameState.isWhiteTurn === (myColor === 'white')))); // Multiplayer, your hand, your turn (should not happen for top hand usually)
+                                   ((isSinglePlayer && gameState.isWhiteTurn !== isBottomHandWhite && !isBotGame) || // Single player, other turn, not bot
+                                   (!isSinglePlayer && myColor === topHandColor && gameState.isWhiteTurn === (myColor === 'white')))); // Multiplayer, your hand, your turn (should not happen for top hand usually)
 
 
         // --- Render Captured Pieces (Group by type) ---
@@ -977,29 +1000,29 @@ document.addEventListener('DOMContentLoaded', () => {
                return Object.entries(counts).sort(([typeA], [typeB]) => typeA.localeCompare(typeB));
            };
 
-           groupPieces(bottomHandPieces).forEach(([type, count]) => {
-               const pieceData = { type }; // Pass just the type
-               const pieceEl = createCapturedPieceElement(pieceData, bottomHandColor, isBottomHandClickable);
-               if (count > 1) { // Add count badge if more than one
-                    const countBadge = document.createElement('span');
-                    countBadge.classList.add('piece-count');
-                    countBadge.textContent = count;
-                    pieceEl.appendChild(countBadge);
-               }
-               bottomHandEl.appendChild(pieceEl);
-           });
+          groupPieces(bottomHandPieces).forEach(([type, count]) => {
+              const pieceData = { type }; // Pass just the type
+              const pieceEl = createCapturedPieceElement(pieceData, bottomHandColor, isBottomHandClickable);
+              if (count > 1) { // Add count badge if more than one
+                  const countBadge = document.createElement('span');
+                  countBadge.classList.add('piece-count');
+                  countBadge.textContent = count;
+                  pieceEl.appendChild(countBadge);
+              }
+              bottomHandEl.appendChild(pieceEl);
+          });
 
-           groupPieces(topHandPieces).forEach(([type, count]) => {
-               const pieceData = { type };
-               const pieceEl = createCapturedPieceElement(pieceData, topHandColor, isTopHandClickable);
-                if (count > 1) {
-                    const countBadge = document.createElement('span');
-                    countBadge.classList.add('piece-count');
-                    countBadge.textContent = count;
-                    pieceEl.appendChild(countBadge);
-               }
-               topHandEl.appendChild(pieceEl);
-           });
+          groupPieces(topHandPieces).forEach(([type, count]) => {
+              const pieceData = { type };
+              const pieceEl = createCapturedPieceElement(pieceData, topHandColor, isTopHandClickable);
+               if (count > 1) {
+                  const countBadge = document.createElement('span');
+                  countBadge.classList.add('piece-count');
+                  countBadge.textContent = count;
+                  pieceEl.appendChild(countBadge);
+              }
+              topHandEl.appendChild(pieceEl);
+          });
     }
 
     function updateTurnIndicator() {
@@ -1031,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  // In single player (pass & play or vs bot)
                  turnIndicatorEl.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
-                // In multiplayer
+                 // In multiplayer
                 const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
                 turnIndicatorEl.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
             }
@@ -1078,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
              // Check if the clone is still a child before removing
              if (clone.parentNode === hikoroBoardElement) {
-                clone.remove();
+                 clone.remove();
              }
         }, ANIMATION_DURATION);
     }
@@ -1116,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove after animation
         setTimeout(() => {
              if (clone.parentNode === hikoroBoardElement) {
-                clone.remove();
+                 clone.remove();
             }
         }, ANIMATION_DURATION);
     }
@@ -1290,17 +1313,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
              // Client-side check for valid drop location (empty and valid square)
              if (gameState.boardState[y]?.[x] === null && (typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x,y) : true) ) {
-                // Determine drop color based on context
-                const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
-                const spriteType = isDroppingPiece.type;
-                const pieceImgSrc = `sprites/${spriteType}_${dropColor}.png`;
-                animateHikoroDrop({ x, y }, pieceImgSrc); // Animate visually
+                 // Determine drop color based on context
+                 const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
+                 const spriteType = isDroppingPiece.type;
+                 const pieceImgSrc = `sprites/${spriteType}_${dropColor}.png`;
+                 animateHikoroDrop({ x, y }, pieceImgSrc); // Animate visually
 
-                // Emit the generic drop event
-                socket.emit('makeGameMove', {
-                    gameId,
-                    move: { type: 'drop', piece: isDroppingPiece, to: { x, y } } // Send only type
-                });
+                 // Emit the generic drop event
+                 socket.emit('makeGameMove', {
+                     gameId,
+                     move: { type: 'drop', piece: isDroppingPiece, to: { x, y } } // Send only type
+                 });
              } else {
                  console.log("Invalid drop location."); // Clicked on occupied or invalid square
              }
@@ -1510,7 +1533,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     stone.classList.add('stone'); // Base class
 
                     // Add classes based on stoneType for background images
-                    // ⛔ REMOVED STRAY CSS LINE FROM HERE
                     switch (stoneType) {
                         case 1: // Black
                             stone.classList.add('go-black');
@@ -1531,7 +1553,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Add last move highlight if applicable
                     if (gameState.lastMove && gameState.lastMove.x === x && gameState.lastMove.y === y) {
-                        // ⛔ REMOVED STRAY 'TML' FROM HERE
                         stone.classList.add('last-move');
                     }
                     // Add selected highlight if applicable
@@ -1546,7 +1567,6 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('getValidMoves', {
                 gameId,
                 data: { x: goSelectedPiece.x, y: goSelectedPiece.y }
-                // ⛔ REMOVED STRAY 'Section' FROM HERE
             });
         }
     }
@@ -1600,20 +1620,52 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Client-side Turn Check ---
             // Prevent actions if it's not the client's turn in multiplayer
             if (!isSinglePlayer && player !== myPlayerColorValue) {
-                console.log("CLIENT BLOCKED: Not your turn (Go Multiplayer).");
-                if (goSelectedPiece) {
-                    deselectGoPiece();
-                }
-                return;
-            }
+                console.log("CLIENT BLOCKED: Not your turn (Go Multiplayer).");
+                if (goSelectedPiece) {
+                    deselectGoPiece();
+                }
+                return;
+            }
 
-            // 2. Bot Game check (THIS IS THE FIX)
-            // If it's a bot game AND it's black's turn (the bot's turn)
-            if (isBotGame && !gameState.isWhiteTurn) {
-                console.log("CLIENT BLOCKED: Bot is thinking.");
-                return; // Just ignore the click
-            }
-            // --- Main Click Logic ---
+            // 2. Bot Game check (THIS IS THE FIX)
+            // If it's a bot game AND it's black's turn (the bot's turn)
+            if (isBotGame && !gameState.isWhiteTurn) {
+                console.log("CLIENT BLOCKED: Bot is thinking.");
+                return; // Just ignore the click
+            }
+
+            // --- NEW: CHAIN CAPTURE CLICK LOGIC ---
+            if (gameState.pendingChainCapture) {
+                // 1. Check if clicking a valid jump target
+                const isValidJumpTarget = target.querySelector('.valid-move');
+                
+                if (isValidJumpTarget) {
+                    console.log("Continuing chain capture...");
+                    const from = gameState.pendingChainCapture; // Use the pending piece as 'from'
+                    const to = { x, y };
+                    socket.emit('makeGameMove', {
+                        gameId,
+                        move: { type: 'move', from, to }
+                    });
+                    deselectGoPiece(); // Deselect after move
+                } else if (goSelectedPiece && goSelectedPiece.x === x && goSelectedPiece.y === y) {
+                    // 2. Clicked the pending piece itself
+                    console.log("Clicked pending piece. Deselecting.");
+                    deselectGoPiece(); // Allow deselecting
+                } else {
+                    // 3. Clicked anywhere else
+                    console.log("Invalid click during chain capture.");
+                    // Optional: re-select the piece if they clicked elsewhere
+                    selectGoPiece(gameState.pendingChainCapture.x, gameState.pendingChainCapture.y);
+                    return; // Do nothing else
+                }
+                goClickTimer = null; // Clear timer
+                return; // End chain capture logic
+            }
+            // --- END OF NEW LOGIC ---
+
+
+            // --- Main Click Logic (No chain pending) ---
 
             if (goSelectedPiece) {
                 // A piece IS currently selected
@@ -1666,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Ensure nothing stays visually selected if it shouldn't
                     if (goSelectedPiece) { // Should be null here, but just in case
                          deselectGoPiece();
-                     }
+                    }
                 }
             }
 
@@ -1675,7 +1727,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleGoDblClick(e) {
-        if (gameState.gameOver || isReplayMode) return; // Prevent actions
+        // --- NEW: This functionality is now removed ---
+        console.log("Double-click to shield is disabled.");
 
         // Cancel the pending single-click timer
         if (goClickTimer) {
@@ -1683,101 +1736,62 @@ document.addEventListener('DOMContentLoaded', () => {
             goClickTimer = null;
         }
 
-        const target = e.currentTarget;
-        const x = parseInt(target.dataset.x, 10);
-        const y = parseInt(target.dataset.y, 10);
-        const cellState = gameState.boardState[y][x];
-
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
-
-        // --- CHECK IF ALLOWED TO MOVE ---
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
-             return; // Not your turn in multiplayer
-        }
-        if (isBotGame && !gameState.isWhiteTurn) {
-            console.log("CLIENT BLOCKED: Bot is thinking (shield dblclick).");
-            return; // Bot's turn
-        }
-
-        // --- THIS IS THE FIX ---
-        // 1. Check if a chain capture is pending (blocks shielding)
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
-            return;
-        }
-
-        // 2. Check if the double-clicked piece is the current player's *stone* (not shield)
-        if (cellState === player) { 
-             if (goSelectedPiece) deselectGoPiece(); // Deselect if another piece was selected
-             // --- Emit Turn to Shield move ---
-             socket.emit('makeGameMove', {
-                 gameId,
-                 move: { type: 'shield', at: { x, y } }
-             });
-             // State update will come from server
-        } else {
-            console.log("Can only turn your own NORMAL stones into shields.");
-        }
-        // --- END OF FIX ---
+        // Do nothing. Shielding only happens via capture or 'shieldStop' button.
+        return; 
     }
 
 
     function handleGoShieldClick() {
-        if (gameState.gameOver || !goSelectedPiece) return; // Check if a piece is selected
+        // --- NEW: This is now the "Stop Chain" button ---
 
-        // Determine the player whose turn it is
-        const player = gameState.isWhiteTurn ? 2 : 1;
-        // Determine the color this client controls
-        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
+        // 1. Check if a chain capture is pending
+        if (!gameState.pendingChainCapture) {
+            console.log("Shield button clicked, but no chain capture is pending. Doing nothing.");
+            // This button is *only* for stopping a chain now.
+            return;
+        }
 
-        // Check if it's the player's turn before emitting (for multiplayer responsiveness)
-        if (!isSinglePlayer && player !== myPlayerColor) {
-             console.log("CLIENT BLOCKED: Not your turn to shield (Go Multiplayer).");
-             return;
-        }
-        if (isBotGame && !gameState.isWhiteTurn) {
-            console.log("CLIENT BLOCKED: Bot is thinking (shield button).");
-            return; // Bot's turn
-        }
+        // 2. Check game state / turn (safety check)
+        if (gameState.gameOver) return;
+        const player = gameState.isWhiteTurn ? 2 : 1;
+        const myPlayerColor = !isSinglePlayer ? (myColor === 'white' ? 2 : 1) : null;
 
-        // --- CHAIN CAPTURE CHECK ---
-        // 1. Check if a chain capture is pending
-        if (gameState.pendingChainCapture) {
-            console.log("Cannot shield, must complete chain capture.");
-            return;
-        }
+        if (!isSinglePlayer && player !== myPlayerColor) {
+             console.log("CLIENT BLOCKED: Not your turn to stop chain (Go Multiplayer).");
+             return;
+        }
+        if (isBotGame && !gameState.isWhiteTurn) {
+            console.log("CLIENT BLOCKED: Bot is thinking (shield stop).");
+            return;
+        }
 
-        const { x, y } = goSelectedPiece;
+        // 3. Emit the new 'shieldStop' move
+        console.log("Emitting shieldStop move.");
+        socket.emit('makeGameMove', {
+            gameId,
+            move: { 
+                type: 'shieldStop', 
+                at: { 
+                    x: gameState.pendingChainCapture.x, 
+                    y: gameState.pendingChainCapture.y 
+                } 
+            }
+        });
 
-        // 2. Check if the selected piece is actually the current player's NORMAL stone
-        if (gameState.boardState[y]?.[x] !== player) { 
-            console.log("Cannot shield opponent's piece, shield, or empty square.");
-            deselectGoPiece(); // Deselect invalid piece
-            return;
-        }
-        // --- END CHAIN CAPTURE CHECK ---
-
-        // Emit shield move
-        socket.emit('makeGameMove', { // <--- ⛔️ THIS WAS THE BUG (was 'makeGoMove')
-            gameId,
-            move: { type: 'shield', at: { x, y } }
-        });
-        deselectGoPiece(); // Deselect after sending request
-    }
+        deselectGoPiece(); // Deselect after sending request
+    }
 
     function selectGoPiece(x, y) {
         goSelectedPiece = { x, y };
-        goShieldButton.style.display = 'block';
+        // The shield button logic is now handled by updateLocalState
+        // goShieldButton.style.display = 'block'; 
         renderGoBoard(); // This re-renders board and requests highlights
     }
 
     function deselectGoPiece() {
         goSelectedPiece = null;
-        goShieldButton.style.display = 'none';
+        // The shield button logic is now handled by updateLocalState
+        // goShieldButton.style.display = 'none';
         clearGoHighlights(); // Clear highlights immediately
         renderGoBoard(); // Re-render board without selection
     }
@@ -1860,22 +1874,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${pieceAbbr}${coord}`;
     }
 
-     // --- Updated Kifu Parser ---
+       // --- Updated Kifu Parser ---
     function parseKifuToMoveList(kifuText) {
-        const moves = [];
-        const lines = kifuText.split('\n');
-        for (const line of lines) {
-            // Match lines like "1. MoveW MoveB" or "1... MoveB"
-            const lineMatch = line.trim().match(/^(\d+)\.(?:\.\.)?\s*(.*)$/);
-            if (lineMatch && lineMatch[2]) {
-                const moveParts = lineMatch[2].trim().split(/\s+/); // Split by one or more spaces
-                // Filter out empty strings that might result from multiple spaces
-                moves.push(...moveParts.filter(part => part.length > 0));
-            }
-        }
-        console.log("Parsed Kifu:", moves);
-        return moves;
-    }
+         const moves = [];
+         const lines = kifuText.split('\n');
+         for (const line of lines) {
+             // Match lines like "1. MoveW MoveB" or "1... MoveB"
+             const lineMatch = line.trim().match(/^(\d+)\.(?:\.\.)?\s*(.*)$/);
+             if (lineMatch && lineMatch[2]) {
+                 const moveParts = lineMatch[2].trim().split(/\s+/); // Split by one or more spaces
+                 // Filter out empty strings that might result from multiple spaces
+                 moves.push(...moveParts.filter(part => part.length > 0));
+             }
+         }
+         console.log("Parsed Kifu:", moves);
+         return moves;
+     }
 
 
     function parseNotation(notation, boardState, isWhiteTurn) {
@@ -1982,12 +1996,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     else if (piece.type === 'mermaid' && wasCapture) promotedType = 'neptune';
 
                                     if (promotedType === pieceType) {
-                                        // console.log(`    -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
-                                        possibleMoves.push({ type: 'board', from: { x, y }, to: to, isAttack: matchingMove.isAttack });
+                                         // console.log(`    -> Found valid *promoting* move from ${toAlgebraic(x,y)} to ${algTo}.`);
+                                         possibleMoves.push({ type: 'board', from: { x, y }, to: to, isAttack: matchingMove.isAttack });
                                     }
                                 }
                             } catch (e) {
-                                console.error(`Error checking promoting moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
+                                 console.error(`Error checking promoting moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
                             }
                         }
                     }
@@ -2013,7 +2027,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
        // --- Updated Apply Move Function (Client-side simulation for Replay) ---
-     function applyMoveToState(oldGameState, moveObj) {
+    function applyMoveToState(oldGameState, moveObj) {
          if (!moveObj) {
              console.error("applyMoveToState received null moveObj");
              return oldGameState;
@@ -2085,12 +2099,12 @@ document.addEventListener('DOMContentLoaded', () => {
                      while (cx !== to.x || cy !== to.y) {
                          // Check bounds before accessing boardState
                          if (cy >= 0 && cy < HIKORO_BOARD_HEIGHT && cx >= 0 && cx < HIKORO_BOARD_WIDTH) {
-                            const iPiece = boardState[cy][cx];
-                            if (iPiece && iPiece.color === color && iPiece.type !== 'greathorsegeneral' && iPiece.type !== 'cthulhu') {
-                                const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
-                                if (hand.length < 6) hand.push({ type: iPiece.type });
-                                boardState[cy][cx] = null; // Remove jumped piece
-                            }
+                             const iPiece = boardState[cy][cx];
+                             if (iPiece && iPiece.color === color && iPiece.type !== 'greathorsegeneral' && iPiece.type !== 'cthulhu') {
+                                 const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
+                                 if (hand.length < 6) hand.push({ type: iPiece.type });
+                                 boardState[cy][cx] = null; // Remove jumped piece
+                             }
                          }
                          cx += dx; cy += dy;
                      }
@@ -2187,7 +2201,7 @@ document.addEventListener('DOMContentLoaded', () => {
      }
 
        // --- Updated Build Replay Tree ---
-     function buildReplayTree(kifuText) {
+    function buildReplayTree(kifuText) {
          const moveNotations = parseKifuToMoveList(kifuText);
          if (moveNotations.length === 0) {
              alert("Invalid or empty kifu. Please check format (e.g., '1. MoveW MoveB').");
@@ -2257,15 +2271,15 @@ document.addEventListener('DOMContentLoaded', () => {
          return rootNode;
      }
 
-    // --- Updated Move History Renderer ---
+     // --- Updated Move History Renderer ---
     function renderReplayMoveHistory() {
-        if (!moveHistoryElement) return;
-        moveHistoryElement.innerHTML = ''; // Clear previous history
+         if (!moveHistoryElement) return;
+         moveHistoryElement.innerHTML = ''; // Clear previous history
 
-        // Recursive function to render nodes and their variations
-        function renderNodeRecursive(node, parentDOMElement, depth) {
-            // Skip root node itself, start with its direct children
-            if (!node || node === replayGameTree) {
+         // Recursive function to render nodes and their variations
+         function renderNodeRecursive(node, parentDOMElement, depth) {
+             // Skip root node itself, start with its direct children
+             if (!node || node === replayGameTree) {
                  if(node && node.children.length > 0){
                      // Create a container for the main line moves starting from root
                      const mainLineContainer = document.createElement('div');
@@ -2277,50 +2291,50 @@ document.addEventListener('DOMContentLoaded', () => {
                          renderNodeRecursive(child, mainLineContainer, 0); // All children of root are at depth 0 visually
                      });
                  }
-                return;
-            }
-
-            const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
-            moveWrapper.classList.add('move-wrapper');
-            // Indent based on depth (especially for branches)
-            moveWrapper.style.marginLeft = `${depth * 15}px`;
-
-            const moveEl = document.createElement('span'); // Use span for the text part
-            moveEl.classList.add('move-node');
-
-            let moveText = node.moveNotation;
-            const stateBefore = node.parent.gameState; // State *before* this move
-            // Calculate turn number based on the state *before* the move
-            const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
-            const wasWhiteMove = stateBefore.isWhiteTurn;
-
-             // Add move number/ellipsis based on whose move it was (before bonus check)
-             if (wasWhiteMove) {
-                 moveText = `${turnNum}. ${moveText}`;
-             } else {
-                 moveText = `... ${moveText}`; // Use ellipsis for black's move
+                 return;
              }
 
-             // Prepend ">" if it's the second part of a bonus move
-             if (node.isBonusSecondMove) {
-                 // Overwrite number/ellipsis if it's a bonus continuation
-                 moveText = `> ${node.moveNotation}`;
-             }
+             const moveWrapper = document.createElement('div'); // Wrapper for move + potential branches
+             moveWrapper.classList.add('move-wrapper');
+             // Indent based on depth (especially for branches)
+             moveWrapper.style.marginLeft = `${depth * 15}px`;
+
+             const moveEl = document.createElement('span'); // Use span for the text part
+             moveEl.classList.add('move-node');
+
+             let moveText = node.moveNotation;
+             const stateBefore = node.parent.gameState; // State *before* this move
+             // Calculate turn number based on the state *before* the move
+             const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
+             const wasWhiteMove = stateBefore.isWhiteTurn;
+
+               // Add move number/ellipsis based on whose move it was (before bonus check)
+               if (wasWhiteMove) {
+                   moveText = `${turnNum}. ${moveText}`;
+               } else {
+                   moveText = `... ${moveText}`; // Use ellipsis for black's move
+               }
+
+               // Prepend ">" if it's the second part of a bonus move
+               if (node.isBonusSecondMove) {
+                   // Overwrite number/ellipsis if it's a bonus continuation
+                   moveText = `> ${node.moveNotation}`;
+               }
 
 
-            // Add parenthesis for the start of a branch variation
-            // A node starts a branch if it's not the first child of its parent
-            const isBranchStartNode = node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node;
-            if (isBranchStartNode && !node.isBonusSecondMove) { // Don't add '(' to bonus continuations
+             // Add parenthesis for the start of a branch variation
+             // A node starts a branch if it's not the first child of its parent
+             const isBranchStartNode = node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node;
+             if (isBranchStartNode && !node.isBonusSecondMove) { // Don't add '(' to bonus continuations
                  moveText = `( ${moveText}`; // Add opening parenthesis
                  // Closing parenthesis is harder, maybe add visually via CSS border/line
-            }
+             }
 
-            moveEl.textContent = moveText + " "; // Add space after text for readability
+             moveEl.textContent = moveText + " "; // Add space after text for readability
 
-            // Highlight the currently displayed move
-            if (node === currentReplayNode) {
-                moveEl.classList.add('active-move');
+             // Highlight the currently displayed move
+             if (node === currentReplayNode) {
+                 moveEl.classList.add('active-move');
                  // Scroll the wrapper into view smoothly
                  setTimeout(() => {
                      // Check again in case user navigated quickly
@@ -2328,18 +2342,18 @@ document.addEventListener('DOMContentLoaded', () => {
                          moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                      }
                  }, 50); // Small delay to ensure rendering
-            }
+             }
 
-            // Add click listener to navigate replay
-            moveEl.addEventListener('click', (e) => {
-                displayReplayState(node);
-            });
+             // Add click listener to navigate replay
+             moveEl.addEventListener('click', (e) => {
+                 displayReplayState(node);
+             });
 
-            moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
-            parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
+             moveWrapper.appendChild(moveEl); // Add the text span to the wrapper
+             parentDOMElement.appendChild(moveWrapper); // Add the wrapper to the container
 
-            // --- Render Children Recursively ---
-            if (node.children.length > 0) {
+             // --- Render Children Recursively ---
+             if (node.children.length > 0) {
                  let containerForChildren = moveWrapper; // By default, nest directly
                  // Create a new sub-container for branches visually if needed
                  if (node.children.length > 1) {
@@ -2356,32 +2370,32 @@ document.addEventListener('DOMContentLoaded', () => {
                  for (let i = 1; i < node.children.length; i++) {
                      renderNodeRecursive(node.children[i], containerForChildren, depth + 1); // Increase depth for branches
                  }
-            }
-        }
+             }
+         }
 
-        renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
-    }
+         renderNodeRecursive(replayGameTree, moveHistoryElement, 0); // Start rendering from root
+     }
 
-    // --- Updated handleReplaySquareClick ---
+     // --- Updated handleReplaySquareClick ---
     function handleReplaySquareClick(x, y) {
-        if (!currentReplayNode) return; // Should not happen in replay mode
-        const currentGameState = currentReplayNode.gameState;
+         if (!currentReplayNode) return; // Should not happen in replay mode
+         const currentGameState = currentReplayNode.gameState;
 
-        // --- Check if awaiting BONUS move ---
-        if (currentGameState.bonusMoveInfo) {
-            const bonusPieceX = currentGameState.bonusMoveInfo.pieceX;
-            const bonusPieceY = currentGameState.bonusMoveInfo.pieceY;
-            const piece = currentGameState.boardState[bonusPieceY]?.[bonusPieceX];
+         // --- Check if awaiting BONUS move ---
+         if (currentGameState.bonusMoveInfo) {
+             const bonusPieceX = currentGameState.bonusMoveInfo.pieceX;
+             const bonusPieceY = currentGameState.bonusMoveInfo.pieceY;
+             const piece = currentGameState.boardState[bonusPieceY]?.[bonusPieceX];
 
-            if (!piece) {
-                console.error("Bonus move pending, but piece not found at expected location!");
-                clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null; // Clear state
+             if (!piece) {
+                 console.error("Bonus move pending, but piece not found at expected location!");
+                 clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null; // Clear state
                  currentReplayNode.gameState.bonusMoveInfo = null; // Attempt recovery
                  updateTurnIndicator(); // Refresh display
-                return;
-            }
-            // Ensure correct piece is selected
-            if (!selectedSquare || selectedSquare.x !== bonusPieceX || selectedSquare.y !== bonusPieceY) {
+                 return;
+             }
+             // Ensure correct piece is selected
+             if (!selectedSquare || selectedSquare.x !== bonusPieceX || selectedSquare.y !== bonusPieceY) {
                  selectedSquare = { x: bonusPieceX, y: bonusPieceY }; // Auto-select
                  isDroppingPiece = null;
                  // Get valid non-capture moves for the bonus piece
@@ -2392,76 +2406,76 @@ document.addEventListener('DOMContentLoaded', () => {
                  if(bonusSquareEl) bonusSquareEl.classList.add('selected');
                  console.log("Auto-selected piece for required bonus move.");
                  return; // Wait for click on target
-            }
+             }
 
-            // Correct piece is selected, check if target is valid bonus move
-            const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true).filter(m => !m.isAttack);
-            const isValidBonusTarget = validBonusMoves.some(m => m.x === x && m.y === y);
+             // Correct piece is selected, check if target is valid bonus move
+             const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true).filter(m => !m.isAttack);
+             const isValidBonusTarget = validBonusMoves.some(m => m.x === x && m.y === y);
 
-            if (isValidBonusTarget) {
-                // Construct the move object for the bonus move
-                const moveObj = { type: 'board', from: { x: bonusPieceX, y: bonusPieceY }, to: { x, y } };
-                // Apply the move to get the resulting game state
-                const nextGameState = applyMoveToState(currentGameState, moveObj);
-                // Generate notation for this bonus move (non-capture)
-                const notationString = generateServerNotation(piece, { x, y }, false, false);
+             if (isValidBonusTarget) {
+                 // Construct the move object for the bonus move
+                 const moveObj = { type: 'board', from: { x: bonusPieceX, y: bonusPieceY }, to: { x, y } };
+                 // Apply the move to get the resulting game state
+                 const nextGameState = applyMoveToState(currentGameState, moveObj);
+                 // Generate notation for this bonus move (non-capture)
+                 const notationString = generateServerNotation(piece, { x, y }, false, false);
 
-                // Check if this exact move already exists as a child node
-                let existingNode = currentReplayNode.children.find(child =>
-                    child.moveObj?.type === 'board' &&
-                    child.moveObj.from.x === moveObj.from.x && child.moveObj.from.y === moveObj.from.y &&
-                    child.moveObj.to.x === moveObj.to.x && child.moveObj.to.y === moveObj.to.y &&
-                    child.isBonusSecondMove // Ensure it's marked as the second part
-                );
+                 // Check if this exact move already exists as a child node
+                 let existingNode = currentReplayNode.children.find(child =>
+                     child.moveObj?.type === 'board' &&
+                     child.moveObj.from.x === moveObj.from.x && child.moveObj.from.y === moveObj.from.y &&
+                     child.moveObj.to.x === moveObj.to.x && child.moveObj.to.y === moveObj.to.y &&
+                     child.isBonusSecondMove // Ensure it's marked as the second part
+                 );
 
-                if (!existingNode) {
-                     // Create a new node if this variation wasn't in the original Kifu
-                     console.log("Creating new node for bonus move variation.");
-                     existingNode = {
-                         moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
-                         parent: currentReplayNode, children: [], isBonusSecondMove: true
-                     };
-                     currentReplayNode.children.push(existingNode); // Add as a new child branch
-                } else {
-                     console.log("Following existing node for bonus move.");
-                }
+                 if (!existingNode) {
+                      // Create a new node if this variation wasn't in the original Kifu
+                      console.log("Creating new node for bonus move variation.");
+                      existingNode = {
+                          moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
+                          parent: currentReplayNode, children: [], isBonusSecondMove: true
+                      };
+                      currentReplayNode.children.push(existingNode); // Add as a new child branch
+                 } else {
+                      console.log("Following existing node for bonus move.");
+                 }
 
 
-                awaitingBonusMove = null; // Bonus complete
-                selectedSquare = null;
-                isDroppingPiece = null;
-                clearHikoroHighlights();
-                displayReplayState(existingNode); // Display state *after* bonus move
-            } else {
-                console.log("Invalid target for bonus move.");
-                // Keep piece selected, redraw highlights for bonus moves
-                clearHikoroHighlights();
-                drawHikoroHighlights(validBonusMoves);
-                const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${bonusPieceX}'][data-logical-y='${bonusPieceY}']`);
-                if(bonusSquareEl) bonusSquareEl.classList.add('selected');
-            }
-            return; // End processing for this click
-        }
+                 awaitingBonusMove = null; // Bonus complete
+                 selectedSquare = null;
+                 isDroppingPiece = null;
+                 clearHikoroHighlights();
+                 displayReplayState(existingNode); // Display state *after* bonus move
+             } else {
+                 console.log("Invalid target for bonus move.");
+                 // Keep piece selected, redraw highlights for bonus moves
+                 clearHikoroHighlights();
+                 drawHikoroHighlights(validBonusMoves);
+                 const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${bonusPieceX}'][data-logical-y='${bonusPieceY}']`);
+                 if(bonusSquareEl) bonusSquareEl.classList.add('selected');
+             }
+             return; // End processing for this click
+         }
 
-        // --- Standard move/selection logic (if NOT awaiting bonus) ---
-        if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
-            const from = selectedSquare;
-            const to = { x, y };
-            const piece = currentGameState.boardState[from.y]?.[from.x];
+         // --- Standard move/selection logic (if NOT awaiting bonus) ---
+         if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+             const from = selectedSquare;
+             const to = { x, y };
+             const piece = currentGameState.boardState[from.y]?.[from.x];
 
-            if (!piece) { clearHikoroHighlights(); selectedSquare = null; return; }
+             if (!piece) { clearHikoroHighlights(); selectedSquare = null; return; }
 
-            // Check if this move is valid from the current state (ignore bonus flag here)
-            const validMoves = gameLogic.getValidMovesForPiece(piece, from.x, from.y, currentGameState.boardState, false);
-            const targetMove = validMoves.find(m => m.x === to.x && m.y === to.y);
+             // Check if this move is valid from the current state (ignore bonus flag here)
+             const validMoves = gameLogic.getValidMovesForPiece(piece, from.x, from.y, currentGameState.boardState, false);
+             const targetMove = validMoves.find(m => m.x === to.x && m.y === to.y);
 
-            if (targetMove) {
-                const wasCapture = targetMove.isAttack;
-                const moveObj = { type: 'board', from, to };
-                // Apply move to get next state
-                const nextGameState = applyMoveToState(currentGameState, moveObj);
-                // Generate notation
-                const notationString = generateServerNotation(piece, to, wasCapture, false);
+             if (targetMove) {
+                 const wasCapture = targetMove.isAttack;
+                 const moveObj = { type: 'board', from, to };
+                 // Apply move to get next state
+                 const nextGameState = applyMoveToState(currentGameState, moveObj);
+                 // Generate notation
+                 const notationString = generateServerNotation(piece, to, wasCapture, false);
 
                  // Check if this exact move already exists as a child node
                  let existingNode = currentReplayNode.children.find(child =>
@@ -2472,56 +2486,56 @@ document.addEventListener('DOMContentLoaded', () => {
                  );
 
                  if (!existingNode) {
-                     // Create a new node if this variation wasn't in the Kifu
-                     console.log("Creating new node for move variation.");
-                      existingNode = {
-                         moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
-                         parent: currentReplayNode, children: [], isBonusSecondMove: false
-                     };
-                     currentReplayNode.children.push(existingNode); // Add as a new child branch
+                      // Create a new node if this variation wasn't in the Kifu
+                      console.log("Creating new node for move variation.");
+                       existingNode = {
+                           moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
+                           parent: currentReplayNode, children: [], isBonusSecondMove: false
+                       };
+                       currentReplayNode.children.push(existingNode); // Add as a new child branch
                  } else {
-                     console.log("Following existing node for move.");
+                      console.log("Following existing node for move.");
                  }
 
 
-                // Check if the move just made triggers a bonus
-                if (nextGameState.bonusMoveInfo) {
-                    // Bonus triggered, keep piece selected for the next click
-                    awaitingBonusMove = { from: to, pieceType: piece.type }; // Track info if needed
-                    selectedSquare = { x: to.x, y: to.y }; // Keep selected
-                    displayReplayState(existingNode); // Show state after first move, triggers bonus highlighting
-                } else {
-                    // Normal move completed, clear selections
-                    awaitingBonusMove = null;
-                    selectedSquare = null;
-                    isDroppingPiece = null;
-                    clearHikoroHighlights();
-                    displayReplayState(existingNode); // Show state after normal move
-                }
-            } else {
-                // Invalid target clicked, deselect
-                clearHikoroHighlights();
-                selectedSquare = null;
-            }
-            return; // End processing
-        }
+                 // Check if the move just made triggers a bonus
+                 if (nextGameState.bonusMoveInfo) {
+                     // Bonus triggered, keep piece selected for the next click
+                     awaitingBonusMove = { from: to, pieceType: piece.type }; // Track info if needed
+                     selectedSquare = { x: to.x, y: to.y }; // Keep selected
+                     displayReplayState(existingNode); // Show state after first move, triggers bonus highlighting
+                 } else {
+                     // Normal move completed, clear selections
+                     awaitingBonusMove = null;
+                     selectedSquare = null;
+                     isDroppingPiece = null;
+                     clearHikoroHighlights();
+                     displayReplayState(existingNode); // Show state after normal move
+                 }
+             } else {
+                 // Invalid target clicked, deselect
+                 clearHikoroHighlights();
+                 selectedSquare = null;
+             }
+             return; // End processing
+         }
 
-        // --- Drop Logic ---
-        if (isDroppingPiece) {
-            const to = { x, y };
-            // Ensure piece type is valid for dropping
-            if (isDroppingPiece.type === 'lupa' || isDroppingPiece.type === 'prince') {
-                clearHikoroHighlights(); isDroppingPiece = null; return;
-            }
-            // Construct drop move object
-            const moveObj = { type: 'drop', piece: { type: isDroppingPiece.type }, to };
+         // --- Drop Logic ---
+         if (isDroppingPiece) {
+             const to = { x, y };
+             // Ensure piece type is valid for dropping
+             if (isDroppingPiece.type === 'lupa' || isDroppingPiece.type === 'prince') {
+                 clearHikoroHighlights(); isDroppingPiece = null; return;
+             }
+             // Construct drop move object
+             const moveObj = { type: 'drop', piece: { type: isDroppingPiece.type }, to };
 
-            // Client-side validation: empty and valid square
-            if (currentGameState.boardState[to.y]?.[to.x] === null && gameLogic.isPositionValid(to.x, to.y)) {
-                // Apply drop to get next state
-                const nextGameState = applyMoveToState(currentGameState, moveObj);
-                // Generate notation for drop
-                const notationString = generateServerNotation({ type: isDroppingPiece.type }, to, false, true);
+             // Client-side validation: empty and valid square
+             if (currentGameState.boardState[to.y]?.[to.x] === null && gameLogic.isPositionValid(to.x, to.y)) {
+                 // Apply drop to get next state
+                 const nextGameState = applyMoveToState(currentGameState, moveObj);
+                 // Generate notation for drop
+                 const notationString = generateServerNotation({ type: isDroppingPiece.type }, to, false, true);
 
                  // Check if this exact drop already exists as a child node
                  let existingNode = currentReplayNode.children.find(child =>
@@ -2531,175 +2545,175 @@ document.addEventListener('DOMContentLoaded', () => {
                  );
 
                  if (!existingNode) {
-                     // Create a new node if this variation wasn't in the Kifu
-                     console.log("Creating new node for drop variation.");
-                     existingNode = {
-                         moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
-                         parent: currentReplayNode, children: [], isBonusSecondMove: false
-                     };
-                     currentReplayNode.children.push(existingNode); // Add as a new child branch
+                      // Create a new node if this variation wasn't in the Kifu
+                      console.log("Creating new node for drop variation.");
+                      existingNode = {
+                          moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
+                          parent: currentReplayNode, children: [], isBonusSecondMove: false
+                      };
+                      currentReplayNode.children.push(existingNode); // Add as a new child branch
                  } else {
-                     console.log("Following existing node for drop.");
+                      console.log("Following existing node for drop.");
                  }
 
-                // Drops don't trigger bonus moves
-                awaitingBonusMove = null;
-                selectedSquare = null;
-                isDroppingPiece = null;
-                clearHikoroHighlights();
-                displayReplayState(existingNode); // Show state after drop
+                 // Drops don't trigger bonus moves
+                 awaitingBonusMove = null;
+                 selectedSquare = null;
+                 isDroppingPiece = null;
+                 clearHikoroHighlights();
+                 displayReplayState(existingNode); // Show state after drop
 
-            } else {
-                // Invalid drop location clicked, deselect
-                clearHikoroHighlights();
-                isDroppingPiece = null;
-            }
-            return; // End processing
-        }
+             } else {
+                 // Invalid drop location clicked, deselect
+                 clearHikoroHighlights();
+                 isDroppingPiece = null;
+             }
+             return; // End processing
+         }
 
-        // --- Standard piece selection on the board ---
-        const piece = currentGameState.boardState[y]?.[x];
-        if (piece) {
-            // Allow selecting only the piece whose turn it is
-            const canSelectPiece = piece.color === (currentGameState.isWhiteTurn ? 'white' : 'black');
-            if (canSelectPiece) {
-                // Toggle selection if clicking the same piece again
-                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                    selectedSquare = null; // Deselect
-                    clearHikoroHighlights();
-                } else {
-                    // Select the new piece
-                    selectedSquare = { x, y };
-                    isDroppingPiece = null; // Clear drop selection
-                    // Get and draw valid moves (no bonus flag needed here, handled above)
-                    const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, currentGameState.boardState, false);
-                    clearHikoroHighlights();
-                    drawHikoroHighlights(validMoves);
-                    // Add visual selection to the square
-                    const selSquareEl = document.querySelector(`#game-board .square[data-logical-x='${x}'][data-logical-y='${y}']`);
-                    if(selSquareEl) selSquareEl.classList.add('selected');
-                }
-            } else { // Clicked opponent piece
+         // --- Standard piece selection on the board ---
+         const piece = currentGameState.boardState[y]?.[x];
+         if (piece) {
+             // Allow selecting only the piece whose turn it is
+             const canSelectPiece = piece.color === (currentGameState.isWhiteTurn ? 'white' : 'black');
+             if (canSelectPiece) {
+                 // Toggle selection if clicking the same piece again
+                 if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                     selectedSquare = null; // Deselect
+                     clearHikoroHighlights();
+                 } else {
+                     // Select the new piece
+                     selectedSquare = { x, y };
+                     isDroppingPiece = null; // Clear drop selection
+                     // Get and draw valid moves (no bonus flag needed here, handled above)
+                     const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, currentGameState.boardState, false);
+                     clearHikoroHighlights();
+                     drawHikoroHighlights(validMoves);
+                     // Add visual selection to the square
+                     const selSquareEl = document.querySelector(`#game-board .square[data-logical-x='${x}'][data-logical-y='${y}']`);
+                     if(selSquareEl) selSquareEl.classList.add('selected');
+                 }
+             } else { // Clicked opponent piece
                  // Clear any selection if opponent piece is clicked
                  selectedSquare = null; isDroppingPiece = null; clearHikoroHighlights();
-            }
-        } else { // Clicked empty square when not moving/dropping
-            // Clear any selection
-            selectedSquare = null;
-            isDroppingPiece = null;
-            clearHikoroHighlights();
-        }
-    }
-
-
-    // --- Updated handleReplayCapturedClick ---
-    function handleReplayCapturedClick(pieceData, handColor, clickedElement) { // pieceData only has {type}
-        if (!currentReplayNode) return; // Check if replay is active
-        const currentGameState = currentReplayNode.gameState;
-
-        // Prevent selecting from hand if bonus move is pending
-        if (currentGameState.bonusMoveInfo) {
-             console.log("Cannot select captured piece while bonus move is pending.");
-             return;
-        }
-
-        // Allow selecting only from the hand of the player whose turn it is
-        const activeColor = currentGameState.isWhiteTurn ? 'white' : 'black';
-        if (handColor !== activeColor) return;
-
-        // Prevent selecting royalty
-        if (pieceData.type === 'lupa' || pieceData.type === 'prince') return;
-
-        // Toggle selection: If clicking the same piece type again, deselect
-        if (isDroppingPiece && isDroppingPiece.type === pieceData.type) {
-            isDroppingPiece = null;
-            selectedSquare = null; // Clear board selection too
-            clearHikoroHighlights(); // Clear board highlights
-            clickedElement.classList.remove('selected-drop'); // Remove visual selection
-            return;
-        }
-
-        // Select piece for dropping
-        selectedSquare = null; // Clear any board selection
-        isDroppingPiece = { type: pieceData.type }; // Store just the type
-        clearHikoroHighlights(); // Clear board highlights
-        // Remove selection from previously selected captured piece
-        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
-        clickedElement.classList.add('selected-drop'); // Add visual selection to this piece
-        highlightHikoroDropSquares(); // Highlight valid drop squares on the board (uses global gameState)
-    }
-
-
-    // --- Updated Display Replay State ---
-    function displayReplayState(node) {
-        if (!node) return;
-        currentReplayNode = node; // Update the current position in the tree
-
-        // Calculate the display move number by traversing up the main line
-        let displayMoveNum = 0;
-        let tempNode = node;
-        let pathNodes = []; // Store nodes in path for accurate count
-        while (tempNode && tempNode.parent) {
-            pathNodes.unshift(tempNode); // Add to beginning
-            tempNode = tempNode.parent;
-        }
-        pathNodes.forEach(n => { if (!n.isBonusSecondMove) displayMoveNum++; });
-
-        gameState = node.gameState; // Set global state for renderers
-
-        // Render the board and captured pieces based on the node's game state
-        renderHikoroBoard(); // Replay mode always uses Hikoro board rendering
-        renderHikoroCaptured();
-        updateTurnIndicator(); // Update whose turn it is
-        renderReplayMoveHistory(); // Re-render the move tree, highlighting the current node
-
-        // Update replay control buttons and move number display
-        // Calculate total moves in the *original* main line for display consistency
-         let displayTotal = 0;
-         flatMoveList.forEach(n => { if (n !== replayGameTree && !n.isBonusSecondMove) displayTotal++; });
-        replayMoveNumber.textContent = `${displayMoveNum} / ${displayTotal}`;
-
-        // Enable/disable navigation buttons based on position in the tree
-        replayFirstBtn.disabled = (node === replayGameTree); // Disable if at root
-        replayPrevBtn.disabled = (!node.parent); // Disable if no parent (at root)
-
-        // Next button: disable if no children AND no bonus pending
-        replayNextBtn.disabled = node.children.length === 0 && !gameState.bonusMoveInfo;
-
-        // Last button: disable if at the end of the *original* main line
-        replayLastBtn.disabled = (flatMoveList.length <= 1 || node === flatMoveList[flatMoveList.length - 1]);
-
-        // Clear bonus requirement *unless* we are displaying the state that requires it
-        if (!gameState.bonusMoveInfo) {
-            awaitingBonusMove = null;
-        }
-
-        // Manage highlights and selections based on bonus state for interactive replay
-         if (gameState.bonusMoveInfo) {
-             // Bonus is pending in this state, force selection of the bonus piece
-             selectedSquare = { x: gameState.bonusMoveInfo.pieceX, y: gameState.bonusMoveInfo.pieceY };
-             isDroppingPiece = null; // Cannot drop during bonus
-             const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
-             if (bonusPiece) {
-                 // Get and highlight only the valid non-capture moves
-                 const validBonusMoves = gameLogic.getValidMovesForPiece(bonusPiece, selectedSquare.x, selectedSquare.y, gameState.boardState, true).filter(m => !m.isAttack);
-                 clearHikoroHighlights();
-                 drawHikoroHighlights(validBonusMoves);
-                 // Visually select the piece on the board
-                 const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
-                 if (bonusSquareEl) bonusSquareEl.classList.add('selected');
-             } else {
-                  // Error state: Bonus info exists but piece is gone? Clear state.
-                  console.error("Replay bonus state error: Piece missing!");
-                  clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null;
              }
-         } else if (selectedSquare || isDroppingPiece) {
-              // If navigating and a selection *was* active (but not bonus), clear it for the new state
-              selectedSquare = null;
-              isDroppingPiece = null;
-              clearHikoroHighlights();
+         } else { // Clicked empty square when not moving/dropping
+             // Clear any selection
+             selectedSquare = null;
+             isDroppingPiece = null;
+             clearHikoroHighlights();
          }
-    }
+     }
+
+
+     // --- Updated handleReplayCapturedClick ---
+    function handleReplayCapturedClick(pieceData, handColor, clickedElement) { // pieceData only has {type}
+         if (!currentReplayNode) return; // Check if replay is active
+         const currentGameState = currentReplayNode.gameState;
+
+         // Prevent selecting from hand if bonus move is pending
+         if (currentGameState.bonusMoveInfo) {
+              console.log("Cannot select captured piece while bonus move is pending.");
+              return;
+         }
+
+         // Allow selecting only from the hand of the player whose turn it is
+         const activeColor = currentGameState.isWhiteTurn ? 'white' : 'black';
+         if (handColor !== activeColor) return;
+
+         // Prevent selecting royalty
+         if (pieceData.type === 'lupa' || pieceData.type === 'prince') return;
+
+         // Toggle selection: If clicking the same piece type again, deselect
+         if (isDroppingPiece && isDroppingPiece.type === pieceData.type) {
+             isDroppingPiece = null;
+             selectedSquare = null; // Clear board selection too
+             clearHikoroHighlights(); // Clear board highlights
+             clickedElement.classList.remove('selected-drop'); // Remove visual selection
+             return;
+         }
+
+         // Select piece for dropping
+         selectedSquare = null; // Clear any board selection
+         isDroppingPiece = { type: pieceData.type }; // Store just the type
+         clearHikoroHighlights(); // Clear board highlights
+         // Remove selection from previously selected captured piece
+         document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+         clickedElement.classList.add('selected-drop'); // Add visual selection to this piece
+         highlightHikoroDropSquares(); // Highlight valid drop squares on the board (uses global gameState)
+     }
+
+
+     // --- Updated Display Replay State ---
+    function displayReplayState(node) {
+         if (!node) return;
+         currentReplayNode = node; // Update the current position in the tree
+
+         // Calculate the display move number by traversing up the main line
+         let displayMoveNum = 0;
+         let tempNode = node;
+         let pathNodes = []; // Store nodes in path for accurate count
+         while (tempNode && tempNode.parent) {
+             pathNodes.unshift(tempNode); // Add to beginning
+             tempNode = tempNode.parent;
+         }
+         pathNodes.forEach(n => { if (!n.isBonusSecondMove) displayMoveNum++; });
+
+         gameState = node.gameState; // Set global state for renderers
+
+         // Render the board and captured pieces based on the node's game state
+         renderHikoroBoard(); // Replay mode always uses Hikoro board rendering
+         renderHikoroCaptured();
+         updateTurnIndicator(); // Update whose turn it is
+         renderReplayMoveHistory(); // Re-render the move tree, highlighting the current node
+
+         // Update replay control buttons and move number display
+         // Calculate total moves in the *original* main line for display consistency
+          let displayTotal = 0;
+          flatMoveList.forEach(n => { if (n !== replayGameTree && !n.isBonusSecondMove) displayTotal++; });
+         replayMoveNumber.textContent = `${displayMoveNum} / ${displayTotal}`;
+
+         // Enable/disable navigation buttons based on position in the tree
+         replayFirstBtn.disabled = (node === replayGameTree); // Disable if at root
+         replayPrevBtn.disabled = (!node.parent); // Disable if no parent (at root)
+
+         // Next button: disable if no children AND no bonus pending
+         replayNextBtn.disabled = node.children.length === 0 && !gameState.bonusMoveInfo;
+
+         // Last button: disable if at the end of the *original* main line
+         replayLastBtn.disabled = (flatMoveList.length <= 1 || node === flatMoveList[flatMoveList.length - 1]);
+
+         // Clear bonus requirement *unless* we are displaying the state that requires it
+         if (!gameState.bonusMoveInfo) {
+             awaitingBonusMove = null;
+         }
+
+         // Manage highlights and selections based on bonus state for interactive replay
+          if (gameState.bonusMoveInfo) {
+              // Bonus is pending in this state, force selection of the bonus piece
+              selectedSquare = { x: gameState.bonusMoveInfo.pieceX, y: gameState.bonusMoveInfo.pieceY };
+              isDroppingPiece = null; // Cannot drop during bonus
+              const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
+              if (bonusPiece) {
+                  // Get and highlight only the valid non-capture moves
+                  const validBonusMoves = gameLogic.getValidMovesForPiece(bonusPiece, selectedSquare.x, selectedSquare.y, gameState.boardState, true).filter(m => !m.isAttack);
+                  clearHikoroHighlights();
+                  drawHikoroHighlights(validBonusMoves);
+                  // Visually select the piece on the board
+                  const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
+                  if (bonusSquareEl) bonusSquareEl.classList.add('selected');
+              } else {
+                   // Error state: Bonus info exists but piece is gone? Clear state.
+                   console.error("Replay bonus state error: Piece missing!");
+                   clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null;
+              }
+          } else if (selectedSquare || isDroppingPiece) {
+               // If navigating and a selection *was* active (but not bonus), clear it for the new state
+               selectedSquare = null;
+               isDroppingPiece = null;
+               clearHikoroHighlights();
+          }
+     }
 
     // --- (Keep your rules modal functions unchanged) ---
     const rulesBtn = document.getElementById('rules-btn');
@@ -2730,6 +2744,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     function populateGoRules() {
+        // --- NEW: Updated Go Rules ---
         rulesBody.innerHTML = `
             <h2>Go Variant Rules</h2>
             <p>This is a fast-paced Go variant combining elements of Go and Chess.</p>
@@ -2738,39 +2753,55 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>The goal is to have a higher score than your opponent. Your score is the sum of:</p>
             <ul>
                 <li><strong>Territory:</strong> Empty intersections you have surrounded.</li>
-                <li><strong>Stones:</strong> The number of your stones on the board.</li>
-                <li><strong>(Penalty):</strong> You lose 1 point for every stone you've had captured (either by a jump or a Go capture).</li>
+                <li><strong>Stones:</strong> The number of your stones on the board (both normal and shields).</li>
             </ul>
 
             <h3>Gameplay</h3>
-            <p>On your turn, you can choose one of four actions:</p>
+            <p>On your turn, you can choose one of three actions:</p>
             
-            <h4>1. Place a Stone (Default Click)</h4>
+            <h4>1. Place a Stone (Click Empty Spot)</h4>
             <p>Click on any empty intersection to place one of your stones. This is the most common move.</p>
 
             <h4>2. Move a Stone (Click to Select, Click to Move)</h4>
-            <p>Click one of your existing stones (not a Shield) to select it. Click a valid empty square to move it. Valid moves are:</p>
+            <p>You can move your stones, but <strong>Normal Stones</strong> and <strong>Shield Stones</strong> move differently.</p>
             <ul>
-                <li>One square in any orthogonal direction (up, down, left, right).</li>
-                <li>A two-square jump over an <strong>enemy</strong> stone, capturing it (like in Checkers). This is only allowed if the landing spot is empty.</li>
+                <li><strong>Normal Stones (● ○):</strong> Can <strong>only</strong> move by capturing. A capture is a two-square orthogonal (not diagonal) jump over a single enemy <strong>normal stone</strong>, landing on an empty space (like in Checkers).</li>
+                <li><strong>Shield Stones (■ □):</strong> Can move <strong>one</strong> square in any direction (orthogonal or diagonal) to an empty space. They cannot capture.</li>
             </ul>
 
-            <h4>3. Turn to Shield (Double-Click or Select + Button)</h4>
-            <p>Double-click one of your stones (or select it and press the 'Shield' button) to turn it into a Shield. A Shield cannot move, be captured thorugh jumb capture, or be used to capture, but it counts for territory and score. It acts as a wall.</p>
+            <h4>3. Pass (Click "Pass" Button)</h4>
+            <p>You can pass your turn at any time, unless you are in the middle of a Chain Capture.</p>
 
-            <h4>4. Resign</h4>
-            <p>You can go to the Main Menu and leave the game to resign.</p>
-
+            <h3><span style="color: #4CAF50;">🛡️</span> Shields & Chain Captures</h3>
+            <p>Shields are created <strong>only</strong> after a capture.</p>
+            <ol>
+                 <li><strong>Capture:</strong> You move a <strong>Normal Stone</strong> to capture an enemy stone by jumping over it.</li>
+                 <li><strong>Chain Check:</strong> The game checks if your piece can make <em>another</em> jump-capture from its new position.
+                    <ul>
+                        <li><strong>If NO:</strong> Your turn ends. Your piece is <strong>automatically converted into a Shield Stone</strong> (■ or □).</li>
+                        <li><strong>If YES:</strong> A <strong>Chain Capture</strong> begins! Your turn continues, and your piece remains a Normal Stone.</li>
+                    </ul>
+                 </li>
+                 <li><strong>Chain Capture (Pending):</strong>
+                    <p>You now have two options:</p>
+                    <ul>
+                        <li><strong>Continue Chain:</strong> Make another jump-capture move. The game will check for chains again.</li>
+                        <li><strong>Stop Chain:</strong> Click the "<strong>Stop Chain & Shield</strong>" button. Your piece will be converted to a Shield Stone, and your turn will end.</li>
+                    </ul>
+                 </li>
+            </ol>
+            
             <h3>Capture Rules</h3>
             <p>There are two ways to capture stones:</p>
             <ol>
-                <li><strong>Jump Capture (via Move):</strong> As described above, jumping over a single enemy stone captures it.</li>
-                <li><strong>Go Capture (via Placement or Move):</strong> If any of your moves (placing or moving) results in an enemy group having no "liberties" (empty adjacent spaces), that entire group is captured and removed from the board.</li>
+                <li><strong>Jump Capture (via Move):</strong> As described above. This is how Normal Stones move.</li>
+                <li><strong>Go Capture (via Placement or Move):</strong> If any of your moves (placing, moving, or shielding) results in an enemy group having no "liberties" (empty adjacent spaces), that entire group is captured and removed from the board.</li>
             </ol>
 
             <h3><span style="color: #FF5722;">⚠️</span> Suicide Rule</h3>
             <p>You cannot make a move (place or move a stone) that results in your own group having zero liberties, <em>unless</em> that move also captures an enemy group at the same time.</p>
         `;
+        // --- END: Updated Go Rules ---
     }
 	
 	
@@ -2786,62 +2817,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- RENAMED HIKORO RULES (Your old function) ---
     function populateHikoroRules() {
-        rulesBody.innerHTML = `
-            <h2>Winning the Game</h2>
-            <ul>
-                <li><strong>Royalty Capture:</strong> Capture **both** the opponent's King Kraken and Kraken Prince.</li>
-                <li><strong>Sanctuary Victory:</strong> Move your King Kraken OR Kraken Prince onto one of the eight golden "Sanctuary" squares.</li>
-            </ul>
-            <h2>Special Mechanics</h2>
-            <h3><span style="color: #FF5722;">👑</span> The Royal Family & The Palace</h3>
-            <ul>
-                <li><strong>King Kraken Palace Rule:</strong> Confined to its starting 4x2 Palace area.</li>
-                <li><strong>Prince's Freedom:</strong> If your Prince is captured, your King is freed from the Palace.</li>
-                <li><strong>Royal Capture Rule:</strong> Captured Kings/Princes are removed, not added to hand.</li>
-            </ul>
-            <h3><span style="color: #4CAF50;">🛡️</span> Piece Protection</h3>
-              <ul>
-                  <li><strong>Squid (Pilut):</strong> Protects friendly piece directly behind it.</li>
-                  <li><strong>Shield Squid (Greatshield):</strong> Protects adjacent friendly pieces on sides/behind (5 squares).</li>
-              </ul>
-              <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
-            <ul>
-                <li><strong>Narwhal (Cope):</strong> After a capture, gets a second non-capture move.</li>
-                <li><strong>Ancient Creature / Cthulhu:</strong> After a non-capture move, gets a second non-capture move.</li>
-            </ul>
-            <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
-            <p>Captured pieces (except royalty) go to your Hand. On your turn, drop a piece from hand onto any empty, valid square (max 6 pieces in hand).</p>
-            <h2>Piece Movesets</h2>
-            <div class="piece-list" id="piece-list-container"></div>
-        `;
+        rulesBody.innerHTML = `
+            <h2>Winning the Game</h2>
+            <ul>
+                <li><strong>Royalty Capture:</strong> Capture **both** the opponent's King Kraken and Kraken Prince.</li>
+                <li><strong>Sanctuary Victory:</strong> Move your King Kraken OR Kraken Prince onto one of the eight golden "Sanctuary" squares.</li>
+            </ul>
+            <h2>Special Mechanics</h2>
+            <h3><span style="color: #FF5722;">👑</span> The Royal Family & The Palace</h3>
+            <ul>
+                <li><strong>King Kraken Palace Rule:</strong> Confined to its starting 4x2 Palace area.</li>
+                <li><strong>Prince's Freedom:</strong> If your Prince is captured, your King is freed from the Palace.</li>
+                <li><strong>Royal Capture Rule:</strong> Captured Kings/Princes are removed, not added to hand.</li>
+            </ul>
+            <h3><span style="color: #4CAF50;">🛡️</span> Piece Protection</h3>
+              <ul>
+                  <li><strong>Squid (Pilut):</strong> Protects friendly piece directly behind it.</li>
+                  <li><strong>Shield Squid (Greatshield):</strong> Protects adjacent friendly pieces on sides/behind (5 squares).</li>
+              </ul>
+            <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
+            <ul>
+                <li><strong>Narwhal (Cope):</strong> After a capture, gets a second non-capture move.</li>
+                <li><strong>Ancient Creature / Cthulhu:</strong> After a non-capture move, gets a second non-capture move.</li>
+            </ul>
+            <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
+            <p>Captured pieces (except royalty) go to your Hand. On your turn, drop a piece from hand onto any empty, valid square (max 6 pieces in hand).</p>
+            <h2>Piece Movesets</h2>
+            <div class="piece-list" id="piece-list-container"></div>
+        `;
 
-        const pieceListContainer = document.getElementById('piece-list-container');
-        if (!pieceListContainer) return;
-        pieceListContainer.innerHTML = '';
+        const pieceListContainer = document.getElementById('piece-list-container');
+        if (!pieceListContainer) return;
+        pieceListContainer.innerHTML = '';
 
-        [...pieceInfo].sort((a, b) => {
-            if (a.type === 'lupa') return -1; if (b.type === 'lupa') return 1;
-            if (a.type === 'prince') return -1; if (b.type === 'prince') return 1;
-            return a.name.localeCompare(b.name);
-        }).forEach(p => {
-            const entry = document.createElement('div');
-            entry.className = 'piece-entry';
-            const notation = p.notation || '?';
-            entry.innerHTML = `
-                <div class="piece-header">
-                    <img src="sprites/${p.type}_white.png" alt="${p.name}">
-                  - <span>${p.name} (${notation})</span>
-                </div>
-                <p>${p.desc}</p>
-                ${p.special ? `<p><em><strong>Note:</strong> ${p.special}</em></p>` : ''}
-            `;
-            pieceListContainer.appendChild(entry);
-        });
+        [...pieceInfo].sort((a, b) => {
+            if (a.type === 'lupa') return -1; if (b.type === 'lupa') return 1;
+            if (a.type === 'prince') return -1; if (b.type === 'prince') return 1;
+            return a.name.localeCompare(b.name);
+        }).forEach(p => {
+            const entry = document.createElement('div');
+            entry.className = 'piece-entry';
+            const notation = p.notation || '?';
+            entry.innerHTML = `
+                <div class="piece-header">
+                    <img src="sprites/${p.type}_white.png" alt="${p.name}">
+                   - <span>${p.name} (${notation})</span>
+                </div>
+                <p>${p.desc}</p>
+                ${p.special ? `<p><em><strong>Note:</strong> ${p.special}</em></p>` : ''}
+            `;
+            pieceListContainer.appendChild(entry);
+        });
     }
 
     // Ensure rulesBtn exists before adding listener
      if (rulesBtn) {
-        rulesBtn.addEventListener('click', () => {
+        rulesBtn.addEventListener('click', () => {
             // --- MODIFIED: Check the lobby dropdown to show correct rules ---
             const gameType = gameTypeSelect.value; 
             if (gameType === 'go') {
@@ -2849,11 +2880,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 populateHikoroRules();
             }
-            if (rulesModal) rulesModal.style.display = 'block';
-        });
-    } else {
+            if (rulesModal) rulesModal.style.display = 'block';
+        });
+     } else {
          console.warn("Rules button (#rules-btn) not found in lobby.");
-    }
+     }
 
 
     if (closeRulesBtn && rulesModal) {
