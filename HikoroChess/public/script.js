@@ -738,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (isBotGame && !gameState.isWhiteTurn && !botWorker) {
         console.error("Bot's turn, but worker is not available!");
     }
+	}
 
     // Renamed from drawHighlights
     function drawValidMoves(moves) {
