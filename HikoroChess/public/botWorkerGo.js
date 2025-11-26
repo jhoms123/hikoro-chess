@@ -1,41 +1,31 @@
 /**
  * botWorkerGo.js
- *
- * A Web Worker to run a Monte Carlo Tree Search (MCTS) bot
- * for the Go Variant game.
+ * A Web Worker to run a Monte Carlo Tree Search (MCTS) bot for the Go Variant.
  */
 
-// Import the game logic. This file MUST be accessible to the worker.
 try {
     importScripts('goGameLogic.js');
 } catch (e) {
-    console.error("Failed to import goGameLogic.js. Bot will not work.", e);
-    // Post a message back to indicate failure
+    console.error("Failed to import goGameLogic.js", e);
     postMessage({ error: "Failed to load goGameLogic.js" });
 }
 
 // MCTS Parameters
-const ITERATIONS = 3000; // ~2-3 seconds of thinking. Increase for stronger bot, decrease for faster moves.
-const MAX_SIMULATION_DEPTH = 60; // How many moves deep to simulate in a random game.
-const UCB1_CONSTANT = Math.sqrt(2); // Exploration constant for MCTS selection.
+const ITERATIONS = 3500; // Increased slightly for better depth
+const MAX_SIMULATION_DEPTH = 80;
+const UCB1_CONSTANT = Math.sqrt(2);
 
-/**
- * Represents a node in the Monte Carlo Search Tree.
- */
 class Node {
     constructor(state, parent = null, move = null) {
-        this.state = state; // The full 'game' object state
+        this.state = state; 
         this.parent = parent;
-        this.move = move;   // The move that led to this state
+        this.move = move;   
         this.children = [];
         this.wins = 0;
         this.visits = 0;
-        this.untriedMoves = null; // Will be populated by getAllPossibleMoves
+        this.untriedMoves = null; 
     }
 
-    /**
-     * Lazily get all valid moves for this node's state.
-     */
     getUntriedMoves() {
         if (this.untriedMoves === null) {
             this.untriedMoves = getAllPossibleMoves(this.state);
@@ -43,18 +33,13 @@ class Node {
         return this.untriedMoves;
     }
 
-    /**
-     * Selects the best child node using the UCB1 formula.
-     */
     selectChild() {
         let bestScore = -Infinity;
         let bestChild = null;
 
         for (const child of this.children) {
-            if (child.visits === 0) {
-                // If a child hasn't been visited, it's the top priority
-                return child;
-            }
+            if (child.visits === 0) return child;
+
             // UCB1 formula
             const score = (child.wins / child.visits) +
                           UCB1_CONSTANT * Math.sqrt(Math.log(this.visits) / child.visits);
@@ -67,118 +52,75 @@ class Node {
         return bestChild;
     }
 
-    /**
-     * Expands the tree by creating a new child node from an untried move.
-     */
     expand() {
         const moves = this.getUntriedMoves();
-        if (moves.length === 0) {
-            // This is a terminal node (no moves possible)
-            return null;
-        }
+        if (moves.length === 0) return null; // Terminal
 
-        // Pop a move to try
-        const move = moves.pop(); // Take one move off the list
+        const move = moves.pop(); 
         const playerColor = this.state.isWhiteTurn ? 'white' : 'black';
 
-        // Simulate the move using the imported game logic
-        // Use a DEEP COPY of the state for simulation
-        const stateCopy = typeof structuredClone === 'function' 
-            ? structuredClone(this.state) 
-            : JSON.parse(JSON.stringify(this.state));
+        // Deep copy state
+        const stateCopy = structuredClone(this.state);
 
         const result = goGameLogic.makeGoMove(stateCopy, move, playerColor);
 
         if (!result.success) {
-            // This move was illegal (e.g., suicide).
-            // Log it (optional)
-            // console.warn(`MCTS Expand: Illegal move discarded: ${JSON.stringify(move)}, Error: ${result.error}`);
-
-            // Instead of recursing infinitely, just try expanding again on the *next* call.
-            // The current call effectively discards this illegal move.
-            // We return null for this specific attempt, but the untriedMoves list
-            // for the parent node now has one fewer move. The MCTS loop will continue.
+            // Move failed (e.g. suicide rule), skip and try next expansion next time
             return null; 
         }
 
-        // Move was successful, create the child node
-        const newState = result.updatedGame;
-        const childNode = new Node(newState, this, move);
+        const childNode = new Node(result.updatedGame, this, move);
         this.children.push(childNode);
         return childNode;
     }
 }
 
-/**
- * Main MCTS function.
- */
 function runMCTS(rootState) {
     const rootNode = new Node(rootState);
-    const botPlayer = rootState.isWhiteTurn ? 2 : 1; // 1 for Black, 2 for White
+    const botPlayer = rootState.isWhiteTurn ? 2 : 1; 
 
     for (let i = 0; i < ITERATIONS; i++) {
         let node = rootNode;
         let stateToSimulate = rootNode.state;
 
         // 1. Selection
-        // Traverse down the tree, picking the best child (UCB1)
-        // until we find a leaf node or a node with untried moves.
         while (node.getUntriedMoves().length === 0 && node.children.length > 0) {
             node = node.selectChild();
             stateToSimulate = node.state;
         }
 
         // 2. Expansion
-        // If the node has untried moves, expand it by one child.
         if (node.getUntriedMoves().length > 0) {
             const newNode = node.expand();
             if (newNode) {
-                node = newNode; // Move to the new node
+                node = newNode;
                 stateToSimulate = newNode.state;
             }
-            // If expand returns null, it's a terminal node, just simulate from `node`
         }
 
-        // 3. Simulation (Rollout)
-        // Play a random game from the new node's state to a terminal condition.
+        // 3. Simulation
         const result = simulateRandomGame(stateToSimulate, botPlayer);
 
         // 4. Backpropagation
-        // Update wins/visits from the simulated node back up to the root.
         while (node) {
             node.visits++;
-            // The result is from the perspective of botPlayer
-            // If the current node's *parent* was the bot's turn, this node is an
-            // opponent's move, so we invert the result.
-            if (node.parent && node.parent.state.isWhiteTurn !== stateToSimulate.isWhiteTurn) {
-                // This check is slightly complex. Let's simplify:
-                // `result` is 1 if `botPlayer` won, -1 if they lost.
-                // The `wins` for a node should reflect the wins for the player *who made the move to get to that node*.
-                // The player who moved to `node` is `!node.state.isWhiteTurn`.
-                const nodePlayer = node.state.isWhiteTurn ? 1 : 2; // Player *whose turn it is* at this node
-                const parentPlayer = node.parent ? (node.parent.state.isWhiteTurn ? 2 : 1) : null; // Player *who just moved*
+            // Logic: If the node's parent (who made the move) is the bot, 
+            // and the bot won, that's good.
+            const nodePlayer = node.state.isWhiteTurn ? 1 : 2; // Player to move at this node
+            const parentPlayer = node.parent ? (node.parent.state.isWhiteTurn ? 2 : 1) : null; 
 
-                if (parentPlayer === botPlayer) {
-                    // Bot made this move. A bot win (1) is a win for this node.
-                    if (result === 1) node.wins++;
-                } else {
-                    // Opponent made this move. A bot loss (-1) is a "win" for this node.
-                    if (result === -1) node.wins++;
-                }
-                // A draw (0) counts as 0.5 wins for both.
-                if (result === 0) node.wins += 0.5;
-
+            if (parentPlayer === botPlayer) {
+                if (result === 1) node.wins++;
             } else {
-                 // Root node or complex case, simple update
-                 if (result === 1) node.wins++;
-                 if (result === 0) node.wins += 0.5;
+                if (result === -1) node.wins++; // Opponent lost, good for bot
             }
+            if (result === 0) node.wins += 0.5;
             
-            node = node.parent; // Move up the tree
+            node = node.parent;
         }
     }
 
-    // After all iterations, pick the child with the most visits.
+    // Select best move (highest visits)
     let bestChild = null;
     let maxVisits = -1;
     for (const child of rootNode.children) {
@@ -191,48 +133,34 @@ function runMCTS(rootState) {
     return bestChild;
 }
 
-/**
- * Simulates a random game (rollout) from a given state.
- * Returns 1 if botPlayer wins, -1 if they lose, 0 for a draw.
- */
 function simulateRandomGame(state, botPlayer) {
-    let currentState = JSON.parse(JSON.stringify(state)); // Deep copy
+    let currentState = structuredClone(state);
     let passCount = 0;
 
     for (let d = 0; d < MAX_SIMULATION_DEPTH; d++) {
         const allMoves = getAllPossibleMoves(currentState);
         
-        if (allMoves.length === 0) {
-            break; // No moves possible (game over)
-        }
+        if (allMoves.length === 0) break; 
 
         const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)];
 
-        if (randomMove.type === 'pass') {
-            passCount++;
-        } else {
-            passCount = 0;
-        }
+        if (randomMove.type === 'pass') passCount++;
+        else passCount = 0;
 
-        if (passCount === 2) {
-            break; // Game over by two consecutive passes
-        }
+        if (passCount >= 2) break; 
 
         const playerColor = currentState.isWhiteTurn ? 'white' : 'black';
         const result = goGameLogic.makeGoMove(currentState, randomMove, playerColor);
 
         if (result.success) {
             currentState = result.updatedGame;
-            // If it was a chain capture, reset pass count
-            if (currentState.pendingChainCapture) {
+            // Reset pass count if chain capture occurs (technically turn didn't end)
+            if (currentState.pendingChainCapture || currentState.mustShieldAt) {
                 passCount = 0;
             }
         }
-        // If !result.success (e.g., illegal suicide), the loop continues
-        // and will try a *different* random move from the *same* state.
     }
 
-    // Simulation over. Calculate score.
     const score = goGameLogic.calculateScore(
         currentState.boardState,
         currentState.blackPiecesLost,
@@ -244,74 +172,72 @@ function simulateRandomGame(state, botPlayer) {
 
     if (botScore > oppScore) return 1;
     if (botScore < oppScore) return -1;
-    return 0; // Draw
+    return 0;
 }
 
 /**
- * Gets ALL possible legal moves from a given game state.
- * This is the most critical function for this specific game variant.
+ * Returns all legally valid moves based on strict game state.
  */
 function getAllPossibleMoves(gameState) {
-    // structuredClone is faster than JSON.parse(stringify) if available
-    const state = typeof structuredClone === 'function' 
-        ? structuredClone(gameState) 
-        : JSON.parse(JSON.stringify(gameState));
+    // 1. Mandatory Shield Logic
+    if (gameState.mustShieldAt) {
+        return [{ 
+            type: 'shield', 
+            at: { x: gameState.mustShieldAt.x, y: gameState.mustShieldAt.y } 
+        }];
+    }
 
-    const boardSize = state.boardState.length;
-    const player = state.isWhiteTurn ? 2 : 1;
-    const moves = [];
-
-    // --- 1. Handle Pending Chain Captures ---
-    if (state.pendingChainCapture) {
-        // If a chain is pending, ONLY jump moves from that piece are allowed.
-        const chainMoves = goGameLogic.getValidMoves(state, state.pendingChainCapture);
+    // 2. Pending Chain Logic
+    if (gameState.pendingChainCapture) {
+        const moves = [];
+        const chainMoves = goGameLogic.getValidMoves(gameState, gameState.pendingChainCapture);
         
+        // Only Jumps allowed
         for (const move of chainMoves) {
-            moves.push({
-                type: 'move',
-                from: state.pendingChainCapture,
-                to: { x: move.x, y: move.y }
-            });
+            if (move.type === 'jump') {
+                moves.push({
+                    type: 'move',
+                    from: gameState.pendingChainCapture,
+                    to: { x: move.x, y: move.y }
+                });
+            }
         }
-        // *Always* allow passing to end a chain capture
+        // Pass is allowed to end chain
         moves.push({ type: 'pass' });
         return moves;
     }
 
-    // --- 2. No Chain Capture: Find all moves ---
-    moves.push({ type: 'pass' }); // Passing is always an option
+    // 3. Standard Turn Logic
+    const moves = [];
+    moves.push({ type: 'pass' }); 
+
+    const boardSize = gameState.boardState.length;
+    const player = gameState.isWhiteTurn ? 2 : 1;
 
     for (let y = 0; y < boardSize; y++) {
         for (let x = 0; x < boardSize; x++) {
-            const piece = state.boardState[y][x];
+            const piece = gameState.boardState[y][x];
 
             if (piece === 0) {
-                // --- A. Place Moves ---
-                // Add placing a stone on any empty square as a possible move.
-                // The simulation/expansion phase will handle validation (e.g., suicide).
+                // Place Stone
                 moves.push({ type: 'place', to: { x, y } });
-
             } else if (piece === player) {
-                // --- B. Normal Stone Moves (Shield or Jump) ---
-                
-                // B1: Turn to Shield
-                moves.push({ type: 'shield', at: { x, y } });
-
-                // B2: Jumps (getValidMoves only returns jumps for normal stones)
-                const jumpMoves = goGameLogic.getValidMoves(state, { x, y });
-                for (const move of jumpMoves) {
+                // Move Normal Stone (Jump only)
+                const validMoves = goGameLogic.getValidMoves(gameState, {x, y});
+                for (const move of validMoves) {
                     moves.push({
                         type: 'move',
                         from: { x, y },
                         to: { x: move.x, y: move.y }
                     });
                 }
+                // NOTE: Voluntary "Turn to Shield" is NOT allowed in standard rules
+                // unless triggered by capture, which handles itself via 'mustShieldAt'.
             } else if (piece === player + 2) {
-                // --- C. Shield Stone Moves (Move 1 square) ---
-                // (getValidMoves only returns 1-sq moves for shields)
-                const moveMoves = goGameLogic.getValidMoves(state, { x, y });
-                for (const move of moveMoves) {
-                    moves.push({
+                // Move Shield Stone (1 step)
+                const validMoves = goGameLogic.getValidMoves(gameState, {x, y});
+                for (const move of validMoves) {
+                     moves.push({
                         type: 'move',
                         from: { x, y },
                         to: { x: move.x, y: move.y }
@@ -323,27 +249,21 @@ function getAllPossibleMoves(gameState) {
     return moves;
 }
 
-
-// --- Worker Main Message Handler ---
 self.onmessage = function(e) {
     const { gameState } = e.data;
 
     if (!goGameLogic) {
-        console.error("Bot worker received message but goGameLogic is not loaded.");
-        postMessage(null); // Send back nothing
+        postMessage({ error: "Game logic not loaded" });
         return;
     }
 
-    console.log("GoBot Worker: Received game state. Starting MCTS...");
-    
-    // Run the MCTS to find the best move
+    //console.log("GoBot: Thinking...");
     const bestNode = runMCTS(gameState);
 
     if (bestNode && bestNode.move) {
-        console.log("GoBot Worker: MCTS complete. Best move:", bestNode.move, "Visits:", bestNode.visits, "Win%:", (bestNode.wins / bestNode.visits * 100).toFixed(1));
+        //console.log("GoBot: Move found", bestNode.move);
         postMessage(bestNode.move);
     } else {
-        console.log("GoBot Worker: MCTS found no valid moves. Passing.");
-        postMessage({ type: 'pass' }); // Default to passing if no move is found
+        postMessage({ type: 'pass' });
     }
 };
