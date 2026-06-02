@@ -884,8 +884,8 @@ class Game {
         }
 
         if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
-        if (kind === "chysalith" && this.fieldHasActiveShining(key)) return [false, "Cannot drop Chysalith into a field with active Shining."];
-        if (kind === "chysalith" && this.lineHasActiveShiningView(key)) return [false, "Cannot drop where a Shining has line-of-sight."];
+        if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active enemy Shining."];
+        if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where an enemy Shining has line-of-sight."];
 
         if (touchesOwnGate) return [true, ""];
         if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
@@ -969,6 +969,7 @@ class Game {
         }
 
         if (this.phase === "setup_chysalith") {
+            this.movedThisTurn.clear(); // Clear memory of the setup drop so it doesn't block turn 1
             if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
             else { 
                 this.currentPlayer = 0; 
@@ -1198,8 +1199,8 @@ class Game {
         }
         if (piece.kind === "sun" && move.captureId !== null) return false;
         if (piece.kind === "chysalith") {
-            if (this.fieldHasActiveShining(move.dst)) return false;
-            if (this.lineHasActiveShiningView(move.dst)) return false;
+            if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
+            if (this.lineHasActiveShiningView(move.dst, piece.owner)) return false;
         }
         return true;
     }
@@ -1235,8 +1236,12 @@ class Game {
         }
     }
 
-    activeShiningPieces() {
-        return this.piecesOnBoard(null, "shining").filter(sh => !this.shiningPausedBySun(sh));
+    activeShiningPieces(excludeOwner = null) {
+        let shinings = this.piecesOnBoard(null, "shining").filter(sh => !this.shiningPausedBySun(sh));
+        if (excludeOwner !== null) {
+            shinings = shinings.filter(sh => sh.owner !== excludeOwner);
+        }
+        return shinings;
     }
 
     shiningPausedBySun(shining) {
@@ -1244,14 +1249,14 @@ class Game {
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
-    lineHasActiveShiningView(key) {
-        return this.activeShiningPieces().some(sh => sh.pos && this.inView(sh.pos, key));
+    lineHasActiveShiningView(key, excludeOwner = null) {
+        return this.activeShiningPieces(excludeOwner).some(sh => sh.pos && this.inView(sh.pos, key));
     }
 
-    fieldHasActiveShining(key) {
+    fieldHasActiveShining(key, excludeOwner = null) {
         let fIds = this.board.fieldIdsAtVertex(key);
         if (fIds.size === 0) return false;
-        return this.activeShiningPieces().some(sh => {
+        return this.activeShiningPieces(excludeOwner).some(sh => {
             if (!sh.pos) return false;
             let shFids = this.board.fieldIdsAtVertex(sh.pos);
             for (let id of fIds) if (shFids.has(id)) return true;
@@ -1260,7 +1265,7 @@ class Game {
     }
 
     chysalithIsFrozen(chys) {
-        return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos);
+        return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos, chys.owner);
     }
 
     checkWinner() {
