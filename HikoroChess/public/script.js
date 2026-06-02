@@ -15,8 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const gameTypeSelect = document.getElementById('game-type-select');
-    const playerCountContainer = document.getElementById('player-count-container');
-    const playerCountSelect = document.getElementById('player-count');
 
     // --- Game Wrappers ---
     const hikoroGameWrapper = document.getElementById('hikoro-game-wrapper');
@@ -73,12 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 startReplayBtn.disabled = true;
                 startReplayBtn.title = "Replay is not available for Sho Dan Sho";
                 kifuPasteArea.disabled = true;
-                playerCountContainer.style.display = 'block';
             } else {
                 startReplayBtn.disabled = false;
                 startReplayBtn.title = "";
                 kifuPasteArea.disabled = false;
-                playerCountContainer.style.display = 'none';
             }
         });
     }
@@ -88,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        const playerCount = playerCountSelect ? parseInt(playerCountSelect.value, 10) : 2;
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
         const timeControl = {
@@ -97,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
         };
 
-        const dataToSend = { playerName, timeControl, gameType, playerCount };
+        const dataToSend = { playerName, timeControl, gameType };
         socket.emit('createGame', dataToSend);
     });
 
@@ -109,8 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('lobbyUpdate', updateLobby);
     socket.on('gameCreated', onGameCreated);
-    socket.on('joinedLobby', onJoinedLobby);
-    socket.on('playerJoinedLobby', onPlayerJoinedLobby);
     socket.on('gameStart', onGameStart);
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('timeUpdate', updateTimerDisplay);
@@ -313,9 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const creatorName = game.creatorName || 'Player 1';
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
             const gameTypeStr = game.gameType === 'shodansho' ? "Sho Dan Sho" : "Hikoro Chess";
-            const playersStr = game.gameType === 'shodansho' ? ` (${game.currentPlayers}/${game.maxPlayers} Players)` : '';
 
-            infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}]${playersStr} [${timeString}]`; 
+            infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
             gameItem.appendChild(infoSpan);
 
             const joinBtn = document.createElement('button');
@@ -335,35 +327,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lobbyElement.style.display = 'none';
         turnIndicatorContainer.style.display = 'block';
-        if (data.maxPlayers && data.maxPlayers > 2) {
-            turnIndicator.textContent = `Waiting for players... (1/${data.maxPlayers})`;
-        } else {
-            turnIndicator.textContent = "Waiting for an opponent...";
-        }
+        turnIndicator.textContent = "Waiting for an opponent...";
         gameControls.style.display = 'flex';
         replayControls.style.display = 'none';
         postGameControls.style.display = 'none';
-    }
-
-    function onJoinedLobby(data) {
-        gameId = data.gameId;
-        lobbyElement.style.display = 'none';
-        turnIndicatorContainer.style.display = 'block';
-        turnIndicator.textContent = `Waiting for players... (${data.current}/${data.max})`;
-        gameControls.style.display = 'flex';
-        replayControls.style.display = 'none';
-        postGameControls.style.display = 'none';
-    }
-
-    function onPlayerJoinedLobby(data) {
-        if (turnIndicatorContainer.style.display === 'block') {
-            turnIndicator.textContent = `Waiting for players... (${data.current}/${data.max})`;
-        }
     }
 
     function onGameStart(initialGameState) {
+        // Redirection to the Sho Dan Sho standalone canvas environment!
         if (initialGameState.gameType === 'shodansho') {
-            window.location.href = `/shodansho.html?gameId=${initialGameState.id}&token=${initialGameState.token}`;
+            window.location.href = `/shodansho.html?gameId=${initialGameState.id}`;
             return;
         }
 
