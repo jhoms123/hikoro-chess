@@ -92,10 +92,10 @@ function endGame(gameId, winner, reason) {
     }
 }
 
-function createGameObject(gameId, timeControl, isSinglePlayer, socketId) {
+function createGameObject(gameId, timeControl, isSinglePlayer, socketId, gameType = 'hikoro') {
     return {
         id: gameId,
-        gameType: 'hikoro',
+        gameType: gameType,
         logic: {
             makeMove: hikoroLogic.makeMove,
             getValidMoves: hikoroLogic.getValidMoves,
@@ -120,13 +120,14 @@ io.on('connection', (socket) => {
     socket.emit('lobbyUpdate', lobbyGames);
 
     socket.on('createGame', (data) => {
-        const { playerName, timeControl } = data;
+        const { playerName, timeControl, gameType } = data;
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
         const tc = timeControl || { main: 300, byoyomiTime: 30 };
+        const gt = gameType || 'hikoro';
         
-        games[gameId] = createGameObject(gameId, tc, false, socket.id);
+        games[gameId] = createGameObject(gameId, tc, false, socket.id, gt);
         
-        lobbyGames[gameId] = { id: gameId, gameType: 'hikoro', creatorName: playerName || 'Anonymous', timeControl: tc };
+        lobbyGames[gameId] = { id: gameId, gameType: gt, creatorName: playerName || 'Anonymous', timeControl: tc };
         
         socket.join(gameId);
         socket.emit('gameCreated', { gameId, color: 'white' });
@@ -150,11 +151,12 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('createSinglePlayerGame', () => {
+    socket.on('createSinglePlayerGame', (data) => {
+        const gt = (data && data.gameType) ? data.gameType : 'hikoro';
         const gameId = `sp_${Math.random().toString(36).substr(2, 9)}`;
         const tc = { main: -1, byoyomiTime: 0 };
         
-        games[gameId] = createGameObject(gameId, tc, true, socket.id);
+        games[gameId] = createGameObject(gameId, tc, true, socket.id, gt);
         
         socket.join(gameId);
         const stateToSend = { ...games[gameId] };
