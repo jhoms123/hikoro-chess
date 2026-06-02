@@ -67,14 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
+            const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             if (gameType === 'shodansho') {
                 startReplayBtn.disabled = true;
                 startReplayBtn.title = "Replay is not available for Sho Dan Sho";
                 kifuPasteArea.disabled = true;
+                if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'flex';
             } else {
                 startReplayBtn.disabled = false;
                 startReplayBtn.title = "";
                 kifuPasteArea.disabled = false;
+                if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'none';
             }
         });
     }
@@ -84,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
+        
+        const sdsPlayerCountEl = document.getElementById('sds-player-count');
+        const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
         const timeControl = {
@@ -92,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
         };
 
-        const dataToSend = { playerName, timeControl, gameType };
+        const dataToSend = { playerName, timeControl, gameType, sdsPlayerCount };
         socket.emit('createGame', dataToSend);
     });
 
@@ -305,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const infoSpan = document.createElement('span');
             const creatorName = game.creatorName || 'Player 1';
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
-            const gameTypeStr = game.gameType === 'shodansho' ? "Sho Dan Sho" : "Hikoro Chess";
+            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : "Hikoro Chess";
 
             infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
             gameItem.appendChild(infoSpan);
@@ -327,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lobbyElement.style.display = 'none';
         turnIndicatorContainer.style.display = 'block';
-        turnIndicator.textContent = "Waiting for an opponent...";
+        turnIndicator.textContent = "Waiting for opponents...";
         gameControls.style.display = 'flex';
         replayControls.style.display = 'none';
         postGameControls.style.display = 'none';
@@ -336,7 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function onGameStart(initialGameState) {
         // Redirection to the Sho Dan Sho standalone canvas environment!
         if (initialGameState.gameType === 'shodansho') {
-            window.location.href = `/shodansho.html?gameId=${initialGameState.id}`;
+            const myIndex = initialGameState.players.indexOf(socket.id);
+            window.location.href = `/shodansho.html?gameId=${initialGameState.id}&p=${myIndex}&players=${initialGameState.maxPlayers}`;
             return;
         }
 
