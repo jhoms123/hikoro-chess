@@ -294,6 +294,12 @@ io.on('connection', (socket) => {
                     continue;
                 }
 
+                // CRITICAL FIX: If a Sho Dan Sho game HAS started, players are redirecting to the dedicated page.
+                // Their lobby sockets will disconnect. We MUST NOT delete the game here!
+                if (game.gameType === 'shodansho' && game.started) {
+                    continue; 
+                }
+
                 if (!game.isSinglePlayer && !game.gameOver) {
                     endGame(gameId, "disconnected", "Player Disconnected");
                 }
