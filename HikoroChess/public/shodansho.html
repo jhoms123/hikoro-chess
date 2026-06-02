@@ -1,33 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Sho Dan Sho</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #201e1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-        }
-        canvas {
-            background-color: #201e1a;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sho Dan Sho - Online</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #201e1a;
+            background-image: url('sprites/lobby_background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-sizing: border-box;
+            gap: 30px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+
+        #board-wrapper {
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+            border: 6px solid #4a2a00;
+            border-radius: 8px;
+            background-color: #d6b36b; /* Hikoro wood base */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 80vh; /* Responsive sizing based on viewport height */
+            max-width: 900px;
+            height: 80vh;
+            max-height: 900px;
+            cursor: pointer;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 340px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Hide scrollbar for a cleaner look */
+        .side-panel::-webkit-scrollbar { width: 8px; }
+        .side-panel::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        .side-panel::-webkit-scrollbar-track { background: transparent; }
+
+        .info-box {
+            background-color: rgba(30, 30, 30, 0.85);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #666;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .info-box h2 { 
+            margin: 0 0 15px 0; 
+            color: #ffc107; 
+            font-size: 1.6em; 
+            text-align: center; 
+            border-bottom: 2px solid #555; 
+            padding-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .info-box h3 { margin: 0 0 10px 0; font-size: 1.2em; color: #ddd; }
+        .info-box p { margin: 8px 0; line-height: 1.5; font-size: 0.95em; }
+
+        #turn-indicator {
+            font-size: 1.4em;
+            font-weight: bold;
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            background-color: #4a2a00;
+            color: white;
+            border: 2px solid #ff9800;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 15px;
+            font-size: 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid #777;
+            background-color: #444;
+            color: #eee;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover { background-color: #555; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+        button:active { transform: translateY(0); }
+        
+        #pass-btn { background-color: #2c5e2e; border-color: #4CAF50; }
+        #pass-btn:hover { background-color: #3b7a3e; }
+        
+        #pickup-btn { background-color: #b9770e; border-color: #ffc107; }
+        #pickup-btn:hover { background-color: #d68910; }
+
+        #main-menu-btn { background-color: #a13a3a; border-color: #ff5252; }
+        #main-menu-btn:hover { background-color: #c04848; }
+
+        .player-hand {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 8px;
+            border-left: 6px solid transparent;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .player-hand.active-turn {
+            border-left-color: #ff9800;
+            background-color: #444;
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);
+        }
+
+        .hand-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        .hand-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hand-item {
+            background-color: #222;
+            border: 2px solid #555;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .hand-item:hover { background-color: #3a3a3a; border-color: #888; }
+        
+        .hand-item.selected {
+            background-color: #4a2a00;
+            border-color: #ffc107;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+            transform: scale(1.05);
+        }
+
+        .hand-item .piece-icon {
+            font-weight: bold;
+            font-size: 1.3em;
+            width: 22px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .hand-item .piece-count {
+            background-color: #000;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            color: #ddd;
+            font-family: monospace;
+            border: 1px solid #444;
+        }
+        
+        #game-message {
+            color: #a4d8ff;
+            font-style: italic;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .controls-hint {
+            font-size: 0.85em; 
+            color: #aaa; 
+            margin-top: 15px; 
+            background: rgba(0,0,0,0.4); 
+            padding: 10px; 
+            border-radius: 5px;
+        }
+        
+        .controls-hint ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="gameCanvas" width="1230" height="900" oncontextmenu="return false;"></canvas>
+    <div class="side-panel">
+        <div class="info-box">
+            <h2>Sho Dan Sho</h2>
+            <div id="turn-indicator">Turn 1 | P1</div>
+            <p style="margin-top: 15px; text-align: center; font-size: 1.1em;"><strong>Phase:</strong> <span id="phase-display" style="color: #ff9800;">Setup</span></p>
+            <p id="game-message">Loading game state...</p>
+        </div>
+
+        <div class="info-box">
+            <h3>Actions</h3>
+            <div class="btn-group">
+                <button id="pass-btn" onclick="game.passPhase()">Pass Phase (N)</button>
+                <button id="pickup-btn" onclick="game.pickupSelectedSun()">Pickup Sun (P)</button>
+                <button id="main-menu-btn" onclick="window.location.href='/'">Exit to Main Menu</button>
+            </div>
+            <div class="controls-hint">
+                <strong>Controls:</strong>
+                <ul>
+                    <li>Left Click piece: Select/Move</li>
+                    <li>Left Click empty: Drop hand</li>
+                    <li>Right Click: Cancel Selection</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="board-wrapper">
+        <canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
+    </div>
+
+    <div class="side-panel">
+        <div class="info-box" style="flex-grow: 1;">
+            <h2>Player Hands</h2>
+            <div id="hands-container">
+                <!-- Hands are generated dynamically here by updateDOM() -->
+            </div>
+        </div>
+    </div>
 
 <script>
-// --- DATA FROM CALIBRATION (Source 1) --- //
 const BOARD_SIZE = 900;
 const CENTER = [450, 450];
 const RADIUS = 445;
@@ -35,998 +283,1007 @@ const VERTICAL_LINES = [36, 68, 98, 128, 158, 189, 219, 278, 310, 339, 373, 403,
 const HORIZONTAL_LINES = [35, 67, 97, 127, 157, 188, 218, 278, 308, 338, 371, 401, 495, 525, 559, 588, 616, 678, 708, 739, 769, 799, 829, 861];
 
 const RAW_VERTICES = [
-    [0,10,373,35],[0,11,403,35],[0,12,496,35],[0,13,526,35],[1,7,278,67],[1,8,310,67],[1,9,339,67],[1,10,373,67],[1,11,403,67],[1,12,496,67],[1,13,526,67],[1,14,559,67],[1,15,589,67],[1,16,620,67],[2,6,219,97],[2,7,278,97],[2,8,310,97],[2,9,339,97],[2,10,373,97],[2,11,403,97],[2,12,496,97],[2,13,526,97],[2,14,559,97],[2,15,589,97],[2,16,620,97],[2,17,680,97],[3,5,189,127],[3,6,219,127],[3,7,278,127],[3,8,310,127],[3,9,339,127],[3,10,373,127],[3,11,403,127],[3,12,496,127],[3,13,526,127],[3,14,559,127],[3,15,589,127],[3,16,620,127],[3,17,680,127],[3,18,710,127],[4,4,158,157],[4,5,189,157],[4,6,219,157],[4,7,278,157],[4,8,310,157],[4,9,339,157],[4,10,373,157],[4,11,403,157],[4,12,496,157],[4,13,526,157],[4,14,559,157],[4,15,589,157],[4,16,620,157],[4,17,680,157],[4,18,710,157],[4,19,740,157],[5,3,128,188],[5,4,158,188],[5,5,189,188],[5,6,219,188],[5,7,278,188],[5,8,310,188],[5,9,339,188],[5,10,373,188],[5,11,403,188],[5,12,496,188],[5,13,526,188],[5,14,559,188],[5,15,589,188],[5,16,620,188],[5,17,680,188],[5,18,710,188],[5,19,740,188],[5,20,770,188],[6,2,98,218],[6,3,128,218],[6,4,158,218],[6,5,189,218],[6,6,219,218],[6,7,278,218],[6,8,310,218],[6,9,339,218],[6,10,373,218],[6,11,403,218],[6,12,496,218],[6,13,526,218],[6,14,559,218],[6,15,589,218],[6,16,620,218],[6,17,680,218],[6,18,710,218],[6,19,740,218],[6,20,770,218],[6,21,801,218],[7,1,68,278],[7,2,98,278],[7,3,128,278],[7,4,158,278],[7,5,189,278],[7,6,219,278],[7,7,278,278],[7,8,310,278],[7,9,339,278],[7,10,373,278],[7,11,403,278],[7,12,496,278],[7,13,526,278],[7,14,559,278],[7,15,589,278],[7,16,620,278],[7,17,680,278],[7,18,710,278],[7,19,740,278],[7,20,770,278],[7,21,801,278],[7,22,831,278],[8,1,68,308],[8,2,98,308],[8,3,128,308],[8,4,158,308],[8,5,189,308],[8,6,219,308],[8,7,278,308],[8,8,310,308],[8,9,339,308],[8,10,373,308],[8,11,403,308],[8,12,496,308],[8,13,526,308],[8,14,559,308],[8,15,589,308],[8,16,620,308],[8,17,680,308],[8,18,710,308],[8,19,740,308],[8,20,770,308],[8,21,801,308],[8,22,831,308],[9,1,68,338],[9,2,98,338],[9,3,128,338],[9,4,158,338],[9,5,189,338],[9,6,219,338],[9,7,278,338],[9,8,310,338],[9,9,339,338],[9,10,373,338],[9,11,403,338],[9,12,496,338],[9,13,526,338],[9,14,559,338],[9,15,589,338],[9,16,620,338],[9,17,680,338],[9,18,710,338],[9,19,740,338],[9,20,770,338],[9,21,801,338],[9,22,831,338],[10,0,36,371],[10,1,68,371],[10,2,98,371],[10,3,128,371],[10,4,158,371],[10,5,189,371],[10,6,219,371],[10,7,278,371],[10,8,310,371],[10,9,339,371],[10,10,373,371],[10,11,403,371],[10,12,496,371],[10,13,526,371],[10,14,559,371],[10,15,589,371],[10,16,620,371],[10,17,680,371],[10,18,710,371],[10,19,740,371],[10,20,770,371],[10,21,801,371],[10,22,831,371],[10,23,862,371],[11,0,36,401],[11,1,68,401],[11,2,98,401],[11,3,128,401],[11,4,158,401],[11,5,189,401],[11,6,219,401],[11,7,278,401],[11,8,310,401],[11,9,339,401],[11,10,373,401],[11,11,403,401],[11,12,496,401],[11,13,526,401],[11,14,559,401],[11,15,589,401],[11,16,620,401],[11,17,680,401],[11,18,710,401],[11,19,740,401],[11,20,770,401],[11,21,801,401],[11,22,831,401],[11,23,862,401],[12,0,36,495],[12,1,68,495],[12,2,98,495],[12,3,128,495],[12,4,158,495],[12,5,189,495],[12,6,219,495],[12,7,278,495],[12,8,310,495],[12,9,339,495],[12,10,373,495],[12,11,403,495],[12,12,496,495],[12,13,526,495],[12,14,559,495],[12,15,589,495],[12,16,620,495],[12,17,680,495],[12,18,710,495],[12,19,740,495],[12,20,770,495],[12,21,801,495],[12,22,831,495],[12,23,862,495],[13,0,36,525],[13,1,68,525],[13,2,98,525],[13,3,128,525],[13,4,158,525],[13,5,189,525],[13,6,219,525],[13,7,278,525],[13,8,310,525],[13,9,339,525],[13,10,373,525],[13,11,403,525],[13,12,496,525],[13,13,526,525],[13,14,559,525],[13,15,589,525],[13,16,620,525],[13,17,680,525],[13,18,710,525],[13,19,740,525],[13,20,770,525],[13,21,801,525],[13,22,831,525],[13,23,862,525],[14,1,68,559],[14,2,98,559],[14,3,128,559],[14,4,158,559],[14,5,189,559],[14,6,219,559],[14,7,278,559],[14,8,310,559],[14,9,339,559],[14,10,373,559],[14,11,403,559],[14,12,496,559],[14,13,526,559],[14,14,559,559],[14,15,589,559],[14,16,620,559],[14,17,680,559],[14,18,710,559],[14,19,740,559],[14,20,770,559],[14,21,801,559],[14,22,831,559],[15,1,68,588],[15,2,98,588],[15,3,128,588],[15,4,158,588],[15,5,189,588],[15,6,219,588],[15,7,278,588],[15,8,310,588],[15,9,339,588],[15,10,373,588],[15,11,403,588],[15,12,496,588],[15,13,526,588],[15,14,559,588],[15,15,589,588],[15,16,620,588],[15,17,680,588],[15,18,710,588],[15,19,740,588],[15,20,770,588],[15,21,801,588],[15,22,831,588],[16,1,68,616],[16,2,98,616],[16,3,128,616],[16,4,158,616],[16,5,189,616],[16,6,219,616],[16,7,278,616],[16,8,310,616],[16,9,339,616],[16,10,373,616],[16,11,403,616],[16,12,496,616],[16,13,526,616],[16,14,559,616],[16,15,589,616],[16,16,620,616],[16,17,680,616],[16,18,710,616],[16,19,740,616],[16,20,770,616],[16,21,801,616],[16,22,831,616],[17,2,98,678],[17,3,128,678],[17,4,158,678],[17,5,189,678],[17,6,219,678],[17,7,278,678],[17,8,310,678],[17,9,339,678],[17,10,373,678],[17,11,403,678],[17,12,496,678],[17,13,526,678],[17,14,559,678],[17,15,589,678],[17,16,620,678],[17,17,680,678],[17,18,710,678],[17,19,740,678],[17,20,770,678],[17,21,801,678],[18,3,128,708],[18,4,158,708],[18,5,189,708],[18,6,219,708],[18,7,278,708],[18,8,310,708],[18,9,339,708],[18,10,373,708],[18,11,403,708],[18,12,496,708],[18,13,526,708],[18,14,559,708],[18,15,589,708],[18,16,620,708],[18,17,680,708],[18,18,710,708],[18,19,740,708],[18,20,770,708],[19,4,158,739],[19,5,189,739],[19,6,219,739],[19,7,278,739],[19,8,310,739],[19,9,339,739],[19,10,373,739],[19,11,403,739],[19,12,496,739],[19,13,526,739],[19,14,559,739],[19,15,589,739],[19,16,620,739],[19,17,680,739],[19,18,710,739],[19,19,740,739],[20,5,189,769],[20,6,219,769],[20,7,278,769],[20,8,310,769],[20,9,339,769],[20,10,373,769],[20,11,403,769],[20,12,496,769],[20,13,526,769],[20,14,559,769],[20,15,589,769],[20,16,620,769],[20,17,680,769],[20,18,710,769],[21,6,219,799],[21,7,278,799],[21,8,310,799],[21,9,339,799],[21,10,373,799],[21,11,403,799],[21,12,496,799],[21,13,526,799],[21,14,559,799],[21,15,589,799],[21,16,620,799],[21,17,680,799],[22,7,278,829],[22,8,310,829],[22,9,339,829],[22,10,373,829],[22,11,403,829],[22,12,496,829],[22,13,526,829],[22,14,559,829],[22,15,589,829],[22,16,620,829],[23,10,373,861],[23,11,403,861],[23,12,496,861],[23,13,526,861]
+    [0,10,373,35],[0,11,403,35],[0,12,496,35],[0,13,526,35],[1,7,278,67],[1,8,310,67],[1,9,339,67],[1,10,373,67],[1,11,403,67],[1,12,496,67],[1,13,526,67],[1,14,559,67],[1,15,589,67],[1,16,620,67],[2,6,219,97],[2,7,278,97],[2,8,310,97],[2,9,339,97],[2,10,373,97],[2,11,403,97],[2,12,496,97],[2,13,526,97],[2,14,559,97],[2,15,589,97],[2,16,620,97],[2,17,680,97],[3,5,189,127],[3,6,219,127],[3,7,278,127],[3,8,310,127],[3,9,339,127],[3,10,373,127],[3,11,403,127],[3,12,496,127],[3,13,526,127],[3,14,559,127],[3,15,589,127],[3,16,620,127],[3,17,680,127],[3,18,710,127],[4,4,158,157],[4,5,189,157],[4,6,219,157],[4,7,278,157],[4,8,310,157],[4,9,339,157],[4,10,373,157],[4,11,403,157],[4,12,496,157],[4,13,526,157],[4,14,559,157],[4,15,589,157],[4,16,620,157],[4,17,680,157],[4,18,710,157],[4,19,740,157],[5,3,128,188],[5,4,158,188],[5,5,189,188],[5,6,219,188],[5,7,278,188],[5,8,310,188],[5,9,339,188],[5,10,373,188],[5,11,403,188],[5,12,496,188],[5,13,526,188],[5,14,559,188],[5,15,589,188],[5,16,620,188],[5,17,680,188],[5,18,710,188],[5,19,740,188],[5,20,770,188],[6,2,98,218],[6,3,128,218],[6,4,158,218],[6,5,189,218],[6,6,219,218],[6,7,278,218],[6,8,310,218],[6,9,339,218],[6,10,373,218],[6,11,403,218],[6,12,496,218],[6,13,526,218],[6,14,559,218],[6,15,589,218],[6,16,620,218],[6,17,680,218],[6,18,710,218],[6,19,740,218],[6,20,770,218],[6,21,801,218],[7,1,68,278],[7,2,98,278],[7,3,128,278],[7,4,158,278],[7,5,189,278],[7,6,219,278],[7,7,278,278],[7,8,310,278],[7,9,339,278],[7,10,373,278],[7,11,403,278],[7,12,496,278],[7,13,526,278],[7,14,559,278],[7,15,589,278],[7,16,620,278],[7,17,680,278],[7,18,710,278],[7,19,740,278],[7,20,770,278],[7,21,801,278],[7,22,831,278],[8,1,68,308],[8,2,98,308],[8,3,128,308],[8,4,158,308],[8,5,189,308],[8,6,219,308],[8,7,278,308],[8,8,310,308],[8,9,339,308],[8,10,373,308],[8,11,403,308],[8,12,496,308],[8,13,526,308],[8,14,559,308],[8,15,589,308],[8,16,620,308],[8,17,680,308],[8,18,710,308],[8,19,740,308],[8,20,770,308],[8,21,801,308],[8,22,831,308],[9,1,68,338],[9,2,98,338],[9,3,128,338],[9,4,158,338],[9,5,189,338],[9,6,219,338],[9,7,278,338],[9,8,310,338],[9,9,339,338],[9,10,373,338],[9,11,403,338],[9,12,496,338],[9,13,526,338],[9,14,559,338],[9,15,589,338],[9,16,620,338],[9,17,680,338],[9,18,710,338],[9,19,740,338],[9,20,770,338],[9,21,801,338],[9,22,831,338],[10,0,36,371],[10,1,68,371],[10,2,98,371],[10,3,128,371],[10,4,158,371],[10,5,189,371],[10,6,219,371],[10,7,278,371],[10,8,310,371],[10,9,339,371],[10,10,373,371],[10,11,403,371],[10,12,496,371],[10,13,526,371],[10,14,559,371],[10,15,589,371],[10,16,620,371],[10,17,680,371],[10,18,710,371],[10,19,740,371],[10,20,770,371],[10,21,801,371],[10,22,831,371],[10,23,862,371],[11,0,36,401],[11,1,68,401],[11,2,98,401],[11,3,128,401],[11,4,158,401],[11,5,189,401],[11,6,219,401],[11,7,278,401],[11,8,310,401],[11,9,339,401],[11,10,373,401],[11,11,403,401],[11,12,496,401],[11,13,526,401],[11,14,559,401],[11,15,589,401],[11,16,620,401],[11,17,680,401],[11,18,710,401],[11,19,740,401],[11,20,770,401],[11,21,801,401],[11,22,831,401],[11,23,862,401],[12,0,36,495],[12,1,68,495],[12,2,98,495],[12,3,128,495],[12,4,158,495],[12,5,189,495],[12,6,219,495],[12,7,278,495],[12,8,310,495],[12,9,339,495],[12,10,373,495],[12,11,403,495],[12,12,496,495],[12,13,526,495],[12,14,559,495],[12,15,589,495],[12,16,620,495],[12,17,680,495],[12,18,710,495],[12,19,740,495],[12,20,770,495],[12,21,801,495],[12,22,831,495],[12,23,862,495],[13,0,36,525],[13,1,68,525],[13,2,98,525],[13,3,128,525],[13,4,158,525],[13,5,189,525],[13,6,219,525],[13,7,278,525],[13,8,310,525],[13,9,339,525],[13,10,373,525],[13,11,403,525],[13,12,496,525],[13,13,526,525],[13,14,559,525],[13,15,589,525],[13,16,620,525],[13,17,680,525],[13,18,710,525],[13,19,740,525],[13,20,770,525],[13,21,801,525],[13,22,831,525],[13,23,862,525],[14,1,68,559],[14,2,98,559],[14,3,128,559],[14,4,158,559],[14,5,189,559],[14,6,219,559],[14,7,278,559],[14,8,310,559],[14,9,339,559],[14,10,373,559],[14,11,403,559],[14,12,496,559],[14,13,526,559],[14,14,559,559],[14,15,589,559],[14,16,620,559],[14,17,680,559],[14,18,710,559],[14,19,740,559],[14,20,770,559],[14,21,801,559],[14,22,831,559],[15,1,68,588],[15,2,98,588],[15,3,128,588],[15,4,158,588],[15,5,189,588],[15,6,219,588],[15,7,278,588],[15,8,310,588],[15,9,339,588],[15,10,373,588],[15,11,403,588],[15,12,496,588],[15,13,526,588],[15,14,559,588],[15,15,589,588],[15,16,620,588],[15,17,680,588],[15,18,710,588],[15,19,740,588],[15,20,770,588],[15,21,801,588],[15,22,831,588],[16,1,68,616],[16,2,98,616],[16,3,128,616],[16,4,158,616],[16,5,189,616],[16,6,219,616],[16,7,278,616],[16,8,310,616],[16,9,339,616],[16,10,373,616],[16,11,403,616],[16,12,496,616],[16,13,526,616],[16,14,559,616],[16,15,589,616],[16,16,620,616],[16,17,680,616],[16,18,710,616],[16,19,740,616],[16,20,770,616],[16,21,801,616],[16,22,831,616],[17,2,98,678],[17,3,128,678],[17,4,158,678],[17,5,189,678],[17,6,219,678],[17,7,278,678],[17,8,310,678],[17,9,339,678],[17,10,373,678],[17,11,403,678],[17,12,496,678],[17,13,526,678],[17,14,559,678],[17,15,589,678],[17,16,620,678],[17,17,680,678],[17,18,710,678],[17,19,740,678],[17,20,770,678],[17,21,801,678],[18,3,128,708],[18,4,158,708],[18,5,189,708],[18,6,219,708],[18,7,278,708],[18,8,310,708],[18,9,339,708],[18,10,373,708],[18,11,403,708],[18,12,496,708],[18,13,526,708],[18,14,559,708],[18,15,589,708],[18,16,620,708],[18,17,680,708],[18,18,710,708],[18,19,740,708],[18,20,770,708],[19,4,158,739],[19,5,189,739],[19,6,219,739],[19,7,278,739],[19,8,310,739],[19,9,339,739],[19,10,373,739],[19,11,403,739],[19,12,496,739],[19,13,526,739],[19,14,559,739],[19,15,589,739],[19,16,620,739],[19,17,680,739],[19,18,710,739],[19,19,740,739],[20,5,189,769],[20,6,219,769],[20,7,278,769],[20,8,310,769],[20,9,339,769],[20,10,373,769],[20,11,403,769],[20,12,496,769],[20,13,526,769],[20,14,559,769],[20,15,589,769],[20,16,620,769],[20,17,680,769],[20,18,710,769],[21,6,219,799],[21,7,278,799],[21,8,310,799],[21,9,339,799],[21,10,373,799],[21,11,403,799],[21,12,496,799],[21,13,526,799],[21,14,559,799],[21,15,589,799],[21,16,620,799],[21,17,680,799],[22,7,278,829],[22,8,310,829],[22,9,339,829],[22,10,373,829],[22,11,403,829],[22,12,496,829],[22,13,526,829],[22,14,559,829],[22,15,589,829],[22,16,620,829],[23,10,373,861],[23,11,403,861],[23,12,496,861],[23,13,526,861]
 ];
 
 const ZONE_BY_CELL = {
 "0,7":"outside","0,8":"outside","0,9":"outside","0,10":"field","0,11":"mid_zone","0,12":"field","0,13":"outside","0,14":"outside","0,15":"outside","1,6":"outside","1,7":"field","1,8":"field","1,9":"field","1,10":"field","1,11":"mid_zone","1,12":"field","1,13":"field","1,14":"field","1,15":"field","1,16":"outside","2,4":"outside","2,5":"outside","2,6":"mid_zone","2,7":"field","2,8":"field","2,9":"field","2,10":"field","2,11":"mid_zone","2,12":"field","2,13":"field","2,14":"field","2,15":"field","2,16":"mid_zone","2,17":"outside","2,18":"outside","3,3":"outside","3,4":"outside","3,5":"starting_gate","3,6":"mid_zone","3,7":"field","3,8":"field","3,9":"field","3,10":"field","3,11":"mid_zone","3,12":"field","3,13":"field","3,14":"field","3,15":"field","3,16":"mid_zone","3,17":"starting_gate","3,18":"outside","3,19":"outside","4,2":"outside","4,3":"outside","4,4":"starting_gate","4,5":"starting_gate","4,6":"mid_zone","4,7":"field","4,8":"field","4,9":"field","4,10":"field","4,11":"mid_zone","4,12":"field","4,13":"field","4,14":"field","4,15":"field","4,16":"mid_zone","4,17":"starting_gate","4,18":"starting_gate","4,19":"outside","4,20":"outside","5,1":"outside","5,2":"outside","5,3":"starting_gate","5,4":"starting_gate","5,5":"starting_gate","5,6":"mid_zone","5,7":"field","5,8":"field","5,9":"field","5,10":"field","5,11":"mid_zone","5,12":"field","5,13":"field","5,14":"field","5,15":"field","5,16":"mid_zone","5,17":"starting_gate","5,18":"starting_gate","5,19":"starting_gate","5,20":"outside","5,21":"outside","6,1":"outside","6,2":"mid_zone","6,3":"mid_zone","6,4":"mid_zone","6,5":"mid_zone","6,6":"garden","6,7":"mid_zone","6,8":"mid_zone","6,9":"mid_zone","6,10":"mid_zone","6,11":"mid_zone","6,12":"mid_zone","6,13":"mid_zone","6,14":"mid_zone","6,15":"mid_zone","6,16":"garden","6,17":"mid_zone","6,18":"mid_zone","6,19":"mid_zone","6,20":"mid_zone","6,21":"outside","6,22":"outside","7,0":"outside","7,1":"field","7,2":"field","7,3":"field","7,4":"field","7,5":"field","7,6":"mid_zone","7,7":"field","7,8":"field","7,9":"field","7,10":"field","7,11":"river","7,12":"field","7,13":"field","7,14":"field","7,15":"field","7,16":"mid_zone","7,17":"field","7,18":"field","7,19":"field","7,20":"field","7,21":"field","7,22":"outside","8,0":"outside","8,1":"field","8,2":"field","8,3":"field","8,4":"field","8,5":"field","8,6":"mid_zone","8,7":"field","8,8":"field","8,9":"field","8,10":"field","8,11":"river","8,12":"field","8,13":"field","8,14":"field","8,15":"field","8,16":"mid_zone","8,17":"field","8,18":"field","8,19":"field","8,20":"field","8,21":"field","8,22":"outside","9,0":"outside","9,1":"field","9,2":"field","9,3":"field","9,4":"field","9,5":"field","9,6":"mid_zone","9,7":"field","9,8":"field","9,9":"field","9,10":"field","9,11":"river","9,12":"field","9,13":"field","9,14":"field","9,15":"field","9,16":"mid_zone","9,17":"field","9,18":"field","9,19":"field","9,20":"field","9,21":"field","9,22":"outside","10,0":"field","10,1":"field","10,2":"field","10,3":"field","10,4":"field","10,5":"field","10,6":"mid_zone","10,7":"field","10,8":"field","10,9":"field","10,10":"field","10,11":"river","10,12":"field","10,13":"field","10,14":"field","10,15":"field","10,16":"mid_zone","10,17":"field","10,18":"field","10,19":"field","10,20":"field","10,21":"field","10,22":"field","11,0":"mid_zone","11,1":"mid_zone","11,2":"mid_zone","11,3":"mid_zone","11,4":"mid_zone","11,5":"mid_zone","11,6":"mid_zone","11,7":"river","11,8":"river","11,9":"river","11,10":"river","11,11":"garden","11,12":"river","11,13":"river","11,14":"river","11,15":"river","11,16":"mid_zone","11,17":"mid_zone","11,18":"mid_zone","11,19":"mid_zone","11,20":"mid_zone","11,21":"mid_zone","11,22":"mid_zone","12,0":"field","12,1":"field","12,2":"field","12,3":"field","12,4":"field","12,5":"field","12,6":"mid_zone","12,7":"field","12,8":"field","12,9":"field","12,10":"field","12,11":"river","12,12":"field","12,13":"field","12,14":"field","12,15":"field","12,16":"mid_zone","12,17":"field","12,18":"field","12,19":"field","12,20":"field","12,21":"field","12,22":"field","13,0":"outside","13,1":"field","13,2":"field","13,3":"field","13,4":"field","13,5":"field","13,6":"mid_zone","13,7":"field","13,8":"field","13,9":"field","13,10":"field","13,11":"river","13,12":"field","13,13":"field","13,14":"field","13,15":"field","13,16":"mid_zone","13,17":"field","13,18":"field","13,19":"field","13,20":"field","13,21":"field","13,22":"outside","14,0":"outside","14,1":"field","14,2":"field","14,3":"field","14,4":"field","14,5":"field","14,6":"mid_zone","14,7":"field","14,8":"field","14,9":"field","14,10":"field","14,11":"river","14,12":"field","14,13":"field","14,14":"field","14,15":"field","14,16":"mid_zone","14,17":"field","14,18":"field","14,19":"field","14,20":"field","14,21":"field","14,22":"outside","15,0":"outside","15,1":"field","15,2":"field","15,3":"field","15,4":"field","15,5":"field","15,6":"mid_zone","15,7":"field","15,8":"field","15,9":"field","15,10":"field","15,11":"river","15,12":"field","15,13":"field","15,14":"field","15,15":"field","15,16":"mid_zone","15,17":"field","15,18":"field","15,19":"field","15,20":"field","15,21":"field","15,22":"outside","16,0":"outside","16,1":"outside","16,2":"mid_zone","16,3":"mid_zone","16,4":"mid_zone","16,5":"mid_zone","16,6":"garden","16,7":"mid_zone","16,8":"mid_zone","16,9":"mid_zone","16,10":"mid_zone","16,11":"mid_zone","16,12":"mid_zone","16,13":"mid_zone","16,14":"mid_zone","16,15":"mid_zone","16,16":"garden","16,17":"mid_zone","16,18":"mid_zone","16,19":"mid_zone","16,20":"mid_zone","16,21":"outside","16,22":"outside","17,1":"outside","17,2":"outside","17,3":"starting_gate","17,4":"starting_gate","17,5":"starting_gate","17,6":"mid_zone","17,7":"field","17,8":"field","17,9":"field","17,10":"field","17,11":"mid_zone","17,12":"field","17,13":"field","17,14":"field","17,15":"field","17,16":"mid_zone","17,17":"starting_gate","17,18":"starting_gate","17,19":"starting_gate","17,20":"outside","17,21":"outside","18,2":"outside","18,3":"outside","18,4":"starting_gate","18,5":"starting_gate","18,6":"mid_zone","18,7":"field","18,8":"field","18,9":"field","18,10":"field","18,11":"mid_zone","18,12":"field","18,13":"field","18,14":"field","18,15":"field","18,16":"mid_zone","18,17":"starting_gate","18,18":"starting_gate","18,19":"outside","18,20":"outside","19,3":"outside","19,4":"outside","19,5":"starting_gate","19,6":"mid_zone","19,7":"field","19,8":"field","19,9":"field","19,10":"field","19,11":"mid_zone","19,12":"field","19,13":"field","19,14":"field","19,15":"field","19,16":"mid_zone","19,17":"starting_gate","19,18":"outside","19,19":"outside","20,4":"outside","20,5":"outside","20,6":"mid_zone","20,7":"field","20,8":"field","20,9":"field","20,10":"field","20,11":"mid_zone","20,12":"field","20,13":"field","20,14":"field","20,15":"field","20,16":"mid_zone","20,17":"outside","20,18":"outside","21,5":"outside","21,6":"outside","21,7":"field","21,8":"field","21,9":"field","21,10":"field","21,11":"mid_zone","21,12":"field","21,13":"field","21,14":"field","21,15":"field","21,16":"outside","21,17":"outside","22,6":"outside","22,7":"outside","22,8":"outside","22,9":"outside","22,10":"field","22,11":"mid_zone","22,12":"field","22,13":"outside","22,14":"outside","22,15":"outside","22,16":"outside"
 };
 
-// --- SETTINGS AND RULES (Source 2) --- //
 const FPS = 60;
-const SIDE_PANEL = 330;
 const SNAP_DISTANCE = 18;
 const PIECE_RADIUS = 15;
 const MOVE_DOT_RADIUS = 7;
 const REQUIRE_EXACT_STEPS = true;
 
 const PIECES = {
-    star:      { label: "Star",      count: 4, steps: null, letter: "★" },
-    clover:    { label: "Clover",    count: 4, steps: 4,    letter: "♣" },
-    daisy:     { label: "Daisy",     count: 6, steps: 3,    letter: "✿" },
-    water:     { label: "Water",     count: 6, steps: 2,    letter: "✥" },
-    sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼" },
-    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺" },
-    chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C" }
+    star:      { label: "Star",      count: 4, steps: null, letter: "★" },
+    clover:    { label: "Clover",    count: 4, steps: 4,    letter: "♣" },
+    daisy:     { label: "Daisy",     count: 6, steps: 3,    letter: "✿" },
+    water:     { label: "Water",     count: 6, steps: 2,    letter: "✥" },
+    sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼" },
+    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺" },
+    chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C" }
 };
 
-const PLAYER_COLORS = ["#dc3c3c", "#3c7de6", "#e6be37", "#9b50d2"];
+// Mapped to look like a premium board overlay rather than dev tools
+const PLAYER_COLORS = ["#f0d9b5", "#3a200d", "#dc3c3c", "#3c7de6"]; // P1 White, P2 Black, P3 Red, P4 Blue
+const PLAYER_TEXT = ["#333", "#eee", "#eee", "#eee"];
+
 const ZONE_COLORS = {
-    garden: "rgba(150, 25, 55, 0.32)",
-    field: "rgba(75, 95, 35, 0.32)",
-    gate: "rgba(160, 75, 35, 0.32)",
-    mid: "rgba(160, 125, 90, 0.32)",
-    river: "rgba(70, 100, 95, 0.32)",
-    outside: "rgba(65, 65, 65, 0.32)",
-    unknown: "rgba(90, 90, 90, 0.32)"
+    garden: "rgba(180, 50, 80, 0.45)",  // Soft red/burgundy
+    field: "rgba(100, 160, 60, 0.35)",   // Grassy green
+    gate: "rgba(220, 150, 40, 0.45)",    // Golden yellow
+    mid: "rgba(255, 255, 255, 0.1)",     // Slightly lighter wood overlay
+    river: "rgba(60, 140, 200, 0.4)",    // Water blue
+    outside: "rgba(0, 0, 0, 0.75)",      // Dark mask for out of bounds
+    unknown: "rgba(0, 0, 0, 0)"
 };
 
 const DIRECTIONS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
 
-// --- UTILITIES --- //
 function normalizeZone(zone) {
-    if (!zone) return "unknown";
-    let z = String(zone).trim().toLowerCase();
-    const aliases = { "starting_gate": "gate", "starting gate": "gate", "mid_zone": "mid", "mid zone": "mid", "outside / ignore": "outside", "ignore": "outside", "none": "unknown", "null": "unknown" };
-    return aliases[z] || z;
+    if (!zone) return "unknown";
+    let z = String(zone).trim().toLowerCase();
+    const aliases = { "starting_gate": "gate", "starting gate": "gate", "mid_zone": "mid", "mid zone": "mid", "outside / ignore": "outside", "ignore": "outside", "none": "unknown", "null": "unknown" };
+    return aliases[z] || z;
 }
 
 function distSq(x1, y1, x2, y2) { return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2); }
 
-// --- BOARD DATA CLASS --- //
 class BoardData {
-    constructor() {
-        this.vertices = new Map();
-        this.rowsByCol = new Map();
-        this.colsByRow = new Map();
-        
-        RAW_VERTICES.forEach(([r, c, x, y]) => {
-            let key = `${r},${c}`;
-            this.vertices.set(key, {r, c, x, y});
-            if (!this.rowsByCol.has(c)) this.rowsByCol.set(c, []);
-            this.rowsByCol.get(c).push(r);
-            if (!this.colsByRow.has(r)) this.colsByRow.set(r, []);
-            this.colsByRow.get(r).push(c);
-        });
+    constructor() {
+        this.vertices = new Map();
+        this.rowsByCol = new Map();
+        this.colsByRow = new Map();
+        
+        RAW_VERTICES.forEach(([r, c, x, y]) => {
+            let key = `${r},${c}`;
+            this.vertices.set(key, {r, c, x, y});
+            if (!this.rowsByCol.has(c)) this.rowsByCol.set(c, []);
+            this.rowsByCol.get(c).push(r);
+            if (!this.colsByRow.has(r)) this.colsByRow.set(r, []);
+            this.colsByRow.get(r).push(c);
+        });
 
-        for (let cols of this.rowsByCol.values()) cols.sort((a,b)=>a-b);
-        for (let rows of this.colsByRow.values()) rows.sort((a,b)=>a-b);
+        for (let cols of this.rowsByCol.values()) cols.sort((a,b)=>a-b);
+        for (let rows of this.colsByRow.values()) rows.sort((a,b)=>a-b);
 
-        this.zoneAtCell = new Map();
-        for (let [k, z] of Object.entries(ZONE_BY_CELL)) {
-            let [r, c] = k.split(',').map(Number);
-            this.zoneAtCell.set(k, normalizeZone(z));
-        }
+        this.zoneAtCell = new Map();
+        for (let [k, z] of Object.entries(ZONE_BY_CELL)) {
+            let [r, c] = k.split(',').map(Number);
+            this.zoneAtCell.set(k, normalizeZone(z));
+        }
 
-        this.zonesTouchingVertex = new Map();
-        for (let key of this.vertices.keys()) {
-            let touched = new Set();
-            for (let cell of this.cellsTouchingVertex(key)) {
-                let z = this.zoneAtCell.get(cell);
-                if (z && z !== "unknown") touched.add(z);
-            }
-            this.zonesTouchingVertex.set(key, touched);
-        }
+        this.zonesTouchingVertex = new Map();
+        for (let key of this.vertices.keys()) {
+            let touched = new Set();
+            for (let cell of this.cellsTouchingVertex(key)) {
+                let z = this.zoneAtCell.get(cell);
+                if (z && z !== "unknown") touched.add(z);
+            }
+            this.zonesTouchingVertex.set(key, touched);
+        }
 
-        this.buildFieldComponents();
-        this.gateComponentAt = new Map();
-        this.buildZoneComponents("gate", this.gateComponentAt);
-        this.buildGardens();
-        this.assignStartGates();
-    }
+        this.buildFieldComponents();
+        this.gateComponentAt = new Map();
+        this.buildZoneComponents("gate", this.gateComponentAt);
+        this.buildGardens();
+        this.assignStartGates();
+    }
 
-    cellsTouchingVertex(key) {
-        let [r, c] = key.split(',').map(Number);
-        let cells = [];
-        for (let rr of [r-1, r]) {
-            for (let cc of [c-1, c]) {
-                if (rr >= 0 && rr < HORIZONTAL_LINES.length-1 && cc >= 0 && cc < VERTICAL_LINES.length-1) {
-                    cells.push(`${rr},${cc}`);
-                }
-            }
-        }
-        return cells;
-    }
+    cellsTouchingVertex(key) {
+        let [r, c] = key.split(',').map(Number);
+        let cells = [];
+        for (let rr of [r-1, r]) {
+            for (let cc of [c-1, c]) {
+                if (rr >= 0 && rr < HORIZONTAL_LINES.length-1 && cc >= 0 && cc < VERTICAL_LINES.length-1) {
+                    cells.push(`${rr},${cc}`);
+                }
+            }
+        }
+        return cells;
+    }
 
-    vertexTouchesZone(key, zone) {
-        zone = normalizeZone(zone);
-        let touched = this.zonesTouchingVertex.get(key);
-        return touched ? touched.has(zone) : false;
-    }
+    vertexTouchesZone(key, zone) {
+        zone = normalizeZone(zone);
+        let touched = this.zonesTouchingVertex.get(key);
+        return touched ? touched.has(zone) : false;
+    }
 
-    neighbors(key) {
-        let [r, c] = key.split(',').map(Number);
-        let out = {};
-        let cols = this.colsByRow.get(r) || [];
-        let cIdx = cols.indexOf(c);
-        if (cIdx > 0) out["left"] = `${r},${cols[cIdx-1]}`;
-        if (cIdx + 1 < cols.length) out["right"] = `${r},${cols[cIdx+1]}`;
-        
-        let rows = this.rowsByCol.get(c) || [];
-        let rIdx = rows.indexOf(r);
-        if (rIdx > 0) out["up"] = `${rows[rIdx-1]},${c}`;
-        if (rIdx + 1 < rows.length) out["down"] = `${rows[rIdx+1]},${c}`;
-        
-        return out;
-    }
+    neighbors(key) {
+        let [r, c] = key.split(',').map(Number);
+        let out = {};
+        let cols = this.colsByRow.get(r) || [];
+        let cIdx = cols.indexOf(c);
+        if (cIdx > 0) out["left"] = `${r},${cols[cIdx-1]}`;
+        if (cIdx + 1 < cols.length) out["right"] = `${r},${cols[cIdx+1]}`;
+        
+        let rows = this.rowsByCol.get(c) || [];
+        let rIdx = rows.indexOf(r);
+        if (rIdx > 0) out["up"] = `${rows[rIdx-1]},${c}`;
+        if (rIdx + 1 < rows.length) out["down"] = `${rows[rIdx+1]},${c}`;
+        
+        return out;
+    }
 
-    ray(start, dir) {
-        let out = [];
-        let cur = start;
-        while (true) {
-            let nxt = this.neighbors(cur)[dir];
-            if (!nxt) return out;
-            out.push(nxt);
-            cur = nxt;
-        }
-    }
+    ray(start, dir) {
+        let out = [];
+        let cur = start;
+        while (true) {
+            let nxt = this.neighbors(cur)[dir];
+            if (!nxt) return out;
+            out.push(nxt);
+            cur = nxt;
+        }
+    }
 
-    directionBetweenAligned(a, b) {
-        let [ar, ac] = a.split(',').map(Number);
-        let [br, bc] = b.split(',').map(Number);
-        if (ar === br) {
-            let cols = this.colsByRow.get(ar) || [];
-            if (cols.includes(ac) && cols.includes(bc)) {
-                return cols.indexOf(bc) > cols.indexOf(ac) ? "right" : "left";
-            }
-        }
-        if (ac === bc) {
-            let rows = this.rowsByCol.get(ac) || [];
-            if (rows.includes(ar) && rows.includes(br)) {
-                return rows.indexOf(br) > rows.indexOf(ar) ? "down" : "up";
-            }
-        }
-        return null;
-    }
+    directionBetweenAligned(a, b) {
+        let [ar, ac] = a.split(',').map(Number);
+        let [br, bc] = b.split(',').map(Number);
+        if (ar === br) {
+            let cols = this.colsByRow.get(ar) || [];
+            if (cols.includes(ac) && cols.includes(bc)) {
+                return cols.indexOf(bc) > cols.indexOf(ac) ? "right" : "left";
+            }
+        }
+        if (ac === bc) {
+            let rows = this.rowsByCol.get(ac) || [];
+            if (rows.includes(ar) && rows.includes(br)) {
+                return rows.indexOf(br) > rows.indexOf(ar) ? "down" : "up";
+            }
+        }
+        return null;
+    }
 
-    edgeHasRiverOnBothSides(a, b) {
-        let [ar, ac] = a.split(',').map(Number);
-        let [br, bc] = b.split(',').map(Number);
-        if (ar === br) {
-            let r = ar;
-            let lo = Math.min(ac, bc), hi = Math.max(ac, bc);
-            for (let cc = lo; cc < hi; cc++) {
-                if (this.zoneAtCell.get(`${r-1},${cc}`) === "river" && this.zoneAtCell.get(`${r},${cc}`) === "river") return true;
-            }
-        }
-        if (ac === bc) {
-            let c = ac;
-            let lo = Math.min(ar, br), hi = Math.max(ar, br);
-            for (let rr = lo; rr < hi; rr++) {
-                if (this.zoneAtCell.get(`${rr},${c-1}`) === "river" && this.zoneAtCell.get(`${rr},${c}`) === "river") return true;
-            }
-        }
-        return false;
-    }
+    edgeHasRiverOnBothSides(a, b) {
+        let [ar, ac] = a.split(',').map(Number);
+        let [br, bc] = b.split(',').map(Number);
+        if (ar === br) {
+            let r = ar;
+            let lo = Math.min(ac, bc), hi = Math.max(ac, bc);
+            for (let cc = lo; cc < hi; cc++) {
+                if (this.zoneAtCell.get(`${r-1},${cc}`) === "river" && this.zoneAtCell.get(`${r},${cc}`) === "river") return true;
+            }
+        }
+        if (ac === bc) {
+            let c = ac;
+            let lo = Math.min(ar, br), hi = Math.max(ar, br);
+            for (let rr = lo; rr < hi; rr++) {
+                if (this.zoneAtCell.get(`${rr},${c-1}`) === "river" && this.zoneAtCell.get(`${rr},${c}`) === "river") return true;
+            }
+        }
+        return false;
+    }
 
-    buildFieldComponents() {
-        let fieldCells = new Set([...this.zoneAtCell.keys()].filter(k => this.zoneAtCell.get(k) === "field"));
-        let seen = new Set();
-        this.fieldComponentAtCell = new Map();
-        let compId = 0;
+    buildFieldComponents() {
+        let fieldCells = new Set([...this.zoneAtCell.keys()].filter(k => this.zoneAtCell.get(k) === "field"));
+        let seen = new Set();
+        this.fieldComponentAtCell = new Map();
+        let compId = 0;
 
-        Array.from(fieldCells).sort().forEach(start => {
-            if (seen.has(start)) return;
-            compId++;
-            let q = [start];
-            seen.add(start);
-            while (q.length > 0) {
-                let cell = q.shift();
-                this.fieldComponentAtCell.set(cell, compId);
-                let [r, c] = cell.split(',').map(Number);
-                [`${r-1},${c}`, `${r+1},${c}`, `${r},${c-1}`, `${r},${c+1}`].forEach(nxt => {
-                    if (fieldCells.has(nxt) && !seen.has(nxt)) {
-                        seen.add(nxt);
-                        q.push(nxt);
-                    }
-                });
-            }
-        });
+        Array.from(fieldCells).sort().forEach(start => {
+            if (seen.has(start)) return;
+            compId++;
+            let q = [start];
+            seen.add(start);
+            while (q.length > 0) {
+                let cell = q.shift();
+                this.fieldComponentAtCell.set(cell, compId);
+                let [r, c] = cell.split(',').map(Number);
+                [`${r-1},${c}`, `${r+1},${c}`, `${r},${c-1}`, `${r},${c+1}`].forEach(nxt => {
+                    if (fieldCells.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+        });
 
-        this.fieldComponentsTouchingVertex = new Map();
-        for (let key of this.vertices.keys()) {
-            let ids = new Set();
-            for (let cell of this.cellsTouchingVertex(key)) {
-                if (this.fieldComponentAtCell.has(cell)) ids.add(this.fieldComponentAtCell.get(cell));
-            }
-            this.fieldComponentsTouchingVertex.set(key, ids);
-        }
-    }
+        this.fieldComponentsTouchingVertex = new Map();
+        for (let key of this.vertices.keys()) {
+            let ids = new Set();
+            for (let cell of this.cellsTouchingVertex(key)) {
+                if (this.fieldComponentAtCell.has(cell)) ids.add(this.fieldComponentAtCell.get(cell));
+            }
+            this.fieldComponentsTouchingVertex.set(key, ids);
+        }
+    }
 
-    fieldIdsAtVertex(key) {
-        if (!key) return new Set();
-        return this.fieldComponentsTouchingVertex.get(key) || new Set();
-    }
+    fieldIdsAtVertex(key) {
+        if (!key) return new Set();
+        return this.fieldComponentsTouchingVertex.get(key) || new Set();
+    }
 
-    buildZoneComponents(zone, outMap) {
-        zone = normalizeZone(zone);
-        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, zone)));
-        let seen = new Set();
-        let compId = 0;
-        Array.from(keys).sort().forEach(k => {
-            if (seen.has(k)) return;
-            compId++;
-            let q = [k];
-            seen.add(k);
-            while(q.length > 0) {
-                let cur = q.shift();
-                outMap.set(cur, compId);
-                Object.values(this.neighbors(cur)).forEach(nxt => {
-                    if (keys.has(nxt) && !seen.has(nxt)) {
-                        seen.add(nxt);
-                        q.push(nxt);
-                    }
-                });
-            }
-        });
-    }
+    buildZoneComponents(zone, outMap) {
+        zone = normalizeZone(zone);
+        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, zone)));
+        let seen = new Set();
+        let compId = 0;
+        Array.from(keys).sort().forEach(k => {
+            if (seen.has(k)) return;
+            compId++;
+            let q = [k];
+            seen.add(k);
+            while(q.length > 0) {
+                let cur = q.shift();
+                outMap.set(cur, compId);
+                Object.values(this.neighbors(cur)).forEach(nxt => {
+                    if (keys.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+        });
+    }
 
-    buildGardens() {
-        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, "garden")));
-        let seen = new Set();
-        let comps = [];
-        Array.from(keys).sort().forEach(k => {
-            if (seen.has(k)) return;
-            let q = [k];
-            seen.add(k);
-            let comp = new Set();
-            while(q.length > 0) {
-                let cur = q.shift();
-                comp.add(cur);
-                Object.values(this.neighbors(cur)).forEach(nxt => {
-                    if (keys.has(nxt) && !seen.has(nxt)) {
-                        seen.add(nxt);
-                        q.push(nxt);
-                    }
-                });
-            }
-            if(comp.size > 0) comps.push(comp);
-        });
+    buildGardens() {
+        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, "garden")));
+        let seen = new Set();
+        let comps = [];
+        Array.from(keys).sort().forEach(k => {
+            if (seen.has(k)) return;
+            let q = [k];
+            seen.add(k);
+            let comp = new Set();
+            while(q.length > 0) {
+                let cur = q.shift();
+                comp.add(cur);
+                Object.values(this.neighbors(cur)).forEach(nxt => {
+                    if (keys.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+            if(comp.size > 0) comps.push(comp);
+        });
 
-        comps.sort((a,b) => b.size - a.size);
-        this.gardenCorners = new Map();
-        this.gardenName = new Map();
+        comps.sort((a,b) => b.size - a.size);
+        this.gardenCorners = new Map();
+        this.gardenName = new Map();
 
-        comps.slice(0, 5).forEach((comp, i) => {
-            let gid = i + 1;
-            let rows = Array.from(comp).map(k=>parseInt(k.split(',')[0]));
-            let cols = Array.from(comp).map(k=>parseInt(k.split(',')[1]));
-            let minR = Math.min(...rows), maxR = Math.max(...rows);
-            let minC = Math.min(...cols), maxC = Math.max(...cols);
-            
-            let candidates = [`${minR},${minC}`, `${minR},${maxC}`, `${maxR},${minC}`, `${maxR},${maxC}`];
-            let corners = new Set(candidates.filter(k => this.vertices.has(k)));
-            
-            if (corners.size < 4) {
-                let targetPixels = candidates.map(c => {
-                    let [rr, cc] = c.split(',').map(Number);
-                    let x = VERTICAL_LINES[Math.max(0, Math.min(cc, VERTICAL_LINES.length-1))];
-                    let y = HORIZONTAL_LINES[Math.max(0, Math.min(rr, HORIZONTAL_LINES.length-1))];
-                    return {x,y};
-                });
-                corners = new Set();
-                targetPixels.forEach(t => {
-                    let best = null, bestD = Infinity;
-                    comp.forEach(k => {
-                        let v = this.vertices.get(k);
-                        let d = distSq(v.x, v.y, t.x, t.y);
-                        if(d < bestD) { bestD = d; best = k; }
-                    });
-                    corners.add(best);
-                });
-            }
-            this.gardenCorners.set(gid, corners);
+        comps.slice(0, 5).forEach((comp, i) => {
+            let gid = i + 1;
+            let rows = Array.from(comp).map(k=>parseInt(k.split(',')[0]));
+            let cols = Array.from(comp).map(k=>parseInt(k.split(',')[1]));
+            let minR = Math.min(...rows), maxR = Math.max(...rows);
+            let minC = Math.min(...cols), maxC = Math.max(...cols);
+            
+            let candidates = [`${minR},${minC}`, `${minR},${maxC}`, `${maxR},${minC}`, `${maxR},${maxC}`];
+            let corners = new Set(candidates.filter(k => this.vertices.has(k)));
+            
+            if (corners.size < 4) {
+                let targetPixels = candidates.map(c => {
+                    let [rr, cc] = c.split(',').map(Number);
+                    let x = VERTICAL_LINES[Math.max(0, Math.min(cc, VERTICAL_LINES.length-1))];
+                    let y = HORIZONTAL_LINES[Math.max(0, Math.min(rr, HORIZONTAL_LINES.length-1))];
+                    return {x,y};
+                });
+                corners = new Set();
+                targetPixels.forEach(t => {
+                    let best = null, bestD = Infinity;
+                    comp.forEach(k => {
+                        let v = this.vertices.get(k);
+                        let d = distSq(v.x, v.y, t.x, t.y);
+                        if(d < bestD) { bestD = d; best = k; }
+                    });
+                    corners.add(best);
+                });
+            }
+            this.gardenCorners.set(gid, corners);
 
-            let pts = Array.from(corners).map(k => this.vertices.get(k));
-            let mx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-            let my = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-            let isCenter = Math.hypot(mx - CENTER[0], my - CENTER[1]) < 120;
-            this.gardenName.set(gid, isCenter ? "central" : `small ${gid}`);
-        });
-    }
+            let pts = Array.from(corners).map(k => this.vertices.get(k));
+            let mx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+            let my = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+            let isCenter = Math.hypot(mx - CENTER[0], my - CENTER[1]) < 120;
+            this.gardenName.set(gid, isCenter ? "central" : `small ${gid}`);
+        });
+    }
 
-    assignStartGates() {
-        let comps = new Map();
-        for (let [k, cid] of this.gateComponentAt.entries()) {
-            if (cid) {
-                if (!comps.has(cid)) comps.set(cid, new Set());
-                comps.get(cid).add(k);
-            }
-        }
-        
-        let centers = [];
-        for (let [cid, keys] of comps.entries()) {
-            let pts = Array.from(keys).map(k => this.vertices.get(k));
-            let x = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-            let y = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-            centers.push({cid, x, y, size: keys.size});
-        }
+    assignStartGates() {
+        let comps = new Map();
+        for (let [k, cid] of this.gateComponentAt.entries()) {
+            if (cid) {
+                if (!comps.has(cid)) comps.set(cid, new Set());
+                comps.get(cid).add(k);
+            }
+        }
+        
+        let centers = [];
+        for (let [cid, keys] of comps.entries()) {
+            let pts = Array.from(keys).map(k => this.vertices.get(k));
+            let x = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+            let y = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+            centers.push({cid, x, y, size: keys.size});
+        }
 
-        let [cx, cy] = CENTER;
-        let r = Math.max(1, RADIUS);
-        let desired = [
-            {x: cx - 0.62*r, y: cy + 0.62*r, label: "bottom-left"},
-            {x: cx + 0.62*r, y: cy - 0.62*r, label: "top-right"},
-            {x: cx + 0.62*r, y: cy + 0.62*r, label: "bottom-right"},
-            {x: cx - 0.62*r, y: cy - 0.62*r, label: "top-left"}
-        ];
+        let [cx, cy] = CENTER;
+        let r = Math.max(1, RADIUS);
+        let desired = [
+            {x: cx - 0.62*r, y: cy + 0.62*r, label: "bottom-left"},
+            {x: cx + 0.62*r, y: cy - 0.62*r, label: "top-right"},
+            {x: cx + 0.62*r, y: cy + 0.62*r, label: "bottom-right"},
+            {x: cx - 0.62*r, y: cy - 0.62*r, label: "top-left"}
+        ];
 
-        this.startGateForPlayer = new Map();
-        this.startGateNames = new Map();
-        let unused = [...centers];
+        this.startGateForPlayer = new Map();
+        this.startGateNames = new Map();
+        let unused = [...centers];
 
-        for (let player = 0; player < 4; player++) {
-            let target = desired[player];
-            if (unused.length === 0) break;
-            let chosen = unused.reduce((best, curr) => {
-                let currD = distSq(curr.x, curr.y, target.x, target.y);
-                let bestD = distSq(best.x, best.y, target.x, target.y);
-                return currD < bestD ? curr : best;
-            });
-            unused.splice(unused.indexOf(chosen), 1);
-            this.startGateForPlayer.set(player, comps.get(chosen.cid));
-            this.startGateNames.set(player, target.label);
-        }
-    }
+        for (let player = 0; player < 4; player++) {
+            let target = desired[player];
+            if (unused.length === 0) break;
+            let chosen = unused.reduce((best, curr) => {
+                let currD = distSq(curr.x, curr.y, target.x, target.y);
+                let bestD = distSq(best.x, best.y, target.x, target.y);
+                return currD < bestD ? curr : best;
+            });
+            unused.splice(unused.indexOf(chosen), 1);
+            this.startGateForPlayer.set(player, comps.get(chosen.cid));
+            this.startGateNames.set(player, target.label);
+        }
+    }
 }
 
-// --- GAME STATE --- //
 class Game {
-    constructor(board, playerCount=2) {
-        this.board = board;
-        this.reset(playerCount);
-    }
+    constructor(board, playerCount=2) {
+        this.board = board;
+        this.reset(playerCount);
+    }
 
-    reset(playerCount) {
-        this.playerCount = Math.max(2, Math.min(4, playerCount));
-        this.players = [];
-        this.pieces = new Map();
-        this.nextPieceId = 1;
-        
-        for (let i = 0; i < this.playerCount; i++) {
-            let hand = {};
-            for (let [kind, data] of Object.entries(PIECES)) hand[kind] = data.count;
-            this.players.push({ hand, captured: {}, eliminated: false });
-        }
-        
-        this.currentPlayer = 0;
-        this.turnNumber = 1;
-        this.phase = "setup_chysalith";
-        this.selectedPieceId = null;
-        this.selectedHandKind = "chysalith";
-        this.legalMoves = [];
-        this.message = "Setup: each player drops a Chysalith in their starting gate.";
-        this.winner = null;
-    }
+    reset(playerCount) {
+        this.playerCount = Math.max(2, Math.min(4, playerCount));
+        this.players = [];
+        this.pieces = new Map();
+        this.nextPieceId = 1;
+        
+        for (let i = 0; i < this.playerCount; i++) {
+            let hand = {};
+            for (let [kind, data] of Object.entries(PIECES)) hand[kind] = data.count;
+            this.players.push({ hand, captured: {}, eliminated: false });
+        }
+        
+        this.currentPlayer = 0;
+        this.turnNumber = 1;
+        this.phase = "setup_chysalith";
+        this.selectedPieceId = null;
+        this.selectedHandKind = "chysalith";
+        this.legalMoves = [];
+        this.message = "Setup: Drop your Chysalith in your starting gate.";
+        this.winner = null;
+    }
 
-    occupied() {
-        let occ = new Map();
-        for (let p of this.pieces.values()) {
-            if (p.pos && !this.players[p.owner].eliminated) occ.set(p.pos, p);
-        }
-        return occ;
-    }
+    occupied() {
+        let occ = new Map();
+        for (let p of this.pieces.values()) {
+            if (p.pos && !this.players[p.owner].eliminated) occ.set(p.pos, p);
+        }
+        return occ;
+    }
 
-    piecesOnBoard(owner=null, kind=null) {
-        let out = Array.from(this.pieces.values()).filter(p => p.pos);
-        if (owner !== null) out = out.filter(p => p.owner === owner);
-        if (kind !== null) out = out.filter(p => p.kind === kind);
-        return out;
-    }
+    piecesOnBoard(owner=null, kind=null) {
+        let out = Array.from(this.pieces.values()).filter(p => p.pos);
+        if (owner !== null) out = out.filter(p => p.owner === owner);
+        if (kind !== null) out = out.filter(p => p.kind === kind);
+        return out;
+    }
 
-    nearestVertex(pos) {
-        let best = null, bestD = SNAP_DISTANCE * SNAP_DISTANCE;
-        for (let [key, v] of this.board.vertices.entries()) {
-            let d = distSq(pos.x, pos.y, v.x, v.y);
-            if (d <= bestD) { bestD = d; best = key; }
-        }
-        return best;
-    }
+    nearestVertex(pos) {
+        let best = null, bestD = SNAP_DISTANCE * SNAP_DISTANCE;
+        for (let [key, v] of this.board.vertices.entries()) {
+            let d = distSq(pos.x, pos.y, v.x, v.y);
+            if (d <= bestD) { bestD = d; best = key; }
+        }
+        return best;
+    }
 
-    selectPieceAt(key) {
-        let piece = this.occupied().get(key);
-        if (!piece) return;
-        if (piece.owner !== this.currentPlayer) { this.message = "That is not your piece."; return; }
-        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First move set: move/replace Chysalith."; return; }
-        if (this.phase === "flower" && piece.kind === "chysalith") { this.message = "Second move set: move/place non-Chysalith."; return; }
-        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
+    selectPieceAt(key) {
+        let piece = this.occupied().get(key);
+        if (!piece) return;
+        if (piece.owner !== this.currentPlayer) { this.message = "That is not your piece."; return; }
+        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First move set: move/replace Chysalith."; return; }
+        if (this.phase === "flower" && piece.kind === "chysalith") { this.message = "Second move set: move/place non-Chysalith."; return; }
+        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
 
-        this.selectedPieceId = piece.id;
-        this.legalMoves = this.generateMoves(piece);
-        this.message = `Selected P${piece.owner+1} ${PIECES[piece.kind].label}: ${this.legalMoves.length} moves.`;
-    }
+        this.selectedPieceId = piece.id;
+        this.legalMoves = this.generateMoves(piece);
+        this.message = `Selected ${PIECES[piece.kind].label}. Valid moves: ${this.legalMoves.length}.`;
+    }
 
-    selectHand(kind) {
-        this.selectedPieceId = null;
-        this.selectedHandKind = kind;
-        this.legalMoves = [];
-        this.message = `Selected hand piece: ${PIECES[kind].label}.`;
-    }
+    selectHand(kind) {
+        this.selectedPieceId = null;
+        this.selectedHandKind = kind;
+        this.legalMoves = [];
+        this.message = `Selected ${PIECES[kind].label} from hand to drop.`;
+    }
 
-    clickVertex(key) {
-        if (this.phase === "game_over") return;
-        
-        if (this.selectedPieceId !== null) {
-            let move = this.legalMoves.find(m => m.dst === key);
-            if (move) {
-                this.applyMove(move);
-                return;
-            }
-            this.selectPieceAt(key);
-            if (this.selectedPieceId === null) this.message = "Not a legal destination.";
-            return;
-        }
+    clickVertex(key) {
+        if (this.phase === "game_over") return;
+        
+        if (this.selectedPieceId !== null) {
+            let move = this.legalMoves.find(m => m.dst === key);
+            if (move) {
+                this.applyMove(move);
+                return;
+            }
+            this.selectPieceAt(key);
+            if (this.selectedPieceId === null) this.message = "Not a legal destination.";
+            return;
+        }
 
-        let occ = this.occupied();
-        if (occ.has(key) && occ.get(key).owner === this.currentPlayer) {
-            this.selectPieceAt(key);
-            return;
-        }
+        let occ = this.occupied();
+        if (occ.has(key) && occ.get(key).owner === this.currentPlayer) {
+            this.selectPieceAt(key);
+            return;
+        }
 
-        this.dropSelectedHand(key);
-    }
+        this.dropSelectedHand(key);
+    }
 
-    dropSelectedHand(key) {
-        let kind = this.selectedHandKind;
-        let player = this.players[this.currentPlayer];
-        if ((player.hand[kind] || 0) <= 0) { this.message = `No ${PIECES[kind].label} left.`; return; }
-        if (this.occupied().has(key)) { this.message = "Intersection is occupied."; return; }
-        if (this.phase === "setup_chysalith" && kind !== "chysalith") { this.message = "Setup requires a Chysalith."; return; }
-        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "This phase is only for your Chysalith."; return; }
-        if (this.phase === "flower" && kind === "chysalith") { this.message = "Use the first move set for Chysaliths."; return; }
+    dropSelectedHand(key) {
+        let kind = this.selectedHandKind;
+        let player = this.players[this.currentPlayer];
+        if ((player.hand[kind] || 0) <= 0) { this.message = `No ${PIECES[kind].label} left.`; return; }
+        if (this.occupied().has(key)) { this.message = "Intersection is occupied."; return; }
+        if (this.phase === "setup_chysalith" && kind !== "chysalith") { this.message = "Setup requires a Chysalith."; return; }
+        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "This phase is only for your Chysalith."; return; }
+        if (this.phase === "flower" && kind === "chysalith") { this.message = "Use the first move set for Chysaliths."; return; }
 
-        let [ok, why] = this.canDrop(kind, key);
-        if (!ok) { this.message = why; return; }
+        let [ok, why] = this.canDrop(kind, key);
+        if (!ok) { this.message = why; return; }
 
-        let pid = this.nextPieceId++;
-        let homeField = null;
-        if (kind === "water") {
-            let ids = Array.from(this.board.fieldIdsAtVertex(key));
-            if(ids.length > 0) homeField = Math.min(...ids);
-        }
-        
-        this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField });
-        player.hand[kind]--;
-        this.afterAction(`Dropped ${PIECES[kind].label} at ${key}.`);
-    }
+        let pid = this.nextPieceId++;
+        let homeField = null;
+        if (kind === "water") {
+            let ids = Array.from(this.board.fieldIdsAtVertex(key));
+            if(ids.length > 0) homeField = Math.min(...ids);
+        }
+        
+        this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField });
+        player.hand[kind]--;
+        this.afterAction(`Dropped ${PIECES[kind].label}.`);
+    }
 
-    canDrop(kind, key) {
-        let touchesGate = this.board.vertexTouchesZone(key, "gate");
-        let ownGate = this.board.startGateForPlayer.get(this.currentPlayer) || new Set();
-        let touchesOwnGate = ownGate.has(key);
-        let touchesField = this.board.vertexTouchesZone(key, "field");
+    canDrop(kind, key) {
+        let touchesGate = this.board.vertexTouchesZone(key, "gate");
+        let ownGate = this.board.startGateForPlayer.get(this.currentPlayer) || new Set();
+        let touchesOwnGate = ownGate.has(key);
+        let touchesField = this.board.vertexTouchesZone(key, "field");
 
-        if (this.phase === "setup_chysalith") {
-            if (ownGate.size > 0) {
-                if (!touchesOwnGate) return [false, "Setup Chysalith must be on your starting gate."];
-            } else if (!touchesGate) {
-                return [false, "Setup Chysalith must touch a starting gate."];
-            }
-            return [true, ""];
-        }
+        if (this.phase === "setup_chysalith") {
+            if (ownGate.size > 0) {
+                if (!touchesOwnGate) return [false, "Setup Chysalith must be on your starting gate."];
+            } else if (!touchesGate) {
+                return [false, "Setup Chysalith must touch a starting gate."];
+            }
+            return [true, ""];
+        }
 
-        if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
-        if (kind === "chysalith" && this.fieldHasActiveShining(key)) return [false, "Cannot drop Chysalith into a field with active Shining."];
-        if (kind === "chysalith" && this.lineHasActiveShiningView(key)) return [false, "Cannot drop where a Shining has line-of-sight."];
+        if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
+        if (kind === "chysalith" && this.fieldHasActiveShining(key)) return [false, "Cannot drop Chysalith into a field with active Shining."];
+        if (kind === "chysalith" && this.lineHasActiveShiningView(key)) return [false, "Cannot drop where a Shining has line-of-sight."];
 
-        if (touchesOwnGate) return [true, ""];
-        if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
-        if (touchesGate) return [false, `Not your designated starting gate.`];
-        
-        return [false, "Drops only allowed on your starting gate or a controlled field."];
-    }
+        if (touchesOwnGate) return [true, ""];
+        if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
+        if (touchesGate) return [false, `Not your designated starting gate.`];
+        
+        return [false, "Drops only allowed on your starting gate or a controlled field."];
+    }
 
-    controlsFieldForDrop(owner, key) {
-        let targetFieldIds = this.board.fieldIdsAtVertex(key);
-        if (targetFieldIds.size === 0) return [false, "Not touching a field."];
+    controlsFieldForDrop(owner, key) {
+        let targetFieldIds = this.board.fieldIdsAtVertex(key);
+        if (targetFieldIds.size === 0) return [false, "Not touching a field."];
 
-        for (let fieldId of targetFieldIds) {
-            let ownPieceInField = Array.from(this.pieces.values()).some(p => 
-                p.owner === owner && p.pos && this.board.fieldIdsAtVertex(p.pos).has(fieldId)
-            );
-            
-            let counts = Array(this.playerCount).fill(0);
-            this.piecesOnBoard(null, "chysalith").forEach(p => {
-                if (this.board.fieldIdsAtVertex(p.pos).has(fieldId)) counts[p.owner]++;
-            });
-            
-            let othersMax = 0;
-            for(let i=0; i<this.playerCount; i++) if (i !== owner) othersMax = Math.max(othersMax, counts[i]);
+        for (let fieldId of targetFieldIds) {
+            let ownPieceInField = Array.from(this.pieces.values()).some(p => 
+                p.owner === owner && p.pos && this.board.fieldIdsAtVertex(p.pos).has(fieldId)
+            );
+            
+            let counts = Array(this.playerCount).fill(0);
+            this.piecesOnBoard(null, "chysalith").forEach(p => {
+                if (this.board.fieldIdsAtVertex(p.pos).has(fieldId)) counts[p.owner]++;
+            });
+            
+            let othersMax = 0;
+            for(let i=0; i<this.playerCount; i++) if (i !== owner) othersMax = Math.max(othersMax, counts[i]);
 
-            if (ownPieceInField && counts[owner] > othersMax) return [true, ""];
-        }
-        return [false, "You need a piece here and strictly more Chysaliths than any other player in this field."];
-    }
+            if (ownPieceInField && counts[owner] > othersMax) return [true, ""];
+        }
+        return [false, "Need a piece here and strictly more Chysaliths than anyone else in this field."];
+    }
 
-    applyMove(move) {
-        let piece = this.pieces.get(move.pieceId);
-        if (move.captureId !== null) this.capturePiece(this.pieces.get(move.captureId));
-        piece.pos = move.dst;
-        if (piece.kind === "water" && piece.homeField === null) {
-            let ids = Array.from(this.board.fieldIdsAtVertex(move.dst));
-            if(ids.length > 0) piece.homeField = Math.min(...ids);
-        }
-        this.afterAction(move.reason || "Moved.");
-    }
+    applyMove(move) {
+        let piece = this.pieces.get(move.pieceId);
+        if (move.captureId !== null) this.capturePiece(this.pieces.get(move.captureId));
+        piece.pos = move.dst;
+        if (piece.kind === "water" && piece.homeField === null) {
+            let ids = Array.from(this.board.fieldIdsAtVertex(move.dst));
+            if(ids.length > 0) piece.homeField = Math.min(...ids);
+        }
+        this.afterAction(move.reason || "Moved.");
+    }
 
-    capturePiece(victim) {
-        victim.pos = null;
-        this.players[victim.owner].captured[victim.kind] = (this.players[victim.owner].captured[victim.kind] || 0) + 1;
-        this.checkChysalithLoss(victim.owner);
-    }
+    capturePiece(victim) {
+        victim.pos = null;
+        this.players[victim.owner].captured[victim.kind] = (this.players[victim.owner].captured[victim.kind] || 0) + 1;
+        this.checkChysalithLoss(victim.owner);
+    }
 
-    checkChysalithLoss(owner) {
-        let onBoard = this.piecesOnBoard(owner, "chysalith").length;
-        let inHand = this.players[owner].hand["chysalith"] || 0;
-        if (onBoard + inHand <= 0) {
-            this.players[owner].eliminated = true;
-            this.message = `Player ${owner+1} lost both Chysaliths and is eliminated.`;
-        }
-    }
+    checkChysalithLoss(owner) {
+        let onBoard = this.piecesOnBoard(owner, "chysalith").length;
+        let inHand = this.players[owner].hand["chysalith"] || 0;
+        if (onBoard + inHand <= 0) {
+            this.players[owner].eliminated = true;
+            this.message = `Player ${owner+1} lost both Chysaliths and is eliminated.`;
+        }
+    }
 
-    afterAction(msg) {
-        this.selectedPieceId = null;
-        this.legalMoves = [];
-        let win = this.checkWinner();
-        if (win !== null) {
-            this.phase = "game_over";
-            this.winner = win;
-            this.message = `Player ${win+1} wins! ${msg}`;
-            return;
-        }
+    afterAction(msg) {
+        this.selectedPieceId = null;
+        this.legalMoves = [];
+        let win = this.checkWinner();
+        if (win !== null) {
+            this.phase = "game_over";
+            this.winner = win;
+            this.message = `Player ${win+1} wins! ${msg}`;
+            return;
+        }
 
-        if (this.phase === "setup_chysalith") {
-            if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
-            else { this.currentPlayer = 0; this.phase = "chysalith"; this.turnNumber = 1; }
-            this.message = msg;
-            return;
-        }
-        
-        if (this.phase === "chysalith") {
-            this.phase = "flower";
-            this.message = msg + " Now move/place non-Chysalith.";
-        } else if (this.phase === "flower") {
-            this.advancePlayer();
-            this.phase = "chysalith";
-            this.message = msg;
-        }
-    }
+        if (this.phase === "setup_chysalith") {
+            if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
+            else { this.currentPlayer = 0; this.phase = "chysalith"; this.turnNumber = 1; }
+            this.message = msg;
+            return;
+        }
+        
+        if (this.phase === "chysalith") {
+            this.phase = "flower";
+            this.message = msg + " Now move/place non-Chysalith.";
+        } else if (this.phase === "flower") {
+            this.advancePlayer();
+            this.phase = "chysalith";
+            this.message = msg;
+        }
+    }
 
-    advancePlayer() {
-        let start = this.currentPlayer;
-        while (true) {
-            this.currentPlayer = (this.currentPlayer + 1) % this.playerCount;
-            if (this.currentPlayer === 0) this.turnNumber++;
-            if (!this.players[this.currentPlayer].eliminated) break;
-            if (this.currentPlayer === start) { this.phase = "game_over"; break; }
-        }
-        if (this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0 && (this.players[this.currentPlayer].hand["chysalith"]||0) > 0) {
-            this.selectedHandKind = "chysalith";
-            this.message = "Your Chysalith is off board. You must place it.";
-        }
-    }
+    advancePlayer() {
+        let start = this.currentPlayer;
+        while (true) {
+            this.currentPlayer = (this.currentPlayer + 1) % this.playerCount;
+            if (this.currentPlayer === 0) this.turnNumber++;
+            if (!this.players[this.currentPlayer].eliminated) break;
+            if (this.currentPlayer === start) { this.phase = "game_over"; break; }
+        }
+        if (this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0 && (this.players[this.currentPlayer].hand["chysalith"]||0) > 0) {
+            this.selectedHandKind = "chysalith";
+            this.message = "Your Chysalith is off board. You must place it.";
+        }
+    }
 
-    passPhase() {
-        this.afterAction("Passed phase.");
-    }
+    passPhase() {
+        this.afterAction("Passed phase.");
+        updateDOM();
+    }
 
-    pickupSelectedSun() {
-        if (this.selectedPieceId === null) { this.message = "Select your Sun Flower first."; return; }
-        let p = this.pieces.get(this.selectedPieceId);
-        if (p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; return; }
-        if (this.phase !== "flower") { this.message = "Picking up Sun uses the flower phase."; return; }
-        p.pos = null;
-        this.players[p.owner].hand["sun"]++;
-        this.afterAction("Picked Sun Flower up.");
-    }
+    pickupSelectedSun() {
+        if (this.selectedPieceId === null) { this.message = "Select your Sun Flower first."; updateDOM(); return; }
+        let p = this.pieces.get(this.selectedPieceId);
+        if (p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; updateDOM(); return; }
+        if (this.phase !== "flower") { this.message = "Picking up Sun uses the flower phase."; updateDOM(); return; }
+        p.pos = null;
+        this.players[p.owner].hand["sun"]++;
+        this.afterAction("Picked Sun Flower up.");
+        updateDOM();
+    }
 
-    generateMoves(piece) {
-        if (!piece.pos) return [];
-        let moves = [];
-        if (piece.kind === "star") moves = this.starMoves(piece);
-        else if (piece.kind === "clover") moves = this.fixedStepMoves(piece, 4).concat(this.cloverSpecialMoves(piece));
-        else moves = this.fixedStepMoves(piece, PIECES[piece.kind].steps);
+    generateMoves(piece) {
+        if (!piece.pos) return [];
+        let moves = [];
+        if (piece.kind === "star") moves = this.starMoves(piece);
+        else if (piece.kind === "clover") moves = this.fixedStepMoves(piece, 4).concat(this.cloverSpecialMoves(piece));
+        else moves = this.fixedStepMoves(piece, PIECES[piece.kind].steps);
 
-        moves = moves.filter(m => this.isMoveLegalSpecial(piece, m));
-        
-        // Deduplicate
-        let seen = new Set();
-        let out = [];
-        for (let m of moves) {
-            let k = `${m.dst}-${m.captureId}`;
-            if (!seen.has(k)) { seen.add(k); out.push(m); }
-        }
-        return out;
-    }
+        moves = moves.filter(m => this.isMoveLegalSpecial(piece, m));
+        
+        let seen = new Set();
+        let out = [];
+        for (let m of moves) {
+            let k = `${m.dst}-${m.captureId}`;
+            if (!seen.has(k)) { seen.add(k); out.push(m); }
+        }
+        return out;
+    }
 
-    starMoves(piece) {
-        let out = [];
-        let occ = this.occupied();
-        for (let dir in DIRECTIONS) {
-            let path = [];
-            let prev = piece.pos;
-            for (let dst of this.board.ray(piece.pos, dir)) {
-                if (this.board.edgeHasRiverOnBothSides(prev, dst)) break;
-                path.push(dst);
-                let victim = occ.get(dst);
-                if (!victim) {
-                    out.push({pieceId: piece.id, dst, captureId: null, path: [...path]});
-                    prev = dst;
-                    continue;
-                }
-                if (victim.owner === piece.owner) break;
-                if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: [...path]});
-                break;
-            }
-        }
-        return out;
-    }
+    starMoves(piece) {
+        let out = [];
+        let occ = this.occupied();
+        for (let dir in DIRECTIONS) {
+            let path = [];
+            let prev = piece.pos;
+            for (let dst of this.board.ray(piece.pos, dir)) {
+                if (this.board.edgeHasRiverOnBothSides(prev, dst)) break;
+                path.push(dst);
+                let victim = occ.get(dst);
+                if (!victim) {
+                    out.push({pieceId: piece.id, dst, captureId: null, path: [...path]});
+                    prev = dst;
+                    continue;
+                }
+                if (victim.owner === piece.owner) break;
+                if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: [...path]});
+                break;
+            }
+        }
+        return out;
+    }
 
-    fixedStepMoves(piece, steps) {
-        let out = [];
-        let occ = this.occupied();
-        let q = [{cur: piece.pos, used: 0, path: []}];
-        let seen = new Set();
-        
-        while (q.length > 0) {
-            let {cur, used, path} = q.shift();
-            let state = `${cur}-${used}-${path.join(',')}`;
-            if (seen.has(state)) continue;
-            seen.add(state);
+    fixedStepMoves(piece, steps) {
+        let out = [];
+        let occ = this.occupied();
+        let q = [{cur: piece.pos, used: 0, path: []}];
+        let seen = new Set();
+        
+        while (q.length > 0) {
+            let {cur, used, path} = q.shift();
+            let state = `${cur}-${used}-${path.join(',')}`;
+            if (seen.has(state)) continue;
+            seen.add(state);
 
-            if (used > 0 && (!REQUIRE_EXACT_STEPS || used === steps)) {
-                out.push({pieceId: piece.id, dst: cur, captureId: null, path: [...path]});
-            }
-            if (used >= steps) continue;
+            if (used > 0 && (!REQUIRE_EXACT_STEPS || used === steps)) {
+                out.push({pieceId: piece.id, dst: cur, captureId: null, path: [...path]});
+            }
+            if (used >= steps) continue;
 
-            let neighbors = this.board.neighbors(cur);
-            for (let dir in neighbors) {
-                let nxt = neighbors[dir];
-                if (["star", "daisy"].includes(piece.kind) && this.board.edgeHasRiverOnBothSides(cur, nxt)) continue;
-                let nextPath = [...path, nxt];
-                let victim = occ.get(nxt);
-                
-                if (!victim) {
-                    q.push({cur: nxt, used: used+1, path: nextPath});
-                } else if (victim.owner !== piece.owner) {
-                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst: nxt, captureId: victim.id, path: nextPath});
-                }
-            }
-        }
-        return out;
-    }
+            let neighbors = this.board.neighbors(cur);
+            for (let dir in neighbors) {
+                let nxt = neighbors[dir];
+                if (["star", "daisy"].includes(piece.kind) && this.board.edgeHasRiverOnBothSides(cur, nxt)) continue;
+                let nextPath = [...path, nxt];
+                let victim = occ.get(nxt);
+                
+                if (!victim) {
+                    q.push({cur: nxt, used: used+1, path: nextPath});
+                } else if (victim.owner !== piece.owner) {
+                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst: nxt, captureId: victim.id, path: nextPath});
+                }
+            }
+        }
+        return out;
+    }
 
-    cloverSpecialMoves(piece) {
-        let out = [];
-        if (!piece.pos) return out;
-        let occ = this.occupied();
+    cloverSpecialMoves(piece) {
+        let out = [];
+        if (!piece.pos) return out;
+        let occ = this.occupied();
 
-        let recurse = (pivot, incoming, used) => {
-            for (let d in DIRECTIONS) {
-                let opposite = {up:"down", down:"up", left:"right", right:"left"}[incoming];
-                if (incoming && d === opposite) continue;
-                
-                for (let dst of this.board.ray(pivot, d)) {
-                    let victim = occ.get(dst);
-                    if (!victim) {
-                        out.push({pieceId: piece.id, dst, captureId: null, path: []});
-                        continue;
-                    }
-                    if (victim.owner === piece.owner) {
-                        if (victim.kind === "clover" && !used.has(victim.id) && this.inView(pivot, dst, piece.id)) {
-                            let nextUsed = new Set(used); nextUsed.add(victim.id);
-                            recurse(dst, d, nextUsed);
-                        }
-                        break;
-                    }
-                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: []});
-                    break;
-                }
-            }
-        };
+        let recurse = (pivot, incoming, used) => {
+            for (let d in DIRECTIONS) {
+                let opposite = {up:"down", down:"up", left:"right", right:"left"}[incoming];
+                if (incoming && d === opposite) continue;
+                
+                for (let dst of this.board.ray(pivot, d)) {
+                    let victim = occ.get(dst);
+                    if (!victim) {
+                        out.push({pieceId: piece.id, dst, captureId: null, path: []});
+                        continue;
+                    }
+                    if (victim.owner === piece.owner) {
+                        if (victim.kind === "clover" && !used.has(victim.id) && this.inView(pivot, dst, piece.id)) {
+                            let nextUsed = new Set(used); nextUsed.add(victim.id);
+                            recurse(dst, d, nextUsed);
+                        }
+                        break;
+                    }
+                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: []});
+                    break;
+                }
+            }
+        };
 
-        this.piecesOnBoard(piece.owner, "clover").forEach(other => {
-            if (other.id !== piece.id && other.pos && this.inView(piece.pos, other.pos, piece.id)) {
-                let inc = this.board.directionBetweenAligned(piece.pos, other.pos);
-                recurse(other.pos, inc, new Set([other.id]));
-            }
-        });
-        return out;
-    }
+        this.piecesOnBoard(piece.owner, "clover").forEach(other => {
+            if (other.id !== piece.id && other.pos && this.inView(piece.pos, other.pos, piece.id)) {
+                let inc = this.board.directionBetweenAligned(piece.pos, other.pos);
+                recurse(other.pos, inc, new Set([other.id]));
+            }
+        });
+        return out;
+    }
 
-    isMoveLegalSpecial(piece, move) {
-        if (!move.dst) return false;
-        if (["star", "daisy"].includes(piece.kind) && this.pathCrossesRiver(piece.pos, move.path||[move.dst])) return false;
-        if (piece.kind === "water") {
-            let fields = this.board.fieldIdsAtVertex(move.dst);
-            if (piece.homeField !== null && !fields.has(piece.homeField)) return false;
-        }
-        if (piece.kind === "sun" && move.captureId !== null) return false;
-        if (piece.kind === "chysalith") {
-            if (this.fieldHasActiveShining(move.dst)) return false;
-            if (this.lineHasActiveShiningView(move.dst)) return false;
-        }
-        return true;
-    }
+    isMoveLegalSpecial(piece, move) {
+        if (!move.dst) return false;
+        if (["star", "daisy"].includes(piece.kind) && this.pathCrossesRiver(piece.pos, move.path||[move.dst])) return false;
+        if (piece.kind === "water") {
+            let fields = this.board.fieldIdsAtVertex(move.dst);
+            if (piece.homeField !== null && !fields.has(piece.homeField)) return false;
+        }
+        if (piece.kind === "sun" && move.captureId !== null) return false;
+        if (piece.kind === "chysalith") {
+            if (this.fieldHasActiveShining(move.dst)) return false;
+            if (this.lineHasActiveShiningView(move.dst)) return false;
+        }
+        return true;
+    }
 
-    pathCrossesRiver(src, dstPath) {
-        if (!src) return false;
-        let prev = src;
-        for (let dst of dstPath) {
-            if (this.board.edgeHasRiverOnBothSides(prev, dst)) return true;
-            prev = dst;
-        }
-        return false;
-    }
+    pathCrossesRiver(src, dstPath) {
+        if (!src) return false;
+        let prev = src;
+        for (let dst of dstPath) {
+            if (this.board.edgeHasRiverOnBothSides(prev, dst)) return true;
+            prev = dst;
+        }
+        return false;
+    }
 
-    canCapture(attacker, victim) {
-        if (attacker.owner === victim.owner) return false;
-        if (attacker.kind === "sun" || victim.kind === "sun") return false;
-        return true;
-    }
+    canCapture(attacker, victim) {
+        if (attacker.owner === victim.owner) return false;
+        if (attacker.kind === "sun" || victim.kind === "sun") return false;
+        return true;
+    }
 
-    inView(a, b, ignoreId=null) {
-        let dir = this.board.directionBetweenAligned(a, b);
-        if (!dir) return false;
-        let occ = this.occupied();
-        let cur = a;
-        while (true) {
-            let nxt = this.board.neighbors(cur)[dir];
-            if (!nxt) return false;
-            if (nxt === b) return true;
-            let blocker = occ.get(nxt);
-            if (blocker && blocker.id !== ignoreId) return false;
-            cur = nxt;
-        }
-    }
+    inView(a, b, ignoreId=null) {
+        let dir = this.board.directionBetweenAligned(a, b);
+        if (!dir) return false;
+        let occ = this.occupied();
+        let cur = a;
+        while (true) {
+            let nxt = this.board.neighbors(cur)[dir];
+            if (!nxt) return false;
+            if (nxt === b) return true;
+            let blocker = occ.get(nxt);
+            if (blocker && blocker.id !== ignoreId) return false;
+            cur = nxt;
+        }
+    }
 
-    activeShiningPieces() {
-        return this.piecesOnBoard(null, "shining").filter(sh => !this.shiningPausedBySun(sh));
-    }
+    activeShiningPieces() {
+        return this.piecesOnBoard(null, "shining").filter(sh => !this.shiningPausedBySun(sh));
+    }
 
-    shiningPausedBySun(shining) {
-        if (!shining.pos) return false;
-        return this.piecesOnBoard(null, "sun").some(sun => sun.pos && this.inView(sun.pos, shining.pos));
-    }
+    shiningPausedBySun(shining) {
+        if (!shining.pos) return false;
+        return this.piecesOnBoard(null, "sun").some(sun => sun.pos && this.inView(sun.pos, shining.pos));
+    }
 
-    lineHasActiveShiningView(key) {
-        return this.activeShiningPieces().some(sh => sh.pos && this.inView(sh.pos, key));
-    }
+    lineHasActiveShiningView(key) {
+        return this.activeShiningPieces().some(sh => sh.pos && this.inView(sh.pos, key));
+    }
 
-    fieldHasActiveShining(key) {
-        let fIds = this.board.fieldIdsAtVertex(key);
-        if (fIds.size === 0) return false;
-        return this.activeShiningPieces().some(sh => {
-            if (!sh.pos) return false;
-            let shFids = this.board.fieldIdsAtVertex(sh.pos);
-            for (let id of fIds) if (shFids.has(id)) return true;
-            return false;
-        });
-    }
+    fieldHasActiveShining(key) {
+        let fIds = this.board.fieldIdsAtVertex(key);
+        if (fIds.size === 0) return false;
+        return this.activeShiningPieces().some(sh => {
+            if (!sh.pos) return false;
+            let shFids = this.board.fieldIdsAtVertex(sh.pos);
+            for (let id of fIds) if (shFids.has(id)) return true;
+            return false;
+        });
+    }
 
-    chysalithIsFrozen(chys) {
-        return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos);
-    }
+    chysalithIsFrozen(chys) {
+        return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos);
+    }
 
-    checkWinner() {
-        let alive = this.players.map((p,i)=>({i,p})).filter(x=>!x.p.eliminated).map(x=>x.i);
-        if (alive.length === 1) return alive[0];
-        
-        let ownersByGarden = new Map();
-        let occ = this.occupied();
-        for (let [gid, corners] of this.board.gardenCorners.entries()) {
-            let holders = [];
-            let hasChys = false;
-            for (let k of corners) {
-                let p = occ.get(k);
-                holders.push(p ? p.owner : null);
-                if (p && p.kind === "chysalith") hasChys = true;
-            }
-            let owner = null;
-            if (holders.length > 0 && holders.every(h => h === holders[0] && h !== null) && hasChys) owner = holders[0];
-            ownersByGarden.set(gid, owner);
-        }
+    checkWinner() {
+        let alive = this.players.map((p,i)=>({i,p})).filter(x=>!x.p.eliminated).map(x=>x.i);
+        if (alive.length === 1) return alive[0];
+        
+        let ownersByGarden = new Map();
+        let occ = this.occupied();
+        for (let [gid, corners] of this.board.gardenCorners.entries()) {
+            let holders = [];
+            let hasChys = false;
+            for (let k of corners) {
+                let p = occ.get(k);
+                holders.push(p ? p.owner : null);
+                if (p && p.kind === "chysalith") hasChys = true;
+            }
+            let owner = null;
+            if (holders.length > 0 && holders.every(h => h === holders[0] && h !== null) && hasChys) owner = holders[0];
+            ownersByGarden.set(gid, owner);
+        }
 
-        let centralGid = null;
-        for (let [gid, name] of this.board.gardenName.entries()) if (name === "central") centralGid = gid;
+        let centralGid = null;
+        for (let [gid, name] of this.board.gardenName.entries()) if (name === "central") centralGid = gid;
 
-        let neededSmall = {2:2, 3:1, 4:0}[this.playerCount] || 2;
+        let neededSmall = {2:2, 3:1, 4:0}[this.playerCount] || 2;
 
-        for (let owner of alive) {
-            if (centralGid !== null && ownersByGarden.get(centralGid) !== owner) continue;
-            let smallCount = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner && gid !== centralGid).length;
-            if (smallCount >= neededSmall) return owner;
-        }
-        return null;
-    }
+        for (let owner of alive) {
+            if (centralGid !== null && ownersByGarden.get(centralGid) !== owner) continue;
+            let smallCount = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner && gid !== centralGid).length;
+            if (smallCount >= neededSmall) return owner;
+        }
+        return null;
+    }
 }
 
-// --- RENDERING / UI --- //
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const board = new BoardData();
 const game = new Game(board, 2);
 
-function draw() {
-    ctx.fillStyle = "#1e1a14";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Board Zones
-    ctx.save();
-    for (let r = 0; r < HORIZONTAL_LINES.length - 1; r++) {
-        for (let c = 0; c < VERTICAL_LINES.length - 1; c++) {
-            let z = board.zoneAtCell.get(`${r},${c}`);
-            if (z) {
-                ctx.fillStyle = ZONE_COLORS[z] || ZONE_COLORS.unknown;
-                let x = VERTICAL_LINES[c], y = HORIZONTAL_LINES[r];
-                let w = VERTICAL_LINES[c+1] - x, h = HORIZONTAL_LINES[r+1] - y;
-                ctx.fillRect(x, y, w, h);
-            }
-        }
-    }
-    
-    // Draw Grid Lines
-    ctx.strokeStyle = "rgba(0,0,0,0.8)";
-    ctx.lineWidth = 1.5;
-    for (let x of VERTICAL_LINES) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, BOARD_SIZE); ctx.stroke(); }
-    for (let y of HORIZONTAL_LINES) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(BOARD_SIZE, y); ctx.stroke(); }
-
-    ctx.beginPath();
-    ctx.arc(CENTER[0], CENTER[1], RADIUS, 0, 2*Math.PI);
-    ctx.stroke();
-
-    // Draw Vertices
-    ctx.fillStyle = "#e0d0a0";
-    for (let v of board.vertices.values()) {
-        ctx.beginPath(); ctx.arc(v.x, v.y, 3, 0, 2*Math.PI); ctx.fill();
-    }
-
-    // Draw Garden Centers
-    for (let [gid, corners] of board.gardenCorners.entries()) {
-        let pts = Array.from(corners).map(k => board.vertices.get(k));
-        if (pts.length > 0) {
-            let cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-            let cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.font = "12px Arial";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(gid, cx, cy);
-        }
-    }
-    ctx.restore();
-
-    // Draw Legal Moves
-    for (let m of game.legalMoves) {
-        let v = board.vertices.get(m.dst);
-        if (v) {
-            ctx.strokeStyle = m.captureId === null ? "#ffe650" : "#ff5050";
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(v.x, v.y, MOVE_DOT_RADIUS, 0, 2*Math.PI); ctx.stroke();
-        }
-    }
-
-    // Draw Selected Highlight
-    if (game.selectedPieceId !== null) {
-        let p = game.pieces.get(game.selectedPieceId);
-        if (p && p.pos) {
-            let v = board.vertices.get(p.pos);
-            ctx.strokeStyle = "#ffffff";
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 5, 0, 2*Math.PI); ctx.stroke();
-        }
-    }
-
-    // Draw Pieces
-    for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
-        if (piece.pos && !game.players[piece.owner].eliminated) {
-            let v = board.vertices.get(piece.pos);
-            ctx.fillStyle = "#3c2314";
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 3, 0, 2*Math.PI); ctx.fill();
-            
-            ctx.fillStyle = PLAYER_COLORS[piece.owner];
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS, 0, 2*Math.PI); ctx.fill();
-            
-            ctx.strokeStyle = "#ffe6be"; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS, 0, 2*Math.PI); ctx.stroke();
-            
-            ctx.fillStyle = "#000";
-            ctx.font = "16px Arial";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(PIECES[piece.kind].letter, v.x, v.y);
-
-            if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
-                ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(v.x-12, v.y-12); ctx.lineTo(v.x+12, v.y+12); ctx.stroke();
-            }
-        }
-    }
-
-    // Draw UI Panel
-    ctx.fillStyle = "#161616";
-    ctx.fillRect(BOARD_SIZE, 0, SIDE_PANEL, BOARD_SIZE);
-    
-    let x = BOARD_SIZE + 15, y = 30;
-    ctx.fillStyle = "#fff5dc"; ctx.font = "bold 22px Arial"; ctx.textAlign = "left";
-    ctx.fillText("Sho Dan Sho", x, y); y += 30;
-    
-    ctx.fillStyle = PLAYER_COLORS[game.currentPlayer]; ctx.font = "16px Arial";
-    let status = game.phase === "game_over" ? `Winner: Player ${game.winner + 1}` : `Turn ${game.turnNumber} | P${game.currentPlayer + 1} | ${game.phase}`;
-    ctx.fillText(status, x, y); y += 25;
-    
-    ctx.fillStyle = "#e6e6e6"; ctx.font = "13px Arial";
-    let words = game.message.split(' ');
-    let line = '';
-    for(let i=0; i<words.length; i++) {
-        let test = line + words[i] + ' ';
-        if (ctx.measureText(test).width > SIDE_PANEL - 30) {
-            ctx.fillText(line, x, y); y+=18; line = words[i] + ' ';
-        } else line = test;
-    }
-    ctx.fillText(line, x, y); y += 35;
-
-    ctx.fillStyle = "#fff5dc"; ctx.font = "16px Arial";
-    ctx.fillText("Hand Selection (Keys 1-7):", x, y); y += 20;
-    
-    let handMap = [["1","chysalith"], ["2","star"], ["3","clover"], ["4","daisy"], ["5","water"], ["6","sun"], ["7","shining"]];
-    ctx.font = "13px monospace";
-    for(let [k, kind] of handMap) {
-        ctx.fillStyle = (game.selectedHandKind === kind && game.selectedPieceId === null) ? "#ffe650" : "#ebebeb";
-        let c = game.players[game.currentPlayer].hand[kind] || 0;
-        let pad = " ".repeat(10 - PIECES[kind].label.length);
-        let mark = (game.selectedHandKind === kind && game.selectedPieceId === null) ? ">" : " ";
-        ctx.fillText(`${mark} ${k}: ${PIECES[kind].label}${pad} x${c}`, x, y); y += 18;
-    }
-    
-    y += 10;
-    ctx.fillStyle = "#fff5dc"; ctx.font = "16px Arial";
-    ctx.fillText("Controls:", x, y); y += 20;
-    ctx.fillStyle = "#b9b9b9"; ctx.font = "13px Arial";
-    const controls = ["Left Click piece: Select/Move", "Left Click empty: Drop hand", "Right Click: Cancel", "N: Pass Phase", "P: Pickup selected Sun", "F1/F2/F3: Restart 2/3/4p"];
-    controls.forEach(c => { ctx.fillText(c, x, y); y += 18; });
+function selectHandPiece(kind) {
+    game.selectHand(kind);
+    updateDOM();
 }
 
-// --- INPUT HANDLING --- //
+function updateDOM() {
+    // Status text
+    const turnIndicator = document.getElementById('turn-indicator');
+    const phaseDisplay = document.getElementById('phase-display');
+    const gameMessage = document.getElementById('game-message');
+
+    if (game.phase === "game_over") {
+        turnIndicator.textContent = `Winner: Player ${game.winner + 1}`;
+        turnIndicator.style.backgroundColor = PLAYER_COLORS[game.winner];
+        turnIndicator.style.color = PLAYER_TEXT[game.winner];
+    } else {
+        turnIndicator.textContent = `Turn ${game.turnNumber} | P${game.currentPlayer + 1}`;
+        turnIndicator.style.backgroundColor = PLAYER_COLORS[game.currentPlayer];
+        turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
+    }
+    
+    phaseDisplay.textContent = game.phase;
+    gameMessage.textContent = game.message;
+
+    // Hands container
+    const handsContainer = document.getElementById('hands-container');
+    handsContainer.innerHTML = ''; // Re-build hands
+
+    for (let p = 0; p < game.playerCount; p++) {
+        let player = game.players[p];
+        let handDiv = document.createElement('div');
+        handDiv.className = 'player-hand';
+        if (p === game.currentPlayer && game.phase !== "game_over") handDiv.classList.add('active-turn');
+
+        let handTitle = document.createElement('div');
+        handTitle.className = 'hand-title';
+        handTitle.innerHTML = `<span>Player ${p + 1}</span> <span style="color:${PLAYER_COLORS[p]}; font-size: 1.5em; line-height: 0.5;">■</span>`;
+        handDiv.appendChild(handTitle);
+
+        let grid = document.createElement('div');
+        grid.className = 'hand-grid';
+
+        const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+        kinds.forEach(kind => {
+            let count = player.hand[kind] || 0;
+            if (count > 0 || (game.currentPlayer === p && game.selectedHandKind === kind)) {
+                let item = document.createElement('div');
+                item.className = 'hand-item';
+                if (game.currentPlayer === p && game.selectedHandKind === kind && game.selectedPieceId === null) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `<span class="piece-icon" style="color:${PLAYER_COLORS[p]}">${PIECES[kind].letter}</span> ${PIECES[kind].label} <span class="piece-count">${count}</span>`;
+                
+                // Only allow clicking your own hand on your turn
+                if (game.currentPlayer === p && game.phase !== "game_over") {
+                    item.onclick = () => selectHandPiece(kind);
+                }
+                
+                grid.appendChild(item);
+            }
+        });
+
+        handDiv.appendChild(grid);
+        handsContainer.appendChild(handDiv);
+    }
+    
+    drawBoard();
+}
+
+// Load the custom board image
+const boardImage = new Image();
+boardImage.src = 'shodanshoboard.png'; // <-- Ensure this image is in your public folder!
+boardImage.onload = () => drawBoard(); // Redraw once the image loads
+
+function drawBoard() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the static board image as the background
+    if (boardImage.complete && boardImage.naturalWidth !== 0) {
+        ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
+    } else {
+        // Temporary fallback color if the image hasn't loaded yet
+        ctx.fillStyle = "#d6b36b"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Draw Legal Moves
+    for (let m of game.legalMoves) {
+        let v = board.vertices.get(m.dst);
+        if (v) {
+            ctx.fillStyle = m.captureId === null ? "rgba(4, 255, 0, 0.5)" : "rgba(255, 20, 20, 0.6)";
+            ctx.beginPath(); 
+            ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 3, 0, 2*Math.PI); 
+            ctx.fill();
+        }
+    }
+
+    // Draw Selected Highlight
+    if (game.selectedPieceId !== null) {
+        let p = game.pieces.get(game.selectedPieceId);
+        if (p && p.pos) {
+            let v = board.vertices.get(p.pos);
+            ctx.fillStyle = "rgba(106, 156, 255, 0.4)";
+            ctx.beginPath(); 
+            ctx.arc(v.x, v.y, PIECE_RADIUS + 8, 0, 2*Math.PI); 
+            ctx.fill();
+        }
+    }
+
+    // Draw Pieces
+    for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
+        if (piece.pos && !game.players[piece.owner].eliminated) {
+            let v = board.vertices.get(piece.pos);
+            
+            // Piece Shadow
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.beginPath(); ctx.arc(v.x + 2, v.y + 3, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+            
+            // Piece Base
+            ctx.fillStyle = PLAYER_COLORS[piece.owner];
+            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+            
+            // Piece Border
+            ctx.strokeStyle = "#222"; 
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
+            
+            // Piece Icon
+            ctx.fillStyle = PLAYER_TEXT[piece.owner];
+            ctx.font = "bold 18px Arial";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(PIECES[piece.kind].letter, v.x, v.y + 1);
+
+            // Frozen Effect
+            if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
+                ctx.strokeStyle = "rgba(255,0,0,0.8)"; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(v.x-15, v.y-15); ctx.lineTo(v.x+15, v.y+15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(v.x+15, v.y-15); ctx.lineTo(v.x-15, v.y+15); ctx.stroke();
+            }
+        }
+    }
+}
+
 canvas.addEventListener('mousedown', (e) => {
-    let rect = canvas.getBoundingClientRect();
-    let x = e.clientX - rect.left, y = e.clientY - rect.top;
-    
-    if (e.button === 0) { // Left Click
-        let key = game.nearestVertex({x, y});
-        if (key) game.clickVertex(key);
-    } else if (e.button === 2) { // Right Click
-        game.selectedPieceId = null;
-        game.legalMoves = [];
-        game.message = "Selection canceled.";
-    }
-    draw();
+    let rect = canvas.getBoundingClientRect();
+    // Scale coordinates from CSS display size to internal Canvas size (900x900)
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
+    
+    let x = (e.clientX - rect.left) * scaleX;
+    let y = (e.clientY - rect.top) * scaleY;
+    
+    if (e.button === 0) { // Left Click
+        let key = game.nearestVertex({x, y});
+        if (key) game.clickVertex(key);
+    } else if (e.button === 2) { // Right Click
+        game.selectedPieceId = null;
+        game.legalMoves = [];
+        game.message = "Selection canceled.";
+    }
+    updateDOM();
 });
 
 window.addEventListener('keydown', (e) => {
-    if (e.key >= '1' && e.key <= '7') {
-        const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
-        game.selectHand(kinds[e.key - '1']);
-    }
-    else if (e.key.toLowerCase() === 'n') game.passPhase();
-    else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
-    else if (e.key === 'F1') { e.preventDefault(); game.reset(2); }
-    else if (e.key === 'F2') { e.preventDefault(); game.reset(3); }
-    else if (e.key === 'F3') { e.preventDefault(); game.reset(4); }
-    draw();
+    if (e.key >= '1' && e.key <= '7') {
+        const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+        game.selectHand(kinds[e.key - '1']);
+    }
+    else if (e.key.toLowerCase() === 'n') game.passPhase();
+    else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
+    else if (e.key === 'F1') { e.preventDefault(); game.reset(2); }
+    else if (e.key === 'F2') { e.preventDefault(); game.reset(3); }
+    else if (e.key === 'F3') { e.preventDefault(); game.reset(4); }
+    updateDOM();
 });
 
-// Initial draw
-draw();
+// Initial boot
+updateDOM();
 </script>
-
 </body>
 </html>
