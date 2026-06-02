@@ -22,7 +22,6 @@ let games = {};
 let lobbyGames = {};
 
 const hikoroLogic = require('./gamelogic');
-const goLogic = require('./goGameLogic');
 
 function gameTimerTick() {
     const now = Date.now();
@@ -87,30 +86,16 @@ function endGame(gameId, winner, reason) {
     }
 }
 
-function createGameObject(gameId, gameType, clientBoardSize, timeControl, isSinglePlayer, socketId) {
-    const isHikoro = gameType === 'hikoro';
-    const boardSize = (gameType === 'go' && clientBoardSize) ? clientBoardSize : 19;
-    const logicModule = isHikoro ? hikoroLogic : goLogic;
-    
-    let initialBoardState, initialMustShieldAt = null;
-    if (isHikoro) {
-        initialBoardState = hikoroLogic.getInitialBoard();
-    } else {
-        const data = goLogic.getInitialGoBoard(boardSize);
-        initialBoardState = data.board;
-        initialMustShieldAt = data.mustShieldAt;
-    }
-
-    const game = {
+function createGameObject(gameId, timeControl, isSinglePlayer, socketId) {
+    return {
         id: gameId,
-        gameType,
-        boardSize: isHikoro ? null : boardSize,
+        gameType: 'hikoro',
         logic: {
-            makeMove: isHikoro ? hikoroLogic.makeMove : goLogic.makeGoMove,
-            getValidMoves: isHikoro ? hikoroLogic.getValidMoves : goLogic.getValidMoves,
+            makeMove: hikoroLogic.makeMove,
+            getValidMoves: hikoroLogic.getValidMoves,
         },
         players: { white: socketId, black: isSinglePlayer ? socketId : null },
-        boardState: initialBoardState,
+        boardState: hikoroLogic.getInitialBoard(),
         isWhiteTurn: true,
         turnCount: 0,
         gameOver: false,
@@ -121,27 +106,21 @@ function createGameObject(gameId, gameType, clientBoardSize, timeControl, isSing
         isSinglePlayer,
         moveList: [],
         whiteCaptured: [], blackCaptured: [],
-        whitePrinceOnBoard: true, blackPrinceOnBoard: true,
-        score: { black: 0, white: 0, details: {} },
-        mustShieldAt: initialMustShieldAt,
-        previousBoardState: null 
+        whitePrinceOnBoard: true, blackPrinceOnBoard: true
     };
-
-    if (gameType === 'go') game.score = goLogic.calculateScore(game.boardState, 0, 0);
-    return game;
 }
 
 io.on('connection', (socket) => {
     socket.emit('lobbyUpdate', lobbyGames);
 
     socket.on('createGame', (data) => {
-        const { playerName, timeControl, gameType, boardSize } = data;
+        const { playerName, timeControl } = data;
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
         const tc = timeControl || { main: 300, byoyomiTime: 30 };
         
-        games[gameId] = createGameObject(gameId, gameType, boardSize, tc, false, socket.id);
+        games[gameId] = createGameObject(gameId, tc, false, socket.id);
         
-        lobbyGames[gameId] = { id: gameId, gameType, creatorName: playerName || 'Anonymous', timeControl: tc };
+        lobbyGames[gameId] = { id: gameId, gameType: 'hikoro', creatorName: playerName || 'Anonymous', timeControl: tc };
         
         socket.join(gameId);
         socket.emit('gameCreated', { gameId, color: 'white' });
@@ -165,12 +144,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('createSinglePlayerGame', (data) => {
-        const { gameType, boardSize } = data;
+    socket.on('createSinglePlayerGame', () => {
         const gameId = `sp_${Math.random().toString(36).substr(2, 9)}`;
         const tc = { main: -1, byoyomiTime: 0 };
         
-        games[gameId] = createGameObject(gameId, gameType, boardSize, tc, true, socket.id);
+        games[gameId] = createGameObject(gameId, tc, true, socket.id);
         
         socket.join(gameId);
         const stateToSend = { ...games[gameId] };
