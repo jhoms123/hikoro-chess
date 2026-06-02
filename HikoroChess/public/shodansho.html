@@ -717,7 +717,7 @@ class Game {
         this.selectedPieceId = null;
         this.selectedHandKind = "chysalith";
         this.legalMoves = [];
-        this.startForks = new Set();
+        this.startThreats = { suns: [], chys: [] };
         this.message = "Setup: Drop your Chysalith in your starting gate.";
         this.winner = null;
     }
@@ -769,6 +769,21 @@ class Game {
         let piece = this.occupied().get(key);
         if (!piece) return;
         if (piece.owner !== this.currentPlayer) { this.message = "That is not your piece."; return; }
+        
+        let threats = this.getThreats(this.currentPlayer);
+        if (this.phase === "chysalith" && threats.chys.length > 0) {
+            if (!threats.chys.includes(piece.id)) {
+                this.message = "Force to move! You must select a threatened Chysalith.";
+                return;
+            }
+        }
+        if (this.phase === "flower" && threats.suns.length > 0) {
+            if (!threats.suns.includes(piece.id)) {
+                this.message = "Force to move! You must select a threatened Sun Flower.";
+                return;
+            }
+        }
+
         if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
         if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
@@ -785,6 +800,16 @@ class Game {
     }
 
     selectHand(kind) {
+        let threats = this.getThreats(this.currentPlayer);
+        if (this.phase === "chysalith" && threats.chys.length > 0) {
+            this.message = "Force to move! You must resolve the threat to your Chysalith.";
+            return;
+        }
+        if (this.phase === "flower" && threats.suns.length > 0) {
+            this.message = "Force to move! You must resolve the threat to your Sun Flower.";
+            return;
+        }
+
         this.selectedPieceId = null;
         this.selectedHandKind = kind;
         this.legalMoves = this.generateDropMoves(kind);
@@ -884,8 +909,8 @@ class Game {
         }
 
         if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
-        if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active enemy Shining."];
-        if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where an enemy Shining has line-of-sight."];
+        if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active Shining."];
+        if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where a Shining has line-of-sight."];
 
         if (touchesOwnGate) return [true, ""];
         if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
@@ -975,7 +1000,7 @@ class Game {
                 this.currentPlayer = 0; 
                 this.phase = "chysalith"; 
                 this.turnNumber = 1; 
-                this.startForks = this.getForkedPieces(this.currentPlayer);
+                this.startThreats = this.getThreats(this.currentPlayer);
             }
             this.message = msg;
             return;
@@ -991,42 +1016,63 @@ class Game {
         }
     }
 
-    getForkedPieces(player) {
-        let forked = new Set();
+    getThreats(player) {
+        let suns = [], chys = [];
         let occ = this.occupied();
-        for (let ep of occ.values()) {
-            if (ep.owner === player) continue;
-            let suns = [], chys = [];
-            for (let mp of occ.values()) {
-                if (mp.owner !== player) continue;
-                if (this.inView(ep.pos, mp.pos)) {
-                    if (mp.kind === 'sun') suns.push(mp.id);
-                    if (mp.kind === 'chysalith') chys.push(mp.id);
+        for (let p of occ.values()) {
+            if (p.owner !== player) continue;
+            // Sun must flee enemy Chysalith
+            if (p.kind === 'sun') {
+                for (let ep of occ.values()) {
+                    if (ep.owner !== player && ep.kind === 'chysalith') {
+                        if (this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
+                    }
                 }
-            }
-            if (suns.length >= 2) suns.forEach(id => forked.add(id));
-            if (chys.length >= 2) chys.forEach(id => forked.add(id));
-        }
-        return forked;
-    }
-
-    advancePlayer() {
-        let p = this.currentPlayer;
-        let endForks = this.getForkedPieces(p);
-        
-        // Elimination of unhandled forks
-        if (this.startForks) {
-            for (let id of this.startForks) {
-                // If the player did not move the piece, and it's STILL in a fork scenario
-                if (!this.movedThisTurn.has(id) && endForks.has(id)) {
-                    let piece = this.pieces.get(id);
-                    if (piece && piece.pos) {
-                        this.capturePiece(piece);
-                        this.message += ` Unmoved forked ${PIECES[piece.kind].label} was automatically eliminated.`;
+            } 
+            // Chysalith must flee active enemy Shining Flower
+            else if (p.kind === 'chysalith') {
+                if (this.chysalithIsFrozen(p)) continue;
+                for (let ep of occ.values()) {
+                    if (ep.owner !== player && ep.kind === 'shining' && !this.shiningPausedBySun(ep)) {
+                        if (this.inView(p.pos, ep.pos)) { chys.push(p.id); break; }
                     }
                 }
             }
         }
+        return { suns, chys };
+    }
+
+    advancePlayer() {
+        let p = this.currentPlayer;
+        let endThreats = this.getThreats(p);
+        
+        // Elimination of unhandled forks/threats (if 2 are targeted at once, the unmoved one dies)
+        if (this.startThreats) {
+            if (this.startThreats.suns.length >= 2) {
+                for (let id of this.startThreats.suns) {
+                    // If the player did not move the piece, and it's STILL in a threat scenario
+                    if (!this.movedThisTurn.has(id) && endThreats.suns.includes(id)) {
+                        let piece = this.pieces.get(id);
+                        if (piece && piece.pos) {
+                            this.capturePiece(piece);
+                            this.message += ` Unmoved threatened Sun Flower was automatically eliminated.`;
+                        }
+                    }
+                }
+            }
+            if (this.startThreats.chys.length >= 2) {
+                for (let id of this.startThreats.chys) {
+                    if (!this.movedThisTurn.has(id) && endThreats.chys.includes(id)) {
+                        let piece = this.pieces.get(id);
+                        if (piece && piece.pos) {
+                            this.capturePiece(piece);
+                            this.message += ` Unmoved threatened Chysalith was automatically eliminated.`;
+                        }
+                    }
+                }
+            }
+        }
+        
         this.movedThisTurn.clear();
 
         let start = this.currentPlayer;
@@ -1037,18 +1083,57 @@ class Game {
             if (this.currentPlayer === start) { this.phase = "game_over"; break; }
         }
         
-        this.startForks = this.getForkedPieces(this.currentPlayer);
+        this.startThreats = this.getThreats(this.currentPlayer);
     }
 
     passPhase(isRemote = false) {
         if (isOnline && !isRemote) {
             if (waitingForServer) return;
+            
+            let threats = this.getThreats(this.currentPlayer);
+            if (this.phase === "chysalith" && threats.chys.length > 0) {
+                let canMove = false;
+                for(let id of threats.chys) {
+                    if(this.generateMoves(this.pieces.get(id)).length > 0) canMove = true;
+                }
+                if(canMove) {
+                    this.message = "Force to move! You must resolve the threat to your Chysalith.";
+                    updateDOM();
+                    return;
+                }
+            }
+            if (this.phase === "flower" && threats.suns.length > 0) {
+                this.message = "Force to move! You must resolve the threat to your Sun Flower (move or pickup).";
+                updateDOM();
+                return;
+            }
+
             waitingForServer = true;
             socket.emit('sdsAction', { gameId, action: { type: 'passPhase' } });
             return;
         }
         if (isOnline && isRemote) waitingForServer = false;
         
+        if (!isRemote) {
+            let threats = this.getThreats(this.currentPlayer);
+            if (this.phase === "chysalith" && threats.chys.length > 0) {
+                let canMove = false;
+                for(let id of threats.chys) {
+                    if(this.generateMoves(this.pieces.get(id)).length > 0) canMove = true;
+                }
+                if(canMove) {
+                    this.message = "Force to move! You must resolve the threat to your Chysalith.";
+                    updateDOM();
+                    return;
+                }
+            }
+            if (this.phase === "flower" && threats.suns.length > 0) {
+                this.message = "Force to move! You must resolve the threat to your Sun Flower (move or pickup).";
+                updateDOM();
+                return;
+            }
+        }
+
         this.afterAction("Passed phase.");
         updateDOM();
     }
@@ -1197,10 +1282,21 @@ class Game {
             let fields = this.board.fieldIdsAtVertex(move.dst);
             if (piece.homeField !== null && !fields.has(piece.homeField)) return false;
         }
-        if (piece.kind === "sun" && move.captureId !== null) return false;
+        if (piece.kind === "sun") {
+            if (move.captureId !== null) return false;
+            let occ = this.occupied();
+            for (let ep of occ.values()) {
+                if (ep.owner !== piece.owner && ep.kind === 'chysalith') {
+                    if (this.inView(move.dst, ep.pos, piece.id)) return false;
+                }
+            }
+        }
         if (piece.kind === "chysalith") {
             if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
-            if (this.lineHasActiveShiningView(move.dst, piece.owner)) return false;
+            let fullPath = move.path || [move.dst];
+            for (let step of fullPath) {
+                if (this.lineHasActiveShiningView(step, piece.owner, piece.id)) return false;
+            }
         }
         return true;
     }
@@ -1236,12 +1332,8 @@ class Game {
         }
     }
 
-    activeShiningPieces(excludeOwner = null) {
-        let shinings = this.piecesOnBoard(null, "shining").filter(sh => !this.shiningPausedBySun(sh));
-        if (excludeOwner !== null) {
-            shinings = shinings.filter(sh => sh.owner !== excludeOwner);
-        }
-        return shinings;
+    activeEnemyShiningPieces(owner) {
+        return this.piecesOnBoard(null, "shining").filter(sh => sh.owner !== owner && !this.shiningPausedBySun(sh));
     }
 
     shiningPausedBySun(shining) {
@@ -1249,14 +1341,14 @@ class Game {
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
-    lineHasActiveShiningView(key, excludeOwner = null) {
-        return this.activeShiningPieces(excludeOwner).some(sh => sh.pos && this.inView(sh.pos, key));
+    lineHasActiveShiningView(key, owner, ignoreId=null) {
+        return this.activeEnemyShiningPieces(owner).some(sh => sh.pos && this.inView(sh.pos, key, ignoreId));
     }
 
-    fieldHasActiveShining(key, excludeOwner = null) {
+    fieldHasActiveShining(key, owner) {
         let fIds = this.board.fieldIdsAtVertex(key);
         if (fIds.size === 0) return false;
-        return this.activeShiningPieces(excludeOwner).some(sh => {
+        return this.activeEnemyShiningPieces(owner).some(sh => {
             if (!sh.pos) return false;
             let shFids = this.board.fieldIdsAtVertex(sh.pos);
             for (let id of fIds) if (shFids.has(id)) return true;
@@ -1514,7 +1606,7 @@ function drawBoard() {
 
             if (img && img.complete && img.naturalWidth !== 0) {
                 // Draw custom sprite centered
-                let size = (PIECE_RADIUS + 2) * 2; // Roughly 34x34 based on the previous size
+                let size = (PIECE_RADIUS + 2) * 2; // Roughly 31x31
                 ctx.drawImage(img, -size/2, -size/2, size, size);
             } else {
                 // Fallback to drawn circles if images are missing or still loading
