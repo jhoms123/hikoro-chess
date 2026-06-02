@@ -313,7 +313,7 @@ const FPS = 60;
 const SNAP_DISTANCE = 18;
 const PIECE_RADIUS = 15;
 const MOVE_DOT_RADIUS = 7;
-const REQUIRE_EXACT_STEPS = true;
+const REQUIRE_EXACT_STEPS = false; // Set to false to allow moving *up to* X steps.
 
 const PIECES = {
     star:      { label: "Star",      count: 4, steps: null, letter: "★" },
@@ -371,7 +371,6 @@ class BoardData {
 
         this.zoneAtCell = new Map();
         for (let [k, z] of Object.entries(ZONE_BY_CELL)) {
-            let [r, c] = k.split(',').map(Number);
             this.zoneAtCell.set(k, normalizeZone(z));
         }
 
@@ -630,6 +629,7 @@ class BoardData {
 
         this.startGateForPlayer = new Map();
         this.startGateNames = new Map();
+        this.closestGardenToPlayer = new Map();
         let unused = [...centers];
 
         for (let player = 0; player < 4; player++) {
@@ -643,6 +643,18 @@ class BoardData {
             unused.splice(unused.indexOf(chosen), 1);
             this.startGateForPlayer.set(player, comps.get(chosen.cid));
             this.startGateNames.set(player, target.label);
+            
+            // Map player to their closest outer garden
+            let bestGid = null, bestD = Infinity;
+            for (let [gid, corners] of this.gardenCorners.entries()) {
+                if (this.gardenName.get(gid) === "central") continue;
+                let cPts = Array.from(corners).map(k => this.vertices.get(k));
+                let gcx = cPts.reduce((sum, p) => sum + p.x, 0) / cPts.length;
+                let gcy = cPts.reduce((sum, p) => sum + p.y, 0) / cPts.length;
+                let d = distSq(chosen.x, chosen.y, gcx, gcy);
+                if (d < bestD) { bestD = d; bestGid = gid; }
+            }
+            this.closestGardenToPlayer.set(player, bestGid);
         }
     }
 }
@@ -658,6 +670,7 @@ class Game {
         this.players = [];
         this.pieces = new Map();
         this.nextPieceId = 1;
+        this.movedThisTurn = new Set();
         
         for (let i = 0; i < this.playerCount; i++) {
             let hand = {};
@@ -671,6 +684,7 @@ class Game {
         this.selectedPieceId = null;
         this.selectedHandKind = "chysalith";
         this.legalMoves = [];
+        this.startForks = new Set();
         this.message = "Setup: Drop your Chysalith in your starting gate.";
         this.winner = null;
     }
@@ -699,6 +713,24 @@ class Game {
         return best;
     }
 
+    isClosestGardenCaptured(owner) {
+        let gid = this.board.closestGardenToPlayer.get(owner);
+        if (!gid) return false;
+        let corners = this.board.gardenCorners.get(gid);
+        if (!corners) return false;
+        let occ = this.occupied();
+        let holders = [];
+        for (let k of corners) {
+            let p = occ.get(k);
+            if (p) holders.push(p.owner);
+        }
+        if (holders.length === corners.size && holders.length > 0 && holders.every(h => h === holders[0])) {
+            // Captured by an opponent
+            if (holders[0] !== owner) return true;
+        }
+        return false;
+    }
+
     selectPieceAt(key) {
         if (isOnline && this.currentPlayer !== myPlayerIndex) return;
         let piece = this.occupied().get(key);
@@ -707,6 +739,11 @@ class Game {
         if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First move set: move/replace Chysalith."; return; }
         if (this.phase === "flower" && piece.kind === "chysalith") { this.message = "Second move set: move/place non-Chysalith."; return; }
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
+        
+        if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
+            this.message = "Your closest starting garden was fully captured! Your Chysaliths cannot move.";
+            return;
+        }
 
         this.selectedPieceId = piece.id;
         this.legalMoves = this.generateMoves(piece);
@@ -778,6 +815,8 @@ class Game {
         
         this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField });
         player.hand[kind]--;
+        this.movedThisTurn.add(pid);
+        
         if (!isRemote) this.selectedHandKind = null;
         this.afterAction(`Dropped ${PIECES[kind].label}.`);
     }
@@ -846,6 +885,7 @@ class Game {
             let ids = Array.from(this.board.fieldIdsAtVertex(move.dst));
             if(ids.length > 0) piece.homeField = Math.min(...ids);
         }
+        this.movedThisTurn.add(piece.id);
         this.afterAction(move.reason || "Moved.");
     }
 
@@ -859,8 +899,14 @@ class Game {
         let onBoard = this.piecesOnBoard(owner, "chysalith").length;
         let inHand = this.players[owner].hand["chysalith"] || 0;
         if (onBoard + inHand <= 0) {
-            this.players[owner].eliminated = true;
-            this.message = `Player ${owner+1} lost both Chysaliths and is eliminated.`;
+            if (!this.players[owner].eliminated) {
+                this.players[owner].eliminated = true;
+                this.message += ` Player ${owner+1} lost both Chysaliths and is eliminated.`;
+                // Completely wipe pieces for an eliminated player
+                for (let p of this.pieces.values()) {
+                    if (p.owner === owner) p.pos = null;
+                }
+            }
         }
     }
 
@@ -877,7 +923,12 @@ class Game {
 
         if (this.phase === "setup_chysalith") {
             if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
-            else { this.currentPlayer = 0; this.phase = "chysalith"; this.turnNumber = 1; }
+            else { 
+                this.currentPlayer = 0; 
+                this.phase = "chysalith"; 
+                this.turnNumber = 1; 
+                this.startForks = this.getForkedPieces(this.currentPlayer);
+            }
             this.message = msg;
             return;
         }
@@ -892,7 +943,44 @@ class Game {
         }
     }
 
+    getForkedPieces(player) {
+        let forked = new Set();
+        let occ = this.occupied();
+        for (let ep of occ.values()) {
+            if (ep.owner === player) continue;
+            let suns = [], chys = [];
+            for (let mp of occ.values()) {
+                if (mp.owner !== player) continue;
+                if (this.inView(ep.pos, mp.pos)) {
+                    if (mp.kind === 'sun') suns.push(mp.id);
+                    if (mp.kind === 'chysalith') chys.push(mp.id);
+                }
+            }
+            if (suns.length >= 2) suns.forEach(id => forked.add(id));
+            if (chys.length >= 2) chys.forEach(id => forked.add(id));
+        }
+        return forked;
+    }
+
     advancePlayer() {
+        let p = this.currentPlayer;
+        let endForks = this.getForkedPieces(p);
+        
+        // Elimination of unhandled forks
+        if (this.startForks) {
+            for (let id of this.startForks) {
+                // If the player did not move the piece, and it's STILL in a fork scenario
+                if (!this.movedThisTurn.has(id) && endForks.has(id)) {
+                    let piece = this.pieces.get(id);
+                    if (piece && piece.pos) {
+                        this.capturePiece(piece);
+                        this.message += ` Unmoved forked ${PIECES[piece.kind].label} was automatically eliminated.`;
+                    }
+                }
+            }
+        }
+        this.movedThisTurn.clear();
+
         let start = this.currentPlayer;
         while (true) {
             this.currentPlayer = (this.currentPlayer + 1) % this.playerCount;
@@ -900,9 +988,12 @@ class Game {
             if (!this.players[this.currentPlayer].eliminated) break;
             if (this.currentPlayer === start) { this.phase = "game_over"; break; }
         }
+        
+        this.startForks = this.getForkedPieces(this.currentPlayer);
+
         if (this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0 && (this.players[this.currentPlayer].hand["chysalith"]||0) > 0) {
             this.selectedHandKind = "chysalith";
-            this.message = "Your Chysalith is off board. You must place it.";
+            this.message += " Your Chysalith is off board. You must place it.";
         }
     }
 
@@ -934,8 +1025,10 @@ class Game {
         let p = this.pieces.get(pid);
         if (p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; updateDOM(); return; }
         if (this.phase !== "flower") { this.message = "Picking up Sun uses the flower phase."; updateDOM(); return; }
+        
         p.pos = null;
         this.players[p.owner].hand["sun"]++;
+        this.movedThisTurn.add(pid);
         if (!isRemote) this.selectedPieceId = null;
         this.afterAction("Picked Sun Flower up.");
         updateDOM();
@@ -1133,18 +1226,26 @@ class Game {
         if (alive.length === 1) return alive[0];
         
         let ownersByGarden = new Map();
+        let hasChysInGarden = new Map();
         let occ = this.occupied();
+        
         for (let [gid, corners] of this.board.gardenCorners.entries()) {
             let holders = [];
             let hasChys = false;
             for (let k of corners) {
                 let p = occ.get(k);
-                holders.push(p ? p.owner : null);
-                if (p && p.kind === "chysalith") hasChys = true;
+                if (p) {
+                    holders.push(p.owner);
+                    if (p.kind === "chysalith") hasChys = true;
+                }
             }
             let owner = null;
-            if (holders.length > 0 && holders.every(h => h === holders[0] && h !== null) && hasChys) owner = holders[0];
+            // fully captured garden needs all 4 corners owned by the same player
+            if (holders.length === corners.size && holders.every(h => h === holders[0])) {
+                owner = holders[0];
+            }
             ownersByGarden.set(gid, owner);
+            hasChysInGarden.set(gid, hasChys);
         }
 
         let centralGid = null;
@@ -1153,9 +1254,15 @@ class Game {
         let neededSmall = {2:2, 3:1, 4:0}[this.playerCount] || 2;
 
         for (let owner of alive) {
-            if (centralGid !== null && ownersByGarden.get(centralGid) !== owner) continue;
-            let smallCount = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner && gid !== centralGid).length;
-            if (smallCount >= neededSmall) return owner;
+            let ownedGardens = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner);
+            let ownsCenter = ownedGardens.some(([gid]) => gid === centralGid);
+            let smallCount = ownedGardens.filter(([gid]) => gid !== centralGid).length;
+            
+            if (ownsCenter && smallCount >= neededSmall) {
+                // One of the corners of one of the winning filled gardens needs to be filled by a chysalith
+                let validWin = ownedGardens.some(([gid]) => hasChysInGarden.get(gid));
+                if (validWin) return owner;
+            }
         }
         return null;
     }
