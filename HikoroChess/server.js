@@ -34,6 +34,7 @@ function gameTimerTick() {
     for (const gameId in games) {
         const game = games[gameId];
         if (!game || game.gameOver || game.timeControl.main === -1 || !game.players.black || !game.lastMoveTimestamp) continue;
+        if (game.gameType === 'shodansho') continue; // Handled differently/separately or doesn't use the standard chess timer here.
 
         const activePlayerColor = game.isWhiteTurn ? 'white' : 'black';
         const opponentColor = game.isWhiteTurn ? 'black' : 'white';
@@ -92,10 +93,13 @@ function endGame(gameId, winner, reason) {
     }
 }
 
-function createGameObject(gameId, timeControl, isSinglePlayer, socketId, gameType = 'hikoro') {
+function createGameObject(gameId, timeControl, isSinglePlayer, socketId, gameType = 'hikoro', maxPlayers = 2) {
     return {
         id: gameId,
         gameType: gameType,
+        maxPlayers: maxPlayers,
+        playersArray: [socketId], // Used for lobbies with > 2 players
+        tokens: [], // Used to authenticate users upon redirect
         logic: {
             makeMove: hikoroLogic.makeMove,
             getValidMoves: hikoroLogic.getValidMoves,
@@ -120,34 +124,63 @@ io.on('connection', (socket) => {
     socket.emit('lobbyUpdate', lobbyGames);
 
     socket.on('createGame', (data) => {
-        const { playerName, timeControl, gameType } = data;
+        const { playerName, timeControl, gameType, playerCount } = data;
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
         const tc = timeControl || { main: 300, byoyomiTime: 30 };
         const gt = gameType || 'hikoro';
+        const maxP = gt === 'shodansho' ? (playerCount || 2) : 2;
         
-        games[gameId] = createGameObject(gameId, tc, false, socket.id, gt);
+        games[gameId] = createGameObject(gameId, tc, false, socket.id, gt, maxP);
         
-        lobbyGames[gameId] = { id: gameId, gameType: gt, creatorName: playerName || 'Anonymous', timeControl: tc };
+        lobbyGames[gameId] = { id: gameId, gameType: gt, creatorName: playerName || 'Anonymous', timeControl: tc, currentPlayers: 1, maxPlayers: maxP };
         
         socket.join(gameId);
-        socket.emit('gameCreated', { gameId, color: 'white' });
+        socket.emit('gameCreated', { gameId, color: 'white', maxPlayers: maxP });
         io.emit('lobbyUpdate', lobbyGames);
     });
 
     socket.on('joinGame', (gameId) => {
         const game = games[gameId];
-        if (game && !game.players.black) {
-            game.players.black = socket.id;
-            delete lobbyGames[gameId]; 
-            socket.join(gameId);
-            game.lastMoveTimestamp = Date.now();
-            
-            const stateToSend = { ...game };
-            delete stateToSend.logic;
-            io.to(gameId).emit('gameStart', stateToSend);
-            io.emit('lobbyUpdate', lobbyGames);
+        if (!game) return socket.emit('errorMsg', 'Game not found.');
+        
+        if (game.gameType === 'shodansho') {
+            if (game.playersArray.length < game.maxPlayers) {
+                game.playersArray.push(socket.id);
+                socket.join(gameId);
+                
+                if (game.playersArray.length === game.maxPlayers) {
+                    delete lobbyGames[gameId];
+                    // Generate secret tokens so clients returning from redirect are secured
+                    game.tokens = game.playersArray.map(() => Math.random().toString(36).substr(2, 9));
+                    
+                    game.playersArray.forEach((sId, index) => {
+                        io.to(sId).emit('gameStart', { id: gameId, gameType: 'shodansho', token: game.tokens[index] });
+                    });
+                    io.emit('lobbyUpdate', lobbyGames);
+                } else {
+                    lobbyGames[gameId].currentPlayers = game.playersArray.length;
+                    io.emit('lobbyUpdate', lobbyGames);
+                    io.to(gameId).emit('playerJoinedLobby', { current: game.playersArray.length, max: game.maxPlayers });
+                    // Inform the person joining so their UI updates
+                    socket.emit('joinedLobby', { gameId, current: game.playersArray.length, max: game.maxPlayers });
+                }
+            } else {
+                socket.emit('errorMsg', 'Game is full.');
+            }
         } else {
-            socket.emit('errorMsg', 'Game full or not found.');
+            if (!game.players.black) {
+                game.players.black = socket.id;
+                delete lobbyGames[gameId]; 
+                socket.join(gameId);
+                game.lastMoveTimestamp = Date.now();
+                
+                const stateToSend = { ...game };
+                delete stateToSend.logic;
+                io.to(gameId).emit('gameStart', stateToSend);
+                io.emit('lobbyUpdate', lobbyGames);
+            } else {
+                socket.emit('errorMsg', 'Game full or not found.');
+            }
         }
     });
 
@@ -156,12 +189,28 @@ io.on('connection', (socket) => {
         const gameId = `sp_${Math.random().toString(36).substr(2, 9)}`;
         const tc = { main: -1, byoyomiTime: 0 };
         
-        games[gameId] = createGameObject(gameId, tc, true, socket.id, gt);
+        games[gameId] = createGameObject(gameId, tc, true, socket.id, gt, 2);
         
         socket.join(gameId);
         const stateToSend = { ...games[gameId] };
         delete stateToSend.logic;
         socket.emit('gameStart', stateToSend);
+    });
+
+    socket.on('joinShodanshoRoom', ({ gameId, token }) => {
+        const game = games[gameId];
+        if (game && game.gameType === 'shodansho') {
+            socket.join(gameId);
+            let pIndex = game.tokens.indexOf(token);
+            if (pIndex !== -1) {
+                socket.emit('shodanshoInit', { playerIndex: pIndex, playerCount: game.maxPlayers });
+            }
+        }
+    });
+
+    socket.on('shodanshoAction', (data) => {
+        // Relay actions directly to all other clients in the game
+        socket.to(data.gameId).emit('shodanshoAction', data);
     });
 
     socket.on('makeGameMove', (data) => {
@@ -206,25 +255,71 @@ io.on('connection', (socket) => {
     socket.on('leaveGame', (gameId) => {
         const game = games[gameId];
         if (game) {
-            if (!game.isSinglePlayer && !game.gameOver) {
-                endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Forfeited");
+            if (game.gameType === 'shodansho') {
+                const idx = game.playersArray.indexOf(socket.id);
+                if (idx !== -1) {
+                    if (!game.gameOver && game.playersArray.length === game.maxPlayers) {
+                        game.gameOver = true;
+                        socket.to(gameId).emit('errorMsg', 'A player left. Game Over.');
+                        delete games[gameId];
+                    } else if (lobbyGames[gameId]) {
+                        game.playersArray.splice(idx, 1);
+                        if (game.playersArray.length === 0) {
+                            delete games[gameId];
+                            delete lobbyGames[gameId];
+                        } else {
+                            lobbyGames[gameId].currentPlayers = game.playersArray.length;
+                            io.to(gameId).emit('playerJoinedLobby', { current: game.playersArray.length, max: game.maxPlayers });
+                        }
+                        io.emit('lobbyUpdate', lobbyGames);
+                    }
+                }
+            } else {
+                if (!game.isSinglePlayer && !game.gameOver) {
+                    endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Forfeited");
+                }
+                delete games[gameId];
+                delete lobbyGames[gameId];
+                io.emit('lobbyUpdate', lobbyGames);
             }
-            delete games[gameId];
-            delete lobbyGames[gameId];
-            io.emit('lobbyUpdate', lobbyGames);
         }
     });
 
     socket.on('disconnect', () => {
         for (const gameId in games) {
             const game = games[gameId];
-            if (game.players.white === socket.id || game.players.black === socket.id) {
-                if (!game.isSinglePlayer && !game.gameOver) {
-                    endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Disconnected");
+            if (game.gameType === 'shodansho') {
+                const idx = game.playersArray.indexOf(socket.id);
+                if (idx !== -1) {
+                    if (!game.gameOver && game.playersArray.length === game.maxPlayers) {
+                        // Game started, but a player left (the original socket connection)
+                        // If they are bouncing through redirect, we rely on leaveGame to end it securely if it matters, 
+                        // but disconnect during a game can also trigger Game Over.
+                        socket.to(gameId).emit('errorMsg', 'A player disconnected. Game Over.');
+                        game.gameOver = true;
+                        delete games[gameId];
+                    } else if (lobbyGames[gameId]) {
+                        // Lobby phase
+                        game.playersArray.splice(idx, 1);
+                        if (game.playersArray.length === 0) {
+                            delete games[gameId];
+                            delete lobbyGames[gameId];
+                        } else {
+                            lobbyGames[gameId].currentPlayers = game.playersArray.length;
+                            io.to(gameId).emit('playerJoinedLobby', { current: game.playersArray.length, max: game.maxPlayers });
+                        }
+                        io.emit('lobbyUpdate', lobbyGames);
+                    }
                 }
-                delete games[gameId];
-                delete lobbyGames[gameId];
-                io.emit('lobbyUpdate', lobbyGames);
+            } else {
+                if (game.players.white === socket.id || game.players.black === socket.id) {
+                    if (!game.isSinglePlayer && !game.gameOver) {
+                        endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Disconnected");
+                    }
+                    delete games[gameId];
+                    delete lobbyGames[gameId];
+                    io.emit('lobbyUpdate', lobbyGames);
+                }
             }
         }
     });
