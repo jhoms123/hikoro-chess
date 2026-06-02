@@ -16,7 +16,13 @@ const io = socketIo(server, {
 
 const PORT = process.env.PORT || 3000;
 
+// Serve the public folder for HTML, CSS, images, etc.
 app.use(express.static('public'));
+
+// Explicitly serve gamelogic.js from the root folder to the browser
+app.get('/gamelogic.js', (req, res) => {
+    res.sendFile(__dirname + '/gamelogic.js');
+});
 
 let games = {};
 let lobbyGames = {};
