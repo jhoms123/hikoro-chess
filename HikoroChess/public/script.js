@@ -9,15 +9,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const HIKORO_BOARD_WIDTH = 10;
     const HIKORO_BOARD_HEIGHT = 16;
 
+    // --- DOM Elements ---
     const lobbyElement = document.getElementById('lobby');
     const createGameBtn = document.getElementById('create-game-btn');
     const gameListElement = document.getElementById('game-list');
     const singlePlayerBtn = document.getElementById('single-player-btn');
+    const gameTypeSelect = document.getElementById('game-type-select');
 
     // --- Game Wrappers ---
     const hikoroGameWrapper = document.getElementById('hikoro-game-wrapper');
-
-    // --- Hikoro Elements ---
     const hikoroBoardElement = document.getElementById('game-board');
 
     // --- Shared UI Elements ---
@@ -64,10 +64,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
     const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
 
+    if (gameTypeSelect) {
+        gameTypeSelect.addEventListener('change', () => {
+            const gameType = gameTypeSelect.value;
+            if (gameType === 'shodansho') {
+                startReplayBtn.disabled = true;
+                startReplayBtn.title = "Replay is not available for Sho Dan Sho";
+                kifuPasteArea.disabled = true;
+            } else {
+                startReplayBtn.disabled = false;
+                startReplayBtn.title = "";
+                kifuPasteArea.disabled = false;
+            }
+        });
+    }
+
     createGameBtn.addEventListener('click', () => {
         const playerName = document.getElementById('player-name').value.trim() || 'Anonymous';
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
+        const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
         const timeControl = {
@@ -76,13 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
         };
 
-        const dataToSend = { playerName, timeControl };
+        const dataToSend = { playerName, timeControl, gameType };
         socket.emit('createGame', dataToSend);
     });
 
     singlePlayerBtn.addEventListener('click', () => {
         isSinglePlayer = true;
-        socket.emit('createSinglePlayerGame');
+        const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
+        socket.emit('createSinglePlayerGame', { gameType });
     });
 
     socket.on('lobbyUpdate', updateLobby);
@@ -90,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameStart', onGameStart);
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('timeUpdate', updateTimerDisplay);
-    socket.on('validMoves', drawValidMoves); 
+    socket.on('validMoves', drawHikoroHighlights); 
     socket.on('errorMsg', (message) => alert(message));
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
@@ -112,13 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resignButton) {
         resignButton.addEventListener('click', () => {
             if (gameState.gameOver || isReplayMode || !gameId) return;
-
-            // Don't allow resigning in single-player (pass-and-play)
             if (isSinglePlayer) {
                 alert("Cannot resign in a local pass-and-play game.");
                 return;
             }
-
             if (confirm("Are you sure you want to resign?")) {
                 socket.emit('makeGameMove', {
                     gameId,
@@ -169,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- Reset replay state before building ---
             replayGameTree = null;
             currentReplayNode = null;
             flatMoveList = [];
@@ -229,7 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
         displayReplayState(flatMoveList[flatMoveList.length - 1]);
     });
 
-
     function formatTimeControl(tc) {
         if (!tc || tc.main === -1) { return 'Unlimited'; }
         const mainMinutes = Math.floor(tc.main / 60);
@@ -266,12 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gameState.timeControl) return;
 
         const { whiteTime, blackTime, isInByoyomiWhite, isInByoyomiBlack } = times;
-
-        const whiteTimeStr = formatTime(whiteTime, 0, isInByoyomiWhite);
-        const blackTimeStr = formatTime(blackTime, 0, isInByoyomiBlack);
-
-        whiteTimerEl_Hikoro.textContent = whiteTimeStr;
-        blackTimerEl_Hikoro.textContent = blackTimeStr;
+        whiteTimerEl_Hikoro.textContent = formatTime(whiteTime, 0, isInByoyomiWhite);
+        blackTimerEl_Hikoro.textContent = formatTime(blackTime, 0, isInByoyomiBlack);
 
         if (gameState.gameOver) {
             whiteTimerEl_Hikoro.classList.remove('active');
@@ -297,8 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const infoSpan = document.createElement('span');
             const creatorName = game.creatorName || 'Player 1';
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
+            const gameTypeStr = game.gameType === 'shodansho' ? "Sho Dan Sho" : "Hikoro Chess";
 
-            infoSpan.textContent = `${creatorName}'s Game [Hikoro Chess] [${timeString}]`; 
+            infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
             gameItem.appendChild(infoSpan);
 
             const joinBtn = document.createElement('button');
@@ -325,6 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
+        // Redirection to the Sho Dan Sho standalone canvas environment!
+        if (initialGameState.gameType === 'shodansho') {
+            window.location.href = `/shodansho.html?gameId=${initialGameState.id}`;
+            return;
+        }
+
         gameId = initialGameState.id;
         gameState = initialGameState; 
         isReplayMode = false;
@@ -376,11 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateTurnIndicator(); 
-    }
-
-    function drawValidMoves(moves) {
-        if (!gameState || !gameState.gameType) return; 
-        drawHikoroHighlights(moves);
     }
 
     function renderHikoroNotationMarkers() {
@@ -444,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHikoroBoard() {
         hikoroBoardElement.innerHTML = ''; 
         if (!gameState || !Array.isArray(gameState.boardState) || gameState.boardState.length === 0) {
-            console.error("renderHikoroBoard: gameState or boardState is missing!");
             return;
         }
 
@@ -552,10 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bottomLabelEl = document.querySelector(isBottomHandWhite ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label');
         const topLabelEl = document.querySelector(isBottomHandWhite ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label');
 
-        if (!bottomHandEl || !topHandEl || !bottomLabelEl || !topLabelEl) {
-            console.error("renderHikoroCaptured: Captured piece elements not found!");
-            return;
-        }
+        if (!bottomHandEl || !topHandEl || !bottomLabelEl || !topLabelEl) return;
 
         if (isSinglePlayer || isReplayMode) {
              bottomLabelEl.textContent = "White's Hand";
@@ -577,9 +583,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const spriteImg = document.createElement('img');
             const spriteType = pieceData.type;
-            const displayColor = handColor; 
-            spriteImg.src = `sprites/${spriteType}_${displayColor}.png`;
-            spriteImg.alt = `${displayColor} ${spriteType}`;
+            spriteImg.src = `sprites/${spriteType}_${handColor}.png`;
+            spriteImg.alt = `${handColor} ${spriteType}`;
 
             pieceElement.appendChild(spriteImg);
             el.appendChild(pieceElement);
@@ -633,10 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTurnIndicator() {
-        if (!turnIndicator || !winnerText) {
-            console.error("updateTurnIndicator: Turn indicator or winner text element not found!");
-            return;
-        }
+        if (!turnIndicator || !winnerText) return;
 
         if (gameState.gameOver && !isReplayMode) {
             turnIndicator.textContent = ''; 
@@ -759,8 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
          if (selectedSquare && elementToHighlight) {
              elementToHighlight.classList.add(isPlayerTurn ? 'selected' : 'preview-selected');
-         } else if (isDroppingPiece && elementToHighlight) {
-             // selected-drop class already added
          }
 
          const bonusInfo = isReplayMode ? currentReplayNode?.gameState?.bonusMoveInfo : gameState.bonusMoveInfo;
@@ -770,7 +770,6 @@ document.addEventListener('DOMContentLoaded', () => {
          } else if (bonusInfo && (!selectedSquare || selectedSquare.x !== bonusInfo.pieceX || selectedSquare.y !== bonusInfo.pieceY)) {
               movesToDraw = [];
          }
-
 
         movesToDraw.forEach(move => {
             const moveSquare = document.querySelector(`#game-board .square[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
@@ -807,16 +806,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (square) {
                         const plate = document.createElement('div');
                         plate.classList.add('move-plate', 'drop'); 
-                        if (!isPlayerTurn) {
-                            plate.classList.add('preview');
-                        }
+                        if (!isPlayerTurn) plate.classList.add('preview');
                         square.appendChild(plate);
                     }
                 }
             }
         }
     }
-
 
     function handleHikoroClick(x, y) {
         if (isReplayMode) {
@@ -846,10 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         gameId,
                         move: { type: 'board', from: selectedSquare, to: { x, y } }
                     });
-                } else {
-                    console.log("Invalid move target selected."); 
                 }
-
             }
             selectedSquare = null;
             isDroppingPiece = null;
@@ -859,7 +852,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isDroppingPiece) {
              if (isDroppingPiece.type === 'lupa' || isDroppingPiece.type === 'prince') {
-                 console.log("Cannot drop King or Prince.");
                  isDroppingPiece = null;
                  clearHikoroHighlights();
                  return;
@@ -875,8 +867,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     gameId,
                     move: { type: 'drop', piece: isDroppingPiece, to: { x, y } } 
                 });
-             } else {
-                 console.log("Invalid drop location."); 
              }
             selectedSquare = null;
             isDroppingPiece = null;
@@ -886,20 +876,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const piece = gameState.boardState[y]?.[x];
         if (piece) {
-            let canSelectPiece;
-             if (isSinglePlayer) { 
-                 canSelectPiece = true; 
-             } else { 
-                 canSelectPiece = piece.color === myColor; 
-             }
+            let canSelectPiece = isSinglePlayer ? true : piece.color === myColor; 
 
              if (gameState.bonusMoveInfo &&
                  (piece.color !== (gameState.isWhiteTurn ? 'white' : 'black') || 
                   x !== gameState.bonusMoveInfo.pieceX || y !== gameState.bonusMoveInfo.pieceY)) { 
-                  console.log("Must complete bonus move with the correct piece.");
                   canSelectPiece = false; 
              }
-
 
             if (canSelectPiece) {
                 if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
@@ -929,31 +912,15 @@ document.addEventListener('DOMContentLoaded', () => {
             handleReplayCapturedClick(pieceData, handColor, clickedElement); 
             return;
         }
-        if (gameState.gameOver) return; 
-
-        if(gameState.bonusMoveInfo){
-             console.log("Cannot select captured piece during bonus move.");
-             return;
-        }
+        if (gameState.gameOver || gameState.bonusMoveInfo) return; 
 
         const activeColor = gameState.isWhiteTurn ? 'white' : 'black';
-        if (handColor !== activeColor) {
-            console.log("Cannot select piece from opponent's hand or out of turn.");
-            return; 
-        }
+        if (handColor !== activeColor) return; 
 
-        const isPlayerAllowedToMove = (isSinglePlayer) || 
-                                      (!isSinglePlayer && myColor === activeColor); 
+        const isPlayerAllowedToMove = (isSinglePlayer) || (!isSinglePlayer && myColor === activeColor); 
+        if (!isPlayerAllowedToMove) return; 
 
-        if (!isPlayerAllowedToMove) {
-             console.log("Not your turn to select from hand.");
-            return; 
-        }
-
-        if (pieceData.type === 'lupa' || pieceData.type === 'prince') {
-            console.log("Cannot select royalty from hand.");
-            return;
-        }
+        if (pieceData.type === 'lupa' || pieceData.type === 'prince') return;
 
         if (isDroppingPiece && isDroppingPiece.type === pieceData.type) {
             isDroppingPiece = null;
@@ -970,9 +937,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clickedElement.classList.add('selected-drop'); 
         highlightHikoroDropSquares(); 
     }
-
-    const original_onSquareClick = typeof onSquareClick !== 'undefined' ? onSquareClick : null;
-    const original_onCapturedClick = typeof onCapturedClick !== 'undefined' ? onCapturedClick : null;
 
     onSquareClick = handleHikoroClick;
     onCapturedClick = handleHikoroCapturedClick;
@@ -1003,19 +967,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function generateServerNotation(piece, to, wasCapture, wasDrop) {
-        if (typeof gameLogic === 'undefined' || !gameLogic.pieceNotation) {
-             console.error("generateServerNotation: gameLogic not available");
-             return "?";
-        }
+        if (typeof gameLogic === 'undefined' || !gameLogic.pieceNotation) return "?";
         const pieceAbbr = gameLogic.pieceNotation[piece.type] || '?';
         const coord = toAlgebraic(to.x, to.y);
 
-        if (wasDrop) {
-            return `${pieceAbbr}*${coord}`;
-        }
-        if (wasCapture) {
-            return `${pieceAbbr}x${coord}`;
-        }
+        if (wasDrop) return `${pieceAbbr}*${coord}`;
+        if (wasCapture) return `${pieceAbbr}x${coord}`;
         return `${pieceAbbr}${coord}`;
     }
 
@@ -1033,10 +990,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function parseNotation(notation, boardState, isWhiteTurn) {
-        if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) {
-            console.error("parseNotation: gameLogic not available");
-            return null;
-        }
+        if (typeof gameLogic === 'undefined' || !gameLogic.notationToPieceType || !gameLogic.getValidMovesForPiece) return null;
 
         const color = isWhiteTurn ? 'white' : 'black';
 
@@ -1046,10 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const algTo = match[2];
             const to = fromAlgebraic(algTo);
             const pieceType = gameLogic.notationToPieceType[pieceAbbr];
-            if (!pieceType || !to) {
-                console.warn(`Invalid drop notation or target: "${notation}"`);
-                return null;
-            }
+            if (!pieceType || !to) return null;
             return { type: 'drop', piece: { type: pieceType }, to: to };
         }
 
@@ -1061,10 +1012,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pieceType = gameLogic.notationToPieceType[pieceAbbr];
             const to = fromAlgebraic(algTo);
 
-            if (!pieceType || !to) {
-                console.warn(`Invalid move notation or target: "${notation}"`);
-                return null;
-            }
+            if (!pieceType || !to) return null;
 
             let possibleMoves = []; 
 
@@ -1085,12 +1033,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (possibleMoves.length === 1) {
-                return possibleMoves[0]; 
-            } else if (possibleMoves.length > 1) {
-                console.warn(`AMBIGUOUS MOVE: "${notation}". Multiple pieces (${pieceType}) can move to ${algTo}. Defaulting to first.`);
-                return possibleMoves[0]; 
-            } else {
+            if (possibleMoves.length === 1) return possibleMoves[0]; 
+            else if (possibleMoves.length > 1) return possibleMoves[0]; 
+            else {
                 const promotingTypes = [];
                 if (pieceType === 'chair') promotingTypes.push('sult', 'pawn');
                 if (pieceType === 'greatshield') promotingTypes.push('pilut');
@@ -1127,27 +1072,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                if (possibleMoves.length === 1) {
-                    return possibleMoves[0];
-                } else if (possibleMoves.length > 1) {
-                    console.warn(`AMBIGUOUS PROMOTING MOVE: "${notation}". Multiple pieces promote to ${pieceType} at ${algTo}. Defaulting.`);
-                    return possibleMoves[0];
-                } else {
-                    console.warn(`Could not find valid 'from' for move: "${notation}" for ${color}`);
-                    return null; 
-                }
+                if (possibleMoves.length === 1) return possibleMoves[0];
+                else if (possibleMoves.length > 1) return possibleMoves[0];
+                else return null; 
             }
         }
-
-        console.warn("Could not parse notation (format mismatch):", notation);
         return null;
     }
 
      function applyMoveToState(oldGameState, moveObj) {
-         if (!moveObj) {
-             console.error("applyMoveToState received null moveObj");
-             return oldGameState;
-         }
+         if (!moveObj) return oldGameState;
+         
          let newGameState = typeof structuredClone === 'function'
              ? structuredClone(oldGameState)
              : JSON.parse(JSON.stringify(oldGameState));
@@ -1161,42 +1096,19 @@ document.addEventListener('DOMContentLoaded', () => {
              const { piece, to } = moveObj; 
              const droppedPiece = { type: piece.type, color: color }; 
 
-             if (to.y < 0 || to.y >= HIKORO_BOARD_HEIGHT || to.x < 0 || to.x >= HIKORO_BOARD_WIDTH) {
-                 console.error("ApplyMove (Drop): Invalid 'to' coordinates", moveObj); return oldGameState;
-             }
-             if(boardState[to.y][to.x] !== null) {
-                 console.error("ApplyMove (Drop): Target square not empty", moveObj); return oldGameState;
-             }
-
              boardState[to.y][to.x] = droppedPiece; 
 
              const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
              const pieceIndex = hand.findIndex(p => p.type === piece.type);
-             if (pieceIndex > -1) {
-                 hand.splice(pieceIndex, 1);
-             } else {
-                 console.warn("ApplyMove: Drop piece type not found in hand", moveObj, hand);
-             }
+             if (pieceIndex > -1) hand.splice(pieceIndex, 1);
              pieceMovedOriginal = droppedPiece; 
              newGameState.lastMove = { from: null, to: moveObj.to }; 
 
          } else if (moveObj.type === 'board') {
              const { from, to } = moveObj;
-
-             if (from.y < 0 || from.y >= HIKORO_BOARD_HEIGHT || from.x < 0 || from.x >= HIKORO_BOARD_WIDTH ||
-                 to.y < 0 || to.y >= HIKORO_BOARD_HEIGHT || to.x < 0 || to.x >= HIKORO_BOARD_WIDTH ) {
-                 console.error("ApplyMove (Board): Invalid coordinates", moveObj); return oldGameState;
-             }
              const piece = boardState[from.y]?.[from.x];
-             if (!piece) {
-                 console.error("ApplyMove: Piece not found at source", moveObj); return oldGameState;
-             }
-             if (piece.color !== color) {
-                 console.error("ApplyMove: Trying to move opponent's piece", moveObj); return oldGameState;
-             }
 
              pieceMovedOriginal = {...piece}; 
-
              const targetPiece = boardState[to.y]?.[to.x];
              wasCapture = targetPiece !== null;
 
@@ -1219,7 +1131,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  }
              }
 
-
              if (targetPiece) {
                  if (targetPiece.type === 'prince') {
                      if (targetPiece.color === 'white') newGameState.whitePrinceOnBoard = false; else newGameState.blackPrinceOnBoard = false;
@@ -1234,9 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      }
 
                      if (!indestructible.includes(targetPiece.type)) {
-                         if (targetHand.length < 6) {
-                             targetHand.push({ type: handPieceType });
-                         }
+                         if (targetHand.length < 6) targetHand.push({ type: handPieceType });
                      }
                  }
              }
@@ -1248,15 +1157,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
               const pieceNowAtTarget = boardState[to.y]?.[to.x];
               if (pieceNowAtTarget) {
-                 handlePromotion(pieceNowAtTarget, moveObj.to.y, wasCapture); 
-              } else {
-                 console.error("ApplyMove: Piece disappeared after move!", moveObj);
-                 return oldGameState; 
+                 if (pieceNowAtTarget.type !== 'prince') {
+                     if (pieceNowAtTarget.type === 'greathorsegeneral' && wasCapture) pieceNowAtTarget.type = 'cthulhu';
+                     else if (pieceNowAtTarget.type === 'mermaid' && wasCapture) pieceNowAtTarget.type = 'neptune';
+                     else if (pieceNowAtTarget.type === 'fin' && wasCapture) pieceNowAtTarget.type = 'finor';
+                     else {
+                         const promotablePawns = ['sult', 'pawn', 'pilut'];
+                         if (promotablePawns.includes(pieceNowAtTarget.type)) {
+                             const inPromotionZone = (pieceNowAtTarget.color === 'white' && moveObj.to.y > 8) || (pieceNowAtTarget.color === 'black' && moveObj.to.y < 7);
+                             if (inPromotionZone) {
+                                 if (pieceNowAtTarget.type === 'pilut') pieceNowAtTarget.type = 'greatshield';
+                                 else pieceNowAtTarget.type = 'chair';
+                             }
+                         }
+                     }
+                 }
               }
 
-         } else {
-             console.error("ApplyMove: Unknown move type", moveObj);
-             return oldGameState;
          }
 
          const isBonusContinuation = !!oldGameState.bonusMoveInfo; 
@@ -1290,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
      function buildReplayTree(kifuText) {
          const moveNotations = parseKifuToMoveList(kifuText);
          if (moveNotations.length === 0) {
-             alert("Invalid or empty kifu. Please check format (e.g., '1. MoveW MoveB').");
+             alert("Invalid or empty kifu. Please check format.");
              return null;
          }
 
@@ -1313,20 +1230,11 @@ document.addEventListener('DOMContentLoaded', () => {
              const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
 
              if (!moveObj) {
-                 console.error(`Failed to parse move: "${notation}" (index ${i}). Stopping tree build.`);
-                 alert(`Error parsing move "${notation}" (approx move ${Math.floor(i/2)+1}). Replay might be incomplete or incorrect.`);
+                 alert(`Error parsing move "${notation}". Replay might be incomplete.`);
                  break; 
              }
 
              const newGameState = applyMoveToState(currentGameState, moveObj);
-
-             if (JSON.stringify(newGameState.boardState) === JSON.stringify(currentGameState.boardState) &&
-                 JSON.stringify(newGameState.whiteCaptured) === JSON.stringify(currentGameState.whiteCaptured) &&
-                 JSON.stringify(newGameState.blackCaptured) === JSON.stringify(currentGameState.blackCaptured)) {
-                 console.error(`Applying move "${notation}" did not change game state. Stopping build.`, {oldState: currentGameState, move: moveObj, newState: newGameState});
-                 alert(`Error applying move "${notation}" (approx move ${Math.floor(i/2)+1}). State did not change. Replay might be incomplete or incorrect.`);
-                 break; 
-             }
 
              const newNode = {
                  moveNotation: notation, moveObj: moveObj, gameState: newGameState,
@@ -1359,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      mainLineContainer.classList.add('move-line');
                      parentDOMElement.appendChild(mainLineContainer);
 
-                     node.children.forEach((child, index) => {
+                     node.children.forEach((child) => {
                          renderNodeRecursive(child, mainLineContainer, 0); 
                      });
                  }
@@ -1378,20 +1286,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
             const wasWhiteMove = stateBefore.isWhiteTurn;
 
-             if (wasWhiteMove) {
-                 moveText = `${turnNum}. ${moveText}`;
-             } else {
-                 moveText = `... ${moveText}`; 
-             }
+             if (wasWhiteMove) moveText = `${turnNum}. ${moveText}`;
+             else moveText = `... ${moveText}`; 
 
-             if (node.isBonusSecondMove) {
-                 moveText = `> ${node.moveNotation}`;
-             }
+             if (node.isBonusSecondMove) moveText = `> ${node.moveNotation}`;
 
             const isBranchStartNode = node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node;
-            if (isBranchStartNode && !node.isBonusSecondMove) { 
-                 moveText = `( ${moveText}`; 
-            }
+            if (isBranchStartNode && !node.isBonusSecondMove) moveText = `( ${moveText}`; 
 
             moveEl.textContent = moveText + " "; 
 
@@ -1404,10 +1305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  }, 50); 
             }
 
-            moveEl.addEventListener('click', (e) => {
-                displayReplayState(node);
-            });
-
+            moveEl.addEventListener('click', () => displayReplayState(node));
             moveWrapper.appendChild(moveEl); 
             parentDOMElement.appendChild(moveWrapper); 
 
@@ -1420,7 +1318,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  }
 
                  renderNodeRecursive(node.children[0], containerForChildren, depth); 
-
                  for (let i = 1; i < node.children.length; i++) {
                      renderNodeRecursive(node.children[i], containerForChildren, depth + 1); 
                  }
@@ -1440,7 +1337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const piece = currentGameState.boardState[bonusPieceY]?.[bonusPieceX];
 
             if (!piece) {
-                console.error("Bonus move pending, but piece not found at expected location!");
                 clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null; 
                  currentReplayNode.gameState.bonusMoveInfo = null; 
                  updateTurnIndicator(); 
@@ -1452,8 +1348,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true).filter(m => !m.isAttack);
                  clearHikoroHighlights();
                  drawHikoroHighlights(validBonusMoves);
-                 const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${bonusPieceX}'][data-logical-y='${bonusPieceY}']`);
-                 if(bonusSquareEl) bonusSquareEl.classList.add('selected');
                  return; 
             }
 
@@ -1488,8 +1382,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clearHikoroHighlights();
                 drawHikoroHighlights(validBonusMoves);
-                const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${bonusPieceX}'][data-logical-y='${bonusPieceY}']`);
-                if(bonusSquareEl) bonusSquareEl.classList.add('selected');
             }
             return; 
         }
@@ -1611,9 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentReplayNode) return; 
         const currentGameState = currentReplayNode.gameState;
 
-        if (currentGameState.bonusMoveInfo) {
-             return;
-        }
+        if (currentGameState.bonusMoveInfo) return;
 
         const activeColor = currentGameState.isWhiteTurn ? 'white' : 'black';
         if (handColor !== activeColor) return;
@@ -1662,9 +1552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         replayFirstBtn.disabled = (node === replayGameTree); 
         replayPrevBtn.disabled = (!node.parent); 
-
         replayNextBtn.disabled = node.children.length === 0 && !gameState.bonusMoveInfo;
-
         replayLastBtn.disabled = (flatMoveList.length <= 1 || node === flatMoveList[flatMoveList.length - 1]);
 
         if (!gameState.bonusMoveInfo) {
@@ -1682,7 +1570,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  const bonusSquareEl = document.querySelector(`#game-board .square[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
                  if (bonusSquareEl) bonusSquareEl.classList.add('selected');
              } else {
-                  console.error("Replay bonus state error: Piece missing!");
                   clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null;
              }
          } else if (selectedSquare || isDroppingPiece) {

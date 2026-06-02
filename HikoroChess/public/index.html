@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hikoro Chess - Online</title>
+    <title>Hikoro Chess & Sho Dan Sho</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Hikoro Chess</h1>
+    <h1>Hikoro Chess & Sho Dan Sho</h1>
 
     <div id="lobby">
         <h2>Game Lobby</h2>
         <div id="time-controls">
+            <div>
+                <label for="game-type-select">Game Type:</label>
+                <select id="game-type-select">
+                    <option value="hikoro" selected>Hikoro Chess</option>
+                    <option value="shodansho">Sho Dan Sho</option>
+                </select>
+            </div>
+            
             <div> <label for="time-control">Main Time:</label>
                 <select id="time-control">
                     <option value="-1">Unlimited</option>
