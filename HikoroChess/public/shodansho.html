@@ -1176,20 +1176,39 @@ function updateDOM() {
 
 // Load the custom board image
 const boardImage = new Image();
-boardImage.src = 'shodanshoboard.png'; // <-- Ensure this image is in your public folder!
-boardImage.onload = () => drawBoard(); // Redraw once the image loads
+let imageLoadError = false;
+
+// NOTE: If you put the image inside your sprites folder, change this to: '/sprites/shodanshoboard.png'
+boardImage.src = '/shodanshoboard.png'; 
+
+boardImage.onload = () => { imageLoadError = false; drawBoard(); }; 
+boardImage.onerror = () => { imageLoadError = true; drawBoard(); console.error("Could not find shodanshoboard.png"); };
 
 function drawBoard() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw the static board image as the background
-    if (boardImage.complete && boardImage.naturalWidth !== 0) {
+    if (boardImage.complete && boardImage.naturalWidth !== 0 && !imageLoadError) {
         ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
     } else {
         // Temporary fallback color if the image hasn't loaded yet
         ctx.fillStyle = "#d6b36b"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Show a helpful error message on the board if the image is missing
+        if (imageLoadError) {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#ff5050";
+            ctx.font = "bold 32px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "20px Arial";
+            ctx.fillText(`Check that "${boardImage.src}" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
+        }
     }
 
     // Draw Legal Moves
