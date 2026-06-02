@@ -1,6 +1,6 @@
 /**
  * botWorkerGo.js
- * A Web Worker to run a Monte Carlo Tree Search (MCTS) bot for the Go Variant.
+ * A Web Worker to run a Monte Carlo Tree Search (MCTS) bot for the Go Varianta
  */
 
 try {
