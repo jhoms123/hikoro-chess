@@ -290,11 +290,43 @@ const isOnline = gameId !== null && myPlayerIndex !== null && !isNaN(myPlayerInd
 let socket = null;
 let waitingForServer = false;
 
-// Set board rotation so the local player sits at the bottom left.
-let boardRotationAngle = 0;
-if (myPlayerIndex === 1) boardRotationAngle = Math.PI; // 180 deg
-else if (myPlayerIndex === 2) boardRotationAngle = Math.PI / 2; // 90 deg clockwise
-else if (myPlayerIndex === 3) boardRotationAngle = -Math.PI / 2; // 90 deg counter-clockwise
+// --- BOARD SPIN & ROTATION STATE ---
+let targetRotationAngle = 0;
+if (myPlayerIndex === 1) targetRotationAngle = Math.PI; // 180 deg
+else if (myPlayerIndex === 2) targetRotationAngle = Math.PI / 2; // 90 deg clockwise
+else if (myPlayerIndex === 3) targetRotationAngle = -Math.PI / 2; // 90 deg counter-clockwise
+
+let currentRotationAngle = targetRotationAngle - (Math.PI * 4); // Start 2 full spins back
+let isAnimatingBoard = true;
+let animationStartTime = null;
+const ANIMATION_DURATION_MS = 2000;
+let hasSpun = false;
+
+function startBoardAnimation() {
+    if (hasSpun) return;
+    hasSpun = true;
+    requestAnimationFrame(animateBoardLoop);
+}
+
+function animateBoardLoop(timestamp) {
+    if (!animationStartTime) animationStartTime = timestamp;
+    let progress = (timestamp - animationStartTime) / ANIMATION_DURATION_MS;
+    if (progress > 1) progress = 1;
+    
+    // easeOutQuart easing function for a smooth spin-down
+    let ease = 1 - Math.pow(1 - progress, 4);
+    currentRotationAngle = (targetRotationAngle - 4 * Math.PI) + (4 * Math.PI * ease);
+    
+    drawBoard();
+    
+    if (progress < 1) {
+        requestAnimationFrame(animateBoardLoop);
+    } else {
+        isAnimatingBoard = false;
+        currentRotationAngle = targetRotationAngle;
+        drawBoard();
+    }
+}
 
 const BOARD_SIZE = 900;
 const CENTER = [450, 450];
@@ -1200,7 +1232,7 @@ class Game {
 
     shiningPausedBySun(shining) {
         if (!shining.pos) return false;
-        return this.piecesOnBoard(null, "sun").some(sun => sun.pos && this.inView(sun.pos, shining.pos));
+        return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
     lineHasActiveShiningView(key) {
@@ -1387,8 +1419,8 @@ let imageLoadError = false;
 
 boardImage.src = 'shodansho.png'; 
 
-boardImage.onload = () => { imageLoadError = false; drawBoard(); }; 
-boardImage.onerror = () => { imageLoadError = true; drawBoard(); console.error("Could not find shodansho.png"); };
+boardImage.onload = () => { imageLoadError = false; startBoardAnimation(); }; 
+boardImage.onerror = () => { imageLoadError = true; console.error("Could not find shodansho.png"); startBoardAnimation(); };
 
 function drawBoard() {
     // Clear canvas
@@ -1398,7 +1430,7 @@ function drawBoard() {
     
     // Apply board rotation around the center point
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(boardRotationAngle);
+    ctx.rotate(currentRotationAngle);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
     // Draw the static board image as the background
@@ -1460,7 +1492,7 @@ function drawBoard() {
             ctx.save();
             ctx.translate(v.x, v.y);
             // Reverse the board's rotation so pieces face the local player naturally
-            ctx.rotate(-boardRotationAngle);
+            ctx.rotate(-currentRotationAngle);
 
             // Piece Shadow
             ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -1500,6 +1532,8 @@ function drawBoard() {
 }
 
 canvas.addEventListener('mousedown', (e) => {
+    if (isAnimatingBoard) return; // Ignore clicks during the initial spin animation
+
     let rect = canvas.getBoundingClientRect();
     // Scale coordinates from CSS display size to internal Canvas size (900x900)
     let scaleX = canvas.width / rect.width;
@@ -1514,7 +1548,7 @@ canvas.addEventListener('mousedown', (e) => {
     let dx = screenX - cx;
     let dy = screenY - cy;
     
-    let angle = -boardRotationAngle;
+    let angle = -targetRotationAngle;
     let x = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
     let y = cy + dx * Math.sin(angle) + dy * Math.cos(angle);
     
