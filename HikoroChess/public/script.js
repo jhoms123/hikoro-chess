@@ -68,21 +68,26 @@ document.addEventListener('DOMContentLoaded', () => {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
+            
             if (gameType === 'shodansho') {
-                startReplayBtn.disabled = true;
-                startReplayBtn.title = "Replay is not available for Sho Dan Sho";
-                kifuPasteArea.disabled = true;
+                if (startReplayBtn) {
+                    startReplayBtn.disabled = true;
+                    startReplayBtn.title = "Replay is not available for Sho Dan Sho";
+                }
+                if (kifuPasteArea) kifuPasteArea.disabled = true;
                 if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'flex';
             } else {
-                startReplayBtn.disabled = false;
-                startReplayBtn.title = "";
-                kifuPasteArea.disabled = false;
+                if (startReplayBtn) {
+                    startReplayBtn.disabled = false;
+                    startReplayBtn.title = "";
+                }
+                if (kifuPasteArea) kifuPasteArea.disabled = false;
                 if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'none';
             }
         });
         
-        // Trigger right away to set correct default state
-        gameTypeSelect.dispatchEvent(new Event('change'));
+        // Trigger right away to set correct default state on page load
+        setTimeout(() => gameTypeSelect.dispatchEvent(new Event('change')), 10);
     }
 
     createGameBtn.addEventListener('click', () => {
@@ -108,7 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
     singlePlayerBtn.addEventListener('click', () => {
         isSinglePlayer = true;
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        socket.emit('createSinglePlayerGame', { gameType });
+        const sdsPlayerCountEl = document.getElementById('sds-player-count');
+        const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
+        socket.emit('createSinglePlayerGame', { gameType, sdsPlayerCount });
     });
 
     socket.on('lobbyUpdate', updateLobby);
@@ -346,7 +353,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Safe navigation directly to the Sho Dan Sho canvas environment
         if (initialGameState.gameType === 'shodansho') {
             const myIndex = initialGameState.players.indexOf(socket.id); // Valid index for SP or Online
-            window.location.href = `/shodansho.html?gameId=${initialGameState.id}&p=${myIndex}&players=${initialGameState.maxPlayers}`;
+            const pQuery = myIndex !== -1 ? `&p=${myIndex}` : '';
+            window.location.href = `/shodansho.html?gameId=${initialGameState.id}${pQuery}&players=${initialGameState.maxPlayers}`;
             return;
         }
 
