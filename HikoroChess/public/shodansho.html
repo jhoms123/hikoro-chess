@@ -196,6 +196,13 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
+        .hand-item .piece-icon-img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8));
+        }
+
         .hand-item .piece-count {
             background-color: #000;
             padding: 2px 8px;
@@ -306,17 +313,18 @@ const PIECES = {
     chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C" }
 };
 
-// Mapped to look like a premium board overlay rather than dev tools
-const PLAYER_COLORS = ["#f0d9b5", "#3a200d", "#dc3c3c", "#3c7de6"]; // P1 White, P2 Black, P3 Red, P4 Blue
-const PLAYER_TEXT = ["#333", "#eee", "#eee", "#eee"];
+// Colors associated with each player for UI accents and fallbacks
+const PLAYER_COLORS = ["#3c7de6", "#9c27b0", "#dc3c3c", "#ffc107"]; // P1 Blue, P2 Purple, P3 Red, P4 Yellow
+const PLAYER_TEXT = ["#fff", "#fff", "#fff", "#333"];
+const SPRITE_COLORS = ["blue", "purple", "red", "yellow"];
 
 const ZONE_COLORS = {
-    garden: "rgba(180, 50, 80, 0.45)",  // Soft red/burgundy
-    field: "rgba(100, 160, 60, 0.35)",   // Grassy green
-    gate: "rgba(220, 150, 40, 0.45)",    // Golden yellow
-    mid: "rgba(255, 255, 255, 0.1)",     // Slightly lighter wood overlay
-    river: "rgba(60, 140, 200, 0.4)",    // Water blue
-    outside: "rgba(0, 0, 0, 0.75)",      // Dark mask for out of bounds
+    garden: "rgba(180, 50, 80, 0.45)",  
+    field: "rgba(100, 160, 60, 0.35)",   
+    gate: "rgba(220, 150, 40, 0.45)",    
+    mid: "rgba(255, 255, 255, 0.1)",     
+    river: "rgba(60, 140, 200, 0.4)",    
+    outside: "rgba(0, 0, 0, 0.75)",      
     unknown: "rgba(0, 0, 0, 0)"
 };
 
@@ -1104,6 +1112,26 @@ const ctx = canvas.getContext("2d");
 const board = new BoardData();
 const game = new Game(board, 2);
 
+// Preload Sprite Images
+const loadedSprites = {};
+const spriteKinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+let spritesPending = 0;
+
+spriteKinds.forEach(kind => {
+    loadedSprites[kind] = {};
+    SPRITE_COLORS.forEach(color => {
+        spritesPending++;
+        let img = new Image();
+        img.src = `sprites/${kind}_flower_${color}.png`;
+        img.onload = () => { 
+            spritesPending--; 
+            if(spritesPending === 0) drawBoard(); // Redraw once everything is loaded
+        };
+        img.onerror = () => { spritesPending--; console.warn("Missing sprite: " + img.src); };
+        loadedSprites[kind][color] = img;
+    });
+});
+
 function selectHandPiece(kind) {
     game.selectHand(kind);
     updateDOM();
@@ -1156,7 +1184,10 @@ function updateDOM() {
                     item.classList.add('selected');
                 }
                 
-                item.innerHTML = `<span class="piece-icon" style="color:${PLAYER_COLORS[p]}">${PIECES[kind].letter}</span> ${PIECES[kind].label} <span class="piece-count">${count}</span>`;
+                let colorName = SPRITE_COLORS[p];
+                let imgSrc = `sprites/${kind}_flower_${colorName}.png`;
+                
+                item.innerHTML = `<img src="${imgSrc}" class="piece-icon-img" alt="${kind}"> ${PIECES[kind].label} <span class="piece-count">${count}</span>`;
                 
                 // Only allow clicking your own hand on your turn
                 if (game.currentPlayer === p && game.phase !== "game_over") {
@@ -1174,11 +1205,10 @@ function updateDOM() {
     drawBoard();
 }
 
-// Load the custom board image
+// Load the custom board image without leading slash
 const boardImage = new Image();
 let imageLoadError = false;
 
-// NOTE: If you put the image inside your sprites folder, change this to: '/sprites/shodansho.png'
 boardImage.src = 'shodansho.png'; 
 
 boardImage.onload = () => { imageLoadError = false; drawBoard(); }; 
@@ -1207,7 +1237,7 @@ function drawBoard() {
             ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
             ctx.fillStyle = "#ffffff";
             ctx.font = "20px Arial";
-            ctx.fillText(`Check that "${boardImage.src}" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText(`Check that "shodansho.png" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
         }
     }
 
@@ -1238,27 +1268,33 @@ function drawBoard() {
     for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
         if (piece.pos && !game.players[piece.owner].eliminated) {
             let v = board.vertices.get(piece.pos);
-            
+            let colorName = SPRITE_COLORS[piece.owner];
+            let img = loadedSprites[piece.kind] && loadedSprites[piece.kind][colorName];
+
             // Piece Shadow
             ctx.fillStyle = "rgba(0,0,0,0.5)";
             ctx.beginPath(); ctx.arc(v.x + 2, v.y + 3, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
-            
-            // Piece Base
-            ctx.fillStyle = PLAYER_COLORS[piece.owner];
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
-            
-            // Piece Border
-            ctx.strokeStyle = "#222"; 
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
-            
-            // Piece Icon
-            ctx.fillStyle = PLAYER_TEXT[piece.owner];
-            ctx.font = "bold 18px Arial";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText(PIECES[piece.kind].letter, v.x, v.y + 1);
 
-            // Frozen Effect
+            if (img && img.complete && img.naturalWidth !== 0) {
+                // Draw custom sprite
+                let size = (PIECE_RADIUS + 2) * 2; // Roughly 34x34 based on the previous size
+                ctx.drawImage(img, v.x - size/2, v.y - size/2, size, size);
+            } else {
+                // Fallback to drawn circles if images are missing or still loading
+                ctx.fillStyle = PLAYER_COLORS[piece.owner];
+                ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+                
+                ctx.strokeStyle = "#222"; 
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
+                
+                ctx.fillStyle = PLAYER_TEXT[piece.owner];
+                ctx.font = "bold 18px Arial";
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(PIECES[piece.kind].letter, v.x, v.y + 1);
+            }
+
+            // Frozen Effect for Shining Piece
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = "rgba(255,0,0,0.8)"; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(v.x-15, v.y-15); ctx.lineTo(v.x+15, v.y+15); ctx.stroke();
