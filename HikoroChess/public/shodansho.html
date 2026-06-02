@@ -41,10 +41,10 @@
 
         canvas {
             display: block;
-            width: 80vh; /* Responsive sizing based on viewport height */
-            max-width: 900px;
-            height: 80vh;
-            max-height: 900px;
+            width: 85vh; /* Expanded sizing based on viewport height */
+            max-width: 950px;
+            height: 85vh;
+            max-height: 950px;
             cursor: pointer;
         }
 
@@ -344,8 +344,8 @@ const ZONE_BY_CELL = {
 
 const FPS = 60;
 const SNAP_DISTANCE = 18;
-const PIECE_RADIUS = 15;
-const MOVE_DOT_RADIUS = 7;
+const PIECE_RADIUS = 13.5;
+const MOVE_DOT_RADIUS = 6;
 const REQUIRE_EXACT_STEPS = false; // Set to false to allow moving *up to* X steps.
 
 const PIECES = {
@@ -769,8 +769,8 @@ class Game {
         let piece = this.occupied().get(key);
         if (!piece) return;
         if (piece.owner !== this.currentPlayer) { this.message = "That is not your piece."; return; }
-        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First move set: move/replace Chysalith."; return; }
-        if (this.phase === "flower" && piece.kind === "chysalith") { this.message = "Second move set: move/place non-Chysalith."; return; }
+        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
+        if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
         
         if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
@@ -779,6 +779,7 @@ class Game {
         }
 
         this.selectedPieceId = piece.id;
+        this.selectedHandKind = null;
         this.legalMoves = this.generateMoves(piece);
         this.message = `Selected ${PIECES[piece.kind].label}. Valid moves: ${this.legalMoves.length}.`;
     }
@@ -786,8 +787,8 @@ class Game {
     selectHand(kind) {
         this.selectedPieceId = null;
         this.selectedHandKind = kind;
-        this.legalMoves = [];
-        this.message = `Selected ${PIECES[kind].label} from hand to drop.`;
+        this.legalMoves = this.generateDropMoves(kind);
+        this.message = `Selected ${PIECES[kind].label} from hand to drop. Valid drops: ${this.legalMoves.length}.`;
     }
 
     clickVertex(key) {
@@ -833,8 +834,7 @@ class Game {
         if ((player.hand[kind] || 0) <= 0) { this.message = `No ${PIECES[kind].label} left.`; return; }
         if (this.occupied().has(key)) { this.message = "Intersection is occupied."; return; }
         if (this.phase === "setup_chysalith" && kind !== "chysalith") { this.message = "Setup requires a Chysalith."; return; }
-        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "This phase is only for your Chysalith."; return; }
-        if (this.phase === "flower" && kind === "chysalith") { this.message = "Use the first move set for Chysaliths."; return; }
+        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
 
         let [ok, why] = this.canDrop(kind, key);
         if (!ok) { this.message = why; return; }
@@ -852,6 +852,20 @@ class Game {
         
         if (!isRemote) this.selectedHandKind = null;
         this.afterAction(`Dropped ${PIECES[kind].label}.`);
+    }
+
+    generateDropMoves(kind) {
+        let moves = [];
+        let occ = this.occupied();
+        for (let key of this.board.vertices.keys()) {
+            if (occ.has(key)) continue;
+            let [ok] = this.canDrop(kind, key);
+            if (ok) {
+                // Formatting this object exactly like movement logic so `drawBoard` draws the dot
+                moves.push({ dst: key, captureId: null });
+            }
+        }
+        return moves;
     }
 
     canDrop(kind, key) {
@@ -968,7 +982,7 @@ class Game {
         
         if (this.phase === "chysalith") {
             this.phase = "flower";
-            this.message = msg + " Now move/place non-Chysalith.";
+            this.message = msg + " Now move/place any available piece.";
         } else if (this.phase === "flower") {
             this.advancePlayer();
             this.phase = "chysalith";
@@ -1023,11 +1037,6 @@ class Game {
         }
         
         this.startForks = this.getForkedPieces(this.currentPlayer);
-
-        if (this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0 && (this.players[this.currentPlayer].hand["chysalith"]||0) > 0) {
-            this.selectedHandKind = "chysalith";
-            this.message += " Your Chysalith is off board. You must place it.";
-        }
     }
 
     passPhase(isRemote = false) {
@@ -1557,6 +1566,7 @@ canvas.addEventListener('mousedown', (e) => {
         if (key) game.clickVertex(key);
     } else if (e.button === 2) { // Right Click
         game.selectedPieceId = null;
+        game.selectedHandKind = null;
         game.legalMoves = [];
         game.message = "Selection canceled.";
     }
