@@ -80,6 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'none';
             }
         });
+        
+        // Trigger right away to set correct default state
+        gameTypeSelect.dispatchEvent(new Event('change'));
     }
 
     createGameBtn.addEventListener('click', () => {
@@ -340,9 +343,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
-        // Redirection to the Sho Dan Sho standalone canvas environment!
+        // Safe navigation directly to the Sho Dan Sho canvas environment
         if (initialGameState.gameType === 'shodansho') {
-            const myIndex = initialGameState.players.indexOf(socket.id);
+            const myIndex = initialGameState.players.indexOf(socket.id); // Valid index for SP or Online
             window.location.href = `/shodansho.html?gameId=${initialGameState.id}&p=${myIndex}&players=${initialGameState.maxPlayers}`;
             return;
         }

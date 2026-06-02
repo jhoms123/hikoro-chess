@@ -101,9 +101,9 @@ function createGameObject(gameId, timeControl, isSinglePlayer, socketId, gameTyp
             makeMove: hikoroLogic.makeMove,
             getValidMoves: hikoroLogic.getValidMoves,
         },
-        players: gameType === 'hikoro' 
-            ? { white: socketId, black: isSinglePlayer ? socketId : null }
-            : [socketId], // Treat SDS players as an array
+        // Sho Dan Sho tracks an array of socket IDs, Hikoro uses white/black object
+        players: gameType === 'shodansho' ? [socketId] : { white: socketId, black: isSinglePlayer ? socketId : null },
+        started: isSinglePlayer, // Track if game has fully begun
         boardState: hikoroLogic.getInitialBoard(),
         isWhiteTurn: true,
         turnCount: 0,
@@ -123,20 +123,20 @@ io.on('connection', (socket) => {
     socket.emit('lobbyUpdate', lobbyGames);
 
     socket.on('createGame', (data) => {
-        const { playerName, timeControl, gameType } = data;
+        const { playerName, timeControl, gameType, sdsPlayerCount } = data;
         const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
         const tc = timeControl || { main: 300, byoyomiTime: 30 };
         const gt = gameType || 'hikoro';
         
-        const sdsPlayerCount = data.sdsPlayerCount || 2;
-        const maxPlayers = gt === 'shodansho' ? sdsPlayerCount : 2;
+        const maxPlayers = gt === 'shodansho' ? (sdsPlayerCount || 2) : 2;
         
         games[gameId] = createGameObject(gameId, tc, false, socket.id, gt, maxPlayers);
-        
         lobbyGames[gameId] = { id: gameId, gameType: gt, creatorName: playerName || 'Anonymous', timeControl: tc, currentPlayers: 1, maxPlayers: maxPlayers };
         
         socket.join(gameId);
-        socket.emit('gameCreated', { gameId, color: 'white' });
+        
+        // Return 'waiting' for Sho Dan Sho creator so they wait for room to fill
+        socket.emit('gameCreated', { gameId, color: gt === 'shodansho' ? 'waiting' : 'white' });
         io.emit('lobbyUpdate', lobbyGames);
     });
 
@@ -157,7 +157,8 @@ io.on('connection', (socket) => {
                 if (game.players.length === game.maxPlayers) {
                     delete lobbyGames[gameId];
                     io.emit('lobbyUpdate', lobbyGames);
-
+                    
+                    game.started = true; // Mark as started so page navigation doesn't instantly delete it
                     game.lastMoveTimestamp = Date.now();
                     const stateToSend = { ...game };
                     delete stateToSend.logic;
@@ -169,12 +170,13 @@ io.on('connection', (socket) => {
                 socket.emit('errorMsg', 'Game full or you are already in it.');
             }
         } else {
-            // Hikoro
+            // Hikoro logic
             if (!game.players.black) {
                 game.players.black = socket.id;
                 delete lobbyGames[gameId]; 
                 socket.join(gameId);
                 game.lastMoveTimestamp = Date.now();
+                game.started = true;
                 
                 const stateToSend = { ...game };
                 delete stateToSend.logic;
@@ -192,6 +194,7 @@ io.on('connection', (socket) => {
         const tc = { main: -1, byoyomiTime: 0 };
         
         games[gameId] = createGameObject(gameId, tc, true, socket.id, gt);
+        games[gameId].started = true;
         
         socket.join(gameId);
         const stateToSend = { ...games[gameId] };
@@ -217,7 +220,6 @@ io.on('connection', (socket) => {
         const result = game.logic.makeMove(game, move, playerColor);
 
         if (result.success) {
-            // Re-attach logic functions (they are lost on struct copy/JSON parse)
             const originalLogic = game.logic;
             games[gameId] = result.updatedGame;
             games[gameId].logic = originalLogic;
@@ -252,6 +254,7 @@ io.on('connection', (socket) => {
             if (!game.sdsActions) game.sdsActions = [];
             game.sdsActions.push(data.action);
         }
+        // Broadcast exact action so everyone syncs at the same time
         io.to(data.gameId).emit('sdsAction', data.action);
     });
 
@@ -270,14 +273,31 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         for (const gameId in games) {
             const game = games[gameId];
-            if ((game.gameType === 'hikoro' && (game.players.white === socket.id || game.players.black === socket.id)) ||
-                (game.gameType === 'shodansho' && game.players.includes(socket.id))) {
-                if (!game.isSinglePlayer && !game.gameOver) {
-                    endGame(gameId, "disconnected", "Player Disconnected");
+            
+            if (game.gameType === 'hikoro') {
+                if (game.players.white === socket.id || game.players.black === socket.id) {
+                    if (!game.isSinglePlayer && !game.gameOver) {
+                        endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Disconnected");
+                    }
+                    delete games[gameId];
+                    delete lobbyGames[gameId];
+                    io.emit('lobbyUpdate', lobbyGames);
                 }
-                delete games[gameId];
-                delete lobbyGames[gameId];
-                io.emit('lobbyUpdate', lobbyGames);
+            } else if (game.gameType === 'shodansho') {
+                // IMPORTANT: We only remove SDS games on lobby disconnect IF they haven't fully started yet.
+                // Once they start, players redirect to shodansho.html which intentionally drops the lobby socket!
+                if (!game.started && game.players.includes(socket.id)) {
+                    game.players = game.players.filter(id => id !== socket.id);
+                    if (lobbyGames[gameId]) {
+                        lobbyGames[gameId].currentPlayers = game.players.length;
+                        io.emit('lobbyUpdate', lobbyGames);
+                    }
+                    if (game.players.length === 0) {
+                        delete games[gameId];
+                        delete lobbyGames[gameId];
+                        io.emit('lobbyUpdate', lobbyGames);
+                    }
+                }
             }
         }
     });
