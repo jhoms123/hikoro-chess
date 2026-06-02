@@ -34,11 +34,6 @@
 
         #board-wrapper {
             position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.9);
-            border: 6px solid #4a2a00;
-            border-radius: 8px;
-            background-color: #d6b36b; /* Hikoro wood base */
-            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -294,6 +289,12 @@ const onlinePlayerCount = urlParams.get('players') !== null ? parseInt(urlParams
 const isOnline = gameId !== null && myPlayerIndex !== null && !isNaN(myPlayerIndex) && !gameId.startsWith("sp_");
 let socket = null;
 let waitingForServer = false;
+
+// Set board rotation so the local player sits at the bottom left.
+let boardRotationAngle = 0;
+if (myPlayerIndex === 1) boardRotationAngle = Math.PI; // 180 deg
+else if (myPlayerIndex === 2) boardRotationAngle = Math.PI / 2; // 90 deg clockwise
+else if (myPlayerIndex === 3) boardRotationAngle = -Math.PI / 2; // 90 deg counter-clockwise
 
 const BOARD_SIZE = 900;
 const CENTER = [450, 450];
@@ -1393,6 +1394,13 @@ function drawBoard() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    ctx.save(); // Save main state
+    
+    // Apply board rotation around the center point
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(boardRotationAngle);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
     // Draw the static board image as the background
     if (boardImage.complete && boardImage.naturalWidth !== 0 && !imageLoadError) {
         ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
@@ -1403,6 +1411,8 @@ function drawBoard() {
 
         // Show a helpful error message on the board if the image is missing
         if (imageLoadError) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform so text is always straight
             ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#ff5050";
@@ -1413,6 +1423,7 @@ function drawBoard() {
             ctx.fillStyle = "#ffffff";
             ctx.font = "20px Arial";
             ctx.fillText(`Check that "shodansho.png" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
+            ctx.restore();
         }
     }
 
@@ -1446,37 +1457,46 @@ function drawBoard() {
             let colorName = SPRITE_COLORS[piece.owner];
             let img = loadedSprites[piece.kind] && loadedSprites[piece.kind][colorName];
 
+            ctx.save();
+            ctx.translate(v.x, v.y);
+            // Reverse the board's rotation so pieces face the local player naturally
+            ctx.rotate(-boardRotationAngle);
+
             // Piece Shadow
             ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.beginPath(); ctx.arc(v.x + 2, v.y + 3, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(2, 3, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
 
             if (img && img.complete && img.naturalWidth !== 0) {
-                // Draw custom sprite
+                // Draw custom sprite centered
                 let size = (PIECE_RADIUS + 2) * 2; // Roughly 34x34 based on the previous size
-                ctx.drawImage(img, v.x - size/2, v.y - size/2, size, size);
+                ctx.drawImage(img, -size/2, -size/2, size, size);
             } else {
                 // Fallback to drawn circles if images are missing or still loading
                 ctx.fillStyle = PLAYER_COLORS[piece.owner];
-                ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
                 
                 ctx.strokeStyle = "#222"; 
                 ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(v.x, v.y, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
                 
                 ctx.fillStyle = PLAYER_TEXT[piece.owner];
                 ctx.font = "bold 18px Arial";
                 ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText(PIECES[piece.kind].letter, v.x, v.y + 1);
+                ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
             // Frozen Effect for Shining Piece
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = "rgba(255,0,0,0.8)"; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(v.x-15, v.y-15); ctx.lineTo(v.x+15, v.y+15); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(v.x+15, v.y-15); ctx.lineTo(v.x-15, v.y+15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, 15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(15, -15); ctx.lineTo(-15, 15); ctx.stroke();
             }
+            
+            ctx.restore();
         }
     }
+    
+    ctx.restore(); // End of main board transform
 }
 
 canvas.addEventListener('mousedown', (e) => {
@@ -1485,8 +1505,18 @@ canvas.addEventListener('mousedown', (e) => {
     let scaleX = canvas.width / rect.width;
     let scaleY = canvas.height / rect.height;
     
-    let x = (e.clientX - rect.left) * scaleX;
-    let y = (e.clientY - rect.top) * scaleY;
+    let screenX = (e.clientX - rect.left) * scaleX;
+    let screenY = (e.clientY - rect.top) * scaleY;
+    
+    // Inverse rotate coordinates back to the board's internal logic space
+    let cx = canvas.width / 2;
+    let cy = canvas.height / 2;
+    let dx = screenX - cx;
+    let dy = screenY - cy;
+    
+    let angle = -boardRotationAngle;
+    let x = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
+    let y = cy + dx * Math.sin(angle) + dy * Math.cos(angle);
     
     if (e.button === 0) { // Left Click
         let key = game.nearestVertex({x, y});
