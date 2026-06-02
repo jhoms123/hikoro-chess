@@ -1179,7 +1179,7 @@ const boardImage = new Image();
 let imageLoadError = false;
 
 // NOTE: If you put the image inside your sprites folder, change this to: '/sprites/shodanshoboard.png'
-boardImage.src = '/shodanshoboard.png'; 
+boardImage.src = 'shodanshoboard.png'; 
 
 boardImage.onload = () => { imageLoadError = false; drawBoard(); }; 
 boardImage.onerror = () => { imageLoadError = true; drawBoard(); console.error("Could not find shodanshoboard.png"); };
