@@ -386,7 +386,7 @@ const PIECES = {
     daisy:     { label: "Daisy",     count: 6, steps: 3,    letter: "✿", desc: "Moves 3 steps. Cannot cross rivers." },
     water:     { label: "Water",     count: 6, steps: 2,    letter: "✥", desc: "Moves 2 steps. Can only drop in a green zone and cannot leave it." },
     sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼", desc: "Moves 4 steps. Uncapturable. Blocks Shining. Must evade/discard if targeting enemy Chysalith." },
-    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths in its field & blocks line-of-sight." },
+    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths in its field & blocks line-of-sight. Paused and frozen by enemy Sun." },
     chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C", desc: "Moves 2 steps. Crucial piece. Capture gardens to win. Cannot move near enemy Shining." }
 };
 
@@ -795,7 +795,15 @@ class Game {
             this.selectedHandKind = null;
             this.legalMoves = [];
             this.enemyMoves = this.generateMoves(piece);
-            this.message = `Viewing valid moves for Player ${piece.owner + 1}'s ${PIECES[piece.kind].label}.`;
+            
+            // Helpful context for why an enemy piece might not have moves
+            if (piece.kind === "shining" && this.shiningPausedBySun(piece)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Sun Flower.`;
+            } else if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Shining Flower.`;
+            } else {
+                this.message = `Viewing valid moves for Player ${piece.owner + 1}'s ${PIECES[piece.kind].label}.`;
+            }
             return;
         }
 
@@ -819,7 +827,10 @@ class Game {
 
         if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
         if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
+        
+        // Status checks preventing moves
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
+        if (piece.kind === "shining" && this.shiningPausedBySun(piece)) { this.message = "Shining flower is frozen by an enemy Sun Flower."; return; }
         
         if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
             this.message = "Your closest starting garden was fully captured! Your Chysaliths cannot move.";
@@ -1201,6 +1212,11 @@ class Game {
 
     generateMoves(piece) {
         if (!piece.pos) return [];
+        
+        // Frozen pieces generate 0 valid moves
+        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) return [];
+        if (piece.kind === "shining" && this.shiningPausedBySun(piece)) return [];
+
         let moves = [];
         if (piece.kind === "star") moves = this.starMoves(piece);
         else if (piece.kind === "clover") moves = this.fixedStepMoves(piece, 4).concat(this.cloverSpecialMoves(piece));
@@ -1281,7 +1297,7 @@ class Game {
 
         let recurse = (pivot, incoming, used) => {
             for (let d in DIRECTIONS) {
-                let opposite = {up:"down", down:"up", left:"right", right:"left"}[incoming];
+                let opposite = {up:"down", left:"right", right:"left"}[incoming];
                 if (incoming && d === opposite) continue;
                 
                 for (let dst of this.board.ray(pivot, d)) {
