@@ -995,6 +995,23 @@ class Game {
         }
         return false;
     }
+
+    isPieceProtectedByHarmony(piece) {
+        if (!piece.pos) return false;
+        
+        // RULE: Protection ONLY applies to pieces inside their OWN player's harmony.
+        // We explicitly fetch the harmony data for this specific piece's owner.
+        let hData = this.harmonyData.get(piece.owner);
+        if (!hData || hData.activePolys.length === 0) return false;
+        
+        // RULE: Pieces forming the outline boundary are NOT protected.
+        let isOutline = hData.activeComps.some(comp => comp.has(piece.id));
+        if (isOutline) return false;
+
+        // RULE: The piece must be strictly inside the polygon to gain immunity.
+        let pV = this.board.vertices.get(piece.pos);
+        return hData.activePolys.some(poly => pointInPolygonOrOnEdge(pV, poly));
+    }
     // --- END HARMONY LOGIC ---
 
 
@@ -1309,13 +1326,13 @@ class Game {
         for (let p of occ.values()) {
             if (p.owner !== player) continue;
             
-            // Harmony Immunity!
-            if (this.isPieceInActiveHarmony(p)) continue;
+            // Harmony Immunity! (Only for pieces strictly inside)
+            if (this.isPieceProtectedByHarmony(p)) continue;
             
             if (p.kind === 'sun') {
                 for (let ep of occ.values()) {
                     if (ep.owner !== player && ep.kind === 'chysalith') {
-                        if (this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
+                        if (!this.isPieceProtectedByHarmony(ep) && this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
                     }
                 }
             } 
@@ -1564,12 +1581,6 @@ class Game {
 
     isMoveLegalSpecial(piece, move) {
         if (!move.dst) return false;
-        
-        let destV = this.board.vertices.get(move.dst);
-        
-        // Cannot enter enemy harmony
-        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(destV, piece.owner)) return false;
-
         if (["star", "daisy"].includes(piece.kind) && this.pathCrossesRiver(piece.pos, move.path||[move.dst])) return false;
         if (piece.kind === "water") {
             let fields = this.board.fieldIdsAtVertex(move.dst);
@@ -1580,8 +1591,7 @@ class Game {
             let occ = this.occupied();
             for (let ep of occ.values()) {
                 if (ep.owner !== piece.owner && ep.kind === 'chysalith') {
-                    // Ignore if target Chysalith is in harmony
-                    if (!this.isPieceInActiveHarmony(ep) && this.inView(move.dst, ep.pos, piece.id)) return false;
+                    if (!this.isPieceProtectedByHarmony(ep) && this.inView(move.dst, ep.pos, piece.id)) return false;
                 }
             }
         }
@@ -1627,16 +1637,12 @@ class Game {
     }
 
     activeEnemyShiningPieces(owner) {
-        return this.piecesOnBoard(null, "shining").filter(sh => 
-            sh.owner !== owner && 
-            !this.shiningPausedBySun(sh) && 
-            !this.isPieceInActiveHarmony(sh) // Immutable if in harmony
-        );
+        return this.piecesOnBoard(null, "shining").filter(sh => sh.owner !== owner && !this.shiningPausedBySun(sh));
     }
 
     shiningPausedBySun(shining) {
         if (!shining.pos) return false;
-        if (this.isPieceInActiveHarmony(shining)) return false; // Harmony immunity
+        if (this.isPieceProtectedByHarmony(shining)) return false;
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
@@ -1656,7 +1662,7 @@ class Game {
     }
 
     chysalithIsFrozen(chys) {
-        if (this.isPieceInActiveHarmony(chys)) return false; // Harmony immunity
+        if (this.isPieceProtectedByHarmony(chys)) return false;
         return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos, chys.owner);
     }
 
@@ -1668,6 +1674,7 @@ class Game {
         let hasChysInGarden = new Map();
         let occ = this.occupied();
         
+        // 1. Base check: Who is physically sitting on the corners?
         for (let [gid, corners] of this.board.gardenCorners.entries()) {
             let holders = [];
             let hasChys = false;
@@ -1686,7 +1693,7 @@ class Game {
             hasChysInGarden.set(gid, hasChys);
         }
 
-        // Apply Harmony Garden Overrides
+        // 2. Apply Harmony Garden Overrides
         for (let player of alive) {
             let hData = this.harmonyData.get(player);
             if (!hData || hData.activePolys.length === 0) continue;
@@ -1694,6 +1701,7 @@ class Game {
             for (let poly of hData.activePolys) {
                 for (let [gid, corners] of this.board.gardenCorners.entries()) {
                     let allCornersInHarmony = true;
+                    // Check if the entire garden (all 4 corners) is swallowed by the harmony
                     for (let c of corners) {
                         if (!pointInPolygonOrOnEdge(this.board.vertices.get(c), poly)) {
                             allCornersInHarmony = false; break;
@@ -1701,12 +1709,18 @@ class Game {
                     }
                     if (allCornersInHarmony) {
                         let currentOwner = ownersByGarden.get(gid);
+                        
+                        // RULE: If wild (no one owns all corners), the harmony owner takes it.
                         if (currentOwner === null) {
-                            ownersByGarden.set(gid, player); // Wild becomes owned
-                            hasChysInGarden.set(gid, true); // Assume control as if Chysalith is there
-                        } else if (currentOwner !== player) {
-                            ownersByGarden.set(gid, null); // Owned by enemy becomes neutral
+                            ownersByGarden.set(gid, player); 
+                            hasChysInGarden.set(gid, true); // Automatically satisfies Chysalith rule
+                        } 
+                        // RULE: If owned by an opponent, it becomes neutralized.
+                        else if (currentOwner !== player) {
+                            ownersByGarden.set(gid, null); 
                         }
+                        // Note: If the harmony breaks later, this override loop won't happen,
+                        // and ownership will instantly revert back to physical corner control.
                     }
                 }
             }
