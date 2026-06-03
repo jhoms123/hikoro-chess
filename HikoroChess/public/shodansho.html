@@ -216,16 +216,30 @@
                 <!-- NEW HARMONY SECTION -->
                 <section>
                     <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Harmony & Disharmony</h3>
-                    <p class="mb-2"><strong>Harmony:</strong> A network of at least 4 friendly pieces with uninterrupted line-of-sight to valid partners. Harmonized pieces project <strong class="text-blue-400">blue dotted lines</strong>.</p>
-                    <ul class="list-disc pl-5 space-y-1 mb-3">
-                        <li><strong>Pairs:</strong> Star-Water, Star-Sun, Star-Daisy, Sun-Shining, Sun-Clover, Clover-Daisy, Clover-Water, Daisy-Shining, Shining-Water.</li>
+                    <p class="mb-2"><strong>Harmony:</strong> A closed loop (structure) of at least 4 friendly pieces with uninterrupted line-of-sight to valid partners. Pieces must form a continuous enclosed shape. Faint lines show valid pairs forming, but fully harmonized loops project <strong class="text-blue-400">thick glowing blue lines</strong>.</p>
+                    <ul class="list-disc pl-5 space-y-1 mb-3 text-xs">
+                        <li><strong class="text-white">Harmony Pairs:</strong> 
+                            Star: Water, Sun, Daisy. | 
+                            Sun: Star, Shining, Clover. | 
+                            Clover: Sun, Daisy, Water. | 
+                            Daisy: Clover, Shining, Star. | 
+                            Shining: Sun, Daisy, Water. | 
+                            Water: Shining, Clover, Star.
+                        </li>
                         <li>Ignores negative effects (e.g. Harmonized Suns don't flee Chysaliths, Shining isn't frozen).</li>
                         <li>Traps enemy Chysaliths inside and blocks them from crossing harmony lines.</li>
                         <li>Can automatically capture wild gardens or neutralize enemy gardens it touches.</li>
                     </ul>
-                    <p class="mb-2"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">red dotted lines</strong>.</p>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Pairs:</strong> Star-Clover, Star-Shining, Sun-Water, Sun-Daisy, Clover-Shining, Daisy-Water.</li>
+                    <p class="mb-2 mt-4"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">glowing red dotted lines</strong>.</p>
+                    <ul class="list-disc pl-5 space-y-1 text-xs">
+                        <li><strong class="text-white">Disharmony Pairs:</strong> 
+                            Star: Clover, Shining. | 
+                            Sun: Water, Daisy. | 
+                            Clover: Shining, Star. | 
+                            Daisy: Sun, Water. | 
+                            Shining: Clover, Star. | 
+                            Water: Sun, Daisy.
+                        </li>
                         <li>If two friendly pieces disharmonize, neither can form any Harmonies.</li>
                     </ul>
                 </section>
@@ -324,7 +338,7 @@
                                 <div class="w-8 h-8 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-lg text-purple-400 shadow-inner">✺</div>
                                 <div><h4 class="font-bold text-purple-400">Shining</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 3</span></div>
                             </div>
-                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused if in view of enemy Sun.</p>
+                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused and frozen by enemy Sun.</p>
                         </div>
 
                         <!-- Chysalith -->
@@ -393,7 +407,7 @@ const ZONE_BY_CELL = {
 };
 
 const FPS = 60;
-const SNAP_DISTANCE = 22; // Scaled slightly for new canvas size
+const SNAP_DISTANCE = 22; 
 const PIECE_RADIUS = 15;
 const MOVE_DOT_RADIUS = 7;
 const REQUIRE_EXACT_STEPS = false; 
@@ -813,7 +827,6 @@ class Game {
         let piece = this.occupied().get(key);
         if (!piece) return;
         
-        // Inspect Enemy Threat Range
         if (piece.owner !== this.currentPlayer) {
             this.enemyViewPieceId = piece.id;
             this.selectedPieceId = null;
@@ -853,7 +866,6 @@ class Game {
         if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
         if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
         
-        // Status checks preventing moves
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active enemy Shining Flower."; return; }
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) { this.message = "Shining flower is frozen by an enemy Sun Flower."; return; }
         if (piece.kind === "chysalith" && this.isEnemyHarmonyBlocked(piece.pos, piece.owner)) {
@@ -995,8 +1007,6 @@ class Game {
         requestAnimationFrame(drawBoard);
     }
 
-    // --- HARMONY & DISHARMONY LOGIC ---
-    
     getLineOfSightPath(a, b, ignoreId=null) {
         let dir = this.board.directionBetweenAligned(a, b);
         if (!dir) return null;
@@ -1060,7 +1070,6 @@ class Game {
         
         let piecesArr = this.piecesOnBoard();
         
-        // Reset properties
         piecesArr.forEach(p => { p.inHarmony = false; p.disharmonized = false; });
         
         const isDisharmony = (k1, k2) => {
@@ -1133,44 +1142,74 @@ class Game {
                 }
             }
             
-            // Check Garden constraint
+            // NEW LOOP LOGIC: Prune the network to find closed loops (nodes with degree >= 2)
+            let coreNodes = new Set(comp);
+            let pruned = true;
+            while(pruned) {
+                pruned = false;
+                for (let id of coreNodes) {
+                    let degree = 0;
+                    for (let nxt of (adj.get(id)||[])) {
+                        if (coreNodes.has(nxt)) degree++;
+                    }
+                    if (degree < 2) {
+                        coreNodes.delete(id);
+                        pruned = true;
+                    }
+                }
+            }
+
+            // Must have at least 4 pieces in the enclosed loop
+            let isActiveHarmony = coreNodes.size >= 4;
+            
+            // Check Garden constraint only against the active loop pieces
             let touchedGardens = new Set();
-            for (let id of comp) {
-                let pos = this.pieces.get(id).pos;
-                for (let [gid, corners] of this.board.gardenCorners.entries()) {
-                    if (corners.has(pos)) touchedGardens.add(gid);
+            if (isActiveHarmony) {
+                for (let id of coreNodes) {
+                    let pos = this.pieces.get(id).pos;
+                    for (let [gid, corners] of this.board.gardenCorners.entries()) {
+                        if (corners.has(pos)) touchedGardens.add(gid);
+                    }
                 }
             }
             
-            // Harmony minimum size 4 AND only touches 1 garden max
-            let isActiveHarmony = comp.size >= 4 && touchedGardens.size <= 1;
+            let isValidTrap = isActiveHarmony && touchedGardens.size <= 1;
             let owner = this.pieces.get(pid).owner;
-            let claimedGarden = (isActiveHarmony && touchedGardens.size === 1) ? Array.from(touchedGardens)[0] : null;
+            let claimedGarden = (isValidTrap && touchedGardens.size === 1) ? Array.from(touchedGardens)[0] : null;
             
             let blockedVertices = new Set();
             let pts = [];
             
             for (let id of comp) {
                 let p = this.pieces.get(id);
-                if (isActiveHarmony) p.inHarmony = true;
+                // Only pieces making up the structural loop get Harmony immunities
+                let isCore = isValidTrap && coreNodes.has(id);
+                if (isCore) p.inHarmony = true;
                 
-                let v = this.board.vertices.get(p.pos);
-                pts.push({x: v.x, y: v.y});
+                if (isCore) {
+                    let v = this.board.vertices.get(p.pos);
+                    pts.push({x: v.x, y: v.y});
+                }
                 
                 for (let nxt of (adj.get(id)||[])) {
                     if (id < nxt && comp.has(nxt)) {
                         let path = edgeMap.get(`${id},${nxt}`);
-                        this.harmonyEdges.push({p1: p.pos, p2: this.pieces.get(nxt).pos, active: isActiveHarmony});
-                        if (isActiveHarmony) {
+                        // Only make line thick blue if BOTH nodes are in the core loop
+                        let edgeActive = isValidTrap && coreNodes.has(id) && coreNodes.has(nxt);
+                        this.harmonyEdges.push({p1: p.pos, p2: this.pieces.get(nxt).pos, active: edgeActive});
+                        
+                        // Trap lines
+                        if (edgeActive) {
                             path.forEach(pv => blockedVertices.add(pv));
                         }
                     }
                 }
             }
             
-            if (isActiveHarmony) {
+            // Generate the trap zone using the loop points
+            if (isValidTrap) {
                 let hull = this.getConvexHull(pts);
-                this.harmonies.push({ owner, pieces: comp, blockedVertices, hull, claimedGarden });
+                this.harmonies.push({ owner, pieces: coreNodes, blockedVertices, hull, claimedGarden });
             }
         }
     }
@@ -1186,8 +1225,6 @@ class Game {
         }
         return false;
     }
-
-    // --- Core Action Checks ---
 
     generateDropMoves(kind) {
         let moves = [];
@@ -1314,7 +1351,7 @@ class Game {
             } 
             else if (p.kind === 'chysalith') {
                 if (this.chysalithIsFrozen(p)) continue;
-                if (this.isEnemyHarmonyBlocked(p.pos, p.owner)) continue; // Trapped, so can't move anyway
+                if (this.isEnemyHarmonyBlocked(p.pos, p.owner)) continue;
                 for (let ep of occ.values()) {
                     if (ep.owner !== player && ep.kind === 'shining' && !this.shiningPausedBySun(ep)) {
                         if (this.inView(p.pos, ep.pos)) { chys.push(p.id); break; }
@@ -1439,11 +1476,8 @@ class Game {
     generateMoves(piece) {
         if (!piece.pos) return [];
         
-        // Chysaliths trapped in harmony cannot move at all
         if (piece.kind === "chysalith" && this.isEnemyHarmonyBlocked(piece.pos, piece.owner)) return [];
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) return [];
-        
-        // Shining frozen by sun
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) return [];
 
         let moves = [];
@@ -1574,7 +1608,6 @@ class Game {
             }
         }
         if (piece.kind === "chysalith") {
-            // Harmonies: Block from moving into or through opponent harmonies
             if (this.isEnemyHarmonyBlocked(move.dst, piece.owner)) return false;
             let fullPath = move.path || [move.dst];
             for (let step of fullPath) {
@@ -1608,7 +1641,7 @@ class Game {
 
     shiningPausedBySun(shining) {
         if (!shining.pos) return false;
-        if (shining.inHarmony) return false; // Harmony pieces ignore negative interactions
+        if (shining.inHarmony) return false; 
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
@@ -1628,7 +1661,7 @@ class Game {
     }
 
     chysalithIsFrozen(chys) {
-        if (chys.inHarmony) return false; // Harmony immunity
+        if (chys.inHarmony) return false; 
         return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos, chys.owner);
     }
 
@@ -1651,25 +1684,23 @@ class Game {
                 }
             }
             
-            // Base owner ignoring Harmonies
             let baseOwner = null;
             if (holders.length === corners.size && holders.every(h => h === holders[0])) {
                 baseOwner = holders[0];
             }
             
-            // Apply Harmony overrides
             let finalOwner = baseOwner;
             for (let h of this.harmonies) {
                 if (h.claimedGarden === gid) {
-                    if (baseOwner === null) finalOwner = h.owner; // Claim wild garden
-                    else if (baseOwner !== h.owner) finalOwner = null; // Neutralize enemy garden
+                    if (baseOwner === null) finalOwner = h.owner; 
+                    else if (baseOwner !== h.owner) finalOwner = null; 
                 }
             }
             
             ownersByGarden.set(gid, finalOwner);
             
             if (finalOwner !== baseOwner && finalOwner !== null) {
-                hasChysInGarden.set(gid, true); // Override valid control requirements if Harmony grants it
+                hasChysInGarden.set(gid, true); 
             } else {
                 hasChysInGarden.set(gid, hasChys);
             }
@@ -1844,7 +1875,6 @@ function drawBoard(timestamp) {
     let needsNextFrame = false;
     if (!timestamp) timestamp = performance.now();
 
-    // Handle board spin animation on load
     if (isAnimatingBoard) {
         if (!animationStartTime) animationStartTime = timestamp;
         let progress = (timestamp - animationStartTime) / ANIMATION_DURATION_MS;
@@ -1855,14 +1885,12 @@ function drawBoard(timestamp) {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     ctx.save(); 
     
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate(currentRotationAngle);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-    // Draw Board Background
     if (boardImage.complete && boardImage.naturalWidth !== 0 && !imageLoadError) {
         ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
     } else {
@@ -1937,12 +1965,11 @@ function drawBoard(timestamp) {
     }
     ctx.restore();
 
-    // Draw Enemy Moves (Grayed out)
     if (game.enemyMoves && game.enemyViewPieceId !== null) {
         for (let m of game.enemyMoves) {
             let v = board.vertices.get(m.dst);
             if (v) {
-                ctx.fillStyle = "rgba(156, 163, 175, 0.5)"; // Gray
+                ctx.fillStyle = "rgba(156, 163, 175, 0.5)"; 
                 ctx.beginPath(); 
                 ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 2, 0, 2*Math.PI); 
                 ctx.fill();
@@ -1956,16 +1983,15 @@ function drawBoard(timestamp) {
         }
     }
 
-    // Draw Legal Moves
     for (let m of game.legalMoves) {
         let v = board.vertices.get(m.dst);
         if (v) {
             if (m.captureId === null) {
-                ctx.fillStyle = "rgba(16, 185, 129, 0.6)"; // Emerald
+                ctx.fillStyle = "rgba(16, 185, 129, 0.6)"; 
                 ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
             } else {
-                ctx.fillStyle = "rgba(244, 63, 94, 0.7)"; // Rose Red
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // White outline for emphasis
+                ctx.fillStyle = "rgba(244, 63, 94, 0.7)"; 
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; 
             }
             
             ctx.beginPath(); 
@@ -1977,7 +2003,6 @@ function drawBoard(timestamp) {
             ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + (m.captureId !== null ? 8 : 6), 0, 2*Math.PI);
             ctx.stroke();
 
-            // Tactical crosshair for captures
             if (m.captureId !== null) {
                 ctx.strokeStyle = "rgba(244, 63, 94, 0.9)";
                 ctx.beginPath(); ctx.moveTo(v.x - 4, v.y); ctx.lineTo(v.x + 4, v.y); ctx.stroke();
@@ -1986,31 +2011,28 @@ function drawBoard(timestamp) {
         }
     }
 
-    // Highlight Selected Piece
     if (game.selectedPieceId !== null) {
         let p = game.pieces.get(game.selectedPieceId);
         if (p && p.pos) {
             let v = board.vertices.get(p.pos);
-            ctx.fillStyle = "rgba(245, 158, 11, 0.5)"; // Amber highlight
+            ctx.fillStyle = "rgba(245, 158, 11, 0.5)"; 
             ctx.beginPath(); 
             ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
             ctx.fill();
         }
     }
 
-    // Highlight Enemy Inspected Piece
     if (game.enemyViewPieceId !== null) {
         let p = game.pieces.get(game.enemyViewPieceId);
         if (p && p.pos) {
             let v = board.vertices.get(p.pos);
-            ctx.fillStyle = "rgba(156, 163, 175, 0.4)"; // Gray highlight
+            ctx.fillStyle = "rgba(156, 163, 175, 0.4)"; 
             ctx.beginPath(); 
             ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
             ctx.fill();
         }
     }
 
-    // Draw All Pieces (with animations)
     for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
         if (piece.pos && !game.players[piece.owner].eliminated) {
             let targetV = board.vertices.get(piece.pos);
@@ -2019,16 +2041,15 @@ function drawBoard(timestamp) {
 
             ctx.save();
             
-            // Animation Calculation
             let elapsed = piece.animStart ? timestamp - piece.animStart : Infinity;
-            let duration = 300; // ms
+            let duration = 300; 
             let scale = 1;
             let alpha = 1;
 
             if (elapsed < duration) {
                 needsNextFrame = true;
                 let t = elapsed / duration;
-                let ease = 1 - Math.pow(1 - t, 3); // ease out cubic
+                let ease = 1 - Math.pow(1 - t, 3); 
 
                 if (piece.animType === 'move' && piece.lastPosKey) {
                     let startV = board.vertices.get(piece.lastPosKey);
@@ -2048,11 +2069,9 @@ function drawBoard(timestamp) {
 
             ctx.rotate(-currentRotationAngle);
 
-            // Piece Drop Shadow
             ctx.fillStyle = `rgba(0,0,0,${0.6 * alpha})`;
             ctx.beginPath(); ctx.arc(3, 4, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
 
-            // Draw Sprite or Fallback Shape
             if (img && img.complete && img.naturalWidth !== 0) {
                 let size = (PIECE_RADIUS + 3) * 2;
                 ctx.drawImage(img, -size/2, -size/2, size, size);
@@ -2070,7 +2089,6 @@ function drawBoard(timestamp) {
                 ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
-            // Draw Shining Frozen indicator (Ignoring Harmonies)
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = `rgba(239, 68, 68, ${0.9 * alpha})`; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, 15); ctx.stroke();
@@ -2142,7 +2160,6 @@ canvas.addEventListener('mousedown', (e) => {
         let key = game.nearestVertex({x, y});
         if (key) game.clickVertex(key);
     } else if (e.button === 2) { 
-        // Right click clears all selections and views
         game.selectedPieceId = null;
         game.selectedHandKind = null;
         game.legalMoves = [];
