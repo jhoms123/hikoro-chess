@@ -1008,8 +1008,8 @@ class Game {
             this.enemyViewPieceId = piece.id;
             this.selectedPieceId = null;
             this.selectedHandKind = null;
-            this.legalMoves = this.generateMoves(piece); // Check their valid moves
-            this.enemyMoves = this.legalMoves;
+            this.legalMoves = []; // FIX: Ensure friendly moves are cleared out
+            this.enemyMoves = this.generateMoves(piece); // Check their valid moves
             
             // Helpful context for why an enemy piece might not have moves
             if (piece.kind === "shining" && this.shiningPausedBySun(piece)) {
