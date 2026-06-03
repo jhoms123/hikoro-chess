@@ -1600,6 +1600,8 @@ class Game {
             let fullPath = move.path || [move.dst];
             for (let step of fullPath) {
                 if (this.lineHasActiveShiningView(step, piece.owner, piece.id)) return false;
+                // Ensure Chysalith cannot walk into or through an enemy harmony
+                if (this.isPointInEnemyHarmony(this.board.vertices.get(step), piece.owner)) return false;
             }
         }
         return true;
