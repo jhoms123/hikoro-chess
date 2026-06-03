@@ -216,31 +216,31 @@
                 <!-- NEW HARMONY SECTION -->
                 <section>
                     <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Harmony & Disharmony</h3>
-                    <p class="mb-2"><strong>Harmony:</strong> A closed loop (structure) of at least 4 friendly pieces with uninterrupted line-of-sight to valid partners. Pieces must form a continuous enclosed shape. Faint lines show valid pairs forming, but fully harmonized loops project <strong class="text-blue-400">thick glowing blue lines</strong>.</p>
+                    <p class="mb-2"><strong>Harmony:</strong> A closed loop of at least 4 friendly pieces where every piece harmonizes with the pieces it is connected to (having uninterrupted line of sight). Displayed as <strong class="text-blue-400">bright blue dotted lines</strong>. When 4+ pieces successfully form a closed structure, the area inside becomes a protective Harmony Zone.</p>
                     <ul class="list-disc pl-5 space-y-1 mb-3 text-xs">
                         <li><strong class="text-white">Harmony Pairs:</strong> 
-                            Star: Water, Sun, Daisy. | 
-                            Sun: Star, Shining, Clover. | 
-                            Clover: Sun, Daisy, Water. | 
-                            Daisy: Clover, Shining, Star. | 
-                            Shining: Sun, Daisy, Water. | 
-                            Water: Shining, Clover, Star.
+                            Star (Water, Sun, Daisy). | 
+                            Sun (Star, Shining, Clover). | 
+                            Clover (Sun, Daisy, Water). | 
+                            Daisy (Clover, Shining, Star). | 
+                            Shining (Sun, Daisy, Water). | 
+                            Water (Shining, Clover, Star).
                         </li>
-                        <li>Ignores negative effects (e.g. Harmonized Suns don't flee Chysaliths, Shining isn't frozen).</li>
-                        <li>Traps enemy Chysaliths inside and blocks them from crossing harmony lines.</li>
-                        <li>Can automatically capture wild gardens or neutralize enemy gardens it touches.</li>
+                        <li>If a harmony contains an owned garden, it becomes neutral. If it surrounds a wild garden, the player owns it.</li>
+                        <li>Enemy Chysaliths trapped inside cannot move, and cannot enter an opponent's harmony.</li>
+                        <li>Friendly pieces inside a harmony ignore negative effects (e.g. Suns don't flee Chysaliths, Shinings aren't frozen).</li>
                     </ul>
-                    <p class="mb-2 mt-4"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">glowing red dotted lines</strong>.</p>
+                    <p class="mb-2 mt-4"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">bright red dotted lines</strong>.</p>
                     <ul class="list-disc pl-5 space-y-1 text-xs">
                         <li><strong class="text-white">Disharmony Pairs:</strong> 
-                            Star: Clover, Shining. | 
-                            Sun: Water, Daisy. | 
-                            Clover: Shining, Star. | 
-                            Daisy: Sun, Water. | 
-                            Shining: Clover, Star. | 
-                            Water: Sun, Daisy.
+                            Star (Clover, Shining). | 
+                            Sun (Water, Daisy). | 
+                            Clover (Shining, Star). | 
+                            Daisy (Sun, Water). | 
+                            Shining (Clover, Star). | 
+                            Water (Sun, Daisy).
                         </li>
-                        <li>If two friendly pieces disharmonize, neither can form any Harmonies.</li>
+                        <li>If two flowers are disharmonizing, neither can harmonize with any other flower.</li>
                     </ul>
                 </section>
 
@@ -338,7 +338,7 @@
                                 <div class="w-8 h-8 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-lg text-purple-400 shadow-inner">✺</div>
                                 <div><h4 class="font-bold text-purple-400">Shining</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 3</span></div>
                             </div>
-                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused and frozen by enemy Sun.</p>
+                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused if in view of enemy Sun.</p>
                         </div>
 
                         <!-- Chysalith -->
@@ -389,15 +389,13 @@ let animationStartTime = null;
 const ANIMATION_DURATION_MS = 2000;
 let hasSpun = false;
 
-const BOARD_SIZE = 1000; // Scaled up canvas slightly for higher res
+const BOARD_SIZE = 1000;
 const CENTER = [500, 500];
 const RADIUS = 495;
 
-// Original grid lines adjusted proportionally for 1000x1000 map (Approximate multiplier ~1.11)
 const VERTICAL_LINES = [36, 68, 98, 128, 158, 189, 219, 278, 310, 339, 373, 403, 496, 526, 559, 589, 620, 680, 710, 740, 770, 801, 831, 862].map(x => x * 1.11);
 const HORIZONTAL_LINES = [35, 67, 97, 127, 157, 188, 218, 278, 308, 338, 371, 401, 495, 525, 559, 588, 616, 678, 708, 739, 769, 799, 829, 861].map(x => x * 1.11);
 
-// Vertices mapped proportionally
 const RAW_VERTICES = [
     [0,10,373,35],[0,11,403,35],[0,12,496,35],[0,13,526,35],[1,7,278,67],[1,8,310,67],[1,9,339,67],[1,10,373,67],[1,11,403,67],[1,12,496,67],[1,13,526,67],[1,14,559,67],[1,15,589,67],[1,16,620,67],[2,6,219,97],[2,7,278,97],[2,8,310,97],[2,9,339,97],[2,10,373,97],[2,11,403,97],[2,12,496,97],[2,13,526,97],[2,14,559,97],[2,15,589,97],[2,16,620,97],[2,17,680,97],[3,5,189,127],[3,6,219,127],[3,7,278,127],[3,8,310,127],[3,9,339,127],[3,10,373,127],[3,11,403,127],[3,12,496,127],[3,13,526,127],[3,14,559,127],[3,15,589,127],[3,16,620,127],[3,17,680,127],[3,18,710,127],[4,4,158,157],[4,5,189,157],[4,6,219,157],[4,7,278,157],[4,8,310,157],[4,9,339,157],[4,10,373,157],[4,11,403,157],[4,12,496,157],[4,13,526,157],[4,14,559,157],[4,15,589,157],[4,16,620,157],[4,17,680,157],[4,18,710,157],[4,19,740,157],[5,3,128,188],[5,4,158,188],[5,5,189,188],[5,6,219,188],[5,7,278,188],[5,8,310,188],[5,9,339,188],[5,10,373,188],[5,11,403,188],[5,12,496,188],[5,13,526,188],[5,14,559,188],[5,15,589,188],[5,16,620,188],[5,17,680,188],[5,18,710,188],[5,19,740,188],[5,20,770,188],[6,2,98,218],[6,3,128,218],[6,4,158,218],[6,5,189,218],[6,6,219,218],[6,7,278,218],[6,8,310,218],[6,9,339,218],[6,10,373,218],[6,11,403,218],[6,12,496,218],[6,13,526,218],[6,14,559,218],[6,15,589,218],[6,16,620,218],[6,17,680,218],[6,18,710,218],[6,19,740,218],[6,20,770,218],[6,21,801,218],[7,1,68,278],[7,2,98,278],[7,3,128,278],[7,4,158,278],[7,5,189,278],[7,6,219,278],[7,7,278,278],[7,8,310,278],[7,9,339,278],[7,10,373,278],[7,11,403,278],[7,12,496,278],[7,13,526,278],[7,14,559,278],[7,15,589,278],[7,16,620,278],[7,17,680,278],[7,18,710,278],[7,19,740,278],[7,20,770,278],[7,21,801,278],[7,22,831,278],[8,1,68,308],[8,2,98,308],[8,3,128,308],[8,4,158,308],[8,5,189,308],[8,6,219,308],[8,7,278,308],[8,8,310,308],[8,9,339,308],[8,10,373,308],[8,11,403,308],[8,12,496,308],[8,13,526,308],[8,14,559,308],[8,15,589,308],[8,16,620,308],[8,17,680,308],[8,18,710,308],[8,19,740,308],[8,20,770,308],[8,21,801,308],[8,22,831,308],[9,1,68,338],[9,2,98,338],[9,3,128,338],[9,4,158,338],[9,5,189,338],[9,6,219,338],[9,7,278,338],[9,8,310,338],[9,9,339,338],[9,10,373,338],[9,11,403,338],[9,12,496,338],[9,13,526,338],[9,14,559,338],[9,15,589,338],[9,16,620,338],[9,17,680,338],[9,18,710,338],[9,19,740,338],[9,20,770,338],[9,21,801,338],[9,22,831,338],[10,0,36,371],[10,1,68,371],[10,2,98,371],[10,3,128,371],[10,4,158,371],[10,5,189,371],[10,6,219,371],[10,7,278,371],[10,8,310,371],[10,9,339,371],[10,10,373,371],[10,11,403,371],[10,12,496,371],[10,13,526,371],[10,14,559,371],[10,15,589,371],[10,16,620,371],[10,17,680,371],[10,18,710,371],[10,19,740,371],[10,20,770,371],[10,21,801,371],[10,22,831,371],[10,23,862,371],[11,0,36,401],[11,1,68,401],[11,2,98,401],[11,3,128,401],[11,4,158,401],[11,5,189,401],[11,6,219,401],[11,7,278,401],[11,8,310,401],[11,9,339,401],[11,10,373,401],[11,11,403,401],[11,12,496,401],[11,13,526,401],[11,14,559,401],[11,15,589,401],[11,16,620,401],[11,17,680,401],[11,18,710,401],[11,19,740,401],[11,20,770,401],[11,21,801,401],[11,22,831,401],[11,23,862,401],[12,0,36,495],[12,1,68,495],[12,2,98,495],[12,3,128,495],[12,4,158,495],[12,5,189,495],[12,6,219,495],[12,7,278,495],[12,8,310,495],[12,9,339,495],[12,10,373,495],[12,11,403,495],[12,12,496,495],[12,13,526,495],[12,14,559,495],[12,15,589,495],[12,16,620,495],[12,17,680,495],[12,18,710,495],[12,19,740,495],[12,20,770,495],[12,21,801,495],[12,22,831,495],[12,23,862,495],[13,0,36,525],[13,1,68,525],[13,2,98,525],[13,3,128,525],[13,4,158,525],[13,5,189,525],[13,6,219,525],[13,7,278,525],[13,8,310,525],[13,9,339,525],[13,10,373,525],[13,11,403,525],[13,12,496,525],[13,13,526,525],[13,14,559,525],[13,15,589,525],[13,16,620,525],[13,17,680,525],[13,18,710,525],[13,19,740,525],[13,20,770,525],[13,21,801,525],[13,22,831,525],[13,23,862,525],[14,1,68,559],[14,2,98,559],[14,3,128,559],[14,4,158,559],[14,5,189,559],[14,6,219,559],[14,7,278,559],[14,8,310,559],[14,9,339,559],[14,10,373,559],[14,11,403,559],[14,12,496,559],[14,13,526,559],[14,14,559,559],[14,15,589,559],[14,16,620,559],[14,17,680,559],[14,18,710,559],[14,19,740,559],[14,20,770,559],[14,21,801,559],[14,22,831,559],[15,1,68,588],[15,2,98,588],[15,3,128,588],[15,4,158,588],[15,5,189,588],[15,6,219,588],[15,7,278,588],[15,8,310,588],[15,9,339,588],[15,10,373,588],[15,11,403,588],[15,12,496,588],[15,13,526,588],[15,14,559,588],[15,15,589,588],[15,16,620,588],[15,17,680,588],[15,18,710,588],[15,19,740,588],[15,20,770,588],[15,21,801,588],[15,22,831,588],[16,1,68,616],[16,2,98,616],[16,3,128,616],[16,4,158,616],[16,5,189,616],[16,6,219,616],[16,7,278,616],[16,8,310,616],[16,9,339,616],[16,10,373,616],[16,11,403,616],[16,12,496,616],[16,13,526,616],[16,14,559,616],[16,15,589,616],[16,16,620,616],[16,17,680,616],[16,18,710,616],[16,19,740,616],[16,20,770,616],[16,21,801,616],[16,22,831,616],[17,2,98,678],[17,3,128,678],[17,4,158,678],[17,5,189,678],[17,6,219,678],[17,7,278,678],[17,8,310,678],[17,9,339,678],[17,10,373,678],[17,11,403,678],[17,12,496,678],[17,13,526,678],[17,14,559,678],[17,15,589,678],[17,16,620,678],[17,17,680,678],[17,18,710,678],[17,19,740,678],[17,20,770,678],[17,21,801,678],[18,3,128,708],[18,4,158,708],[18,5,189,708],[18,6,219,708],[18,7,278,708],[18,8,310,708],[18,9,339,708],[18,10,373,708],[18,11,403,708],[18,12,496,708],[18,13,526,708],[18,14,559,708],[18,15,589,708],[18,16,620,708],[18,17,680,708],[18,18,710,708],[18,19,740,708],[18,20,770,708],[19,4,158,739],[19,5,189,739],[19,6,219,739],[19,7,278,739],[19,8,310,739],[19,9,339,739],[19,10,373,739],[19,11,403,739],[19,12,496,739],[19,13,526,739],[19,14,559,739],[19,15,589,739],[19,16,620,739],[19,17,680,739],[19,18,710,739],[19,19,740,739],[20,5,189,769],[20,6,219,769],[20,7,278,769],[20,8,310,769],[20,9,339,769],[20,10,373,769],[20,11,403,769],[20,12,496,769],[20,13,526,769],[20,14,559,769],[20,15,589,769],[20,16,620,769],[20,17,680,769],[20,18,710,769],[21,6,219,799],[21,7,278,799],[21,8,310,799],[21,9,339,799],[21,10,373,799],[21,11,403,799],[21,12,496,799],[21,13,526,799],[21,14,559,799],[21,15,589,799],[21,16,620,799],[21,17,680,799],[22,7,278,829],[22,8,310,829],[22,9,339,829],[22,10,373,829],[22,11,403,829],[22,12,496,829],[22,13,526,829],[22,14,559,829],[22,15,589,829],[22,16,620,829],[23,10,373,861],[23,11,403,861],[23,12,496,861],[23,13,526,861]
 ].map(([r, c, x, y]) => [r, c, x * 1.11, y * 1.11]);
@@ -408,8 +406,8 @@ const ZONE_BY_CELL = {
 
 const FPS = 60;
 const SNAP_DISTANCE = 22; 
-const PIECE_RADIUS = 15;
-const MOVE_DOT_RADIUS = 7;
+const PIECE_RADIUS = 12; // Scaled down to prevent overlapping
+const MOVE_DOT_RADIUS = 6;
 const REQUIRE_EXACT_STEPS = false; 
 
 // Rules tied to UI descriptions
@@ -421,6 +419,24 @@ const PIECES = {
     sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼", desc: "Moves 4 steps. Uncapturable. Blocks Shining. Must evade/discard if targeting enemy Chysalith." },
     shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths in its field & blocks line-of-sight. Paused and frozen by enemy Sun." },
     chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C", desc: "Moves 2 steps. Crucial piece. Capture gardens to win. Cannot move near enemy Shining." }
+};
+
+// Harmony mappings per rule update
+const HARMONY_PAIRS = {
+    star: ["water", "sun", "daisy"],
+    sun: ["star", "shining", "clover"],
+    clover: ["sun", "daisy", "water"],
+    daisy: ["clover", "shining", "star"],
+    shining: ["sun", "daisy", "water"],
+    water: ["shining", "clover", "star"]
+};
+const DISHARMONY_PAIRS = {
+    star: ["clover", "shining"],
+    sun: ["water", "daisy"],
+    clover: ["shining", "star"],
+    daisy: ["sun", "water"],
+    shining: ["clover", "star"],
+    water: ["sun", "daisy"]
 };
 
 const PLAYER_COLORS = ["#3b82f6", "#a855f7", "#ef4444", "#f59e0b"]; // Tailwind blue-500, purple-500, red-500, amber-500
@@ -436,6 +452,48 @@ function normalizeZone(zone) {
 }
 
 function distSq(x1, y1, x2, y2) { return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2); }
+
+// Math helpers for Convex Hull and Point in Polygon (for Harmony zones)
+function crossProduct(o, a, b) {
+    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+}
+function getConvexHull(points) {
+    if (points.length <= 3) return points;
+    let pts = points.slice().sort((a, b) => a.x == b.x ? a.y - b.y : a.x - b.x);
+    let lower = [];
+    for (let i = 0; i < pts.length; i++) {
+        while (lower.length >= 2 && crossProduct(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
+        lower.push(pts[i]);
+    }
+    let upper = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+        while (upper.length >= 2 && crossProduct(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
+        upper.push(pts[i]);
+    }
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+}
+function pointInPolygonOrOnEdge(point, vs) {
+    let x = point.x, y = point.y;
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i].x, yi = vs[i].y;
+        let xj = vs[j].x, yj = vs[j].y;
+        
+        // Edge check (with tiny epsilon for floating points)
+        let cross = Math.abs((y - yi) * (xj - xi) - (x - xi) * (yj - yi));
+        if (cross < 1.0) {
+            let dot = (x - xi) * (xj - xi) + (y - yi) * (yj - yi);
+            if (dot >= 0 && dot <= (xj - xi)*(xj - xi) + (yj - yi)*(yj - yi)) return true; // exactly on edge
+        }
+        
+        let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
 
 class BoardData {
     constructor() {
@@ -757,11 +815,6 @@ class Game {
         this.nextPieceId = 1;
         this.movedThisTurn = new Set();
         
-        // Harmony State
-        this.disharmonyEdges = [];
-        this.harmonyEdges = [];
-        this.harmonies = [];
-        
         for (let i = 0; i < this.playerCount; i++) {
             let hand = {};
             for (let [kind, data] of Object.entries(PIECES)) hand[kind] = data.count;
@@ -778,7 +831,8 @@ class Game {
         this.enemyMoves = []; 
         this.message = "Setup: Drop your Chysalith in your starting gate.";
         this.winner = null;
-        this.updateHarmonies();
+        
+        this.harmonyData = new Map(); // Cache per player
     }
 
     occupied() {
@@ -790,7 +844,7 @@ class Game {
     }
 
     piecesOnBoard(owner=null, kind=null) {
-        let out = Array.from(this.pieces.values()).filter(p => p.pos && !this.players[p.owner].eliminated);
+        let out = Array.from(this.pieces.values()).filter(p => p.pos);
         if (owner !== null) out = out.filter(p => p.owner === owner);
         if (kind !== null) out = out.filter(p => p.kind === kind);
         return out;
@@ -822,30 +876,155 @@ class Game {
         return false;
     }
 
+    // --- HARMONY LOGIC ---
+    updateHarmonyCache() {
+        this.harmonyData.clear();
+        for (let p = 0; p < this.playerCount; p++) {
+            if (!this.players[p].eliminated) {
+                this.harmonyData.set(p, this.calculateHarmonyFor(p));
+            }
+        }
+    }
+
+    calculateHarmonyFor(owner) {
+        let pieces = this.piecesOnBoard(owner);
+        let disharmonies = new Set();
+        let harmonyLinks = []; // [pid1, pid2]
+
+        // 1. Map out all line-of-sight interactions
+        for (let i = 0; i < pieces.length; i++) {
+            for (let j = i + 1; j < pieces.length; j++) {
+                let p1 = pieces[i], p2 = pieces[j];
+                if (this.inView(p1.pos, p2.pos)) {
+                    if (DISHARMONY_PAIRS[p1.kind] && DISHARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        disharmonies.add(p1.id); disharmonies.add(p2.id);
+                    } else if (HARMONY_PAIRS[p1.kind] && HARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        harmonyLinks.push([p1.id, p2.id]);
+                    }
+                }
+            }
+        }
+
+        // 2. Build graph for valid harmony items (excluding disharmonized pieces)
+        let adj = new Map();
+        for (let p of pieces) {
+            if (!disharmonies.has(p.id)) adj.set(p.id, new Set());
+        }
+        
+        let validLinks = [];
+        for (let [u, v] of harmonyLinks) {
+            if (!disharmonies.has(u) && !disharmonies.has(v)) {
+                adj.get(u).add(v);
+                adj.get(v).add(u);
+                validLinks.push([u, v]);
+            }
+        }
+
+        // 3. To find Closed Loops, iteratively prune leaves (nodes with < 2 connections)
+        let prunedAdj = new Map();
+        for (let [k, v] of adj.entries()) prunedAdj.set(k, new Set(v));
+
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (let [u, neighbors] of prunedAdj.entries()) {
+                if (neighbors.size === 1) { // It's a leaf
+                    for (let v of neighbors) prunedAdj.get(v).delete(u);
+                    neighbors.clear();
+                    changed = true;
+                }
+            }
+        }
+
+        // 4. Group remaining active nodes into components
+        let activeNodes = new Set();
+        for (let [u, neighbors] of prunedAdj.entries()) {
+            if (neighbors.size >= 2) activeNodes.add(u);
+        }
+
+        let activeComps = [];
+        let activePolys = []; // Convex Hulls mapped from these components
+        let seen = new Set();
+        
+        for (let u of activeNodes) {
+            if (seen.has(u)) continue;
+            let comp = new Set();
+            let q = [u];
+            seen.add(u);
+            while (q.length > 0) {
+                let curr = q.shift();
+                comp.add(curr);
+                for (let n of prunedAdj.get(curr)) {
+                    if (!seen.has(n)) { seen.add(n); q.push(n); }
+                }
+            }
+            if (comp.size >= 4) {
+                activeComps.push(comp);
+                
+                // Build convex hull polygon for area checking
+                let points = Array.from(comp).map(id => {
+                    let posKey = this.pieces.get(id).pos;
+                    return this.board.vertices.get(posKey);
+                });
+                activePolys.push(getConvexHull(points));
+            }
+        }
+
+        // Returns data needed for drawing and mechanics
+        return {
+            disharmonies,     // Set of piece IDs that are disharmonizing
+            validLinks,       // All partial and full harmony links (for thin lines)
+            activeComps,      // Array of Sets of piece IDs forming full >= 4 loops (for bright lines)
+            activePolys       // Array of polygons defining the trapped zones
+        };
+    }
+
+    isPieceInActiveHarmony(piece) {
+        if (!piece.pos) return false;
+        let hData = this.harmonyData.get(piece.owner);
+        if (!hData) return false;
+        return hData.activeComps.some(comp => comp.has(piece.id));
+    }
+
+    isPointInEnemyHarmony(pointV, myOwner) {
+        for (let [p, hData] of this.harmonyData.entries()) {
+            if (p === myOwner) continue;
+            if (hData.activePolys.some(poly => pointInPolygonOrOnEdge(pointV, poly))) {
+                return true;
+            }
+        }
+        return false;
+    }
+    // --- END HARMONY LOGIC ---
+
+
     selectPieceAt(key) {
         if (isOnline && this.currentPlayer !== myPlayerIndex) return;
         let piece = this.occupied().get(key);
         if (!piece) return;
         
+        // Inspect Enemy Threat Range
         if (piece.owner !== this.currentPlayer) {
             this.enemyViewPieceId = piece.id;
             this.selectedPieceId = null;
             this.selectedHandKind = null;
-            this.legalMoves = [];
-            this.enemyMoves = this.generateMoves(piece);
+            this.legalMoves = this.generateMoves(piece); // Check their valid moves
+            this.enemyMoves = this.legalMoves;
             
+            // Helpful context for why an enemy piece might not have moves
             if (piece.kind === "shining" && this.shiningPausedBySun(piece)) {
                 this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Sun Flower.`;
             } else if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) {
                 this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Shining Flower.`;
-            } else if (piece.kind === "chysalith" && this.isEnemyHarmonyBlocked(piece.pos, piece.owner)) {
-                this.message = `Player ${piece.owner + 1}'s Chysalith is trapped inside a Harmony and cannot move.`;
+            } else if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is trapped in a Harmony.`;
             } else {
                 this.message = `Viewing valid moves for Player ${piece.owner + 1}'s ${PIECES[piece.kind].label}.`;
             }
             return;
         }
 
+        // Clear enemy view if selecting own
         this.enemyViewPieceId = null;
         this.enemyMoves = [];
         
@@ -866,13 +1045,15 @@ class Game {
         if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
         if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
         
-        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active enemy Shining Flower."; return; }
+        // Status checks preventing moves
+        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) { this.message = "Shining flower is frozen by an enemy Sun Flower."; return; }
-        if (piece.kind === "chysalith" && this.isEnemyHarmonyBlocked(piece.pos, piece.owner)) {
-            this.message = "Your Chysalith is trapped within an enemy's Harmony and cannot move!";
+        
+        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+            this.message = "Your Chysalith is trapped inside an enemy Harmony zone and cannot move!";
             return;
         }
-        
+
         if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
             this.message = "Your closest starting garden was fully captured! Your Chysaliths cannot move.";
             return;
@@ -956,9 +1137,9 @@ class Game {
             if(ids.length > 0) piece.homeField = Math.min(...ids);
         }
         this.movedThisTurn.add(piece.id);
-        
-        this.updateHarmonies();
+        this.updateHarmonyCache(); // Re-evaluate connections after move
         this.afterAction(move.reason || "Moved.");
+        
         requestAnimationFrame(drawBoard);
     }
 
@@ -996,234 +1177,15 @@ class Game {
             if(ids.length > 0) homeField = Math.min(...ids);
         }
         
-        this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField, animStart: performance.now(), animType: 'drop', inHarmony: false, disharmonized: false });
+        this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField, animStart: performance.now(), animType: 'drop' });
         player.hand[kind]--;
         this.movedThisTurn.add(pid);
+        this.updateHarmonyCache(); // Re-evaluate connections after drop
         
         if (!isRemote) this.selectedHandKind = null;
-        
-        this.updateHarmonies();
         this.afterAction(`Dropped ${PIECES[kind].label}.`);
+        
         requestAnimationFrame(drawBoard);
-    }
-
-    getLineOfSightPath(a, b, ignoreId=null) {
-        let dir = this.board.directionBetweenAligned(a, b);
-        if (!dir) return null;
-        let occ = this.occupied();
-        let cur = a;
-        let path = [];
-        while (true) {
-            let nxt = this.board.neighbors(cur)[dir];
-            if (!nxt) return null;
-            if (nxt === b) return path;
-            let blocker = occ.get(nxt);
-            if (blocker && blocker.id !== ignoreId) return null;
-            path.push(nxt);
-            cur = nxt;
-        }
-    }
-
-    inView(a, b, ignoreId=null) {
-        return this.getLineOfSightPath(a, b, ignoreId) !== null;
-    }
-
-    cross(o, a, b) {
-        return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-    }
-
-    getConvexHull(points) {
-        if (points.length < 3) return points;
-        let sorted = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
-        let lower = [];
-        for (let p of sorted) {
-            while (lower.length >= 2 && this.cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-            lower.push(p);
-        }
-        let upper = [];
-        for (let i = sorted.length - 1; i >= 0; i--) {
-            let p = sorted[i];
-            while (upper.length >= 2 && this.cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-            upper.push(p);
-        }
-        upper.pop(); lower.pop();
-        return lower.concat(upper);
-    }
-
-    isPointInPolygon(point, vs) {
-        if (vs.length < 3) return false;
-        let x = point.x, y = point.y;
-        let inside = false;
-        for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-            let xi = vs[i].x, yi = vs[i].y;
-            let xj = vs[j].x, yj = vs[j].y;
-            let intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    updateHarmonies() {
-        this.disharmonyEdges = [];
-        this.harmonyEdges = [];
-        this.harmonies = []; 
-        
-        let piecesArr = this.piecesOnBoard();
-        
-        piecesArr.forEach(p => { p.inHarmony = false; p.disharmonized = false; });
-        
-        const isDisharmony = (k1, k2) => {
-            const pairs = [
-                ["star", "clover"], ["star", "shining"], 
-                ["sun", "water"], ["sun", "daisy"], 
-                ["clover", "shining"], ["daisy", "water"]
-            ];
-            return pairs.some(p => (p[0]===k1 && p[1]===k2) || (p[0]===k2 && p[1]===k1));
-        };
-        const isHarmony = (k1, k2) => {
-            const pairs = [
-                ["star", "water"], ["star", "sun"], ["star", "daisy"],
-                ["sun", "shining"], ["sun", "clover"],
-                ["clover", "daisy"], ["clover", "water"],
-                ["daisy", "shining"], ["shining", "water"]
-            ];
-            return pairs.some(p => (p[0]===k1 && p[1]===k2) || (p[0]===k2 && p[1]===k1));
-        };
-
-        // 1. Identify Disharmonies (friendly only)
-        for (let i=0; i<piecesArr.length; i++) {
-            for (let j=i+1; j<piecesArr.length; j++) {
-                let p1 = piecesArr[i], p2 = piecesArr[j];
-                if (p1.owner === p2.owner && isDisharmony(p1.kind, p2.kind)) {
-                    if (this.inView(p1.pos, p2.pos)) {
-                        p1.disharmonized = true;
-                        p2.disharmonized = true;
-                        this.disharmonyEdges.push({p1: p1.pos, p2: p2.pos});
-                    }
-                }
-            }
-        }
-
-        // 2. Identify Potential Harmony Connections
-        let adj = new Map();
-        let edgeMap = new Map(); 
-        for (let i=0; i<piecesArr.length; i++) {
-            for (let j=i+1; j<piecesArr.length; j++) {
-                let p1 = piecesArr[i], p2 = piecesArr[j];
-                if (p1.owner === p2.owner && !p1.disharmonized && !p2.disharmonized && isHarmony(p1.kind, p2.kind)) {
-                    let path = this.getLineOfSightPath(p1.pos, p2.pos);
-                    if (path !== null) {
-                        if (!adj.has(p1.id)) adj.set(p1.id, []);
-                        if (!adj.has(p2.id)) adj.set(p2.id, []);
-                        adj.get(p1.id).push(p2.id);
-                        adj.get(p2.id).push(p1.id);
-                        edgeMap.set(`${p1.id},${p2.id}`, path);
-                        edgeMap.set(`${p2.id},${p1.id}`, path);
-                    }
-                }
-            }
-        }
-
-        // 3. Evaluate and finalize Harmony Components
-        let seen = new Set();
-        for (let pid of adj.keys()) {
-            if (seen.has(pid)) continue;
-            let comp = new Set();
-            let q = [pid];
-            seen.add(pid);
-            while(q.length > 0) {
-                let curr = q.shift();
-                comp.add(curr);
-                for (let nxt of (adj.get(curr)||[])) {
-                    if (!seen.has(nxt)) {
-                        seen.add(nxt);
-                        q.push(nxt);
-                    }
-                }
-            }
-            
-            // NEW LOOP LOGIC: Prune the network to find closed loops (nodes with degree >= 2)
-            let coreNodes = new Set(comp);
-            let pruned = true;
-            while(pruned) {
-                pruned = false;
-                for (let id of coreNodes) {
-                    let degree = 0;
-                    for (let nxt of (adj.get(id)||[])) {
-                        if (coreNodes.has(nxt)) degree++;
-                    }
-                    if (degree < 2) {
-                        coreNodes.delete(id);
-                        pruned = true;
-                    }
-                }
-            }
-
-            // Must have at least 4 pieces in the enclosed loop
-            let isActiveHarmony = coreNodes.size >= 4;
-            
-            // Check Garden constraint only against the active loop pieces
-            let touchedGardens = new Set();
-            if (isActiveHarmony) {
-                for (let id of coreNodes) {
-                    let pos = this.pieces.get(id).pos;
-                    for (let [gid, corners] of this.board.gardenCorners.entries()) {
-                        if (corners.has(pos)) touchedGardens.add(gid);
-                    }
-                }
-            }
-            
-            let isValidTrap = isActiveHarmony && touchedGardens.size <= 1;
-            let owner = this.pieces.get(pid).owner;
-            let claimedGarden = (isValidTrap && touchedGardens.size === 1) ? Array.from(touchedGardens)[0] : null;
-            
-            let blockedVertices = new Set();
-            let pts = [];
-            
-            for (let id of comp) {
-                let p = this.pieces.get(id);
-                // Only pieces making up the structural loop get Harmony immunities
-                let isCore = isValidTrap && coreNodes.has(id);
-                if (isCore) p.inHarmony = true;
-                
-                if (isCore) {
-                    let v = this.board.vertices.get(p.pos);
-                    pts.push({x: v.x, y: v.y});
-                }
-                
-                for (let nxt of (adj.get(id)||[])) {
-                    if (id < nxt && comp.has(nxt)) {
-                        let path = edgeMap.get(`${id},${nxt}`);
-                        // Only make line thick blue if BOTH nodes are in the core loop
-                        let edgeActive = isValidTrap && coreNodes.has(id) && coreNodes.has(nxt);
-                        this.harmonyEdges.push({p1: p.pos, p2: this.pieces.get(nxt).pos, active: edgeActive});
-                        
-                        // Trap lines
-                        if (edgeActive) {
-                            path.forEach(pv => blockedVertices.add(pv));
-                        }
-                    }
-                }
-            }
-            
-            // Generate the trap zone using the loop points
-            if (isValidTrap) {
-                let hull = this.getConvexHull(pts);
-                this.harmonies.push({ owner, pieces: coreNodes, blockedVertices, hull, claimedGarden });
-            }
-        }
-    }
-
-    isEnemyHarmonyBlocked(pos, owner) {
-        let v = this.board.vertices.get(pos);
-        if (!v) return false;
-        for (let h of this.harmonies) {
-            if (h.owner !== owner) {
-                if (h.blockedVertices.has(pos)) return true;
-                if (this.isPointInPolygon(v, h.hull)) return true;
-            }
-        }
-        return false;
     }
 
     generateDropMoves(kind) {
@@ -1232,7 +1194,9 @@ class Game {
         for (let key of this.board.vertices.keys()) {
             if (occ.has(key)) continue;
             let [ok] = this.canDrop(kind, key);
-            if (ok) moves.push({ dst: key, captureId: null });
+            if (ok) {
+                moves.push({ dst: key, captureId: null });
+            }
         }
         return moves;
     }
@@ -1251,13 +1215,16 @@ class Game {
             }
             return [true, ""];
         }
+        
+        // Cannot drop inside an enemy harmony
+        let pV = this.board.vertices.get(key);
+        if (kind === "chysalith" && this.isPointInEnemyHarmony(pV, this.currentPlayer)) {
+            return [false, "Cannot drop a Chysalith into an enemy Harmony."];
+        }
 
         if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
         if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active Shining."];
         if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where a Shining has line-of-sight."];
-        
-        // Harmonies Trap
-        if (kind === "chysalith" && this.isEnemyHarmonyBlocked(key, this.currentPlayer)) return [false, "Cannot drop inside an active enemy Harmony."];
 
         if (touchesOwnGate) return [true, ""];
         if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
@@ -1298,7 +1265,7 @@ class Game {
                 for (let p of this.pieces.values()) {
                     if (p.owner === owner) p.pos = null;
                 }
-                this.updateHarmonies();
+                this.updateHarmonyCache();
             }
         }
     }
@@ -1342,7 +1309,10 @@ class Game {
         for (let p of occ.values()) {
             if (p.owner !== player) continue;
             
-            if (p.kind === 'sun' && !p.inHarmony) {
+            // Harmony Immunity!
+            if (this.isPieceInActiveHarmony(p)) continue;
+            
+            if (p.kind === 'sun') {
                 for (let ep of occ.values()) {
                     if (ep.owner !== player && ep.kind === 'chysalith') {
                         if (this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
@@ -1351,7 +1321,6 @@ class Game {
             } 
             else if (p.kind === 'chysalith') {
                 if (this.chysalithIsFrozen(p)) continue;
-                if (this.isEnemyHarmonyBlocked(p.pos, p.owner)) continue;
                 for (let ep of occ.values()) {
                     if (ep.owner !== player && ep.kind === 'shining' && !this.shiningPausedBySun(ep)) {
                         if (this.inView(p.pos, ep.pos)) { chys.push(p.id); break; }
@@ -1391,7 +1360,6 @@ class Game {
             if (!this.players[this.currentPlayer].eliminated) break;
             if (this.currentPlayer === start) { this.phase = "game_over"; break; }
         }
-        this.updateHarmonies();
         return msgs.join(" ");
     }
 
@@ -1466,9 +1434,9 @@ class Game {
         p.pos = null;
         this.players[p.owner].hand["sun"]++;
         this.movedThisTurn.add(pid);
-        if (!isRemote) this.selectedPieceId = null;
+        this.updateHarmonyCache();
         
-        this.updateHarmonies();
+        if (!isRemote) this.selectedPieceId = null;
         this.afterAction("Picked Sun Flower up.");
         updateDOM();
     }
@@ -1476,9 +1444,12 @@ class Game {
     generateMoves(piece) {
         if (!piece.pos) return [];
         
-        if (piece.kind === "chysalith" && this.isEnemyHarmonyBlocked(piece.pos, piece.owner)) return [];
+        // Frozen pieces generate 0 valid moves (unless in harmony)
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) return [];
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) return [];
+        
+        // Trapped pieces inside enemy harmony cannot move
+        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) return [];
 
         let moves = [];
         if (piece.kind === "star") moves = this.starMoves(piece);
@@ -1560,7 +1531,7 @@ class Game {
 
         let recurse = (pivot, incoming, used) => {
             for (let d in DIRECTIONS) {
-                let opposite = {up:"down", down:"up", left:"right", right:"left"}[incoming];
+                let opposite = {up:"down", left:"right", right:"left"}[incoming];
                 if (incoming && d === opposite) continue;
                 
                 for (let dst of this.board.ray(pivot, d)) {
@@ -1593,6 +1564,12 @@ class Game {
 
     isMoveLegalSpecial(piece, move) {
         if (!move.dst) return false;
+        
+        let destV = this.board.vertices.get(move.dst);
+        
+        // Cannot enter enemy harmony
+        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(destV, piece.owner)) return false;
+
         if (["star", "daisy"].includes(piece.kind) && this.pathCrossesRiver(piece.pos, move.path||[move.dst])) return false;
         if (piece.kind === "water") {
             let fields = this.board.fieldIdsAtVertex(move.dst);
@@ -1603,18 +1580,17 @@ class Game {
             let occ = this.occupied();
             for (let ep of occ.values()) {
                 if (ep.owner !== piece.owner && ep.kind === 'chysalith') {
-                    if (this.inView(move.dst, ep.pos, piece.id)) return false;
+                    // Ignore if target Chysalith is in harmony
+                    if (!this.isPieceInActiveHarmony(ep) && this.inView(move.dst, ep.pos, piece.id)) return false;
                 }
             }
         }
         if (piece.kind === "chysalith") {
-            if (this.isEnemyHarmonyBlocked(move.dst, piece.owner)) return false;
+            if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
             let fullPath = move.path || [move.dst];
             for (let step of fullPath) {
-                if (this.isEnemyHarmonyBlocked(step, piece.owner)) return false;
                 if (this.lineHasActiveShiningView(step, piece.owner, piece.id)) return false;
             }
-            if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
         }
         return true;
     }
@@ -1635,13 +1611,32 @@ class Game {
         return true;
     }
 
+    inView(a, b, ignoreId=null) {
+        let dir = this.board.directionBetweenAligned(a, b);
+        if (!dir) return false;
+        let occ = this.occupied();
+        let cur = a;
+        while (true) {
+            let nxt = this.board.neighbors(cur)[dir];
+            if (!nxt) return false;
+            if (nxt === b) return true;
+            let blocker = occ.get(nxt);
+            if (blocker && blocker.id !== ignoreId) return false;
+            cur = nxt;
+        }
+    }
+
     activeEnemyShiningPieces(owner) {
-        return this.piecesOnBoard(null, "shining").filter(sh => sh.owner !== owner && !this.shiningPausedBySun(sh));
+        return this.piecesOnBoard(null, "shining").filter(sh => 
+            sh.owner !== owner && 
+            !this.shiningPausedBySun(sh) && 
+            !this.isPieceInActiveHarmony(sh) // Immutable if in harmony
+        );
     }
 
     shiningPausedBySun(shining) {
         if (!shining.pos) return false;
-        if (shining.inHarmony) return false; 
+        if (this.isPieceInActiveHarmony(shining)) return false; // Harmony immunity
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
@@ -1661,7 +1656,7 @@ class Game {
     }
 
     chysalithIsFrozen(chys) {
-        if (chys.inHarmony) return false; 
+        if (this.isPieceInActiveHarmony(chys)) return false; // Harmony immunity
         return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos, chys.owner);
     }
 
@@ -1683,26 +1678,37 @@ class Game {
                     if (p.kind === "chysalith") hasChys = true;
                 }
             }
-            
-            let baseOwner = null;
+            let owner = null;
             if (holders.length === corners.size && holders.every(h => h === holders[0])) {
-                baseOwner = holders[0];
+                owner = holders[0];
             }
+            ownersByGarden.set(gid, owner);
+            hasChysInGarden.set(gid, hasChys);
+        }
+
+        // Apply Harmony Garden Overrides
+        for (let player of alive) {
+            let hData = this.harmonyData.get(player);
+            if (!hData || hData.activePolys.length === 0) continue;
             
-            let finalOwner = baseOwner;
-            for (let h of this.harmonies) {
-                if (h.claimedGarden === gid) {
-                    if (baseOwner === null) finalOwner = h.owner; 
-                    else if (baseOwner !== h.owner) finalOwner = null; 
+            for (let poly of hData.activePolys) {
+                for (let [gid, corners] of this.board.gardenCorners.entries()) {
+                    let allCornersInHarmony = true;
+                    for (let c of corners) {
+                        if (!pointInPolygonOrOnEdge(this.board.vertices.get(c), poly)) {
+                            allCornersInHarmony = false; break;
+                        }
+                    }
+                    if (allCornersInHarmony) {
+                        let currentOwner = ownersByGarden.get(gid);
+                        if (currentOwner === null) {
+                            ownersByGarden.set(gid, player); // Wild becomes owned
+                            hasChysInGarden.set(gid, true); // Assume control as if Chysalith is there
+                        } else if (currentOwner !== player) {
+                            ownersByGarden.set(gid, null); // Owned by enemy becomes neutral
+                        }
+                    }
                 }
-            }
-            
-            ownersByGarden.set(gid, finalOwner);
-            
-            if (finalOwner !== baseOwner && finalOwner !== null) {
-                hasChysInGarden.set(gid, true); 
-            } else {
-                hasChysInGarden.set(gid, hasChys);
             }
         }
 
@@ -1871,6 +1877,19 @@ boardImage.src = 'shodansho.png';
 boardImage.onload = () => { imageLoadError = false; startBoardAnimation(); }; 
 boardImage.onerror = () => { imageLoadError = true; console.error("Could not find shodansho.png"); startBoardAnimation(); };
 
+function drawDottedLine(ctx, x1, y1, x2, y2, color) {
+    let dx = x2 - x1, dy = y2 - y1;
+    let dist = Math.hypot(dx, dy);
+    let dots = Math.max(2, Math.floor(dist / 14)); // Density of dots
+    ctx.fillStyle = color;
+    for (let i = 1; i < dots; i++) {
+        let t = i / dots;
+        ctx.beginPath();
+        ctx.arc(x1 + dx * t, y1 + dy * t, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
 function drawBoard(timestamp) {
     let needsNextFrame = false;
     if (!timestamp) timestamp = performance.now();
@@ -1885,12 +1904,14 @@ function drawBoard(timestamp) {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     ctx.save(); 
     
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate(currentRotationAngle);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
+    // Draw Board Background
     if (boardImage.complete && boardImage.naturalWidth !== 0 && !imageLoadError) {
         ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
     } else {
@@ -1913,63 +1934,64 @@ function drawBoard(timestamp) {
             ctx.restore();
         }
     }
-    
-    // --- DRAW HARMONIES / DISHARMONIES ---
-    ctx.save();
 
-    // Draw Active Harmony Hulls (Background fields)
-    for (let h of game.harmonies) {
-        if (h.hull && h.hull.length >= 3) {
-            ctx.fillStyle = "rgba(59, 130, 246, 0.12)"; // Faint blue zone
-            ctx.beginPath();
-            ctx.moveTo(h.hull[0].x, h.hull[0].y);
-            for (let i = 1; i < h.hull.length; i++) {
-                ctx.lineTo(h.hull[i].x, h.hull[i].y);
-            }
-            ctx.closePath();
-            ctx.fill();
-        }
-    }
-
-    ctx.setLineDash([8, 8]);
-    
-    // Disharmonies
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.85)"; // Red
-    ctx.shadowColor = "rgba(239, 68, 68, 1)";
-    ctx.shadowBlur = 12;
-    for (let edge of game.disharmonyEdges) {
-        let v1 = board.vertices.get(edge.p1);
-        let v2 = board.vertices.get(edge.p2);
-        ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.stroke();
-    }
-    
-    // Harmonies (Active and Forming)
-    for (let edge of game.harmonyEdges) {
-        let v1 = board.vertices.get(edge.p1);
-        let v2 = board.vertices.get(edge.p2);
+    // Draw Harmony & Disharmony visuals
+    for (let p = 0; p < game.playerCount; p++) {
+        let hData = game.harmonyData.get(p);
+        if (!hData) continue;
         
-        ctx.beginPath();
-        if (edge.active) {
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = "rgba(59, 130, 246, 1)"; // Bright Blue
-            ctx.shadowColor = "rgba(59, 130, 246, 1)";
-            ctx.shadowBlur = 15;
-        } else {
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "rgba(59, 130, 246, 0.4)"; // Dimmer Blue
-            ctx.shadowColor = "rgba(59, 130, 246, 0.2)";
-            ctx.shadowBlur = 5;
-        }
-        ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.stroke();
-    }
-    ctx.restore();
+        // Draw active enclosed Harmony Zones (Polygons)
+        hData.activePolys.forEach(poly => {
+            if (poly.length >= 3) {
+                ctx.fillStyle = "rgba(56, 189, 248, 0.15)"; // Soft blue fill
+                ctx.beginPath();
+                ctx.moveTo(poly[0].x, poly[0].y);
+                for (let i=1; i<poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+                ctx.closePath();
+                ctx.fill();
+            }
+        });
 
+        // Draw Valid Forming & Active Harmony Links (Bright Blue Dots)
+        let drawnLinks = new Set();
+        hData.validLinks.forEach(([u, v]) => {
+            let key = u < v ? `${u}-${v}` : `${v}-${u}`;
+            if (drawnLinks.has(key)) return;
+            drawnLinks.add(key);
+            
+            let p1 = game.pieces.get(u);
+            let p2 = game.pieces.get(v);
+            if (p1 && p2 && p1.pos && p2.pos) {
+                let v1 = board.vertices.get(p1.pos);
+                let v2 = board.vertices.get(p2.pos);
+                drawDottedLine(ctx, v1.x, v1.y, v2.x, v2.y, "rgba(56, 189, 248, 1)"); // Solid bright blue dots
+            }
+        });
+
+        // Draw Disharmony Connections (Bright Red Dots)
+        let dArr = Array.from(hData.disharmonies);
+        for (let i = 0; i < dArr.length; i++) {
+            for (let j = i + 1; j < dArr.length; j++) {
+                let p1 = game.pieces.get(dArr[i]);
+                let p2 = game.pieces.get(dArr[j]);
+                if (p1 && p2 && p1.pos && p2.pos && game.inView(p1.pos, p2.pos)) {
+                    if (DISHARMONY_PAIRS[p1.kind] && DISHARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        let v1 = board.vertices.get(p1.pos);
+                        let v2 = board.vertices.get(p2.pos);
+                        drawDottedLine(ctx, v1.x, v1.y, v2.x, v2.y, "rgba(239, 68, 68, 1)"); // Solid bright red dots
+                    }
+                }
+            }
+        }
+    }
+
+
+    // Draw Enemy Moves (Grayed out)
     if (game.enemyMoves && game.enemyViewPieceId !== null) {
         for (let m of game.enemyMoves) {
             let v = board.vertices.get(m.dst);
             if (v) {
-                ctx.fillStyle = "rgba(156, 163, 175, 0.5)"; 
+                ctx.fillStyle = "rgba(156, 163, 175, 0.5)"; // Gray
                 ctx.beginPath(); 
                 ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 2, 0, 2*Math.PI); 
                 ctx.fill();
@@ -1983,15 +2005,16 @@ function drawBoard(timestamp) {
         }
     }
 
+    // Draw Legal Moves
     for (let m of game.legalMoves) {
         let v = board.vertices.get(m.dst);
         if (v) {
             if (m.captureId === null) {
-                ctx.fillStyle = "rgba(16, 185, 129, 0.6)"; 
+                ctx.fillStyle = "rgba(16, 185, 129, 0.6)"; // Emerald
                 ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
             } else {
-                ctx.fillStyle = "rgba(244, 63, 94, 0.7)"; 
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; 
+                ctx.fillStyle = "rgba(244, 63, 94, 0.7)"; // Rose Red
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // White outline for emphasis
             }
             
             ctx.beginPath(); 
@@ -2003,6 +2026,7 @@ function drawBoard(timestamp) {
             ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + (m.captureId !== null ? 8 : 6), 0, 2*Math.PI);
             ctx.stroke();
 
+            // Tactical crosshair for captures
             if (m.captureId !== null) {
                 ctx.strokeStyle = "rgba(244, 63, 94, 0.9)";
                 ctx.beginPath(); ctx.moveTo(v.x - 4, v.y); ctx.lineTo(v.x + 4, v.y); ctx.stroke();
@@ -2011,28 +2035,31 @@ function drawBoard(timestamp) {
         }
     }
 
+    // Highlight Selected Piece
     if (game.selectedPieceId !== null) {
         let p = game.pieces.get(game.selectedPieceId);
         if (p && p.pos) {
             let v = board.vertices.get(p.pos);
-            ctx.fillStyle = "rgba(245, 158, 11, 0.5)"; 
+            ctx.fillStyle = "rgba(245, 158, 11, 0.5)"; // Amber highlight
             ctx.beginPath(); 
             ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
             ctx.fill();
         }
     }
 
+    // Highlight Enemy Inspected Piece
     if (game.enemyViewPieceId !== null) {
         let p = game.pieces.get(game.enemyViewPieceId);
         if (p && p.pos) {
             let v = board.vertices.get(p.pos);
-            ctx.fillStyle = "rgba(156, 163, 175, 0.4)"; 
+            ctx.fillStyle = "rgba(156, 163, 175, 0.4)"; // Gray highlight
             ctx.beginPath(); 
             ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
             ctx.fill();
         }
     }
 
+    // Draw All Pieces (with animations)
     for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
         if (piece.pos && !game.players[piece.owner].eliminated) {
             let targetV = board.vertices.get(piece.pos);
@@ -2041,6 +2068,7 @@ function drawBoard(timestamp) {
 
             ctx.save();
             
+            // Animation Calculation
             let elapsed = piece.animStart ? timestamp - piece.animStart : Infinity;
             let duration = 300; 
             let scale = 1;
@@ -2049,7 +2077,7 @@ function drawBoard(timestamp) {
             if (elapsed < duration) {
                 needsNextFrame = true;
                 let t = elapsed / duration;
-                let ease = 1 - Math.pow(1 - t, 3); 
+                let ease = 1 - Math.pow(1 - t, 3); // ease out cubic
 
                 if (piece.animType === 'move' && piece.lastPosKey) {
                     let startV = board.vertices.get(piece.lastPosKey);
@@ -2069,9 +2097,11 @@ function drawBoard(timestamp) {
 
             ctx.rotate(-currentRotationAngle);
 
+            // Piece Drop Shadow
             ctx.fillStyle = `rgba(0,0,0,${0.6 * alpha})`;
             ctx.beginPath(); ctx.arc(3, 4, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
 
+            // Draw Sprite or Fallback Shape
             if (img && img.complete && img.naturalWidth !== 0) {
                 let size = (PIECE_RADIUS + 3) * 2;
                 ctx.drawImage(img, -size/2, -size/2, size, size);
@@ -2084,15 +2114,16 @@ function drawBoard(timestamp) {
                 ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
                 
                 ctx.fillStyle = PLAYER_TEXT[piece.owner];
-                ctx.font = "bold 16px Arial";
+                ctx.font = "bold 14px Arial"; // Shrunk slightly
                 ctx.textAlign = "center"; ctx.textBaseline = "middle";
                 ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
+            // Draw Shining Frozen indicator (slightly shrunk to match radius)
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = `rgba(239, 68, 68, ${0.9 * alpha})`; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, 15); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(15, -15); ctx.lineTo(-15, 15); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, -12); ctx.lineTo(-12, 12); ctx.stroke();
             }
             
             ctx.restore();
@@ -2160,6 +2191,7 @@ canvas.addEventListener('mousedown', (e) => {
         let key = game.nearestVertex({x, y});
         if (key) game.clickVertex(key);
     } else if (e.button === 2) { 
+        // Right click clears all selections and views
         game.selectedPieceId = null;
         game.selectedHandKind = null;
         game.legalMoves = [];
