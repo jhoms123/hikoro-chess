@@ -218,14 +218,14 @@
                     <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Harmony & Disharmony</h3>
                     <p class="mb-2"><strong>Harmony:</strong> A network of at least 4 friendly pieces with uninterrupted line-of-sight to valid partners. Harmonized pieces project <strong class="text-blue-400">blue dotted lines</strong>.</p>
                     <ul class="list-disc pl-5 space-y-1 mb-3">
-                        <li><strong>Pairs:</strong> Water-Star, Star-Sun, Sun-Clover, Clover-Daisy, Daisy-Shining, Shining-Water.</li>
+                        <li><strong>Pairs:</strong> Star-Water, Star-Sun, Star-Daisy, Sun-Shining, Sun-Clover, Clover-Daisy, Clover-Water, Daisy-Shining, Shining-Water.</li>
                         <li>Ignores negative effects (e.g. Harmonized Suns don't flee Chysaliths, Shining isn't frozen).</li>
                         <li>Traps enemy Chysaliths inside and blocks them from crossing harmony lines.</li>
                         <li>Can automatically capture wild gardens or neutralize enemy gardens it touches.</li>
                     </ul>
                     <p class="mb-2"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">red dotted lines</strong>.</p>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Pairs:</strong> Star-Daisy, Sun-Shining, Water-Clover.</li>
+                        <li><strong>Pairs:</strong> Star-Clover, Star-Shining, Sun-Water, Sun-Daisy, Clover-Shining, Daisy-Water.</li>
                         <li>If two friendly pieces disharmonize, neither can form any Harmonies.</li>
                     </ul>
                 </section>
@@ -1064,11 +1064,20 @@ class Game {
         piecesArr.forEach(p => { p.inHarmony = false; p.disharmonized = false; });
         
         const isDisharmony = (k1, k2) => {
-            const pairs = [["star", "daisy"], ["sun", "shining"], ["water", "clover"]];
+            const pairs = [
+                ["star", "clover"], ["star", "shining"], 
+                ["sun", "water"], ["sun", "daisy"], 
+                ["clover", "shining"], ["daisy", "water"]
+            ];
             return pairs.some(p => (p[0]===k1 && p[1]===k2) || (p[0]===k2 && p[1]===k1));
         };
         const isHarmony = (k1, k2) => {
-            const pairs = [["water", "star"], ["star", "sun"], ["sun", "clover"], ["clover", "daisy"], ["daisy", "shining"], ["shining", "water"]];
+            const pairs = [
+                ["star", "water"], ["star", "sun"], ["star", "daisy"],
+                ["sun", "shining"], ["sun", "clover"],
+                ["clover", "daisy"], ["clover", "water"],
+                ["daisy", "shining"], ["shining", "water"]
+            ];
             return pairs.some(p => (p[0]===k1 && p[1]===k2) || (p[0]===k2 && p[1]===k1));
         };
 
@@ -1124,44 +1133,44 @@ class Game {
                 }
             }
             
-            // Harmony minimum size 4 constraint
-            if (comp.size >= 4) {
-                let touchedGardens = new Set();
-                for (let id of comp) {
-                    let pos = this.pieces.get(id).pos;
-                    for (let [gid, corners] of this.board.gardenCorners.entries()) {
-                        if (corners.has(pos)) touchedGardens.add(gid);
-                    }
+            // Check Garden constraint
+            let touchedGardens = new Set();
+            for (let id of comp) {
+                let pos = this.pieces.get(id).pos;
+                for (let [gid, corners] of this.board.gardenCorners.entries()) {
+                    if (corners.has(pos)) touchedGardens.add(gid);
                 }
+            }
+            
+            // Harmony minimum size 4 AND only touches 1 garden max
+            let isActiveHarmony = comp.size >= 4 && touchedGardens.size <= 1;
+            let owner = this.pieces.get(pid).owner;
+            let claimedGarden = (isActiveHarmony && touchedGardens.size === 1) ? Array.from(touchedGardens)[0] : null;
+            
+            let blockedVertices = new Set();
+            let pts = [];
+            
+            for (let id of comp) {
+                let p = this.pieces.get(id);
+                if (isActiveHarmony) p.inHarmony = true;
                 
-                // Harmony can only contain corners from one garden
-                if (touchedGardens.size <= 1) {
-                    let owner = this.pieces.get(pid).owner;
-                    let claimedGarden = touchedGardens.size === 1 ? Array.from(touchedGardens)[0] : null;
-                    
-                    let compEdges = [];
-                    let blockedVertices = new Set();
-                    let pts = [];
-                    for (let id of comp) {
-                        let p = this.pieces.get(id);
-                        p.inHarmony = true;
-                        let v = this.board.vertices.get(p.pos);
-                        pts.push({x: v.x, y: v.y});
-                        
-                        for (let nxt of (adj.get(id)||[])) {
-                            if (id < nxt && comp.has(nxt)) {
-                                let path = edgeMap.get(`${id},${nxt}`);
-                                compEdges.push({p1: p.pos, p2: this.pieces.get(nxt).pos});
-                                path.forEach(pv => blockedVertices.add(pv));
-                            }
+                let v = this.board.vertices.get(p.pos);
+                pts.push({x: v.x, y: v.y});
+                
+                for (let nxt of (adj.get(id)||[])) {
+                    if (id < nxt && comp.has(nxt)) {
+                        let path = edgeMap.get(`${id},${nxt}`);
+                        this.harmonyEdges.push({p1: p.pos, p2: this.pieces.get(nxt).pos, active: isActiveHarmony});
+                        if (isActiveHarmony) {
+                            path.forEach(pv => blockedVertices.add(pv));
                         }
                     }
-                    
-                    let hull = this.getConvexHull(pts);
-                    
-                    this.harmonies.push({ owner, pieces: comp, edges: compEdges, blockedVertices, hull, claimedGarden });
-                    this.harmonyEdges.push(...compEdges);
                 }
+            }
+            
+            if (isActiveHarmony) {
+                let hull = this.getConvexHull(pts);
+                this.harmonies.push({ owner, pieces: comp, blockedVertices, hull, claimedGarden });
             }
         }
     }
@@ -1879,10 +1888,25 @@ function drawBoard(timestamp) {
     
     // --- DRAW HARMONIES / DISHARMONIES ---
     ctx.save();
-    ctx.lineWidth = 3;
+
+    // Draw Active Harmony Hulls (Background fields)
+    for (let h of game.harmonies) {
+        if (h.hull && h.hull.length >= 3) {
+            ctx.fillStyle = "rgba(59, 130, 246, 0.12)"; // Faint blue zone
+            ctx.beginPath();
+            ctx.moveTo(h.hull[0].x, h.hull[0].y);
+            for (let i = 1; i < h.hull.length; i++) {
+                ctx.lineTo(h.hull[i].x, h.hull[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
     ctx.setLineDash([8, 8]);
     
     // Disharmonies
+    ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(239, 68, 68, 0.85)"; // Red
     ctx.shadowColor = "rgba(239, 68, 68, 1)";
     ctx.shadowBlur = 12;
@@ -1892,14 +1916,24 @@ function drawBoard(timestamp) {
         ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.stroke();
     }
     
-    // Harmonies
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.85)"; // Blue
-    ctx.shadowColor = "rgba(59, 130, 246, 1)";
-    ctx.shadowBlur = 12;
+    // Harmonies (Active and Forming)
     for (let edge of game.harmonyEdges) {
         let v1 = board.vertices.get(edge.p1);
         let v2 = board.vertices.get(edge.p2);
-        ctx.beginPath(); ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.stroke();
+        
+        ctx.beginPath();
+        if (edge.active) {
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "rgba(59, 130, 246, 1)"; // Bright Blue
+            ctx.shadowColor = "rgba(59, 130, 246, 1)";
+            ctx.shadowBlur = 15;
+        } else {
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(59, 130, 246, 0.4)"; // Dimmer Blue
+            ctx.shadowColor = "rgba(59, 130, 246, 0.2)";
+            ctx.shadowBlur = 5;
+        }
+        ctx.moveTo(v1.x, v1.y); ctx.lineTo(v2.x, v2.y); ctx.stroke();
     }
     ctx.restore();
 
