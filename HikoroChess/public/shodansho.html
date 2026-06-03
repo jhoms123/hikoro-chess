@@ -1,301 +1,394 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sho Dan Sho - Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'game-dark': '#121212',
+                        'game-panel': 'rgba(30, 30, 35, 0.85)',
+                        'game-accent': '#ffb300',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         body {
-            margin: 0;
-            padding: 20px;
-            background-color: #201e1a;
-            background-image: url('sprites/lobby_background.jpg');
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.1), transparent 25%),
+                url('sprites/lobby_background.jpg');
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat;
             background-attachment: fixed;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            color: #eee;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            box-sizing: border-box;
-            gap: 30px;
+            background-blend-mode: overlay;
+            color: #f8fafc;
         }
 
         body::before {
             content: "";
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95));
             z-index: -1;
         }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
         #board-wrapper {
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
+            filter: drop-shadow(0 0 30px rgba(0,0,0,0.5));
         }
 
         canvas {
             display: block;
             width: 85vh;
-            max-width: 950px;
+            max-width: 900px;
             height: 85vh;
-            max-height: 950px;
+            max-height: 900px;
             cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+            background-color: #1a1a1a;
         }
-
-        .side-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 340px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .side-panel::-webkit-scrollbar { width: 8px; }
-        .side-panel::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        .side-panel::-webkit-scrollbar-track { background: transparent; }
-
-        .info-box {
-            background-color: rgba(30, 30, 30, 0.85);
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #666;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .info-box h2 { 
-            margin: 0 0 15px 0; 
-            color: #ffc107; 
-            font-size: 1.6em; 
-            text-align: center; 
-            border-bottom: 2px solid #555; 
-            padding-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .info-box h3 { margin: 0 0 10px 0; font-size: 1.2em; color: #ddd; }
-        .info-box p { margin: 8px 0; line-height: 1.5; font-size: 0.95em; }
-
-        #turn-indicator {
-            font-size: 1.4em;
-            font-weight: bold;
-            text-align: center;
-            padding: 12px;
-            border-radius: 6px;
-            background-color: #4a2a00;
-            color: white;
-            border: 2px solid #ff9800;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        button {
-            padding: 12px 15px;
-            font-size: 15px;
-            cursor: pointer;
-            border-radius: 6px;
-            border: 1px solid #777;
-            background-color: #444;
-            color: #eee;
-            font-weight: bold;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        button:hover { background-color: #555; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
-        button:active { transform: translateY(0); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        #pass-btn { background-color: #2c5e2e; border-color: #4CAF50; }
-        #pass-btn:hover { background-color: #3b7a3e; }
-        
-        #pickup-btn { background-color: #b9770e; border-color: #ffc107; }
-        #pickup-btn:hover { background-color: #d68910; }
-
-        #main-menu-btn { background-color: #a13a3a; border-color: #ff5252; }
-        #main-menu-btn:hover { background-color: #c04848; }
 
         .player-hand {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #333;
-            border-radius: 8px;
-            border-left: 6px solid transparent;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
         }
 
         .player-hand.active-turn {
-            border-left-color: #ff9800;
-            background-color: #444;
-            box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);
+            border-left-color: #f59e0b;
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
         }
 
         .hand-title {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 1.1em;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #555;
-            padding-bottom: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
+            color: #e2e8f0;
         }
 
         .hand-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 0.5rem;
         }
 
         .hand-item {
-            background-color: #222;
-            border: 2px solid #555;
-            border-radius: 6px;
-            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
             user-select: none;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.875rem;
+            font-weight: 500;
         }
 
-        .hand-item:hover { background-color: #3a3a3a; border-color: #888; }
+        .hand-item:hover { 
+            background: rgba(255, 255, 255, 0.1); 
+            transform: translateY(-2px);
+        }
         
         .hand-item.selected {
-            background-color: #4a2a00;
-            border-color: #ffc107;
-            box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
             transform: scale(1.05);
         }
 
-        .hand-item .piece-icon {
-            font-weight: bold;
-            font-size: 1.3em;
-            width: 22px;
-            text-align: center;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-
         .hand-item .piece-icon-img {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             object-fit: contain;
             filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8));
         }
 
         .hand-item .piece-count {
-            background-color: #000;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.9em;
-            color: #ddd;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 0.1rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            color: #cbd5e1;
             font-family: monospace;
-            border: 1px solid #444;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-left: auto;
         }
         
-        #game-message {
-            color: #a4d8ff;
-            font-style: italic;
-            text-align: center;
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.3);
-            border-radius: 5px;
-            padding: 10px;
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+            50% { box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.4); }
         }
 
-        .controls-hint {
-            font-size: 0.85em; 
-            color: #aaa; 
-            margin-top: 15px; 
-            background: rgba(0,0,0,0.4); 
-            padding: 10px; 
-            border-radius: 5px;
+        #turn-indicator {
+            transition: all 0.3s ease;
         }
-        
-        .controls-hint ul {
-            margin: 5px 0 0 0;
-            padding-left: 20px;
+        .active-phase {
+            animation: pulse-glow 2s infinite;
         }
+
+        /* Rules Table Styling */
+        .rules-table th, .rules-table td {
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .rules-table th { background: rgba(255,255,255,0.05); }
     </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col md:flex-row items-center justify-center p-4 md:p-8 gap-6 md:gap-10 font-sans">
 
-    <div class="side-panel">
-        <div class="info-box">
-            <h2>Sho Dan Sho</h2>
-            <div id="turn-indicator">Turn 1 | P1</div>
-            <p style="margin-top: 15px; text-align: center; font-size: 1.1em;"><strong>Phase:</strong> <span id="phase-display" style="color: #ff9800;">Setup</span></p>
-            <p id="game-message">Loading game state...</p>
+    <div class="flex flex-col gap-6 w-full max-w-[360px] max-h-[90vh] overflow-y-auto z-10 shrink-0 custom-scrollbar pr-2">
+        
+        <!-- Game Info Box -->
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl p-6 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-600"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold tracking-wider text-amber-400 uppercase">Sho Dan Sho</h2>
+                <button onclick="document.getElementById('rules-modal').classList.remove('hidden')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-colors font-semibold tracking-wide flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    RULES
+                </button>
+            </div>
+            
+            <div id="turn-indicator" class="text-xl font-bold text-center p-3 rounded-xl bg-amber-900/40 text-white border border-amber-500/50 shadow-inner mb-4">
+                Turn 1 | P1
+            </div>
+            
+            <div class="text-center mb-4 text-slate-300">
+                <span class="text-sm uppercase tracking-wider opacity-70">Phase</span><br>
+                <span id="phase-display" class="text-lg font-semibold text-amber-400 capitalize">Setup</span>
+            </div>
+            
+            <div id="game-message" class="text-sm text-sky-200 italic text-center min-h-[48px] flex items-center justify-center bg-black/40 rounded-lg p-3 border border-sky-500/20 shadow-inner">
+                Loading game state...
+            </div>
         </div>
 
-        <div class="info-box">
-            <h3>Actions</h3>
-            <div class="btn-group">
-                <button id="pass-btn" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.passPhase()">Pass Phase (N)</button>
-                <button id="pickup-btn" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">Pickup Sun (P)</button>
-                <button id="main-menu-btn" onclick="window.location.href='/'">Exit to Main Menu</button>
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl p-6">
+            <h3 class="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Actions
+            </h3>
+            <div class="flex flex-col gap-3">
+                <button id="pass-btn" class="w-full py-3 px-4 bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-xl border border-emerald-400/50 shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.passPhase()">
+                    Pass Phase (N)
+                </button>
+                <button id="pickup-btn" class="w-full py-3 px-4 bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
+                    Pickup Sun (P)
+                </button>
+                <button id="main-menu-btn" class="w-full py-3 px-4 bg-rose-600/80 hover:bg-rose-500 text-white font-bold rounded-xl border border-rose-400/50 shadow-lg transition-all mt-2 hover:-translate-y-0.5 active:translate-y-0" onclick="window.location.href='/'">
+                    Exit to Menu
+                </button>
             </div>
-            <div class="controls-hint">
-                <strong>Controls:</strong>
-                <ul>
-                    <li>Left Click piece: Select/Move</li>
-                    <li>Left Click empty: Drop hand</li>
-                    <li>Right Click: Cancel Selection</li>
+            
+            <div class="mt-5 p-3 rounded-lg bg-black/30 border border-white/5 text-xs text-slate-400">
+                <p class="font-semibold text-slate-300 mb-1">Controls:</p>
+                <ul class="list-disc pl-4 space-y-1">
+                    <li><span class="text-amber-200">Left Click</span> piece: Select/Move</li>
+                    <li><span class="text-amber-200">Left Click</span> empty: Drop hand</li>
+                    <li><span class="text-amber-200">Right Click</span>: Cancel</li>
                 </ul>
             </div>
         </div>
     </div>
 
-    <div id="board-wrapper">
+    <div id="board-wrapper" class="flex-grow flex items-center justify-center z-10 shrink-0">
         <canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
     </div>
 
-    <div class="side-panel">
-        <div class="info-box" style="flex-grow: 1;">
-            <h2>Player Hands</h2>
-            <div id="hands-container">
-                <!-- Hands are generated dynamically here by updateDOM() -->
+    <div class="flex flex-col w-full max-w-[360px] max-h-[90vh] overflow-y-auto z-10 shrink-0 pr-2">
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl p-6 h-full flex flex-col">
+            <h2 class="text-xl font-bold tracking-wide text-white mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Player Hands
+            </h2>
+            <div id="hands-container" class="flex-grow overflow-y-auto custom-scrollbar pr-1">
+                <!-- Hands dynamically generated here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="rules-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-10 transition-opacity">
+        <div class="bg-slate-900 w-full max-w-4xl max-h-full rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden relative">
+            
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                <h2 class="text-2xl font-bold text-amber-400 tracking-wider">How to Play Sho Dan Sho</h2>
+                <button onclick="document.getElementById('rules-modal').classList.add('hidden')" class="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto custom-scrollbar text-slate-300 space-y-8">
+                
+                <section>
+                    <h3 class="text-xl font-bold text-white mb-3 border-b border-slate-700 pb-2">Setup & Turn Structure</h3>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong class="text-amber-300">Player Count:</strong> 2-4 players.</li>
+                        <li><strong class="text-amber-300">First Turn:</strong> Each player places their <span class="text-emerald-400 font-semibold">Chysalith</span> flower in any intersection within their designated starting gate.</li>
+                        <li><strong class="text-amber-300">Rest of Turns:</strong> Players must perform 2 move sets per turn:
+                            <ol class="list-decimal pl-5 mt-1 text-slate-400">
+                                <li>Move your Chysalith flower.</li>
+                                <li>Move or place any other flower.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3 class="text-xl font-bold text-white mb-3 border-b border-slate-700 pb-2">General Rules</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold text-emerald-400 mb-2">Movement</h4>
+                            <ul class="list-disc pl-5 space-y-1 text-sm">
+                                <li>Pieces move orthogonally across lines, stopping on intersections.</li>
+                                <li>Landing on an enemy piece captures it (unless uncapturable), stopping your piece.</li>
+                                <li>Most pieces have set step counts. You move to an intersection, then can switch directions for the next step.</li>
+                                <li><strong>"In view of":</strong> On the same straight line with no blocking pieces between.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-emerald-400 mb-2">Dropping</h4>
+                            <ul class="list-disc pl-5 space-y-1 text-sm">
+                                <li>Drop on your <strong>Starting Gate</strong>.</li>
+                                <li>OR drop in a <strong>Field</strong> IF:
+                                    <ul class="list-[circle] pl-4 mt-1 text-slate-400">
+                                        <li>You have at least one piece in that field area.</li>
+                                        <li>Your Chysaliths in that field exceed any other player's.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-xl font-bold text-white mb-3 border-b border-slate-700 pb-2">Winning Conditions</h3>
+                    <p class="mb-2">Win by holding the corners of the Garden areas. At least one surrounding flower must be a Chysalith.</p>
+                    <ul class="list-disc pl-5 space-y-1 text-sm mb-3">
+                        <li><strong>2 Players:</strong> Central Garden + 2 smaller gardens.</li>
+                        <li><strong>3 Players:</strong> Central Garden + 1 smaller garden.</li>
+                        <li><strong>4 Players:</strong> Central Garden.</li>
+                    </ul>
+                    <div class="bg-rose-900/30 border border-rose-500/30 p-3 rounded-lg text-sm">
+                        <strong class="text-rose-400">Chysalith Penalty:</strong> A Chysalith must always be on board. If lost, you must use your turn to place one from your hand. Lose both = Eliminated. In 3P/4P, if your closest garden is fully captured by an opponent, your Chysaliths are frozen until you regain control.
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-xl font-bold text-white mb-3 border-b border-slate-700 pb-2">Piece Reference</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm rules-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-1/4">Piece</th>
+                                    <th class="w-16 text-center">Count</th>
+                                    <th>Movement & Abilities</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-bold text-blue-300">★ Star Flower</td>
+                                    <td class="text-center">4</td>
+                                    <td>Moves any number of intersections in one direction. Cannot cross rivers.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-green-300">♣ Clover Flower</td>
+                                    <td class="text-center">4</td>
+                                    <td>Moves 4 steps. When in view of a friendly Clover, it may jump to its position and pick a new direction (other than where it came from) to move any number of intersections. Can chain jumps through multiple Clovers (max 1 use per Clover).</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-pink-300">✿ Daisy Flower</td>
+                                    <td class="text-center">6</td>
+                                    <td>Moves 3 steps. Cannot cross rivers.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-cyan-300">✥ Water Flower</td>
+                                    <td class="text-center">6</td>
+                                    <td>Moves 2 steps. Can only be dropped in a green zone (field), and may not leave the zone it was dropped in.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-yellow-300">☼ Sun Flower</td>
+                                    <td class="text-center">3</td>
+                                    <td>Moves 4 steps. <strong>Uncapturable</strong> and cannot capture. Cannot have view of an opponent Chysalith; if targeted, must be moved or discarded. Can be picked up from the board to hand. Stops Shining flowers it is in view of.</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-purple-300">✺ Shining Flower</td>
+                                    <td class="text-center">3</td>
+                                    <td>Moves 3 steps. Chysaliths cannot move through lines giving view of this piece, nor drop/move into field zones where it is located. Freezes enemy Chysaliths already in its field. <em>Paused if in view of a Sun Flower.</em></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-emerald-400">C Chysalith</td>
+                                    <td class="text-center">2</td>
+                                    <td>Moves 2 steps. <strong>Crucial Piece.</strong> Cannot move into field zones with a Shining flower or move into/through a line that has a Shining flower in view.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="p-4 border-t border-slate-700 bg-slate-800/50 text-center text-xs text-slate-500">
+                Sho Dan Sho - Game Inspired by Skud Pai Sho - Created By Taipan
             </div>
         </div>
     </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// --- GLOBAL NETWORKING VARIABLES ---
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId');
 const myPlayerIndex = urlParams.get('p') !== null ? parseInt(urlParams.get('p')) : null;
 const onlinePlayerCount = urlParams.get('players') !== null ? parseInt(urlParams.get('players')) : 2;
-// Ignore SP IDs to allow pure local pass & play with hotkeys
 const isOnline = gameId !== null && myPlayerIndex !== null && !isNaN(myPlayerIndex) && !gameId.startsWith("sp_");
 let socket = null;
 let waitingForServer = false;
 
-// --- BOARD SPIN & ROTATION STATE ---
 let targetRotationAngle = 0;
-if (myPlayerIndex === 1) targetRotationAngle = Math.PI; // 180 deg
-else if (myPlayerIndex === 2) targetRotationAngle = Math.PI / 2; // 90 deg clockwise
-else if (myPlayerIndex === 3) targetRotationAngle = -Math.PI / 2; // 90 deg counter-clockwise
+if (myPlayerIndex === 1) targetRotationAngle = Math.PI; 
+else if (myPlayerIndex === 2) targetRotationAngle = Math.PI / 2; 
+else if (myPlayerIndex === 3) targetRotationAngle = -Math.PI / 2; 
 
-let currentRotationAngle = targetRotationAngle - (Math.PI * 4); // Start 2 full spins back
+let currentRotationAngle = targetRotationAngle - (Math.PI * 4); 
 let isAnimatingBoard = true;
 let animationStartTime = null;
 const ANIMATION_DURATION_MS = 2000;
@@ -312,7 +405,6 @@ function animateBoardLoop(timestamp) {
     let progress = (timestamp - animationStartTime) / ANIMATION_DURATION_MS;
     if (progress > 1) progress = 1;
     
-    // easeOutQuart easing function for a smooth spin-down
     let ease = 1 - Math.pow(1 - progress, 4);
     currentRotationAngle = (targetRotationAngle - 4 * Math.PI) + (4 * Math.PI * ease);
     
@@ -357,8 +449,8 @@ const PIECES = {
     chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C" }
 };
 
-const PLAYER_COLORS = ["#3c7de6", "#9c27b0", "#dc3c3c", "#ffc107"];
-const PLAYER_TEXT = ["#fff", "#fff", "#fff", "#333"];
+const PLAYER_COLORS = ["#3c7de6", "#9c27b0", "#ef4444", "#f59e0b"]; // Updated to match tailwind palette better
+const PLAYER_TEXT = ["#fff", "#fff", "#fff", "#111"];
 const SPRITE_COLORS = ["blue", "purple", "red", "yellow"];
 
 const DIRECTIONS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
@@ -920,7 +1012,6 @@ class Game {
             let othersMax = 0;
             for(let i=0; i<this.playerCount; i++) if (i !== owner) othersMax = Math.max(othersMax, counts[i]);
 
-            // Allowed to drop if the field is uncontested or tied, strictly blocked only if the enemy has MORE Chysaliths than us
             if (ownPieceInField && counts[owner] >= othersMax) return [true, ""];
         }
         return [false, "Need a piece here and not be outnumbered by enemy Chysaliths."];
@@ -1028,7 +1119,6 @@ class Game {
         let endThreats = this.getThreats(p);
         let msgs = [];
         
-        // Strict End of Turn cleanup check. Any piece still in an illegal position is wiped.
         for (let id of endThreats.suns) {
             let piece = this.pieces.get(id);
             if (piece && piece.pos) {
@@ -1381,7 +1471,6 @@ const ctx = canvas.getContext("2d");
 const board = new BoardData();
 const game = new Game(board, onlinePlayerCount);
 
-// Preload Sprite Images
 const loadedSprites = {};
 const spriteKinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
 let spritesPending = 0;
@@ -1417,15 +1506,22 @@ function updateDOM() {
         turnIndicator.textContent = `Winner: Player ${game.winner + 1}`;
         turnIndicator.style.backgroundColor = PLAYER_COLORS[game.winner];
         turnIndicator.style.color = PLAYER_TEXT[game.winner];
+        turnIndicator.classList.remove('active-phase');
     } else {
         const isMyTurn = isOnline && (game.currentPlayer === myPlayerIndex);
         const turnPrefix = isMyTurn ? "(You) " : "";
         turnIndicator.textContent = `Turn ${game.turnNumber} | ${turnPrefix}P${game.currentPlayer + 1}`;
         turnIndicator.style.backgroundColor = PLAYER_COLORS[game.currentPlayer];
         turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
+        
+        if (isMyTurn || !isOnline) {
+            turnIndicator.classList.add('active-phase');
+        } else {
+            turnIndicator.classList.remove('active-phase');
+        }
     }
     
-    phaseDisplay.textContent = game.phase;
+    phaseDisplay.textContent = game.phase.replace('_', ' ');
     gameMessage.textContent = game.message;
 
     document.getElementById('pass-btn').disabled = waitingForServer;
@@ -1443,7 +1539,7 @@ function updateDOM() {
         let handTitle = document.createElement('div');
         handTitle.className = 'hand-title';
         let youSuffix = (isOnline && p === myPlayerIndex) ? " (You)" : "";
-        handTitle.innerHTML = `<span>Player ${p + 1}${youSuffix}</span> <span style="color:${PLAYER_COLORS[p]}; font-size: 1.5em; line-height: 0.5;">■</span>`;
+        handTitle.innerHTML = `<span>Player ${p + 1}${youSuffix}</span> <span style="color:${PLAYER_COLORS[p]}; text-shadow: 0 0 5px rgba(255,255,255,0.3); font-size: 1.2em;">■</span>`;
         handDiv.appendChild(handTitle);
 
         let grid = document.createElement('div');
@@ -1462,7 +1558,7 @@ function updateDOM() {
                 let colorName = SPRITE_COLORS[p];
                 let imgSrc = `sprites/${kind}_flower_${colorName}.png`;
                 
-                item.innerHTML = `<img src="${imgSrc}" class="piece-icon-img" alt="${kind}"> ${PIECES[kind].label} <span class="piece-count">${count}</span>`;
+                item.innerHTML = `<img src="${imgSrc}" class="piece-icon-img" alt="${kind}" onerror="this.style.display='none'; this.nextSibling.textContent='${PIECES[kind].letter} ';"> ${PIECES[kind].label} <span class="piece-count">${count}</span>`;
                 
                 if (game.currentPlayer === p && game.phase !== "game_over") {
                     item.onclick = () => {
@@ -1512,12 +1608,12 @@ function drawBoard() {
             ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#ff5050";
-            ctx.font = "bold 32px Arial";
+            ctx.font = "bold 32px Inter, Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
             ctx.fillStyle = "#ffffff";
-            ctx.font = "20px Arial";
+            ctx.font = "20px Inter, Arial";
             ctx.fillText(`Check that "shodansho.png" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
             ctx.restore();
         }
@@ -1526,10 +1622,17 @@ function drawBoard() {
     for (let m of game.legalMoves) {
         let v = board.vertices.get(m.dst);
         if (v) {
-            ctx.fillStyle = m.captureId === null ? "rgba(4, 255, 0, 0.5)" : "rgba(255, 20, 20, 0.6)";
+            ctx.fillStyle = m.captureId === null ? "rgba(16, 185, 129, 0.6)" : "rgba(239, 68, 68, 0.7)";
             ctx.beginPath(); 
             ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 3, 0, 2*Math.PI); 
             ctx.fill();
+            
+            // Add a subtle ring for aesthetics
+            ctx.strokeStyle = "rgba(255,255,255,0.3)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 6, 0, 2*Math.PI);
+            ctx.stroke();
         }
     }
 
@@ -1537,9 +1640,9 @@ function drawBoard() {
         let p = game.pieces.get(game.selectedPieceId);
         if (p && p.pos) {
             let v = board.vertices.get(p.pos);
-            ctx.fillStyle = "rgba(106, 156, 255, 0.4)";
+            ctx.fillStyle = "rgba(245, 158, 11, 0.5)";
             ctx.beginPath(); 
-            ctx.arc(v.x, v.y, PIECE_RADIUS + 8, 0, 2*Math.PI); 
+            ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
             ctx.fill();
         }
     }
@@ -1554,28 +1657,29 @@ function drawBoard() {
             ctx.translate(v.x, v.y);
             ctx.rotate(-currentRotationAngle);
 
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.beginPath(); ctx.arc(2, 3, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+            // Shadow
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.beginPath(); ctx.arc(3, 4, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
 
             if (img && img.complete && img.naturalWidth !== 0) {
-                let size = (PIECE_RADIUS + 2) * 2;
+                let size = (PIECE_RADIUS + 3) * 2;
                 ctx.drawImage(img, -size/2, -size/2, size, size);
             } else {
                 ctx.fillStyle = PLAYER_COLORS[piece.owner];
                 ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
                 
-                ctx.strokeStyle = "#222"; 
+                ctx.strokeStyle = "rgba(255,255,255,0.2)"; 
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
                 
                 ctx.fillStyle = PLAYER_TEXT[piece.owner];
-                ctx.font = "bold 18px Arial";
+                ctx.font = "bold 16px Arial";
                 ctx.textAlign = "center"; ctx.textBaseline = "middle";
                 ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
-                ctx.strokeStyle = "rgba(255,0,0,0.8)"; ctx.lineWidth = 3;
+                ctx.strokeStyle = "rgba(239, 68, 68, 0.9)"; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(15, 15); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(15, -15); ctx.lineTo(-15, 15); ctx.stroke();
             }
@@ -1619,6 +1723,9 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
+    // Prevent interfering if rules modal is open
+    if(!document.getElementById('rules-modal').classList.contains('hidden')) return;
+    
     if (e.key >= '1' && e.key <= '7') {
         const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
         game.selectHand(kinds[e.key - '1']);
@@ -1629,6 +1736,13 @@ window.addEventListener('keydown', (e) => {
     else if (!isOnline && e.key === 'F2') { e.preventDefault(); game.reset(3); }
     else if (!isOnline && e.key === 'F3') { e.preventDefault(); game.reset(4); }
     updateDOM();
+});
+
+// Close modal on escape
+window.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') {
+        document.getElementById('rules-modal').classList.add('hidden');
+    }
 });
 
 if (isOnline) {
