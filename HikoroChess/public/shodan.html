@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sho Dan Sho - Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Fallback */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(30, 41, 59, 0.7), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(15, 23, 42, 0.7), transparent 25%),
+                url('sprites/lobby_background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Dark overlay for better contrast */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: -1;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .bg-game-panel {
+            background: linear-gradient(145deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.8) 100%);
+        }
+
+        .hand-item-active {
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.8), 0 4px 15px rgba(245, 158, 11, 0.3);
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            transform: translateY(-2px);
+        }
+
+        .piece-icon-img {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+        }
+
+        /* Rules Modal Transitions */
+        #rules-modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #rules-modal.hidden-modal {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #rules-content {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #rules-modal.hidden-modal #rules-content {
+            transform: scale(0.95) translateY(10px);
+        }
+
+        /* Canvas Wrapper keeping ratio */
+        #board-wrapper {
+            aspect-ratio: 1 / 1;
+            max-width: calc(100vh - 40px);
+            max-height: calc(100vw - 40px);
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.8);
+            border: 4px solid rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex h-screen p-4 gap-6 box-border overflow-hidden">
+
+    <!-- Left Panel: Info & Actions -->
+    <div class="flex flex-col gap-4 w-72 shrink-0 z-10 h-full overflow-y-auto pr-2 pb-4">
+        
+        <!-- Header & Info -->
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-5 flex flex-col items-center">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest mb-1 drop-shadow-sm">Sho Dan Sho</h1>
+            <p class="text-xs text-slate-400 mb-5 font-medium tracking-wide">Strategic Board Game</p>
+            
+            <div id="turn-indicator" class="w-full py-2 px-4 rounded-xl font-bold text-center text-lg shadow-inner border border-white/10 mb-4 transition-colors duration-300">
+                Turn 1 | P1
+            </div>
+            
+            <div class="flex justify-between w-full text-sm mb-4 px-2">
+                <span class="text-slate-400">Phase:</span>
+                <span id="phase-display" class="font-semibold text-amber-400">Setup</span>
+            </div>
+            
+            <div id="game-message" class="text-sm text-sky-200 italic text-center min-h-[48px] flex items-center justify-center bg-black/40 rounded-lg p-3 border border-sky-500/20 shadow-inner w-full">
+                Loading game state...
+            </div>
+        </div>
+
+        <!-- Compact Actions -->
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-4">
+            <h3 class="text-md font-semibold text-slate-200 mb-3 flex items-center gap-2 border-b border-white/5 pb-2">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Actions
+            </h3>
+            <div class="flex flex-col gap-2">
+                <button id="pass-btn" class="w-full py-2 px-3 text-sm bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-xl border border-emerald-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.passPhase()">
+                    Pass Phase (N)
+                </button>
+                <button id="pickup-btn" class="w-full py-2 px-3 text-sm bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
+                    Pickup Sun (P)
+                </button>
+                <div class="flex gap-2 mt-1">
+                    <button class="flex-1 py-2 px-3 text-sm bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold rounded-xl border border-indigo-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0" onclick="toggleRulesModal()">
+                        Rules
+                    </button>
+                    <button id="main-menu-btn" class="flex-1 py-2 px-3 text-sm bg-rose-600/80 hover:bg-rose-500 text-white font-bold rounded-xl border border-rose-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0" onclick="window.location.href='/'">
+                        Exit
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Inspect Panel -->
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-4 transition-all" id="piece-info-box">
+            <h3 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2 border-b border-white/5 pb-2">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Inspect
+            </h3>
+            <div id="piece-info-content" class="text-xs text-slate-400 min-h-[60px] flex items-center justify-center italic text-center transition-opacity duration-200">
+                Hover over a piece on the board or in hand to see its movement rules. Left-click enemy pieces to view range.
+            </div>
+        </div>
+
+        <!-- Controls Hint -->
+        <div class="mt-auto bg-black/30 rounded-xl p-4 border border-white/5 text-xs text-slate-400 shadow-inner">
+            <strong class="text-slate-300 block mb-1">Controls:</strong>
+            <ul class="list-disc pl-4 space-y-1">
+                <li><span class="text-white">L-Click</span> friendly: Move</li>
+                <li><span class="text-white">L-Click</span> empty: Drop hand</li>
+                <li><span class="text-sky-300">L-Click</span> enemy: View Threat</li>
+                <li><span class="text-rose-300">R-Click</span>: Cancel Selection</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Center Board -->
+    <div id="board-wrapper" class="flex-grow flex items-center justify-center z-10 shrink-0">
+        <canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
+    </div>
+
+    <!-- Right Panel: Player Hands -->
+    <div class="flex flex-col gap-4 w-80 shrink-0 z-10 h-full overflow-y-auto pl-2 pb-4">
+        <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-5 flex flex-col h-full">
+            <h2 class="text-xl font-bold text-slate-200 mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Inventories
+            </h2>
+            <div id="hands-container" class="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">
+                <!-- Hands generated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal Overlay -->
+    <div id="rules-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden-modal p-4 sm:p-8">
+        <div id="rules-content" class="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-800/50">
+                <h2 class="text-2xl font-bold text-amber-400 tracking-wide">Rules of Sho Dan Sho</h2>
+                <button onclick="toggleRulesModal()" class="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 rounded-lg p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-6 sm:p-8 overflow-y-auto custom-scrollbar text-slate-300 text-sm leading-relaxed space-y-8">
+                
+                <section>
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Set Up & Turn Structure</h3>
+                    <p class="mb-2"><strong class="text-emerald-400">First Turn (Setup):</strong> Each player places their Chysalith flower on any intersection strictly within their designated Starting Gate.</p>
+                    <p class="mb-2"><strong class="text-emerald-400">Normal Turns:</strong> Every subsequent turn consists of two mandatory actions (in order):</p>
+                    <ol class="list-decimal pl-6 space-y-1 mb-2">
+                        <li>Move or drop a <strong>Chysalith</strong> flower.</li>
+                        <li>Move, drop, or pick up <strong>any other flower</strong> (or pass this phase).</li>
+                    </ol>
+                </section>
+
+                <div class="h-px bg-slate-800 w-full"></div>
+
+                <!-- NEW HARMONY SECTION -->
+                <section>
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Harmony & Disharmony</h3>
+                    <p class="mb-2"><strong>Harmony:</strong> A closed loop of at least 4 friendly pieces where every piece harmonizes with the pieces it is connected to (having uninterrupted line of sight). Displayed as <strong class="text-blue-400">bright blue dotted lines</strong>. When 4+ pieces successfully form a closed structure, the area inside becomes a protective Harmony Zone.</p>
+                    <ul class="list-disc pl-5 space-y-1 mb-3 text-xs">
+                        <li><strong class="text-white">Harmony Pairs:</strong> 
+                            Star (Water, Sun, Daisy, Chysalith). | 
+                            Sun (Star, Shining, Clover, Chysalith). | 
+                            Clover (Sun, Daisy, Water, Chysalith). | 
+                            Daisy (Clover, Shining, Star, Chysalith). | 
+                            Shining (Sun, Daisy, Water, Chysalith). | 
+                            Water (Shining, Clover, Star, Chysalith). |
+                            Chysalith (All other friendly pieces).
+                        </li>
+                        <li>If a harmony contains an owned garden, it becomes neutral. If it surrounds a wild garden, the player owns it.</li>
+                        <li>Enemy Chysaliths trapped inside cannot move, and cannot enter an opponent's harmony.</li>
+                        <li>Friendly pieces inside a harmony ignore negative effects (e.g. Suns don't flee Chysaliths, Shinings aren't frozen).</li>
+                    </ul>
+                    <p class="mb-2 mt-4"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">bright red dotted lines</strong>.</p>
+                    <ul class="list-disc pl-5 space-y-1 text-xs">
+                        <li><strong class="text-white">Disharmony Pairs:</strong> 
+                            Star (Clover, Shining). | 
+                            Sun (Water, Daisy). | 
+                            Clover (Shining, Star). | 
+                            Daisy (Sun, Water). | 
+                            Shining (Clover, Star). | 
+                            Water (Sun, Daisy).
+                        </li>
+                        <li>If two flowers are disharmonizing, neither can harmonize with any other flower.</li>
+                    </ul>
+                </section>
+
+                <div class="h-px bg-slate-800 w-full"></div>
+
+                <section>
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Core Mechanics</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-md font-medium text-slate-200 mb-2 border-b border-slate-700 pb-1">Movement</h4>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li>Pieces move orthogonally across lines, stopping on intersections.</li>
+                                <li>Steps are counted by moving to adjacent intersections. Direction can be changed at any intersection mid-move.</li>
+                                <li><strong>"In View":</strong> Refers to a piece being on the same unbroken line as a target, with no other pieces blocking the line of sight between them.</li>
+                                <li><strong class="text-emerald-400">Skip Turn (Double-click):</strong> Any piece with an even number of steps (Chysalith, Clover, Water, Sun) can simply move out and back to skip its turn by double clicking itself.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-md font-medium text-slate-200 mb-2 border-b border-slate-700 pb-1">Capturing & Dropping</h4>
+                            <ul class="list-disc pl-5 space-y-2">
+                                <li>Landing exactly on an enemy piece captures it. The moving piece stops there.</li>
+                                <li><strong>Dropping restrictions:</strong> Pieces from the hand can only be dropped in your Starting Gate OR within a Field Zone.</li>
+                                <li>To drop in a Field Zone, you must have at least one piece already there, AND the number of your Chysaliths touching that field must exceed any other single opponent's Chysaliths.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+                
+                <div class="h-px bg-slate-800 w-full"></div>
+
+                <section>
+                    <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Winning Conditions</h3>
+                    <p class="mb-2">Control the corners of the Garden areas (4 small, 1 large central). At least one of your occupying pieces must be a Chysalith.</p>
+                    <ul class="list-disc pl-6 space-y-1 mb-4">
+                        <li><strong>2 Players:</strong> Control Central Garden + 2 small gardens.</li>
+                        <li><strong>3 Players:</strong> Control Central Garden + 1 small garden.</li>
+                        <li><strong>4 Players:</strong> Control Central Garden only.</li>
+                    </ul>
+                    <p class="text-rose-400 bg-rose-900/20 p-3 rounded border border-rose-800/50 inline-block"><strong>Critical:</strong> A Chysalith must always be on board. If a player loses all Chysaliths from board and hand, they are eliminated.</p>
+                </section>
+
+                <div class="h-px bg-slate-800 w-full"></div>
+
+                <section>
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Piece Compendium</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        
+                        <!-- Star -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-inner">★</div>
+                                <div><h4 class="font-bold text-slate-200">Star</h4><span class="text-xs text-slate-500">Count: 4</span></div>
+                            </div>
+                            <p class="text-xs">Moves any number of intersections in a straight line. If path goes over a river, it can only move one step past the river.</p>
+                        </div>
+                        
+                        <!-- Clover -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-inner">♣</div>
+                                <div><h4 class="font-bold text-slate-200">Clover</h4><span class="text-xs text-slate-500">Count: 4 | Steps: 4</span></div>
+                            </div>
+                            <p class="text-xs">If in view of a friendly Clover, it may jump to it and pick a new direction for unlimited steps. Can chain jumps.</p>
+                        </div>
+
+                        <!-- Daisy -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-inner">✿</div>
+                                <div><h4 class="font-bold text-slate-200">Daisy</h4><span class="text-xs text-slate-500">Count: 6 | Steps: 3</span></div>
+                            </div>
+                            <p class="text-xs">Standard mover. Unaffected by rivers.</p>
+                        </div>
+
+                        <!-- Water -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-inner text-cyan-400">✥</div>
+                                <div><h4 class="font-bold text-slate-200">Water</h4><span class="text-xs text-slate-500">Count: 6 | Steps: 2</span></div>
+                            </div>
+                            <p class="text-xs">Must be dropped in a Green field zone and can never leave that specific zone.</p>
+                        </div>
+
+                        <!-- Sun -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-amber-900/50 border border-amber-500/30 flex items-center justify-center text-lg text-amber-400 shadow-inner">☼</div>
+                                <div><h4 class="font-bold text-amber-400">Sun</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 4</span></div>
+                            </div>
+                            <p class="text-xs">Uncapturable and cannot capture. Stops enemy Shining flowers in view. Must be moved or picked up if threatening an enemy Chysalith.</p>
+                        </div>
+
+                        <!-- Shining -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-lg text-purple-400 shadow-inner">✺</div>
+                                <div><h4 class="font-bold text-purple-400">Shining</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 3</span></div>
+                            </div>
+                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused if in view of enemy Sun.</p>
+                        </div>
+
+                        <!-- Chysalith -->
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 lg:col-span-2">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-rose-900/50 border border-rose-500/30 flex items-center justify-center text-lg font-bold text-rose-400 shadow-inner">C</div>
+                                <div><h4 class="font-bold text-rose-400">Chysalith</h4><span class="text-xs text-slate-500">Count: 2 | Steps: 2</span></div>
+                            </div>
+                            <p class="text-xs">Crucial piece required to capture gardens and win. Restricted by enemy Shining flowers. Must prioritize moving if threatened by enemy Shining. Must have one on board; if unable to pass phase due to missing Chysalith, must drop one or lose.</p>
+                        </div>
+
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const gameId = urlParams.get('gameId');
+const myPlayerIndex = urlParams.get('p') !== null ? parseInt(urlParams.get('p')) : null;
+const onlinePlayerCount = urlParams.get('players') !== null ? parseInt(urlParams.get('players')) : 2;
+const isOnline = gameId !== null && myPlayerIndex !== null && !isNaN(myPlayerIndex) && !gameId.startsWith("sp_");
+let socket = null;
+let waitingForServer = false;
+
+// Modal Logic
+function toggleRulesModal() {
+    const modal = document.getElementById('rules-modal');
+    modal.classList.toggle('hidden-modal');
+}
+// Close on outside click
+document.getElementById('rules-modal').addEventListener('click', function(e) {
+    if (e.target === this) toggleRulesModal();
+});
+
+// Board Spin State
+let targetRotationAngle = 0;
+if (myPlayerIndex === 1) targetRotationAngle = Math.PI; 
+else if (myPlayerIndex === 2) targetRotationAngle = Math.PI / 2; 
+else if (myPlayerIndex === 3) targetRotationAngle = -Math.PI / 2; 
+
+let currentRotationAngle = targetRotationAngle - (Math.PI * 4); 
+let isAnimatingBoard = true;
+let animationStartTime = null;
+const ANIMATION_DURATION_MS = 2000;
+let hasSpun = false;
+
+// Setup new board size
+const BOARD_SIZE = 900;
+const CENTER = [450, 450];
+const RADIUS = 447;
+
+// Using new board lines from user prompt
+const VERTICAL_LINES = [48, 86, 123, 161, 236, 274, 312, 353, 391, 508, 546, 587, 624, 662, 737, 775, 813, 851];
+const HORIZONTAL_LINES = [47, 85, 123, 160, 234, 274, 310, 352, 389, 507, 544, 586, 622, 662, 736, 775, 812, 848];
+
+// Using new vertices from user prompt
+const RAW_VERTICES = [
+    [0, 6, 312, 47], [0, 7, 353, 47], [0, 8, 391, 47], [0, 9, 508, 47], [0, 10, 546, 47], [0, 11, 587, 47], [1, 4, 236, 85], [1, 5, 274, 85], [1, 6, 312, 85], [1, 7, 353, 85], [1, 8, 391, 85], [1, 9, 508, 85], [1, 10, 546, 85], [1, 11, 587, 85], [1, 12, 624, 85], [1, 13, 662, 85], [2, 4, 236, 123], [2, 5, 274, 123], [2, 6, 312, 123], [2, 7, 353, 123], [2, 8, 391, 123], [2, 9, 508, 123], [2, 10, 546, 123], [2, 11, 587, 123], [2, 12, 624, 123], [2, 13, 662, 123], [3, 3, 161, 160], [3, 4, 236, 160], [3, 5, 274, 160], [3, 6, 312, 160], [3, 7, 353, 160], [3, 8, 391, 160], [3, 9, 508, 160], [3, 10, 546, 160], [3, 11, 587, 160], [3, 12, 624, 160], [3, 13, 662, 160], [3, 14, 737, 160], [4, 1, 86, 234], [4, 2, 123, 234], [4, 3, 161, 234], [4, 4, 236, 234], [4, 5, 274, 234], [4, 6, 312, 234], [4, 7, 353, 234], [4, 8, 391, 234], [4, 9, 508, 234], [4, 10, 546, 234], [4, 11, 587, 234], [4, 12, 624, 234], [4, 13, 662, 234], [4, 14, 737, 234], [4, 15, 775, 234], [4, 16, 813, 234], [5, 1, 86, 274], [5, 2, 123, 274], [5, 3, 161, 274], [5, 4, 236, 274], [5, 5, 274, 274], [5, 6, 312, 274], [5, 7, 353, 274], [5, 8, 391, 274], [5, 9, 508, 274], [5, 10, 546, 274], [5, 11, 587, 274], [5, 12, 624, 274], [5, 13, 662, 274], [5, 14, 737, 274], [5, 15, 775, 274], [5, 16, 813, 274], [6, 0, 48, 310], [6, 1, 86, 310], [6, 2, 123, 310], [6, 3, 161, 310], [6, 4, 236, 310], [6, 5, 274, 310], [6, 6, 312, 310], [6, 7, 353, 310], [6, 8, 391, 310], [6, 9, 508, 310], [6, 10, 546, 310], [6, 11, 587, 310], [6, 12, 624, 310], [6, 13, 662, 310], [6, 14, 737, 310], [6, 15, 775, 310], [6, 16, 813, 310], [6, 17, 851, 310], [7, 0, 48, 352], [7, 1, 86, 352], [7, 2, 123, 352], [7, 3, 161, 352], [7, 4, 236, 352], [7, 5, 274, 352], [7, 6, 312, 352], [7, 7, 353, 352], [7, 8, 391, 352], [7, 9, 508, 352], [7, 10, 546, 352], [7, 11, 587, 352], [7, 12, 624, 352], [7, 13, 662, 352], [7, 14, 737, 352], [7, 15, 775, 352], [7, 16, 813, 352], [7, 17, 851, 352], [8, 0, 48, 389], [8, 1, 86, 389], [8, 2, 123, 389], [8, 3, 161, 389], [8, 4, 236, 389], [8, 5, 274, 389], [8, 6, 312, 389], [8, 7, 353, 389], [8, 8, 391, 389], [8, 9, 508, 389], [8, 10, 546, 389], [8, 11, 587, 389], [8, 12, 624, 389], [8, 13, 662, 389], [8, 14, 737, 389], [8, 15, 775, 389], [8, 16, 813, 389], [8, 17, 851, 389], [9, 0, 48, 507], [9, 1, 86, 507], [9, 2, 123, 507], [9, 3, 161, 507], [9, 4, 236, 507], [9, 5, 274, 507], [9, 6, 312, 507], [9, 7, 353, 507], [9, 8, 391, 507], [9, 9, 508, 507], [9, 10, 546, 507], [9, 11, 587, 507], [9, 12, 624, 507], [9, 13, 662, 507], [9, 14, 737, 507], [9, 15, 775, 507], [9, 16, 813, 507], [9, 17, 851, 507], [10, 0, 48, 544], [10, 1, 86, 544], [10, 2, 123, 544], [10, 3, 161, 544], [10, 4, 236, 544], [10, 5, 274, 544], [10, 6, 312, 544], [10, 7, 353, 544], [10, 8, 391, 544], [10, 9, 508, 544], [10, 10, 546, 544], [10, 11, 587, 544], [10, 12, 624, 544], [10, 13, 662, 544], [10, 14, 737, 544], [10, 15, 775, 544], [10, 16, 813, 544], [10, 17, 851, 544], [11, 0, 48, 586], [11, 1, 86, 586], [11, 2, 123, 586], [11, 3, 161, 586], [11, 4, 236, 586], [11, 5, 274, 586], [11, 6, 312, 586], [11, 7, 353, 586], [11, 8, 391, 586], [11, 9, 508, 586], [11, 10, 546, 586], [11, 11, 587, 586], [11, 12, 624, 586], [11, 13, 662, 586], [11, 14, 737, 586], [11, 15, 775, 586], [11, 16, 813, 586], [11, 17, 851, 586], [12, 1, 86, 622], [12, 2, 123, 622], [12, 3, 161, 622], [12, 4, 236, 622], [12, 5, 274, 622], [12, 6, 312, 622], [12, 7, 353, 622], [12, 8, 391, 622], [12, 9, 508, 622], [12, 10, 546, 622], [12, 11, 587, 622], [12, 12, 624, 622], [12, 13, 662, 622], [12, 14, 737, 622], [12, 15, 775, 622], [12, 16, 813, 622], [13, 1, 86, 662], [13, 2, 123, 662], [13, 3, 161, 662], [13, 4, 236, 662], [13, 5, 274, 662], [13, 6, 312, 662], [13, 7, 353, 662], [13, 8, 391, 662], [13, 9, 508, 662], [13, 10, 546, 662], [13, 11, 587, 662], [13, 12, 624, 662], [13, 13, 662, 662], [13, 14, 737, 662], [13, 15, 775, 662], [13, 16, 813, 662], [14, 3, 161, 736], [14, 4, 236, 736], [14, 5, 274, 736], [14, 6, 312, 736], [14, 7, 353, 736], [14, 8, 391, 736], [14, 9, 508, 736], [14, 10, 546, 736], [14, 11, 587, 736], [14, 12, 624, 736], [14, 13, 662, 736], [14, 14, 737, 736], [15, 4, 236, 775], [15, 5, 274, 775], [15, 6, 312, 775], [15, 7, 353, 775], [15, 8, 391, 775], [15, 9, 508, 775], [15, 10, 546, 775], [15, 11, 587, 775], [15, 12, 624, 775], [15, 13, 662, 775], [16, 4, 236, 812], [16, 5, 274, 812], [16, 6, 312, 812], [16, 7, 353, 812], [16, 8, 391, 812], [16, 9, 508, 812], [16, 10, 546, 812], [16, 11, 587, 812], [16, 12, 624, 812], [16, 13, 662, 812], [17, 6, 312, 848], [17, 7, 353, 848], [17, 8, 391, 848], [17, 9, 508, 848], [17, 10, 546, 848], [17, 11, 587, 848]
+];
+
+const ZONE_BY_CELL = {
+    "0,6": "field", "0,7": "field", "0,8": "mid_zone", "0,9": "field", "0,10": "field",
+    "1,4": "field", "1,5": "field", "1,6": "field", "1,7": "field", "1,8": "mid_zone", "1,9": "field", "1,10": "field", "1,11": "field", "1,12": "field",
+    "2,2": "starting_gate", "2,4": "field", "2,5": "field", "2,6": "field", "2,7": "field", "2,8": "mid_zone", "2,9": "field", "2,10": "field", "2,11": "field", "2,12": "field", "2,14": "starting_gate",
+    "3,3": "garden", "3,4": "mid_zone", "3,5": "mid_zone", "3,6": "mid_zone", "3,7": "mid_zone", "3,8": "mid_zone", "3,9": "mid_zone", "3,10": "mid_zone", "3,11": "mid_zone", "3,12": "mid_zone", "3,13": "garden",
+    "4,1": "field", "4,2": "field", "4,3": "mid_zone", "4,4": "field", "4,5": "field", "4,6": "field", "4,7": "field", "4,8": "river", "4,9": "field", "4,10": "field", "4,11": "field", "4,12": "field", "4,13": "mid_zone", "4,14": "field", "4,15": "field",
+    "5,1": "field", "5,2": "field", "5,3": "mid_zone", "5,4": "field", "5,5": "field", "5,6": "field", "5,7": "field", "5,8": "river", "5,9": "field", "5,10": "field", "5,11": "field", "5,12": "field", "5,13": "mid_zone", "5,14": "field", "5,15": "field",
+    "6,0": "field", "6,1": "field", "6,2": "field", "6,3": "mid_zone", "6,4": "field", "6,5": "field", "6,6": "field", "6,7": "field", "6,8": "river", "6,9": "field", "6,10": "field", "6,11": "field", "6,12": "field", "6,13": "mid_zone", "6,14": "field", "6,15": "field", "6,16": "field",
+    "7,0": "field", "7,1": "field", "7,2": "field", "7,3": "mid_zone", "7,4": "field", "7,5": "field", "7,6": "field", "7,7": "field", "7,8": "river", "7,9": "field", "7,10": "field", "7,11": "field", "7,12": "field", "7,13": "mid_zone", "7,14": "field", "7,15": "field", "7,16": "field",
+    "8,0": "mid_zone", "8,1": "mid_zone", "8,2": "mid_zone", "8,3": "mid_zone", "8,4": "river", "8,5": "river", "8,6": "river", "8,7": "river", "8,8": "garden", "8,9": "river", "8,10": "river", "8,11": "river", "8,12": "river", "8,13": "mid_zone", "8,14": "mid_zone", "8,15": "mid_zone", "8,16": "mid_zone",
+    "9,0": "field", "9,1": "field", "9,2": "field", "9,3": "mid_zone", "9,4": "field", "9,5": "field", "9,6": "field", "9,7": "field", "9,8": "river", "9,9": "field", "9,10": "field", "9,11": "field", "9,12": "field", "9,13": "mid_zone", "9,14": "field", "9,15": "field", "9,16": "field",
+    "10,0": "field", "10,1": "field", "10,2": "field", "10,3": "mid_zone", "10,4": "field", "10,5": "field", "10,6": "field", "10,7": "field", "10,8": "river", "10,9": "field", "10,10": "field", "10,11": "field", "10,12": "field", "10,13": "mid_zone", "10,14": "field", "10,15": "field", "10,16": "field",
+    "11,1": "field", "11,2": "field", "11,3": "mid_zone", "11,4": "field", "11,5": "field", "11,6": "field", "11,7": "field", "11,8": "river", "11,9": "field", "11,10": "field", "11,11": "field", "11,12": "field", "11,13": "mid_zone", "11,14": "field", "11,15": "field",
+    "12,1": "field", "12,2": "field", "12,3": "mid_zone", "12,4": "field", "12,5": "field", "12,6": "field", "12,7": "field", "12,8": "river", "12,9": "field", "12,10": "field", "12,11": "field", "12,12": "field", "12,13": "mid_zone", "12,14": "field", "12,15": "field",
+    "13,3": "garden", "13,4": "mid_zone", "13,5": "mid_zone", "13,6": "mid_zone", "13,7": "mid_zone", "13,8": "mid_zone", "13,9": "mid_zone", "13,10": "mid_zone", "13,11": "mid_zone", "13,12": "mid_zone", "13,13": "garden",
+    "14,2": "starting_gate", "14,4": "field", "14,5": "field", "14,6": "field", "14,7": "field", "14,8": "mid_zone", "14,9": "field", "14,10": "field", "14,11": "field", "14,12": "field", "14,14": "starting_gate",
+    "15,4": "field", "15,5": "field", "15,6": "field", "15,7": "field", "15,8": "mid_zone", "15,9": "field", "15,10": "field", "15,11": "field", "15,12": "field",
+    "16,6": "field", "16,7": "field", "16,8": "mid_zone", "16,9": "field", "16,10": "field"
+};
+
+const FPS = 60;
+const SNAP_DISTANCE = 25; 
+const PIECE_RADIUS = 15; 
+const MOVE_DOT_RADIUS = 7;
+const REQUIRE_EXACT_STEPS = false; 
+
+// Rules tied to UI descriptions
+const PIECES = {
+    star:      { label: "Star",      count: 4, steps: null, letter: "★", desc: "Moves any number of intersections in a straight line. One step past river max." },
+    clover:    { label: "Clover",    count: 4, steps: 4,    letter: "♣", desc: "Moves 4 steps. Can jump to friendly Clovers in view to pick a new direction for unlimited steps." },
+    daisy:     { label: "Daisy",     count: 6, steps: 3,    letter: "✿", desc: "Moves 3 steps. Unaffected by rivers." },
+    water:     { label: "Water",     count: 6, steps: 2,    letter: "✥", desc: "Moves 2 steps. Can only drop in a green zone and cannot leave it." },
+    sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼", desc: "Moves 4 steps. Uncapturable. Blocks Shining. Must evade/discard if targeting enemy Chysalith." },
+    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths in its field & blocks line-of-sight. Paused and frozen by enemy Sun." },
+    chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C", desc: "Moves 2 steps. Crucial piece. Capture gardens to win. Cannot move near enemy Shining. Harmonizes with all friendlies." }
+};
+
+// Harmony mappings per rule update
+const HARMONY_PAIRS = {
+    star: ["water", "sun", "daisy", "chysalith"],
+    sun: ["star", "shining", "clover", "chysalith"],
+    clover: ["sun", "daisy", "water", "chysalith"],
+    daisy: ["clover", "shining", "star", "chysalith"],
+    shining: ["sun", "daisy", "water", "chysalith"],
+    water: ["shining", "clover", "star", "chysalith"],
+    chysalith: ["star", "sun", "clover", "daisy", "shining", "water", "chysalith"] 
+};
+const DISHARMONY_PAIRS = {
+    star: ["clover", "shining"],
+    sun: ["water", "daisy"],
+    clover: ["shining", "star"],
+    daisy: ["sun", "water"],
+    shining: ["clover", "star"],
+    water: ["sun", "daisy"],
+    chysalith: [] 
+};
+
+const PLAYER_COLORS = ["#3b82f6", "#a855f7", "#ef4444", "#f59e0b"]; 
+const PLAYER_TEXT = ["#fff", "#fff", "#fff", "#fff"];
+const SPRITE_COLORS = ["blue", "purple", "red", "yellow"];
+const DIRECTIONS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
+
+function normalizeZone(zone) {
+    if (!zone) return "unknown";
+    let z = String(zone).trim().toLowerCase();
+    const aliases = { "starting_gate": "gate", "starting gate": "gate", "mid_zone": "mid", "mid zone": "mid", "outside / ignore": "outside", "ignore": "outside", "none": "unknown", "null": "unknown" };
+    return aliases[z] || z;
+}
+
+function distSq(x1, y1, x2, y2) { return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2); }
+
+// Math helpers for Convex Hull and Point in Polygon (for Harmony zones)
+function crossProduct(o, a, b) {
+    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+}
+function getConvexHull(points) {
+    if (points.length <= 3) return points;
+    let pts = points.slice().sort((a, b) => a.x == b.x ? a.y - b.y : a.x - b.x);
+    let lower = [];
+    for (let i = 0; i < pts.length; i++) {
+        while (lower.length >= 2 && crossProduct(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
+        lower.push(pts[i]);
+    }
+    let upper = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+        while (upper.length >= 2 && crossProduct(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
+        upper.push(pts[i]);
+    }
+    upper.pop();
+    lower.pop();
+    return lower.concat(upper);
+}
+function pointInPolygonOrOnEdge(point, vs) {
+    let x = point.x, y = point.y;
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        let xi = vs[i].x, yi = vs[i].y;
+        let xj = vs[j].x, yj = vs[j].y;
+        
+        let cross = Math.abs((y - yi) * (xj - xi) - (x - xi) * (yj - yi));
+        if (cross < 1.0) {
+            let dot = (x - xi) * (xj - xi) + (y - yi) * (yj - yi);
+            if (dot >= 0 && dot <= (xj - xi)*(xj - xi) + (yj - yi)*(yj - yi)) return true; 
+        }
+        
+        let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+
+class BoardData {
+    constructor() {
+        this.vertices = new Map();
+        this.rowsByCol = new Map();
+        this.colsByRow = new Map();
+        
+        RAW_VERTICES.forEach(([r, c, x, y]) => {
+            let key = `${r},${c}`;
+            this.vertices.set(key, {r, c, x, y});
+            if (!this.rowsByCol.has(c)) this.rowsByCol.set(c, []);
+            this.rowsByCol.get(c).push(r);
+            if (!this.colsByRow.has(r)) this.colsByRow.set(r, []);
+            this.colsByRow.get(r).push(c);
+        });
+
+        for (let cols of this.rowsByCol.values()) cols.sort((a,b)=>a-b);
+        for (let rows of this.colsByRow.values()) rows.sort((a,b)=>a-b);
+
+        this.zoneAtCell = new Map();
+        for (let [k, z] of Object.entries(ZONE_BY_CELL)) {
+            this.zoneAtCell.set(k, normalizeZone(z));
+        }
+        
+        this.gateComponentAt = new Map();
+
+        this.zonesTouchingVertex = new Map();
+        for (let key of this.vertices.keys()) {
+            let touched = new Set();
+            for (let cell of this.cellsTouchingVertex(key)) {
+                let z = this.zoneAtCell.get(cell);
+                if (z && z !== "unknown") touched.add(z);
+            }
+            this.zonesTouchingVertex.set(key, touched);
+        }
+
+        this.buildFieldComponents();
+        this.buildZoneComponents("gate", this.gateComponentAt);
+        this.buildGardens();
+        this.assignStartGates();
+    }
+
+    cellsTouchingVertex(key) {
+        let [r, c] = key.split(',').map(Number);
+        let cells = [];
+        for (let rr of [r-1, r]) {
+            for (let cc of [c-1, c]) {
+                if (rr >= 0 && rr < HORIZONTAL_LINES.length-1 && cc >= 0 && cc < VERTICAL_LINES.length-1) {
+                    cells.push(`${rr},${cc}`);
+                }
+            }
+        }
+        return cells;
+    }
+
+    vertexTouchesZone(key, zone) {
+        zone = normalizeZone(zone);
+        let touched = this.zonesTouchingVertex.get(key);
+        return touched ? touched.has(zone) : false;
+    }
+
+    neighbors(key) {
+        let [r, c] = key.split(',').map(Number);
+        let out = {};
+        let cols = this.colsByRow.get(r) || [];
+        let cIdx = cols.indexOf(c);
+        if (cIdx > 0) out["left"] = `${r},${cols[cIdx-1]}`;
+        if (cIdx + 1 < cols.length) out["right"] = `${r},${cols[cIdx+1]}`;
+        
+        let rows = this.rowsByCol.get(c) || [];
+        let rIdx = rows.indexOf(r);
+        if (rIdx > 0) out["up"] = `${rows[rIdx-1]},${c}`;
+        if (rIdx + 1 < rows.length) out["down"] = `${rows[rIdx+1]},${c}`;
+        
+        return out;
+    }
+
+    ray(start, dir) {
+        let out = [];
+        let cur = start;
+        while (true) {
+            let nxt = this.neighbors(cur)[dir];
+            if (!nxt) return out;
+            out.push(nxt);
+            cur = nxt;
+        }
+    }
+
+    directionBetweenAligned(a, b) {
+        let [ar, ac] = a.split(',').map(Number);
+        let [br, bc] = b.split(',').map(Number);
+        if (ar === br) {
+            let cols = this.colsByRow.get(ar) || [];
+            if (cols.includes(ac) && cols.includes(bc)) {
+                return cols.indexOf(bc) > cols.indexOf(ac) ? "right" : "left";
+            }
+        }
+        if (ac === bc) {
+            let rows = this.rowsByCol.get(ac) || [];
+            if (rows.includes(ar) && rows.includes(br)) {
+                return rows.indexOf(br) > rows.indexOf(ar) ? "down" : "up";
+            }
+        }
+        return null;
+    }
+
+    edgeHasRiverOnBothSides(a, b) {
+        let [ar, ac] = a.split(',').map(Number);
+        let [br, bc] = b.split(',').map(Number);
+        if (ar === br) {
+            let r = ar;
+            let lo = Math.min(ac, bc), hi = Math.max(ac, bc);
+            for (let cc = lo; cc < hi; cc++) {
+                if (this.zoneAtCell.get(`${r-1},${cc}`) === "river" && this.zoneAtCell.get(`${r},${cc}`) === "river") return true;
+            }
+        }
+        if (ac === bc) {
+            let c = ac;
+            let lo = Math.min(ar, br), hi = Math.max(ar, br);
+            for (let rr = lo; rr < hi; rr++) {
+                if (this.zoneAtCell.get(`${rr},${c-1}`) === "river" && this.zoneAtCell.get(`${rr},${c}`) === "river") return true;
+            }
+        }
+        return false;
+    }
+
+    buildFieldComponents() {
+        let fieldCells = new Set([...this.zoneAtCell.keys()].filter(k => this.zoneAtCell.get(k) === "field"));
+        let seen = new Set();
+        this.fieldComponentAtCell = new Map();
+        let compId = 0;
+
+        Array.from(fieldCells).sort().forEach(start => {
+            if (seen.has(start)) return;
+            compId++;
+            let q = [start];
+            seen.add(start);
+            while (q.length > 0) {
+                let cell = q.shift();
+                this.fieldComponentAtCell.set(cell, compId);
+                let [r, c] = cell.split(',').map(Number);
+                [`${r-1},${c}`, `${r+1},${c}`, `${r},${c-1}`, `${r},${c+1}`].forEach(nxt => {
+                    if (fieldCells.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+        });
+
+        this.fieldComponentsTouchingVertex = new Map();
+        for (let key of this.vertices.keys()) {
+            let ids = new Set();
+            for (let cell of this.cellsTouchingVertex(key)) {
+                if (this.fieldComponentAtCell.has(cell)) ids.add(this.fieldComponentAtCell.get(cell));
+            }
+            this.fieldComponentsTouchingVertex.set(key, ids);
+        }
+    }
+
+    fieldIdsAtVertex(key) {
+        if (!key) return new Set();
+        return this.fieldComponentsTouchingVertex.get(key) || new Set();
+    }
+
+    buildZoneComponents(zone, outMap) {
+        zone = normalizeZone(zone);
+        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, zone)));
+        let seen = new Set();
+        let compId = 0;
+        Array.from(keys).sort().forEach(k => {
+            if (seen.has(k)) return;
+            compId++;
+            let q = [k];
+            seen.add(k);
+            while(q.length > 0) {
+                let cur = q.shift();
+                outMap.set(cur, compId);
+                Object.values(this.neighbors(cur)).forEach(nxt => {
+                    if (keys.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+        });
+    }
+
+    buildGardens() {
+        let keys = new Set([...this.vertices.keys()].filter(k => this.vertexTouchesZone(k, "garden")));
+        let seen = new Set();
+        let comps = [];
+        Array.from(keys).sort().forEach(k => {
+            if (seen.has(k)) return;
+            let q = [k];
+            seen.add(k);
+            let comp = new Set();
+            while(q.length > 0) {
+                let cur = q.shift();
+                comp.add(cur);
+                Object.values(this.neighbors(cur)).forEach(nxt => {
+                    if (keys.has(nxt) && !seen.has(nxt)) {
+                        seen.add(nxt);
+                        q.push(nxt);
+                    }
+                });
+            }
+            if(comp.size > 0) comps.push(comp);
+        });
+
+        comps.sort((a,b) => b.size - a.size);
+        this.gardenCorners = new Map();
+        this.gardenName = new Map();
+
+        comps.slice(0, 5).forEach((comp, i) => {
+            let gid = i + 1;
+            let rows = Array.from(comp).map(k=>parseInt(k.split(',')[0]));
+            let cols = Array.from(comp).map(k=>parseInt(k.split(',')[1]));
+            let minR = Math.min(...rows), maxR = Math.max(...rows);
+            let minC = Math.min(...cols), maxC = Math.max(...cols);
+            
+            let candidates = [`${minR},${minC}`, `${minR},${maxC}`, `${maxR},${minC}`, `${maxR},${maxC}`];
+            let corners = new Set(candidates.filter(k => this.vertices.has(k)));
+            
+            if (corners.size < 4) {
+                let targetPixels = candidates.map(c => {
+                    let [rr, cc] = c.split(',').map(Number);
+                    let x = VERTICAL_LINES[Math.max(0, Math.min(cc, VERTICAL_LINES.length-1))];
+                    let y = HORIZONTAL_LINES[Math.max(0, Math.min(rr, HORIZONTAL_LINES.length-1))];
+                    return {x,y};
+                });
+                corners = new Set();
+                targetPixels.forEach(t => {
+                    let best = null, bestD = Infinity;
+                    comp.forEach(k => {
+                        let v = this.vertices.get(k);
+                        let d = distSq(v.x, v.y, t.x, t.y);
+                        if(d < bestD) { bestD = d; best = k; }
+                    });
+                    corners.add(best);
+                });
+            }
+            this.gardenCorners.set(gid, corners);
+
+            let pts = Array.from(corners).map(k => this.vertices.get(k));
+            let mx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+            let my = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+            let isCenter = Math.hypot(mx - CENTER[0], my - CENTER[1]) < 120;
+            this.gardenName.set(gid, isCenter ? "central" : `small ${gid}`);
+        });
+    }
+
+    assignStartGates() {
+        let comps = new Map();
+        for (let [k, cid] of this.gateComponentAt.entries()) {
+            if (cid) {
+                if (!comps.has(cid)) comps.set(cid, new Set());
+                comps.get(cid).add(k);
+            }
+        }
+        
+        let centers = [];
+        for (let [cid, keys] of comps.entries()) {
+            let pts = Array.from(keys).map(k => this.vertices.get(k));
+            let x = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+            let y = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+            centers.push({cid, x, y, size: keys.size});
+        }
+
+        let [cx, cy] = CENTER;
+        let r = Math.max(1, RADIUS);
+        let desired = [
+            {x: cx - 0.62*r, y: cy + 0.62*r, label: "bottom-left"},
+            {x: cx + 0.62*r, y: cy - 0.62*r, label: "top-right"},
+            {x: cx + 0.62*r, y: cy + 0.62*r, label: "bottom-right"},
+            {x: cx - 0.62*r, y: cy - 0.62*r, label: "top-left"}
+        ];
+
+        this.startGateForPlayer = new Map();
+        this.startGateNames = new Map();
+        this.closestGardenToPlayer = new Map();
+        let unused = [...centers];
+
+        for (let player = 0; player < 4; player++) {
+            let target = desired[player];
+            if (unused.length === 0) break;
+            let chosen = unused.reduce((best, curr) => {
+                let currD = distSq(curr.x, curr.y, target.x, target.y);
+                let bestD = distSq(best.x, best.y, target.x, target.y);
+                return currD < bestD ? curr : best;
+            });
+            unused.splice(unused.indexOf(chosen), 1);
+            this.startGateForPlayer.set(player, comps.get(chosen.cid));
+            this.startGateNames.set(player, target.label);
+            
+            let bestGid = null, bestD = Infinity;
+            for (let [gid, corners] of this.gardenCorners.entries()) {
+                if (this.gardenName.get(gid) === "central") continue;
+                let cPts = Array.from(corners).map(k => this.vertices.get(k));
+                let gcx = cPts.reduce((sum, p) => sum + p.x, 0) / cPts.length;
+                let gcy = cPts.reduce((sum, p) => sum + p.y, 0) / cPts.length;
+                let d = distSq(chosen.x, chosen.y, gcx, gcy);
+                if (d < bestD) { bestD = d; bestGid = gid; }
+            }
+            this.closestGardenToPlayer.set(player, bestGid);
+        }
+    }
+}
+
+class Game {
+    constructor(board, playerCount=2) {
+        this.board = board;
+        this.reset(playerCount);
+    }
+
+    reset(playerCount) {
+        this.playerCount = Math.max(2, Math.min(4, playerCount));
+        this.players = [];
+        this.pieces = new Map();
+        this.nextPieceId = 1;
+        this.movedThisTurn = new Set();
+        
+        for (let i = 0; i < this.playerCount; i++) {
+            let hand = {};
+            for (let [kind, data] of Object.entries(PIECES)) hand[kind] = data.count;
+            this.players.push({ hand, captured: {}, eliminated: false });
+        }
+        
+        this.currentPlayer = 0;
+        this.turnNumber = 1;
+        this.phase = "setup_chysalith";
+        this.selectedPieceId = null;
+        this.selectedHandKind = null;
+        this.legalMoves = [];
+        this.enemyViewPieceId = null; 
+        this.enemyMoves = []; 
+        this.message = "Setup: Drop your Chysalith in your starting gate.";
+        this.winner = null;
+        
+        this.harmonyData = new Map();
+        this.autoSelectChysalith(); // Auto-select on initial start
+    }
+
+    // --- AUTO SELECT HELPER ---
+    autoSelectChysalith() {
+        // Prevent auto-selection messing up spectator or off-turn screens in online play
+        if (typeof isOnline !== 'undefined' && isOnline && this.currentPlayer !== myPlayerIndex) return;
+
+        if (this.phase === "setup_chysalith") {
+            this.selectHand("chysalith");
+        } else if (this.phase === "chysalith") {
+            let chys = this.piecesOnBoard(this.currentPlayer, "chysalith");
+            if (chys.length > 0) {
+                this.selectPieceAt(chys[0].pos);
+                // Fallback to second chysalith if first one fails validation (e.g., trapped)
+                if (this.selectedPieceId === null && chys.length > 1) {
+                    this.selectPieceAt(chys[1].pos);
+                }
+            } else if (this.players[this.currentPlayer].hand["chysalith"] > 0) {
+                this.selectHand("chysalith");
+            }
+        }
+    }
+
+    occupied() {
+        let occ = new Map();
+        for (let p of this.pieces.values()) {
+            if (p.pos && !this.players[p.owner].eliminated) occ.set(p.pos, p);
+        }
+        return occ;
+    }
+
+    piecesOnBoard(owner=null, kind=null) {
+        let out = Array.from(this.pieces.values()).filter(p => p.pos);
+        if (owner !== null) out = out.filter(p => p.owner === owner);
+        if (kind !== null) out = out.filter(p => p.kind === kind);
+        return out;
+    }
+
+    nearestVertex(pos) {
+        let best = null, bestD = SNAP_DISTANCE * SNAP_DISTANCE;
+        for (let [key, v] of this.board.vertices.entries()) {
+            let d = distSq(pos.x, pos.y, v.x, v.y);
+            if (d <= bestD) { bestD = d; best = key; }
+        }
+        return best;
+    }
+
+    isClosestGardenCaptured(owner) {
+        let gid = this.board.closestGardenToPlayer.get(owner);
+        if (!gid) return false;
+        let corners = this.board.gardenCorners.get(gid);
+        if (!corners) return false;
+        let occ = this.occupied();
+        let holders = [];
+        for (let k of corners) {
+            let p = occ.get(k);
+            if (p) holders.push(p.owner);
+        }
+        if (holders.length === corners.size && holders.length > 0 && holders.every(h => h === holders[0])) {
+            if (holders[0] !== owner) return true;
+        }
+        return false;
+    }
+
+    // --- HARMONY LOGIC ---
+    updateHarmonyCache() {
+        this.harmonyData.clear();
+        for (let p = 0; p < this.playerCount; p++) {
+            if (!this.players[p].eliminated) {
+                this.harmonyData.set(p, this.calculateHarmonyFor(p));
+            }
+        }
+    }
+
+    calculateHarmonyFor(owner) {
+        let pieces = this.piecesOnBoard(owner);
+        let disharmonies = new Set();
+        let harmonyLinks = []; 
+
+        for (let i = 0; i < pieces.length; i++) {
+            for (let j = i + 1; j < pieces.length; j++) {
+                let p1 = pieces[i], p2 = pieces[j];
+                if (this.inView(p1.pos, p2.pos)) {
+                    if (DISHARMONY_PAIRS[p1.kind] && DISHARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        disharmonies.add(p1.id); disharmonies.add(p2.id);
+                    } else if (HARMONY_PAIRS[p1.kind] && HARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        harmonyLinks.push([p1.id, p2.id]);
+                    }
+                }
+            }
+        }
+
+        let adj = new Map();
+        for (let p of pieces) {
+            if (!disharmonies.has(p.id)) adj.set(p.id, new Set());
+        }
+        
+        let validLinks = [];
+        for (let [u, v] of harmonyLinks) {
+            if (!disharmonies.has(u) && !disharmonies.has(v)) {
+                adj.get(u).add(v);
+                adj.get(v).add(u);
+                validLinks.push([u, v]);
+            }
+        }
+
+        let prunedAdj = new Map();
+        for (let [k, v] of adj.entries()) prunedAdj.set(k, new Set(v));
+
+        let changed = true;
+        while (changed) {
+            changed = false;
+            for (let [u, neighbors] of prunedAdj.entries()) {
+                if (neighbors.size === 1) { 
+                    for (let v of neighbors) prunedAdj.get(v).delete(u);
+                    neighbors.clear();
+                    changed = true;
+                }
+            }
+        }
+
+        let activeNodes = new Set();
+        for (let [u, neighbors] of prunedAdj.entries()) {
+            if (neighbors.size >= 2) activeNodes.add(u);
+        }
+
+        let activeComps = [];
+        let activePolys = []; 
+        let seen = new Set();
+        
+        for (let u of activeNodes) {
+            if (seen.has(u)) continue;
+            let comp = new Set();
+            let q = [u];
+            seen.add(u);
+            while (q.length > 0) {
+                let curr = q.shift();
+                comp.add(curr);
+                for (let n of prunedAdj.get(curr)) {
+                    if (!seen.has(n)) { seen.add(n); q.push(n); }
+                }
+            }
+            if (comp.size >= 4) {
+                activeComps.push(comp);
+                
+                let points = Array.from(comp).map(id => {
+                    let posKey = this.pieces.get(id).pos;
+                    return this.board.vertices.get(posKey);
+                });
+                activePolys.push(getConvexHull(points));
+            }
+        }
+
+        return { disharmonies, validLinks, activeComps, activePolys };
+    }
+
+    isPieceInActiveHarmony(piece) {
+        if (!piece.pos) return false;
+        let hData = this.harmonyData.get(piece.owner);
+        if (!hData) return false;
+        return hData.activeComps.some(comp => comp.has(piece.id));
+    }
+
+    isPointInEnemyHarmony(pointV, myOwner) {
+        for (let [p, hData] of this.harmonyData.entries()) {
+            if (p === myOwner) continue;
+            if (hData.activePolys.some(poly => pointInPolygonOrOnEdge(pointV, poly))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    isPieceProtectedByHarmony(piece) {
+        if (!piece.pos) return false;
+        let hData = this.harmonyData.get(piece.owner);
+        if (!hData || hData.activePolys.length === 0) return false;
+        
+        let isOutline = hData.activeComps.some(comp => comp.has(piece.id));
+        if (isOutline) return false;
+
+        let pV = this.board.vertices.get(piece.pos);
+        return hData.activePolys.some(poly => pointInPolygonOrOnEdge(pV, poly));
+    }
+    // --- END HARMONY LOGIC ---
+
+    // --- THREAT RESOLUTION LOGIC ---
+    testMoveResolvesThreat(piece, move) {
+        let owner = piece.owner;
+        let origPos = piece.pos;
+        let cap = move.captureId ? this.pieces.get(move.captureId) : null;
+        let origCapPos = cap ? cap.pos : null;
+
+        piece.pos = move.dst;
+        if (cap) cap.pos = null;
+        
+        let backupHarmony = this.harmonyData.get(owner);
+        let backupEnemyHarmony = cap ? this.harmonyData.get(cap.owner) : null;
+
+        this.harmonyData.set(owner, this.calculateHarmonyFor(owner));
+        if (cap) this.harmonyData.set(cap.owner, this.calculateHarmonyFor(cap.owner));
+
+        let threats = this.getThreats(owner);
+
+        piece.pos = origPos;
+        if (cap) cap.pos = origCapPos;
+        
+        if (backupHarmony) this.harmonyData.set(owner, backupHarmony);
+        if (cap && backupEnemyHarmony) this.harmonyData.set(cap.owner, backupEnemyHarmony);
+
+        if (owner !== this.currentPlayer) return true;
+
+        if (this.phase === "chysalith") return threats.chys.length === 0;
+        if (this.phase === "flower") return threats.suns.length === 0;
+        return true;
+    }
+
+    testDropResolvesThreat(dst, kind) {
+        let fakeId = this.nextPieceId + 999;
+        this.pieces.set(fakeId, {id: fakeId, owner: this.currentPlayer, kind: kind, pos: dst});
+        
+        let backupHarmony = this.harmonyData.get(this.currentPlayer);
+        this.harmonyData.set(this.currentPlayer, this.calculateHarmonyFor(this.currentPlayer));
+
+        let threats = this.getThreats(this.currentPlayer);
+        
+        this.pieces.delete(fakeId);
+        if (backupHarmony) this.harmonyData.set(this.currentPlayer, backupHarmony);
+
+        if (this.phase === "chysalith") return threats.chys.length === 0;
+        if (this.phase === "flower") return threats.suns.length === 0;
+        return true;
+    }
+
+    canResolveThreat() {
+        let threats = this.getThreats(this.currentPlayer);
+        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
+        if (!hasThreat) return false;
+
+        for (let p of this.piecesOnBoard(this.currentPlayer)) {
+            if (this.phase === "chysalith" && p.kind !== "chysalith") continue;
+            if (this.phase === "flower" && p.kind === "chysalith" && this.movedThisTurn.has(p.id)) continue; 
+            if (this.generateMoves(p).length > 0) return true;
+        }
+
+        for (let kind in this.players[this.currentPlayer].hand) {
+            if (this.players[this.currentPlayer].hand[kind] > 0) {
+                if (this.phase === "chysalith" && kind !== "chysalith") continue;
+                if (this.generateDropMoves(kind).length > 0) return true;
+            }
+        }
+        return false;
+    }
+    // --- END THREAT RESOLUTION LOGIC ---
+
+    selectPieceAt(key) {
+        if (isOnline && this.currentPlayer !== myPlayerIndex) return;
+        let piece = this.occupied().get(key);
+        if (!piece) return;
+        
+        if (piece.owner !== this.currentPlayer) {
+            this.enemyViewPieceId = piece.id;
+            this.selectedPieceId = null;
+            this.selectedHandKind = null;
+            this.legalMoves = [];
+            this.enemyMoves = this.generateMoves(piece);
+            
+            if (piece.kind === "shining" && this.shiningPausedBySun(piece)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Sun Flower.`;
+            } else if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Shining Flower.`;
+            } else if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+                this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is trapped in a Harmony.`;
+            } else {
+                this.message = `Viewing valid moves for Player ${piece.owner + 1}'s ${PIECES[piece.kind].label}.`;
+            }
+            return;
+        }
+
+        this.enemyViewPieceId = null;
+        this.enemyMoves = [];
+        
+        let threats = this.getThreats(this.currentPlayer);
+        if (this.phase === "chysalith" && threats.chys.length > 0) {
+            if (!threats.chys.includes(piece.id)) {
+                this.message = "Force to move! You must select a threatened Chysalith.";
+                return;
+            }
+        }
+        if (this.phase === "flower" && threats.suns.length > 0) {
+            if (!threats.suns.includes(piece.id)) {
+                this.message = "Force to move! You must select a threatened Sun Flower.";
+                return;
+            }
+        }
+
+        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
+        if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
+        
+        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
+        if (piece.kind === "shining" && this.shiningPausedBySun(piece)) { this.message = "Shining flower is frozen by an enemy Sun Flower."; return; }
+        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+            this.message = "Your Chysalith is trapped inside an enemy Harmony zone and cannot move!";
+            return;
+        }
+        if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
+            this.message = "Your closest starting garden was fully captured! Your Chysaliths cannot move.";
+            return;
+        }
+
+        this.selectedPieceId = piece.id;
+        this.selectedHandKind = null;
+        this.legalMoves = this.generateMoves(piece);
+        
+        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
+
+        if (hasThreat && this.legalMoves.length === 0) {
+            if ((this.phase === "chysalith" && threats.chys.includes(piece.id)) || 
+                (this.phase === "flower" && threats.suns.includes(piece.id))) {
+                this.message = `Selected ${PIECES[piece.kind].label} has no valid moves to escape the threat. You may still pick it up if it's a Sun.`;
+            } else {
+                this.message = `Force to move! Selected ${PIECES[piece.kind].label} cannot resolve the current threat.`;
+                this.selectedPieceId = null; 
+                return;
+            }
+        } else {
+            this.message = `Selected ${PIECES[piece.kind].label}. Valid moves: ${this.legalMoves.length}.`;
+        }
+    }
+
+    selectHand(kind) {
+        this.enemyViewPieceId = null;
+        this.enemyMoves = [];
+
+        let threats = this.getThreats(this.currentPlayer);
+        if (this.phase === "chysalith" && threats.chys.length > 0) {
+            this.message = "Force to move! You must resolve the threat to your Chysalith.";
+            return;
+        }
+        if (this.phase === "flower" && threats.suns.length > 0) {
+            this.message = "Force to move! You must resolve the threat to your Sun Flower.";
+            return;
+        }
+
+        this.selectedPieceId = null;
+        this.selectedHandKind = kind;
+        this.legalMoves = this.generateDropMoves(kind);
+        this.message = `Selected ${PIECES[kind].label} from hand to drop. Valid drops: ${this.legalMoves.length}.`;
+    }
+
+    clickVertex(key) {
+        if (this.phase === "game_over") return;
+        if (isOnline && this.currentPlayer !== myPlayerIndex) {
+            this.message = "Not your turn.";
+            return;
+        }
+        
+        this.enemyViewPieceId = null;
+        this.enemyMoves = [];
+
+        if (this.selectedPieceId !== null) {
+            let move = this.legalMoves.find(m => m.dst === key);
+            if (move) {
+                this.applyMove(move);
+                return;
+            }
+            this.selectPieceAt(key);
+            if (this.selectedPieceId === null && this.enemyViewPieceId === null) this.message = "Not a legal destination.";
+            return;
+        }
+
+        let occ = this.occupied();
+        if (occ.has(key)) {
+            this.selectPieceAt(key); 
+            return;
+        }
+
+        this.dropSelectedHand(key);
+    }
+
+    applyMove(move, isRemote = false) {
+        if (isOnline && !isRemote) {
+            if (waitingForServer) return;
+            waitingForServer = true;
+            socket.emit('sdsAction', { gameId, action: { type: 'applyMove', move } });
+            return;
+        }
+        if (isOnline && isRemote) waitingForServer = false;
+
+        let piece = this.pieces.get(move.pieceId);
+        if (move.captureId !== null) this.capturePiece(this.pieces.get(move.captureId));
+        
+        piece.lastPosKey = piece.pos;
+        piece.animStart = performance.now();
+        piece.animType = 'move';
+        
+        piece.pos = move.dst;
+        if (piece.kind === "water" && piece.homeField === null) {
+            let ids = Array.from(this.board.fieldIdsAtVertex(move.dst));
+            if(ids.length > 0) piece.homeField = Math.min(...ids);
+        }
+        this.movedThisTurn.add(piece.id);
+        this.updateHarmonyCache(); 
+        
+        let isSkip = move.dst === piece.lastPosKey;
+        this.afterAction(isSkip ? "Skipped." : (move.reason || "Moved."));
+        
+        requestAnimationFrame(drawBoard);
+    }
+
+    capturePiece(victim) {
+        victim.pos = null;
+        this.players[victim.owner].captured[victim.kind] = (this.players[victim.owner].captured[victim.kind] || 0) + 1;
+        this.checkChysalithLoss(victim.owner);
+    }
+
+    dropSelectedHand(key, kindOverride=null, isRemote=false) {
+        if (isOnline && !isRemote) {
+            if (waitingForServer) return;
+            if (!this.selectedHandKind) return;
+            waitingForServer = true;
+            socket.emit('sdsAction', { gameId, action: { type: 'dropSelectedHand', key, kind: this.selectedHandKind } });
+            this.selectedHandKind = null;
+            return;
+        }
+        if (isOnline && isRemote) waitingForServer = false;
+
+        let kind = isRemote ? kindOverride : this.selectedHandKind;
+        let player = this.players[this.currentPlayer];
+        if ((player.hand[kind] || 0) <= 0) { this.message = `No ${PIECES[kind].label} left.`; return; }
+        if (this.occupied().has(key)) { this.message = "Intersection is occupied."; return; }
+        if (this.phase === "setup_chysalith" && kind !== "chysalith") { this.message = "Setup requires a Chysalith."; return; }
+        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
+
+        let [ok, why] = this.canDrop(kind, key);
+        if (!ok) { this.message = why; return; }
+
+        let pid = this.nextPieceId++;
+        let homeField = null;
+        if (kind === "water") {
+            let ids = Array.from(this.board.fieldIdsAtVertex(key));
+            if(ids.length > 0) homeField = Math.min(...ids);
+        }
+        
+        this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField, animStart: performance.now(), animType: 'drop' });
+        player.hand[kind]--;
+        this.movedThisTurn.add(pid);
+        this.updateHarmonyCache(); 
+        
+        if (!isRemote) this.selectedHandKind = null;
+        this.afterAction(`Dropped ${PIECES[kind].label}.`);
+        
+        requestAnimationFrame(drawBoard);
+    }
+
+    generateDropMoves(kind) {
+        let moves = [];
+        let occ = this.occupied();
+        let threats = this.getThreats(this.currentPlayer);
+        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
+
+        for (let key of this.board.vertices.keys()) {
+            if (occ.has(key)) continue;
+            let [ok] = this.canDrop(kind, key);
+            if (ok) {
+                if (hasThreat && !this.testDropResolvesThreat(key, kind)) continue;
+                moves.push({ dst: key, captureId: null });
+            }
+        }
+        return moves;
+    }
+
+    canDrop(kind, key) {
+        let touchesGate = this.board.vertexTouchesZone(key, "gate");
+        let ownGate = this.board.startGateForPlayer.get(this.currentPlayer) || new Set();
+        let touchesOwnGate = ownGate.has(key);
+        let touchesField = this.board.vertexTouchesZone(key, "field");
+
+        if (this.phase === "setup_chysalith") {
+            if (ownGate.size > 0) {
+                if (!touchesOwnGate) return [false, "Setup Chysalith must be on your starting gate."];
+            } else if (!touchesGate) {
+                return [false, "Setup Chysalith must touch a starting gate."];
+            }
+            return [true, ""];
+        }
+        
+        let pV = this.board.vertices.get(key);
+        if (kind === "chysalith" && this.isPointInEnemyHarmony(pV, this.currentPlayer)) {
+            return [false, "Cannot drop a Chysalith into an enemy Harmony."];
+        }
+
+        if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
+        if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active Shining."];
+        if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where a Shining has line-of-sight."];
+
+        if (touchesOwnGate) return [true, ""];
+        if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
+        if (touchesGate) return [false, `Not your designated starting gate.`];
+        
+        return [false, "Drops only allowed on your starting gate or a controlled field."];
+    }
+
+    controlsFieldForDrop(owner, key) {
+        let targetFieldIds = this.board.fieldIdsAtVertex(key);
+        if (targetFieldIds.size === 0) return [false, "Not touching a field."];
+
+        for (let fieldId of targetFieldIds) {
+            let ownPieceInField = Array.from(this.pieces.values()).some(p => 
+                p.owner === owner && p.pos && this.board.fieldIdsAtVertex(p.pos).has(fieldId)
+            );
+            
+            let counts = Array(this.playerCount).fill(0);
+            this.piecesOnBoard(null, "chysalith").forEach(p => {
+                if (this.board.fieldIdsAtVertex(p.pos).has(fieldId)) counts[p.owner]++;
+            });
+            
+            let othersMax = 0;
+            for(let i=0; i<this.playerCount; i++) if (i !== owner) othersMax = Math.max(othersMax, counts[i]);
+
+            if (ownPieceInField && counts[owner] >= othersMax) return [true, ""];
+        }
+        return [false, "Need a piece here and not be outnumbered by enemy Chysaliths."];
+    }
+
+    checkChysalithLoss(owner) {
+        let onBoard = this.piecesOnBoard(owner, "chysalith").length;
+        let inHand = this.players[owner].hand["chysalith"] || 0;
+        if (onBoard + inHand <= 0) {
+            if (!this.players[owner].eliminated) {
+                this.players[owner].eliminated = true;
+                this.message += ` Player ${owner+1} lost both Chysaliths and is eliminated.`;
+                for (let p of this.pieces.values()) {
+                    if (p.owner === owner) p.pos = null;
+                }
+                this.updateHarmonyCache();
+            }
+        }
+    }
+
+    afterAction(msg) {
+        this.selectedPieceId = null;
+        this.legalMoves = [];
+        let win = this.checkWinner();
+        if (win !== null) {
+            this.phase = "game_over";
+            this.winner = win;
+            this.message = `Player ${win+1} wins! ${msg}`;
+            return;
+        }
+
+        if (this.phase === "setup_chysalith") {
+            this.movedThisTurn.clear();
+            if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
+            else { 
+                this.currentPlayer = 0; 
+                this.phase = "chysalith"; 
+                this.turnNumber = 1; 
+            }
+            this.message = msg;
+            this.autoSelectChysalith();
+            return;
+        }
+        
+        if (this.phase === "chysalith") {
+            this.phase = "flower";
+            this.message = msg + " Now move/place any available piece.";
+        } else if (this.phase === "flower") {
+            let advanceMsg = this.advancePlayer();
+            this.phase = "chysalith";
+            this.message = msg + (advanceMsg ? " " + advanceMsg : "");
+            this.autoSelectChysalith();
+        }
+    }
+
+    getThreats(player) {
+        let suns = [], chys = [];
+        let occ = this.occupied();
+        for (let p of occ.values()) {
+            if (p.owner !== player) continue;
+            
+            if (this.isPieceProtectedByHarmony(p)) continue;
+            
+            if (p.kind === 'sun') {
+                for (let ep of occ.values()) {
+                    if (ep.owner !== player && ep.kind === 'chysalith') {
+                        if (!this.isPieceProtectedByHarmony(ep) && this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
+                    }
+                }
+            } 
+            else if (p.kind === 'chysalith') {
+                if (this.chysalithIsFrozen(p)) continue;
+                for (let ep of occ.values()) {
+                    if (ep.owner !== player && ep.kind === 'shining' && !this.shiningPausedBySun(ep)) {
+                        if (this.inView(p.pos, ep.pos)) { chys.push(p.id); break; }
+                    }
+                }
+            }
+        }
+        return { suns, chys };
+    }
+
+    advancePlayer() {
+        let p = this.currentPlayer;
+        let endThreats = this.getThreats(p);
+        let msgs = [];
+        
+        for (let id of endThreats.suns) {
+            let piece = this.pieces.get(id);
+            if (piece && piece.pos) {
+                this.capturePiece(piece);
+                msgs.push(`Pinned Sun Flower removed.`);
+            }
+        }
+        for (let id of endThreats.chys) {
+            let piece = this.pieces.get(id);
+            if (piece && piece.pos) {
+                this.capturePiece(piece);
+                msgs.push(`Pinned Chysalith removed.`);
+            }
+        }
+        
+        this.movedThisTurn.clear();
+
+        let start = this.currentPlayer;
+        while (true) {
+            this.currentPlayer = (this.currentPlayer + 1) % this.playerCount;
+            if (this.currentPlayer === 0) this.turnNumber++;
+            if (!this.players[this.currentPlayer].eliminated) break;
+            if (this.currentPlayer === start) { this.phase = "game_over"; break; }
+        }
+        return msgs.join(" ");
+    }
+
+    canPassPhase() {
+        let threats = this.getThreats(this.currentPlayer);
+        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
+
+        if (hasThreat) {
+            if (this.canResolveThreat()) {
+                this.message = "Force to move! You must resolve the threat (move, block, or drop).";
+                updateDOM();
+                return false;
+            }
+        }
+
+        if (this.phase === "chysalith" && this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0) {
+            if (this.players[this.currentPlayer].hand["chysalith"] > 0) {
+                this.message = "You have no Chysalith on the board! You must drop one this phase.";
+                updateDOM();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    passPhase(isRemote = false) {
+        if (isOnline && !isRemote) {
+            if (waitingForServer) return;
+            if (!this.canPassPhase()) return;
+            
+            waitingForServer = true;
+            socket.emit('sdsAction', { gameId, action: { type: 'passPhase' } });
+            return;
+        }
+        if (isOnline && isRemote) waitingForServer = false;
+        
+        if (!isRemote) {
+            if (!this.canPassPhase()) return;
+        }
+
+        this.afterAction("Passed phase.");
+        updateDOM();
+    }
+
+    pickupSelectedSun(overridePieceId=null, isRemote=false) {
+        if (isOnline && !isRemote) {
+            if (waitingForServer) return;
+            if (this.selectedPieceId === null) { this.message = "Select your Sun Flower first."; updateDOM(); return; }
+            waitingForServer = true;
+            socket.emit('sdsAction', { gameId, action: { type: 'pickupSelectedSun', pieceId: this.selectedPieceId } });
+            return;
+        }
+        if (isOnline && isRemote) waitingForServer = false;
+        
+        let pid = isRemote ? overridePieceId : this.selectedPieceId;
+        if (pid === null) { this.message = "Select your Sun Flower first."; updateDOM(); return; }
+        let p = this.pieces.get(pid);
+        if (p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; updateDOM(); return; }
+        if (this.phase !== "flower") { this.message = "Picking up Sun uses the flower phase."; updateDOM(); return; }
+        
+        p.pos = null;
+        this.players[p.owner].hand["sun"]++;
+        this.movedThisTurn.add(pid);
+        this.updateHarmonyCache();
+        
+        if (!isRemote) this.selectedPieceId = null;
+        this.afterAction("Picked Sun Flower up.");
+        updateDOM();
+    }
+
+    generateMoves(piece) {
+        if (!piece.pos) return [];
+        
+        if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) return [];
+        if (piece.kind === "shining" && this.shiningPausedBySun(piece)) return [];
+        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) return [];
+
+        let moves = [];
+        if (piece.kind === "star") moves = this.starMoves(piece);
+        else if (piece.kind === "clover") moves = this.fixedStepMoves(piece, 4).concat(this.cloverSpecialMoves(piece));
+        else moves = this.fixedStepMoves(piece, PIECES[piece.kind].steps);
+
+        // --- NEW RULE: EVEN STEP PIECES CAN SKIP TURN ---
+        let steps = PIECES[piece.kind].steps;
+        if (steps !== null && steps % 2 === 0) {
+            // Adds its own current position as a valid legal move destination
+            moves.push({ pieceId: piece.id, dst: piece.pos, captureId: null, path: [] });
+        }
+
+        moves = moves.filter(m => this.isMoveLegalSpecial(piece, m));
+        
+        let threats = this.getThreats(piece.owner);
+        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
+
+        let out = [];
+        let seen = new Set();
+        for (let m of moves) {
+            let k = `${m.dst}-${m.captureId}`;
+            if (!seen.has(k)) { 
+                seen.add(k); 
+                if (!hasThreat || this.testMoveResolvesThreat(piece, m)) {
+                    out.push(m); 
+                }
+            }
+        }
+        return out;
+    }
+
+    starMoves(piece) {
+        let out = [];
+        let occ = this.occupied();
+        for (let dir in DIRECTIONS) {
+            let path = [];
+            let prev = piece.pos;
+            let riverCrossed = false;
+            for (let dst of this.board.ray(piece.pos, dir)) {
+                let crossingRiverNow = this.board.edgeHasRiverOnBothSides(prev, dst);
+                
+                if (riverCrossed) break; 
+                
+                path.push(dst);
+                let victim = occ.get(dst);
+                
+                if (!victim) {
+                    out.push({pieceId: piece.id, dst, captureId: null, path: [...path]});
+                    if (crossingRiverNow) riverCrossed = true;
+                    prev = dst;
+                    continue;
+                }
+                
+                if (victim.owner === piece.owner) break;
+                if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: [...path]});
+                break; 
+            }
+        }
+        return out;
+    }
+
+    fixedStepMoves(piece, steps) {
+        let out = [];
+        let occ = this.occupied();
+        let q = [{cur: piece.pos, used: 0, path: []}];
+        let seen = new Set();
+        
+        while (q.length > 0) {
+            let {cur, used, path} = q.shift();
+            let state = `${cur}-${used}-${path.join(',')}`;
+            if (seen.has(state)) continue;
+            seen.add(state);
+
+            if (used > 0 && (!REQUIRE_EXACT_STEPS || used === steps)) {
+                out.push({pieceId: piece.id, dst: cur, captureId: null, path: [...path]});
+            }
+            if (used >= steps) continue;
+
+            let neighbors = this.board.neighbors(cur);
+            for (let dir in neighbors) {
+                let nxt = neighbors[dir];
+                let nextPath = [...path, nxt];
+                let victim = occ.get(nxt);
+                
+                if (!victim) {
+                    q.push({cur: nxt, used: used+1, path: nextPath});
+                } else if (victim.owner !== piece.owner) {
+                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst: nxt, captureId: victim.id, path: nextPath});
+                }
+            }
+        }
+        return out;
+    }
+
+    cloverSpecialMoves(piece) {
+        let out = [];
+        if (!piece.pos) return out;
+        let occ = this.occupied();
+
+        let recurse = (pivot, incoming, used) => {
+            for (let d in DIRECTIONS) {
+                let opposite = {up:"down", left:"right", right:"left"}[incoming];
+                if (incoming && d === opposite) continue;
+                
+                for (let dst of this.board.ray(pivot, d)) {
+                    let victim = occ.get(dst);
+                    if (!victim) {
+                        out.push({pieceId: piece.id, dst, captureId: null, path: []});
+                        continue;
+                    }
+                    if (victim.owner === piece.owner) {
+                        if (victim.kind === "clover" && !used.has(victim.id) && this.inView(pivot, dst, piece.id)) {
+                            let nextUsed = new Set(used); nextUsed.add(victim.id);
+                            recurse(dst, d, nextUsed);
+                        }
+                        break;
+                    }
+                    if (this.canCapture(piece, victim)) out.push({pieceId: piece.id, dst, captureId: victim.id, path: []});
+                    break;
+                }
+            }
+        };
+
+        this.piecesOnBoard(piece.owner, "clover").forEach(other => {
+            if (other.id !== piece.id && other.pos && this.inView(piece.pos, other.pos, piece.id)) {
+                let inc = this.board.directionBetweenAligned(piece.pos, other.pos);
+                recurse(other.pos, inc, new Set([other.id]));
+            }
+        });
+        return out;
+    }
+
+    isMoveLegalSpecial(piece, move) {
+        if (!move.dst) return false;
+        
+        if (piece.kind === "water") {
+            let fields = this.board.fieldIdsAtVertex(move.dst);
+            if (piece.homeField !== null && !fields.has(piece.homeField)) return false;
+        }
+        if (piece.kind === "sun") {
+            if (move.captureId !== null) return false;
+            let occ = this.occupied();
+            for (let ep of occ.values()) {
+                if (ep.owner !== piece.owner && ep.kind === 'chysalith') {
+                    if (!this.isPieceProtectedByHarmony(ep) && this.inView(move.dst, ep.pos, piece.id)) return false;
+                }
+            }
+        }
+        if (piece.kind === "chysalith") {
+            if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
+            let fullPath = move.path || [move.dst];
+            for (let step of fullPath) {
+                if (this.lineHasActiveShiningView(step, piece.owner, piece.id)) return false;
+                if (this.isPointInEnemyHarmony(this.board.vertices.get(step), piece.owner)) return false;
+            }
+        }
+        return true;
+    }
+
+    canCapture(attacker, victim) {
+        if (attacker.owner === victim.owner) return false;
+        if (attacker.kind === "sun" || victim.kind === "sun") return false;
+        return true;
+    }
+
+    inView(a, b, ignoreId=null) {
+        let dir = this.board.directionBetweenAligned(a, b);
+        if (!dir) return false;
+        let occ = this.occupied();
+        let cur = a;
+        while (true) {
+            let nxt = this.board.neighbors(cur)[dir];
+            if (!nxt) return false;
+            if (nxt === b) return true;
+            let blocker = occ.get(nxt);
+            if (blocker && blocker.id !== ignoreId) return false;
+            cur = nxt;
+        }
+    }
+
+    activeEnemyShiningPieces(owner) {
+        return this.piecesOnBoard(null, "shining").filter(sh => sh.owner !== owner && !this.shiningPausedBySun(sh));
+    }
+
+    shiningPausedBySun(shining) {
+        if (!shining.pos) return false;
+        if (this.isPieceProtectedByHarmony(shining)) return false;
+        return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
+    }
+
+    lineHasActiveShiningView(key, owner, ignoreId=null) {
+        return this.activeEnemyShiningPieces(owner).some(sh => sh.pos && this.inView(sh.pos, key, ignoreId));
+    }
+
+    fieldHasActiveShining(key, owner) {
+        let fIds = this.board.fieldIdsAtVertex(key);
+        if (fIds.size === 0) return false;
+        return this.activeEnemyShiningPieces(owner).some(sh => {
+            if (!sh.pos) return false;
+            let shFids = this.board.fieldIdsAtVertex(sh.pos);
+            for (let id of fIds) if (shFids.has(id)) return true;
+            return false;
+        });
+    }
+
+    chysalithIsFrozen(chys) {
+        if (this.isPieceProtectedByHarmony(chys)) return false;
+        return chys.kind === "chysalith" && chys.pos && this.fieldHasActiveShining(chys.pos, chys.owner);
+    }
+
+    checkWinner() {
+        let alive = this.players.map((p,i)=>({i,p})).filter(x=>!x.p.eliminated).map(x=>x.i);
+        if (alive.length === 1) return alive[0];
+        
+        let ownersByGarden = new Map();
+        let hasChysInGarden = new Map();
+        let occ = this.occupied();
+        
+        for (let [gid, corners] of this.board.gardenCorners.entries()) {
+            let holders = [];
+            let hasChys = false;
+            for (let k of corners) {
+                let p = occ.get(k);
+                if (p) {
+                    holders.push(p.owner);
+                    if (p.kind === "chysalith") hasChys = true;
+                }
+            }
+            let owner = null;
+            if (holders.length === corners.size && holders.every(h => h === holders[0])) {
+                owner = holders[0];
+            }
+            ownersByGarden.set(gid, owner);
+            hasChysInGarden.set(gid, hasChys);
+        }
+
+        for (let player of alive) {
+            let hData = this.harmonyData.get(player);
+            if (!hData || hData.activePolys.length === 0) continue;
+            
+            for (let poly of hData.activePolys) {
+                for (let [gid, corners] of this.board.gardenCorners.entries()) {
+                    let allCornersInHarmony = true;
+                    for (let c of corners) {
+                        if (!pointInPolygonOrOnEdge(this.board.vertices.get(c), poly)) {
+                            allCornersInHarmony = false; break;
+                        }
+                    }
+                    if (allCornersInHarmony) {
+                        let currentOwner = ownersByGarden.get(gid);
+                        
+                        if (currentOwner === null) {
+                            ownersByGarden.set(gid, player); 
+                            hasChysInGarden.set(gid, true); 
+                        } else if (currentOwner !== player) {
+                            ownersByGarden.set(gid, null); 
+                        }
+                    }
+                }
+            }
+        }
+
+        let centralGid = null;
+        for (let [gid, name] of this.board.gardenName.entries()) if (name === "central") centralGid = gid;
+
+        let neededSmall = {2:2, 3:1, 4:0}[this.playerCount] || 2;
+
+        for (let owner of alive) {
+            let ownedGardens = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner);
+            let ownsCenter = ownedGardens.some(([gid]) => gid === centralGid);
+            let smallCount = ownedGardens.filter(([gid]) => gid !== centralGid).length;
+            
+            if (ownsCenter && smallCount >= neededSmall) {
+                let validWin = ownedGardens.some(([gid]) => hasChysInGarden.get(gid));
+                if (validWin) return owner;
+            }
+        }
+        return null;
+    }
+}
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const board = new BoardData();
+const game = new Game(board, onlinePlayerCount);
+
+// Preload Sprite Images
+const loadedSprites = {};
+const spriteKinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+let spritesPending = 0;
+
+spriteKinds.forEach(kind => {
+    loadedSprites[kind] = {};
+    SPRITE_COLORS.forEach(color => {
+        spritesPending++;
+        let img = new Image();
+        img.src = `sprites/${kind}_flower_${color}.png`;
+        img.onload = () => { 
+            spritesPending--; 
+            if(spritesPending === 0) requestAnimationFrame(drawBoard); 
+        };
+        img.onerror = () => { spritesPending--; console.warn("Missing sprite: " + img.src); };
+        loadedSprites[kind][color] = img;
+    });
+});
+
+function selectHandPiece(kind) {
+    if (isOnline && game.currentPlayer !== myPlayerIndex) return;
+    if (waitingForServer) return;
+    game.selectHand(kind);
+    updateDOM();
+}
+
+function showPieceInfo(kind, owner = null) {
+    const infoContent = document.getElementById('piece-info-content');
+    if (!kind) {
+        infoContent.innerHTML = `Hover over a piece on the board or in hand to see its movement rules. Left-click enemy pieces to view range.`;
+        infoContent.style.opacity = '0.5';
+        return;
+    }
+    
+    let pieceData = PIECES[kind];
+    let ownerText = owner !== null ? `<span style="color:${PLAYER_COLORS[owner]}">Player ${owner + 1}'s</span> ` : "";
+    
+    infoContent.style.opacity = '1';
+    infoContent.innerHTML = `
+        <div class="text-left w-full space-y-1">
+            <div class="font-bold text-amber-300 text-sm mb-1">${ownerText}${pieceData.label} Flower</div>
+            <div class="text-slate-300">${pieceData.desc}</div>
+        </div>
+    `;
+}
+
+function updateDOM() {
+    const turnIndicator = document.getElementById('turn-indicator');
+    const phaseDisplay = document.getElementById('phase-display');
+    const gameMessage = document.getElementById('game-message');
+
+    if (game.phase === "game_over") {
+        turnIndicator.textContent = `Winner: Player ${game.winner + 1}`;
+        turnIndicator.style.backgroundColor = PLAYER_COLORS[game.winner];
+        turnIndicator.style.color = PLAYER_TEXT[game.winner];
+    } else {
+        const isMyTurn = isOnline && (game.currentPlayer === myPlayerIndex);
+        const turnPrefix = isMyTurn ? "(You) " : "";
+        turnIndicator.textContent = `Turn ${game.turnNumber} | ${turnPrefix}P${game.currentPlayer + 1}`;
+        turnIndicator.style.backgroundColor = PLAYER_COLORS[game.currentPlayer];
+        turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
+    }
+    
+    phaseDisplay.textContent = game.phase;
+    gameMessage.textContent = game.message;
+
+    document.getElementById('pass-btn').disabled = waitingForServer;
+    document.getElementById('pickup-btn').disabled = waitingForServer;
+
+    const handsContainer = document.getElementById('hands-container');
+    handsContainer.innerHTML = ''; 
+
+    for (let p = 0; p < game.playerCount; p++) {
+        let player = game.players[p];
+        let handDiv = document.createElement('div');
+        handDiv.className = `p-3 rounded-xl border ${p === game.currentPlayer && game.phase !== "game_over" ? 'border-amber-500/50 bg-amber-500/10 shadow-[inset_0_0_15px_rgba(245,158,11,0.1)]' : 'border-white/5 bg-slate-800/40'}`;
+
+        let handTitle = document.createElement('div');
+        handTitle.className = 'flex justify-between items-center text-sm font-semibold mb-3 border-b border-white/10 pb-1';
+        let youSuffix = (isOnline && p === myPlayerIndex) ? " (You)" : "";
+        handTitle.innerHTML = `<span class="text-slate-300">Player ${p + 1}${youSuffix}</span> <span style="color:${PLAYER_COLORS[p]}; text-shadow: 0 0 5px ${PLAYER_COLORS[p]};">■</span>`;
+        handDiv.appendChild(handTitle);
+
+        let grid = document.createElement('div');
+        grid.className = 'flex flex-wrap gap-2';
+
+        const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+        kinds.forEach(kind => {
+            let count = player.hand[kind] || 0;
+            if (count > 0 || (game.currentPlayer === p && game.selectedHandKind === kind)) {
+                let item = document.createElement('div');
+                let isSelected = (game.currentPlayer === p && game.selectedHandKind === kind && game.selectedPieceId === null);
+                item.className = `flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer select-none transition-all ${isSelected ? 'hand-item-active' : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700'}`;
+                
+                let colorName = SPRITE_COLORS[p];
+                let imgSrc = `sprites/${kind}_flower_${colorName}.png`;
+                
+                item.innerHTML = `
+                    <div class="relative w-6 h-6 flex-shrink-0">
+                        <img src="${imgSrc}" class="piece-icon-img absolute inset-0 w-full h-full object-contain" alt="${kind}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display:none;" class="absolute inset-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold border border-white/20" style="color:${PLAYER_COLORS[p]}">${PIECES[kind].letter}</div>
+                    </div>
+                    <span class="text-xs font-medium text-slate-300 flex-grow">${PIECES[kind].label}</span>
+                    <span class="bg-black/50 px-1.5 py-0.5 rounded text-[10px] font-mono border border-white/10 text-slate-300">${count}</span>
+                `;
+                
+                item.onmouseenter = () => showPieceInfo(kind, p);
+                item.onmouseleave = () => showPieceInfo(null);
+
+                if (game.currentPlayer === p && game.phase !== "game_over") {
+                    item.onclick = () => {
+                        if (isOnline && game.currentPlayer !== myPlayerIndex) return;
+                        if (waitingForServer) return;
+                        selectHandPiece(kind);
+                    };
+                }
+                
+                grid.appendChild(item);
+            }
+        });
+
+        handDiv.appendChild(grid);
+        handsContainer.appendChild(handDiv);
+    }
+    
+    requestAnimationFrame(drawBoard);
+}
+
+const boardImage = new Image();
+let imageLoadError = false;
+
+boardImage.src = 'shodanshoboardsmall.png'; 
+
+boardImage.onload = () => { imageLoadError = false; startBoardAnimation(); }; 
+boardImage.onerror = () => { imageLoadError = true; console.error("Could not find shodanshoboardsmall.png"); startBoardAnimation(); };
+
+function drawDottedLine(ctx, x1, y1, x2, y2, color) {
+    let dx = x2 - x1, dy = y2 - y1;
+    let dist = Math.hypot(dx, dy);
+    let dots = Math.max(2, Math.floor(dist / 14));
+    ctx.fillStyle = color;
+    for (let i = 1; i < dots; i++) {
+        let t = i / dots;
+        ctx.beginPath();
+        ctx.arc(x1 + dx * t, y1 + dy * t, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawBoard(timestamp) {
+    let needsNextFrame = false;
+    if (!timestamp) timestamp = performance.now();
+
+    if (isAnimatingBoard) {
+        if (!animationStartTime) animationStartTime = timestamp;
+        let progress = (timestamp - animationStartTime) / ANIMATION_DURATION_MS;
+        if (progress > 1) { progress = 1; isAnimatingBoard = false; }
+        let ease = 1 - Math.pow(1 - progress, 4);
+        currentRotationAngle = (targetRotationAngle - 4 * Math.PI) + (4 * Math.PI * ease);
+        needsNextFrame = true;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save(); 
+    
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(currentRotationAngle);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    if (boardImage.complete && boardImage.naturalWidth !== 0 && !imageLoadError) {
+        ctx.drawImage(boardImage, 0, 0, canvas.width, canvas.height);
+    } else {
+        ctx.fillStyle = "#d6b36b"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (imageLoadError) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#ff5050";
+            ctx.font = "bold 32px Inter, Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "20px Inter, Arial";
+            ctx.fillText(`Check that "shodanshoboardsmall.png" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
+            ctx.restore();
+        }
+    }
+
+    for (let p = 0; p < game.playerCount; p++) {
+        let hData = game.harmonyData.get(p);
+        if (!hData) continue;
+        
+        hData.activePolys.forEach(poly => {
+            if (poly.length >= 3) {
+                ctx.fillStyle = "rgba(56, 189, 248, 0.15)"; 
+                ctx.beginPath();
+                ctx.moveTo(poly[0].x, poly[0].y);
+                for (let i=1; i<poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+                ctx.closePath();
+                ctx.fill();
+            }
+        });
+
+        let drawnLinks = new Set();
+        hData.validLinks.forEach(([u, v]) => {
+            let key = u < v ? `${u}-${v}` : `${v}-${u}`;
+            if (drawnLinks.has(key)) return;
+            drawnLinks.add(key);
+            
+            let p1 = game.pieces.get(u);
+            let p2 = game.pieces.get(v);
+            if (p1 && p2 && p1.pos && p2.pos) {
+                let v1 = board.vertices.get(p1.pos);
+                let v2 = board.vertices.get(p2.pos);
+                drawDottedLine(ctx, v1.x, v1.y, v2.x, v2.y, "rgba(56, 189, 248, 1)"); 
+            }
+        });
+
+        let dArr = Array.from(hData.disharmonies);
+        for (let i = 0; i < dArr.length; i++) {
+            for (let j = i + 1; j < dArr.length; j++) {
+                let p1 = game.pieces.get(dArr[i]);
+                let p2 = game.pieces.get(dArr[j]);
+                if (p1 && p2 && p1.pos && p2.pos && game.inView(p1.pos, p2.pos)) {
+                    if (DISHARMONY_PAIRS[p1.kind] && DISHARMONY_PAIRS[p1.kind].includes(p2.kind)) {
+                        let v1 = board.vertices.get(p1.pos);
+                        let v2 = board.vertices.get(p2.pos);
+                        drawDottedLine(ctx, v1.x, v1.y, v2.x, v2.y, "rgba(239, 68, 68, 1)"); 
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (game.enemyMoves && game.enemyViewPieceId !== null) {
+        for (let m of game.enemyMoves) {
+            let v = board.vertices.get(m.dst);
+            if (v) {
+                ctx.fillStyle = "rgba(156, 163, 175, 0.5)"; 
+                ctx.beginPath(); 
+                ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 2, 0, 2*Math.PI); 
+                ctx.fill();
+                
+                ctx.strokeStyle = "rgba(255,255,255,0.2)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + 5, 0, 2*Math.PI);
+                ctx.stroke();
+            }
+        }
+    }
+
+    for (let m of game.legalMoves) {
+        let v = board.vertices.get(m.dst);
+        if (v) {
+            if (m.captureId === null) {
+                ctx.fillStyle = "rgba(16, 185, 129, 0.6)"; 
+                ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
+            } else {
+                ctx.fillStyle = "rgba(244, 63, 94, 0.7)"; 
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; 
+            }
+            
+            ctx.beginPath(); 
+            ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + (m.captureId !== null ? 4 : 3), 0, 2*Math.PI); 
+            ctx.fill();
+            
+            ctx.lineWidth = m.captureId !== null ? 2 : 1;
+            ctx.beginPath();
+            ctx.arc(v.x, v.y, MOVE_DOT_RADIUS + (m.captureId !== null ? 8 : 6), 0, 2*Math.PI);
+            ctx.stroke();
+
+            if (m.captureId !== null) {
+                ctx.strokeStyle = "rgba(244, 63, 94, 0.9)";
+                ctx.beginPath(); ctx.moveTo(v.x - 4, v.y); ctx.lineTo(v.x + 4, v.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(v.x, v.y - 4); ctx.lineTo(v.x, v.y + 4); ctx.stroke();
+            }
+        }
+    }
+
+    if (game.selectedPieceId !== null) {
+        let p = game.pieces.get(game.selectedPieceId);
+        if (p && p.pos) {
+            let v = board.vertices.get(p.pos);
+            ctx.fillStyle = "rgba(245, 158, 11, 0.5)"; 
+            ctx.beginPath(); 
+            ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
+            ctx.fill();
+        }
+    }
+
+    if (game.enemyViewPieceId !== null) {
+        let p = game.pieces.get(game.enemyViewPieceId);
+        if (p && p.pos) {
+            let v = board.vertices.get(p.pos);
+            ctx.fillStyle = "rgba(156, 163, 175, 0.4)"; 
+            ctx.beginPath(); 
+            ctx.arc(v.x, v.y, PIECE_RADIUS + 10, 0, 2*Math.PI); 
+            ctx.fill();
+        }
+    }
+
+    for (let piece of Array.from(game.pieces.values()).sort((a,b)=>a.id-b.id)) {
+        if (piece.pos && !game.players[piece.owner].eliminated) {
+            let targetV = board.vertices.get(piece.pos);
+            let colorName = SPRITE_COLORS[piece.owner];
+            let img = loadedSprites[piece.kind] && loadedSprites[piece.kind][colorName];
+
+            ctx.save();
+            
+            let elapsed = piece.animStart ? timestamp - piece.animStart : Infinity;
+            let duration = 300; 
+            let scale = 1;
+            let alpha = 1;
+
+            if (elapsed < duration) {
+                needsNextFrame = true;
+                let t = elapsed / duration;
+                let ease = 1 - Math.pow(1 - t, 3);
+
+                if (piece.animType === 'move' && piece.lastPosKey) {
+                    let startV = board.vertices.get(piece.lastPosKey);
+                    let currX = startV.x + (targetV.x - startV.x) * ease;
+                    let currY = startV.y + (targetV.y - startV.y) * ease;
+                    ctx.translate(currX, currY);
+                } else if (piece.animType === 'drop') {
+                    ctx.translate(targetV.x, targetV.y);
+                    scale = 0.5 + 0.5 * ease;
+                    alpha = Math.max(0, ease);
+                    ctx.scale(scale, scale);
+                    ctx.globalAlpha = alpha;
+                }
+            } else {
+                ctx.translate(targetV.x, targetV.y);
+            }
+
+            ctx.rotate(-currentRotationAngle);
+
+            ctx.fillStyle = `rgba(0,0,0,${0.6 * alpha})`;
+            ctx.beginPath(); ctx.arc(3, 4, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+
+            if (img && img.complete && img.naturalWidth !== 0) {
+                let size = (PIECE_RADIUS + 3) * 2;
+                ctx.drawImage(img, -size/2, -size/2, size, size);
+            } else {
+                ctx.fillStyle = PLAYER_COLORS[piece.owner];
+                ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.fill();
+                
+                ctx.strokeStyle = `rgba(255,255,255,${0.2 * alpha})`; 
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0, 0, PIECE_RADIUS + 2, 0, 2*Math.PI); ctx.stroke();
+                
+                ctx.fillStyle = PLAYER_TEXT[piece.owner];
+                ctx.font = "bold 14px Arial"; 
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(PIECES[piece.kind].letter, 0, 1);
+            }
+
+            if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
+                ctx.strokeStyle = `rgba(239, 68, 68, ${0.9 * alpha})`; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, -12); ctx.lineTo(-12, 12); ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+    }
+    
+    ctx.restore();
+    if (needsNextFrame) requestAnimationFrame(drawBoard);
+}
+
+function startBoardAnimation() {
+    if (hasSpun) return;
+    hasSpun = true;
+    isAnimatingBoard = true;
+    requestAnimationFrame(drawBoard);
+}
+
+canvas.addEventListener('mousemove', (e) => {
+    let rect = canvas.getBoundingClientRect();
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
+    
+    let screenX = (e.clientX - rect.left) * scaleX;
+    let screenY = (e.clientY - rect.top) * scaleY;
+    
+    let cx = canvas.width / 2;
+    let cy = canvas.height / 2;
+    let dx = screenX - cx;
+    let dy = screenY - cy;
+    
+    let angle = -targetRotationAngle;
+    let x = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
+    let y = cy + dx * Math.sin(angle) + dy * Math.cos(angle);
+    
+    let key = game.nearestVertex({x, y});
+    let piece = key ? game.occupied().get(key) : null;
+    
+    if (piece) {
+        showPieceInfo(piece.kind, piece.owner);
+        canvas.style.cursor = "pointer";
+    } else {
+        showPieceInfo(null);
+        canvas.style.cursor = "default";
+    }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    let rect = canvas.getBoundingClientRect();
+    let scaleX = canvas.width / rect.width;
+    let scaleY = canvas.height / rect.height;
+    
+    let screenX = (e.clientX - rect.left) * scaleX;
+    let screenY = (e.clientY - rect.top) * scaleY;
+    
+    let cx = canvas.width / 2;
+    let cy = canvas.height / 2;
+    let dx = screenX - cx;
+    let dy = screenY - cy;
+    
+    let angle = -targetRotationAngle;
+    let x = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
+    let y = cy + cy * Math.sin(angle) + dy * Math.cos(angle);
+    
+    if (e.button === 0) { 
+        let key = game.nearestVertex({x, y});
+        if (key) game.clickVertex(key);
+    } else if (e.button === 2) { 
+        game.selectedPieceId = null;
+        game.selectedHandKind = null;
+        game.legalMoves = [];
+        game.enemyViewPieceId = null;
+        game.enemyMoves = [];
+        game.message = "Selection canceled.";
+    }
+    updateDOM();
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key >= '1' && e.key <= '7') {
+        const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
+        game.selectHand(kinds[e.key - '1']);
+    }
+    else if (e.key.toLowerCase() === 'n') game.passPhase();
+    else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
+    else if (!isOnline && e.key === 'F1') { e.preventDefault(); game.reset(2); }
+    else if (!isOnline && e.key === 'F2') { e.preventDefault(); game.reset(3); }
+    else if (!isOnline && e.key === 'F3') { e.preventDefault(); game.reset(4); }
+    updateDOM();
+});
+
+if (isOnline) {
+    socket = io();
+    socket.emit('joinSdsRoom', gameId);
+
+    socket.on('sdsSync', (actions) => {
+        game.reset(onlinePlayerCount);
+        if (actions) {
+            actions.forEach(act => applyRemoteAction(act));
+        }
+        waitingForServer = false;
+        updateDOM();
+    });
+
+    socket.on('sdsAction', (action) => {
+        applyRemoteAction(action);
+        updateDOM();
+    });
+} else {
+    game.reset(onlinePlayerCount); 
+    updateDOM();
+}
+
+function applyRemoteAction(act) {
+    if (act.type === 'applyMove') game.applyMove(act.move, true);
+    else if (act.type === 'dropSelectedHand') game.dropSelectedHand(act.key, act.kind, true);
+    else if (act.type === 'passPhase') game.passPhase(true);
+    else if (act.type === 'pickupSelectedSun') game.pickupSelectedSun(act.pieceId, true);
+}
+</script>
+</body>
+</html>
