@@ -109,11 +109,6 @@
                 Turn 1 | P1
             </div>
             
-            <div class="flex justify-between w-full text-sm mb-4 px-2">
-                <span class="text-slate-400">Phase:</span>
-                <span id="phase-display" class="font-semibold text-amber-400">Setup</span>
-            </div>
-            
             <div id="game-message" class="text-sm text-sky-200 italic text-center min-h-[48px] flex items-center justify-center bg-black/40 rounded-lg p-3 border border-sky-500/20 shadow-inner w-full">
                 Loading game state...
             </div>
@@ -125,9 +120,6 @@
                 Actions
             </h3>
             <div class="flex flex-col gap-2">
-                <button id="pass-btn" class="w-full py-2 px-3 text-sm bg-emerald-600/80 hover:bg-emerald-500 text-white font-bold rounded-xl border border-emerald-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.passPhase()">
-                    Pass Phase (N)
-                </button>
                 <button id="pickup-btn" class="w-full py-2 px-3 text-sm bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
                     Pickup Sun (P)
                 </button>
@@ -192,12 +184,8 @@
                 
                 <section>
                     <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Set Up & Turn Structure</h3>
-                    <p class="mb-2"><strong class="text-emerald-400">First Turn (Setup):</strong> Each player places their Chysalith flower on any intersection strictly within their designated Starting Gate.</p>
-                    <p class="mb-2"><strong class="text-emerald-400">Normal Turns:</strong> Every subsequent turn consists of two mandatory actions (in order):</p>
-                    <ol class="list-decimal pl-6 space-y-1 mb-2">
-                        <li>Move or drop a <strong>Chysalith</strong> flower.</li>
-                        <li>Move, drop, or pick up <strong>any other flower</strong> (or pass this phase).</li>
-                    </ol>
+                    <p class="mb-2"><strong class="text-emerald-400">First Turn:</strong> Each player drops a piece from their hand onto ANY starting gate. Subsequent drops must be on friendly-controlled fields or ANY starting gate.</p>
+                    <p class="mb-2"><strong class="text-emerald-400">Normal Turns:</strong> You may move or drop ONE piece per turn.</p>
                 </section>
 
                 <div class="h-px bg-slate-800 w-full"></div>
@@ -215,8 +203,8 @@
                             Water (Shining, Clover, Star, Chysalith). |
                             Chysalith (All other friendly pieces).
                         </li>
-                        <li>If a harmony contains an owned garden, it becomes neutral. If it surrounds a wild garden, the player owns it.</li>
-                        <li>Enemy Chysaliths trapped inside cannot move, and cannot enter an opponent's harmony.</li>
+                        <li>If a harmony surrounds the central garden, the player owns it.</li>
+                        <li>Enemy pieces trapped inside cannot move, and cannot enter an opponent's harmony.</li>
                         <li>Friendly pieces inside a harmony ignore negative effects (e.g. Suns don't flee Chysaliths, Shinings aren't frozen).</li>
                     </ul>
                     <p class="mb-2 mt-4"><strong>Disharmony:</strong> Opposing natural forces. Displayed as <strong class="text-red-400">bright red dotted lines</strong>.</p>
@@ -230,6 +218,7 @@
                             Water (Sun, Daisy).
                         </li>
                         <li>If two flowers are disharmonizing, neither can harmonize with any other flower.</li>
+                        <li>Chysaliths can never disharmonize but will block enemy pieces from forming harmonys if in view.</li>
                     </ul>
                 </section>
 
@@ -251,7 +240,7 @@
                             <h4 class="text-md font-medium text-slate-200 mb-2 border-b border-slate-700 pb-1">Capturing & Dropping</h4>
                             <ul class="list-disc pl-5 space-y-2">
                                 <li>Landing exactly on an enemy piece captures it. The moving piece stops there.</li>
-                                <li><strong>Dropping restrictions:</strong> Pieces from the hand can only be dropped in your Starting Gate OR within a Field Zone.</li>
+                                <li><strong>Dropping restrictions:</strong> Pieces from the hand can only be dropped in ANY Starting Gate OR within a Field Zone.</li>
                                 <li>To drop in a Field Zone, you must have at least one piece already there, AND the number of your Chysaliths touching that field must exceed any other single opponent's Chysaliths.</li>
                             </ul>
                         </div>
@@ -262,13 +251,11 @@
 
                 <section>
                     <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Winning Conditions</h3>
-                    <p class="mb-2">Control the corners of the Garden areas (4 small, 1 large central). At least one of your occupying pieces must be a Chysalith.</p>
+                    <p class="mb-2">Control the Center Garden. You can do this by either:</p>
                     <ul class="list-disc pl-6 space-y-1 mb-4">
-                        <li><strong>2 Players:</strong> Control Central Garden + 2 small gardens.</li>
-                        <li><strong>3 Players:</strong> Control Central Garden + 1 small garden.</li>
-                        <li><strong>4 Players:</strong> Control Central Garden only.</li>
+                        <li>Having your pieces occupy all vertices around the Center Garden.</li>
+                        <li>Enclosing the Center Garden completely within a Harmony.</li>
                     </ul>
-                    <p class="text-rose-400 bg-rose-900/20 p-3 rounded border border-rose-800/50 inline-block"><strong>Critical:</strong> A Chysalith must always be on board. If a player loses all Chysaliths from board and hand, they are eliminated.</p>
                 </section>
 
                 <div class="h-px bg-slate-800 w-full"></div>
@@ -282,7 +269,7 @@
                                 <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg shadow-inner">★</div>
                                 <div><h4 class="font-bold text-slate-200">Star</h4><span class="text-xs text-slate-500">Count: 4</span></div>
                             </div>
-                            <p class="text-xs">Moves any number of intersections in a straight line. If path goes over a river, it can only move one step past the river.</p>
+                            <p class="text-xs">Moves any number of intersections in a straight line. 1-step limit past rivers (unless edge strictly separates river and field).</p>
                         </div>
                         
                         <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
@@ -314,7 +301,7 @@
                                 <div class="w-8 h-8 rounded-full bg-amber-900/50 border border-amber-500/30 flex items-center justify-center text-lg text-amber-400 shadow-inner">☼</div>
                                 <div><h4 class="font-bold text-amber-400">Sun</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 4</span></div>
                             </div>
-                            <p class="text-xs">Uncapturable and cannot capture. Stops enemy Shining flowers in view. Must be moved or picked up if threatening an enemy Chysalith.</p>
+                            <p class="text-xs">Invulnerable (except to enemy Chysaliths) when in the same field or in view of a friendly Chysalith. Cannot capture normal pieces. Stops enemy Shining. Cannot move into enemy Chysalith view.</p>
                         </div>
 
                         <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
@@ -322,15 +309,15 @@
                                 <div class="w-8 h-8 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-lg text-purple-400 shadow-inner">✺</div>
                                 <div><h4 class="font-bold text-purple-400">Shining</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 3</span></div>
                             </div>
-                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Paused if in view of enemy Sun.</p>
+                            <p class="text-xs">Chysaliths cannot enter its line-of-sight or share a field with it. Freezes Chysaliths already in its field. Cannot step past enemy Sun view.</p>
                         </div>
 
                         <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 lg:col-span-2">
                             <div class="flex items-center gap-3 mb-2">
                                 <div class="w-8 h-8 rounded-full bg-rose-900/50 border border-rose-500/30 flex items-center justify-center text-lg font-bold text-rose-400 shadow-inner">C</div>
-                                <div><h4 class="font-bold text-rose-400">Chysalith</h4><span class="text-xs text-slate-500">Count: 2 | Steps: 2</span></div>
+                                <div><h4 class="font-bold text-rose-400">Chysalith</h4><span class="text-xs text-slate-500">Count: 3 | Steps: 2</span></div>
                             </div>
-                            <p class="text-xs">Crucial piece required to capture gardens and win. Restricted by enemy Shining flowers. Must prioritize moving if threatened by enemy Shining. Must have one on board; if unable to pass phase due to missing Chysalith, must drop one or lose.</p>
+                            <p class="text-xs">Functions like a normal piece but with special interactions. Restricted by enemy Shining flowers. The only piece that can capture an invulnerable enemy Sun. If in view of an enemy piece, that piece cannot form Harmonies.</p>
                         </div>
 
                     </div>
@@ -386,11 +373,12 @@ const RAW_VERTICES = [
     [0, 6, 312, 47], [0, 7, 353, 47], [0, 8, 391, 47], [0, 9, 508, 47], [0, 10, 546, 47], [0, 11, 587, 47], [1, 4, 236, 85], [1, 5, 274, 85], [1, 6, 312, 85], [1, 7, 353, 85], [1, 8, 391, 85], [1, 9, 508, 85], [1, 10, 546, 85], [1, 11, 587, 85], [1, 12, 624, 85], [1, 13, 662, 85], [2, 4, 236, 123], [2, 5, 274, 123], [2, 6, 312, 123], [2, 7, 353, 123], [2, 8, 391, 123], [2, 9, 508, 123], [2, 10, 546, 123], [2, 11, 587, 123], [2, 12, 624, 123], [2, 13, 662, 123], [3, 3, 161, 160], [3, 4, 236, 160], [3, 5, 274, 160], [3, 6, 312, 160], [3, 7, 353, 160], [3, 8, 391, 160], [3, 9, 508, 160], [3, 10, 546, 160], [3, 11, 587, 160], [3, 12, 624, 160], [3, 13, 662, 160], [3, 14, 737, 160], [4, 1, 86, 234], [4, 2, 123, 234], [4, 3, 161, 234], [4, 4, 236, 234], [4, 5, 274, 234], [4, 6, 312, 234], [4, 7, 353, 234], [4, 8, 391, 234], [4, 9, 508, 234], [4, 10, 546, 234], [4, 11, 587, 234], [4, 12, 624, 234], [4, 13, 662, 234], [4, 14, 737, 234], [4, 15, 775, 234], [4, 16, 813, 234], [5, 1, 86, 274], [5, 2, 123, 274], [5, 3, 161, 274], [5, 4, 236, 274], [5, 5, 274, 274], [5, 6, 312, 274], [5, 7, 353, 274], [5, 8, 391, 274], [5, 9, 508, 274], [5, 10, 546, 274], [5, 11, 587, 274], [5, 12, 624, 274], [5, 13, 662, 274], [5, 14, 737, 274], [5, 15, 775, 274], [5, 16, 813, 274], [6, 0, 48, 310], [6, 1, 86, 310], [6, 2, 123, 310], [6, 3, 161, 310], [6, 4, 236, 310], [6, 5, 274, 310], [6, 6, 312, 310], [6, 7, 353, 310], [6, 8, 391, 310], [6, 9, 508, 310], [6, 10, 546, 310], [6, 11, 587, 310], [6, 12, 624, 310], [6, 13, 662, 310], [6, 14, 737, 310], [6, 15, 775, 310], [6, 16, 813, 310], [6, 17, 851, 310], [7, 0, 48, 352], [7, 1, 86, 352], [7, 2, 123, 352], [7, 3, 161, 352], [7, 4, 236, 352], [7, 5, 274, 352], [7, 6, 312, 352], [7, 7, 353, 352], [7, 8, 391, 352], [7, 9, 508, 352], [7, 10, 546, 352], [7, 11, 587, 352], [7, 12, 624, 352], [7, 13, 662, 352], [7, 14, 737, 352], [7, 15, 775, 352], [7, 16, 813, 352], [7, 17, 851, 352], [8, 0, 48, 389], [8, 1, 86, 389], [8, 2, 123, 389], [8, 3, 161, 389], [8, 4, 236, 389], [8, 5, 274, 389], [8, 6, 312, 389], [8, 7, 353, 389], [8, 8, 391, 389], [8, 9, 508, 389], [8, 10, 546, 389], [8, 11, 587, 389], [8, 12, 624, 389], [8, 13, 662, 389], [8, 14, 737, 389], [8, 15, 775, 389], [8, 16, 813, 389], [8, 17, 851, 389], [9, 0, 48, 507], [9, 1, 86, 507], [9, 2, 123, 507], [9, 3, 161, 507], [9, 4, 236, 507], [9, 5, 274, 507], [9, 6, 312, 507], [9, 7, 353, 507], [9, 8, 391, 507], [9, 9, 508, 507], [9, 10, 546, 507], [9, 11, 587, 507], [9, 12, 624, 507], [9, 13, 662, 507], [9, 14, 737, 507], [9, 15, 775, 507], [9, 16, 813, 507], [9, 17, 851, 507], [10, 0, 48, 544], [10, 1, 86, 544], [10, 2, 123, 544], [10, 3, 161, 544], [10, 4, 236, 544], [10, 5, 274, 544], [10, 6, 312, 544], [10, 7, 353, 544], [10, 8, 391, 544], [10, 9, 508, 544], [10, 10, 546, 544], [10, 11, 587, 544], [10, 12, 624, 544], [10, 13, 662, 544], [10, 14, 737, 544], [10, 15, 775, 544], [10, 16, 813, 544], [10, 17, 851, 544], [11, 0, 48, 586], [11, 1, 86, 586], [11, 2, 123, 586], [11, 3, 161, 586], [11, 4, 236, 586], [11, 5, 274, 586], [11, 6, 312, 586], [11, 7, 353, 586], [11, 8, 391, 586], [11, 9, 508, 586], [11, 10, 546, 586], [11, 11, 587, 586], [11, 12, 624, 586], [11, 13, 662, 586], [11, 14, 737, 586], [11, 15, 775, 586], [11, 16, 813, 586], [11, 17, 851, 586], [12, 1, 86, 622], [12, 2, 123, 622], [12, 3, 161, 622], [12, 4, 236, 622], [12, 5, 274, 622], [12, 6, 312, 622], [12, 7, 353, 622], [12, 8, 391, 622], [12, 9, 508, 622], [12, 10, 546, 622], [12, 11, 587, 622], [12, 12, 624, 622], [12, 13, 662, 622], [12, 14, 737, 622], [12, 15, 775, 622], [12, 16, 813, 622], [13, 1, 86, 662], [13, 2, 123, 662], [13, 3, 161, 662], [13, 4, 236, 662], [13, 5, 274, 662], [13, 6, 312, 662], [13, 7, 353, 662], [13, 8, 391, 662], [13, 9, 508, 662], [13, 10, 546, 662], [13, 11, 587, 662], [13, 12, 624, 662], [13, 13, 662, 662], [13, 14, 737, 662], [13, 15, 775, 662], [13, 16, 813, 662], [14, 3, 161, 736], [14, 4, 236, 736], [14, 5, 274, 736], [14, 6, 312, 736], [14, 7, 353, 736], [14, 8, 391, 736], [14, 9, 508, 736], [14, 10, 546, 736], [14, 11, 587, 736], [14, 12, 624, 736], [14, 13, 662, 736], [14, 14, 737, 736], [15, 4, 236, 775], [15, 5, 274, 775], [15, 6, 312, 775], [15, 7, 353, 775], [15, 8, 391, 775], [15, 9, 508, 775], [15, 10, 546, 775], [15, 11, 587, 775], [15, 12, 624, 775], [15, 13, 662, 775], [16, 4, 236, 812], [16, 5, 274, 812], [16, 6, 312, 812], [16, 7, 353, 812], [16, 8, 391, 812], [16, 9, 508, 812], [16, 10, 546, 812], [16, 11, 587, 812], [16, 12, 624, 812], [16, 13, 662, 812], [17, 6, 312, 848], [17, 7, 353, 848], [17, 8, 391, 848], [17, 9, 508, 848], [17, 10, 546, 848], [17, 11, 587, 848]
 ];
 
+// Updated ZONE_BY_CELL mapping based on the provided JSON
 const ZONE_BY_CELL = {
     "0,6": "field", "0,7": "field", "0,8": "mid_zone", "0,9": "field", "0,10": "field",
     "1,4": "field", "1,5": "field", "1,6": "field", "1,7": "field", "1,8": "mid_zone", "1,9": "field", "1,10": "field", "1,11": "field", "1,12": "field",
     "2,2": "starting_gate", "2,4": "field", "2,5": "field", "2,6": "field", "2,7": "field", "2,8": "mid_zone", "2,9": "field", "2,10": "field", "2,11": "field", "2,12": "field", "2,14": "starting_gate",
-    "3,3": "garden", "3,4": "mid_zone", "3,5": "mid_zone", "3,6": "mid_zone", "3,7": "mid_zone", "3,8": "mid_zone", "3,9": "mid_zone", "3,10": "mid_zone", "3,11": "mid_zone", "3,12": "mid_zone", "3,13": "garden",
+    "3,3": "starting_gate", "3,4": "mid_zone", "3,5": "mid_zone", "3,6": "mid_zone", "3,7": "mid_zone", "3,8": "mid_zone", "3,9": "mid_zone", "3,10": "mid_zone", "3,11": "mid_zone", "3,12": "mid_zone", "3,13": "starting_gate",
     "4,1": "field", "4,2": "field", "4,3": "mid_zone", "4,4": "field", "4,5": "field", "4,6": "field", "4,7": "field", "4,8": "river", "4,9": "field", "4,10": "field", "4,11": "field", "4,12": "field", "4,13": "mid_zone", "4,14": "field", "4,15": "field",
     "5,1": "field", "5,2": "field", "5,3": "mid_zone", "5,4": "field", "5,5": "field", "5,6": "field", "5,7": "field", "5,8": "river", "5,9": "field", "5,10": "field", "5,11": "field", "5,12": "field", "5,13": "mid_zone", "5,14": "field", "5,15": "field",
     "6,0": "field", "6,1": "field", "6,2": "field", "6,3": "mid_zone", "6,4": "field", "6,5": "field", "6,6": "field", "6,7": "field", "6,8": "river", "6,9": "field", "6,10": "field", "6,11": "field", "6,12": "field", "6,13": "mid_zone", "6,14": "field", "6,15": "field", "6,16": "field",
@@ -400,7 +388,7 @@ const ZONE_BY_CELL = {
     "10,0": "field", "10,1": "field", "10,2": "field", "10,3": "mid_zone", "10,4": "field", "10,5": "field", "10,6": "field", "10,7": "field", "10,8": "river", "10,9": "field", "10,10": "field", "10,11": "field", "10,12": "field", "10,13": "mid_zone", "10,14": "field", "10,15": "field", "10,16": "field",
     "11,1": "field", "11,2": "field", "11,3": "mid_zone", "11,4": "field", "11,5": "field", "11,6": "field", "11,7": "field", "11,8": "river", "11,9": "field", "11,10": "field", "11,11": "field", "11,12": "field", "11,13": "mid_zone", "11,14": "field", "11,15": "field",
     "12,1": "field", "12,2": "field", "12,3": "mid_zone", "12,4": "field", "12,5": "field", "12,6": "field", "12,7": "field", "12,8": "river", "12,9": "field", "12,10": "field", "12,11": "field", "12,12": "field", "12,13": "mid_zone", "12,14": "field", "12,15": "field",
-    "13,3": "garden", "13,4": "mid_zone", "13,5": "mid_zone", "13,6": "mid_zone", "13,7": "mid_zone", "13,8": "mid_zone", "13,9": "mid_zone", "13,10": "mid_zone", "13,11": "mid_zone", "13,12": "mid_zone", "13,13": "garden",
+    "13,3": "starting_gate", "13,4": "mid_zone", "13,5": "mid_zone", "13,6": "mid_zone", "13,7": "mid_zone", "13,8": "mid_zone", "13,9": "mid_zone", "13,10": "mid_zone", "13,11": "mid_zone", "13,12": "mid_zone", "13,13": "starting_gate",
     "14,2": "starting_gate", "14,4": "field", "14,5": "field", "14,6": "field", "14,7": "field", "14,8": "mid_zone", "14,9": "field", "14,10": "field", "14,11": "field", "14,12": "field", "14,14": "starting_gate",
     "15,4": "field", "15,5": "field", "15,6": "field", "15,7": "field", "15,8": "mid_zone", "15,9": "field", "15,10": "field", "15,11": "field", "15,12": "field",
     "16,6": "field", "16,7": "field", "16,8": "mid_zone", "16,9": "field", "16,10": "field"
@@ -412,18 +400,16 @@ const PIECE_RADIUS = 15;
 const MOVE_DOT_RADIUS = 7;
 const REQUIRE_EXACT_STEPS = false; 
 
-// Rules tied to UI descriptions
 const PIECES = {
-    star:      { label: "Star",      count: 4, steps: null, letter: "★", desc: "Moves any number of intersections in a straight line. One step past river max." },
+    star:      { label: "Star",      count: 4, steps: null, letter: "★", desc: "Moves any number of intersections in a straight line. 1-step limit past rivers (unless edge is river-field)." },
     clover:    { label: "Clover",    count: 4, steps: 4,    letter: "♣", desc: "Moves 4 steps. Can jump to friendly Clovers in view to pick a new direction for unlimited steps." },
     daisy:     { label: "Daisy",     count: 6, steps: 3,    letter: "✿", desc: "Moves 3 steps. Unaffected by rivers." },
     water:     { label: "Water",     count: 6, steps: 2,    letter: "✥", desc: "Moves 2 steps. Can only drop in a green zone and cannot leave it." },
-    sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼", desc: "Moves 4 steps. Uncapturable. Blocks Shining. Must evade/discard if targeting enemy Chysalith." },
-    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths in its field & blocks line-of-sight. Paused and frozen by enemy Sun." },
-    chysalith: { label: "Chysalith", count: 2, steps: 2,    letter: "C", desc: "Moves 2 steps. Crucial piece. Capture gardens to win. Cannot move near enemy Shining. Harmonizes with all friendlies." }
+    sun:       { label: "Sun",       count: 3, steps: 4,    letter: "☼", desc: "Moves 4 steps. Invulnerable (except to enemy Chysaliths) when in same field or view of a friendly Chysalith. Cannot capture. Stops enemy Shining. Cannot move through enemy Chysalith view." },
+    shining:   { label: "Shining",   count: 3, steps: 3,    letter: "✺", desc: "Moves 3 steps. Freezes enemy Chysaliths & blocks view. Moves into but not past enemy Sun view." },
+    chysalith: { label: "Chysalith", count: 3, steps: 2,    letter: "C", desc: "Moves 2 steps. The only piece that can capture an invulnerable Sun. Blocks enemy harmonys if in view. Harmonizes with all friendlies." }
 };
 
-// Harmony mappings per rule update
 const HARMONY_PAIRS = {
     star: ["water", "sun", "daisy", "chysalith"],
     sun: ["star", "shining", "clover", "chysalith"],
@@ -440,7 +426,7 @@ const DISHARMONY_PAIRS = {
     daisy: ["sun", "water"],
     shining: ["clover", "star"],
     water: ["sun", "daisy"],
-    chysalith: [] 
+    chysalith: [] // Chysalith no longer has disharmony pairs, it just blocks.
 };
 
 const PLAYER_COLORS = ["#3b82f6", "#a855f7", "#ef4444", "#f59e0b"]; 
@@ -497,7 +483,6 @@ function pointInPolygonOrOnEdge(point, vs) {
     return inside;
 }
 
-
 class BoardData {
     constructor() {
         this.vertices = new Map();
@@ -536,7 +521,12 @@ class BoardData {
         this.buildFieldComponents();
         this.buildZoneComponents("gate", this.gateComponentAt);
         this.buildGardens();
-        this.assignStartGates();
+        
+        // Combine all gates into a single set of keys for any-gate dropping
+        this.allGateKeys = new Set();
+        for (let [k, cid] of this.gateComponentAt.entries()) {
+            if (cid) this.allGateKeys.add(k);
+        }
     }
 
     cellsTouchingVertex(key) {
@@ -603,22 +593,40 @@ class BoardData {
         return null;
     }
 
-    edgeHasRiverOnBothSides(a, b) {
+    edgeTriggersRiverLimit(a, b) {
         let [ar, ac] = a.split(',').map(Number);
         let [br, bc] = b.split(',').map(Number);
+        let zones = new Set();
+        
         if (ar === br) {
             let r = ar;
-            let lo = Math.min(ac, bc), hi = Math.max(ac, bc);
-            for (let cc = lo; cc < hi; cc++) {
-                if (this.zoneAtCell.get(`${r-1},${cc}`) === "river" && this.zoneAtCell.get(`${r},${cc}`) === "river") return true;
+            let minC = Math.min(ac, bc), maxC = Math.max(ac, bc);
+            for (let c = minC; c < maxC; c++) {
+                zones.add(this.zoneAtCell.get(`${r-1},${c}`));
+                zones.add(this.zoneAtCell.get(`${r},${c}`));
+            }
+        } else if (ac === bc) {
+            let c = ac;
+            let minR = Math.min(ar, br), maxR = Math.max(ar, br);
+            for (let r = minR; r < maxR; r++) {
+                zones.add(this.zoneAtCell.get(`${r},${c-1}`));
+                zones.add(this.zoneAtCell.get(`${r},${c}`));
             }
         }
-        if (ac === bc) {
-            let c = ac;
-            let lo = Math.min(ar, br), hi = Math.max(ar, br);
-            for (let rr = lo; rr < hi; rr++) {
-                if (this.zoneAtCell.get(`${rr},${c-1}`) === "river" && this.zoneAtCell.get(`${rr},${c}`) === "river") return true;
+        
+        zones.delete(undefined);
+        zones.delete("unknown");
+        
+        let hasRiver = zones.has("river");
+        let hasField = zones.has("field");
+        
+        if (hasRiver) {
+            // Star flower can only pass through edges that are STRICTLY between water and field
+            if (zones.size === 2 && hasField) {
+                return false; 
             }
+            // Any other combination involving river enforces block plus step
+            return true;
         }
         return false;
     }
@@ -710,19 +718,31 @@ class BoardData {
         comps.sort((a,b) => b.size - a.size);
         this.gardenCorners = new Map();
         this.gardenName = new Map();
-
-        comps.slice(0, 5).forEach((comp, i) => {
-            let gid = i + 1;
-            let rows = Array.from(comp).map(k=>parseInt(k.split(',')[0]));
-            let cols = Array.from(comp).map(k=>parseInt(k.split(',')[1]));
+        
+        // Find center garden
+        let centralComp = null;
+        for(let comp of comps) {
+            let pts = Array.from(comp).map(k => this.vertices.get(k));
+            let mx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+            let my = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+            if(Math.hypot(mx - CENTER[0], my - CENTER[1]) < 120) {
+                centralComp = comp;
+                break;
+            }
+        }
+        
+        if (centralComp) {
+            let rows = Array.from(centralComp).map(k=>parseInt(k.split(',')[0]));
+            let cols = Array.from(centralComp).map(k=>parseInt(k.split(',')[1]));
             let minR = Math.min(...rows), maxR = Math.max(...rows);
             let minC = Math.min(...cols), maxC = Math.max(...cols);
             
             let candidates = [`${minR},${minC}`, `${minR},${maxC}`, `${maxR},${minC}`, `${maxR},${maxC}`];
             let corners = new Set(candidates.filter(k => this.vertices.has(k)));
             
+            // If some corners are missing from exact rect, approximate them
             if (corners.size < 4) {
-                let targetPixels = candidates.map(c => {
+                 let targetPixels = candidates.map(c => {
                     let [rr, cc] = c.split(',').map(Number);
                     let x = VERTICAL_LINES[Math.max(0, Math.min(cc, VERTICAL_LINES.length-1))];
                     let y = HORIZONTAL_LINES[Math.max(0, Math.min(rr, HORIZONTAL_LINES.length-1))];
@@ -731,7 +751,7 @@ class BoardData {
                 corners = new Set();
                 targetPixels.forEach(t => {
                     let best = null, bestD = Infinity;
-                    comp.forEach(k => {
+                    centralComp.forEach(k => {
                         let v = this.vertices.get(k);
                         let d = distSq(v.x, v.y, t.x, t.y);
                         if(d < bestD) { bestD = d; best = k; }
@@ -739,69 +759,8 @@ class BoardData {
                     corners.add(best);
                 });
             }
-            this.gardenCorners.set(gid, corners);
-
-            let pts = Array.from(corners).map(k => this.vertices.get(k));
-            let mx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-            let my = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-            let isCenter = Math.hypot(mx - CENTER[0], my - CENTER[1]) < 120;
-            this.gardenName.set(gid, isCenter ? "central" : `small ${gid}`);
-        });
-    }
-
-    assignStartGates() {
-        let comps = new Map();
-        for (let [k, cid] of this.gateComponentAt.entries()) {
-            if (cid) {
-                if (!comps.has(cid)) comps.set(cid, new Set());
-                comps.get(cid).add(k);
-            }
-        }
-        
-        let centers = [];
-        for (let [cid, keys] of comps.entries()) {
-            let pts = Array.from(keys).map(k => this.vertices.get(k));
-            let x = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-            let y = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-            centers.push({cid, x, y, size: keys.size});
-        }
-
-        let [cx, cy] = CENTER;
-        let r = Math.max(1, RADIUS);
-        let desired = [
-            {x: cx - 0.62*r, y: cy + 0.62*r, label: "bottom-left"},
-            {x: cx + 0.62*r, y: cy - 0.62*r, label: "top-right"},
-            {x: cx + 0.62*r, y: cy + 0.62*r, label: "bottom-right"},
-            {x: cx - 0.62*r, y: cy - 0.62*r, label: "top-left"}
-        ];
-
-        this.startGateForPlayer = new Map();
-        this.startGateNames = new Map();
-        this.closestGardenToPlayer = new Map();
-        let unused = [...centers];
-
-        for (let player = 0; player < 4; player++) {
-            let target = desired[player];
-            if (unused.length === 0) break;
-            let chosen = unused.reduce((best, curr) => {
-                let currD = distSq(curr.x, curr.y, target.x, target.y);
-                let bestD = distSq(best.x, best.y, target.x, target.y);
-                return currD < bestD ? curr : best;
-            });
-            unused.splice(unused.indexOf(chosen), 1);
-            this.startGateForPlayer.set(player, comps.get(chosen.cid));
-            this.startGateNames.set(player, target.label);
-            
-            let bestGid = null, bestD = Infinity;
-            for (let [gid, corners] of this.gardenCorners.entries()) {
-                if (this.gardenName.get(gid) === "central") continue;
-                let cPts = Array.from(corners).map(k => this.vertices.get(k));
-                let gcx = cPts.reduce((sum, p) => sum + p.x, 0) / cPts.length;
-                let gcy = cPts.reduce((sum, p) => sum + p.y, 0) / cPts.length;
-                let d = distSq(chosen.x, chosen.y, gcx, gcy);
-                if (d < bestD) { bestD = d; bestGid = gid; }
-            }
-            this.closestGardenToPlayer.set(player, bestGid);
+            this.gardenCorners.set(1, corners);
+            this.gardenName.set(1, "central");
         }
     }
 }
@@ -817,7 +776,6 @@ class Game {
         this.players = [];
         this.pieces = new Map();
         this.nextPieceId = 1;
-        this.movedThisTurn = new Set();
         
         for (let i = 0; i < this.playerCount; i++) {
             let hand = {};
@@ -827,38 +785,16 @@ class Game {
         
         this.currentPlayer = 0;
         this.turnNumber = 1;
-        this.phase = "setup_chysalith";
+        this.phase = "turn"; // Consolidated phase
         this.selectedPieceId = null;
         this.selectedHandKind = null;
         this.legalMoves = [];
         this.enemyViewPieceId = null; 
         this.enemyMoves = []; 
-        this.message = "Setup: Drop your Chysalith in your starting gate.";
+        this.message = "Game Start! Place a piece in any gate or move a piece.";
         this.winner = null;
         
         this.harmonyData = new Map();
-        this.autoSelectChysalith(); // Auto-select on initial start
-    }
-
-    // --- AUTO SELECT HELPER ---
-    autoSelectChysalith() {
-        // Prevent auto-selection messing up spectator or off-turn screens in online play
-        if (typeof isOnline !== 'undefined' && isOnline && this.currentPlayer !== myPlayerIndex) return;
-
-        if (this.phase === "setup_chysalith") {
-            this.selectHand("chysalith");
-        } else if (this.phase === "chysalith") {
-            let chys = this.piecesOnBoard(this.currentPlayer, "chysalith");
-            if (chys.length > 0) {
-                this.selectPieceAt(chys[0].pos);
-                // Fallback to second chysalith if first one fails validation (e.g., trapped)
-                if (this.selectedPieceId === null && chys.length > 1) {
-                    this.selectPieceAt(chys[1].pos);
-                }
-            } else if (this.players[this.currentPlayer].hand["chysalith"] > 0) {
-                this.selectHand("chysalith");
-            }
-        }
     }
 
     occupied() {
@@ -885,23 +821,6 @@ class Game {
         return best;
     }
 
-    isClosestGardenCaptured(owner) {
-        let gid = this.board.closestGardenToPlayer.get(owner);
-        if (!gid) return false;
-        let corners = this.board.gardenCorners.get(gid);
-        if (!corners) return false;
-        let occ = this.occupied();
-        let holders = [];
-        for (let k of corners) {
-            let p = occ.get(k);
-            if (p) holders.push(p.owner);
-        }
-        if (holders.length === corners.size && holders.length > 0 && holders.every(h => h === holders[0])) {
-            if (holders[0] !== owner) return true;
-        }
-        return false;
-    }
-
     // --- HARMONY LOGIC ---
     updateHarmonyCache() {
         this.harmonyData.clear();
@@ -910,6 +829,19 @@ class Game {
                 this.harmonyData.set(p, this.calculateHarmonyFor(p));
             }
         }
+    }
+
+    isBlockedByEnemyChysalith(p1Pos, p2Pos, myOwner) {
+        let occ = this.occupied();
+        for (let ep of occ.values()) {
+            if (ep.owner !== myOwner && ep.kind === "chysalith") {
+                // If enemy Chysalith is in view of either p1 or p2
+                if (this.inView(ep.pos, p1Pos) || this.inView(ep.pos, p2Pos)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     calculateHarmonyFor(owner) {
@@ -924,7 +856,10 @@ class Game {
                     if (DISHARMONY_PAIRS[p1.kind] && DISHARMONY_PAIRS[p1.kind].includes(p2.kind)) {
                         disharmonies.add(p1.id); disharmonies.add(p2.id);
                     } else if (HARMONY_PAIRS[p1.kind] && HARMONY_PAIRS[p1.kind].includes(p2.kind)) {
-                        harmonyLinks.push([p1.id, p2.id]);
+                        // Check if blocked by enemy Chysalith view
+                        if (!this.isBlockedByEnemyChysalith(p1.pos, p2.pos, owner)) {
+                            harmonyLinks.push([p1.id, p2.id]);
+                        }
                     }
                 }
             }
@@ -1024,75 +959,7 @@ class Game {
     }
     // --- END HARMONY LOGIC ---
 
-    // --- THREAT RESOLUTION LOGIC ---
-    testMoveResolvesThreat(piece, move) {
-        let owner = piece.owner;
-        let origPos = piece.pos;
-        let cap = move.captureId ? this.pieces.get(move.captureId) : null;
-        let origCapPos = cap ? cap.pos : null;
-
-        piece.pos = move.dst;
-        if (cap) cap.pos = null;
-        
-        let backupHarmony = this.harmonyData.get(owner);
-        let backupEnemyHarmony = cap ? this.harmonyData.get(cap.owner) : null;
-
-        this.harmonyData.set(owner, this.calculateHarmonyFor(owner));
-        if (cap) this.harmonyData.set(cap.owner, this.calculateHarmonyFor(cap.owner));
-
-        let threats = this.getThreats(owner);
-
-        piece.pos = origPos;
-        if (cap) cap.pos = origCapPos;
-        
-        if (backupHarmony) this.harmonyData.set(owner, backupHarmony);
-        if (cap && backupEnemyHarmony) this.harmonyData.set(cap.owner, backupEnemyHarmony);
-
-        if (owner !== this.currentPlayer) return true;
-
-        if (this.phase === "chysalith") return threats.chys.length === 0;
-        if (this.phase === "flower") return threats.suns.length === 0;
-        return true;
-    }
-
-    testDropResolvesThreat(dst, kind) {
-        let fakeId = this.nextPieceId + 999;
-        this.pieces.set(fakeId, {id: fakeId, owner: this.currentPlayer, kind: kind, pos: dst});
-        
-        let backupHarmony = this.harmonyData.get(this.currentPlayer);
-        this.harmonyData.set(this.currentPlayer, this.calculateHarmonyFor(this.currentPlayer));
-
-        let threats = this.getThreats(this.currentPlayer);
-        
-        this.pieces.delete(fakeId);
-        if (backupHarmony) this.harmonyData.set(this.currentPlayer, backupHarmony);
-
-        if (this.phase === "chysalith") return threats.chys.length === 0;
-        if (this.phase === "flower") return threats.suns.length === 0;
-        return true;
-    }
-
-    canResolveThreat() {
-        let threats = this.getThreats(this.currentPlayer);
-        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
-        if (!hasThreat) return false;
-
-        for (let p of this.piecesOnBoard(this.currentPlayer)) {
-            if (this.phase === "chysalith" && p.kind !== "chysalith") continue;
-            if (this.phase === "flower" && p.kind === "chysalith" && this.movedThisTurn.has(p.id)) continue; 
-            if (this.generateMoves(p).length > 0) return true;
-        }
-
-        for (let kind in this.players[this.currentPlayer].hand) {
-            if (this.players[this.currentPlayer].hand[kind] > 0) {
-                if (this.phase === "chysalith" && kind !== "chysalith") continue;
-                if (this.generateDropMoves(kind).length > 0) return true;
-            }
-        }
-        return false;
-    }
-    // --- END THREAT RESOLUTION LOGIC ---
-
+    // --- INTERACTION LOGIC ---
     selectPieceAt(key) {
         if (isOnline && this.currentPlayer !== myPlayerIndex) return;
         let piece = this.occupied().get(key);
@@ -1109,7 +976,7 @@ class Game {
                 this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Sun Flower.`;
             } else if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) {
                 this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is frozen by a Shining Flower.`;
-            } else if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+            } else if (this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
                 this.message = `Player ${piece.owner + 1}'s ${PIECES[piece.kind].label} is trapped in a Harmony.`;
             } else {
                 this.message = `Viewing valid moves for Player ${piece.owner + 1}'s ${PIECES[piece.kind].label}.`;
@@ -1120,31 +987,10 @@ class Game {
         this.enemyViewPieceId = null;
         this.enemyMoves = [];
         
-        let threats = this.getThreats(this.currentPlayer);
-        if (this.phase === "chysalith" && threats.chys.length > 0) {
-            if (!threats.chys.includes(piece.id)) {
-                this.message = "Force to move! You must select a threatened Chysalith.";
-                return;
-            }
-        }
-        if (this.phase === "flower" && threats.suns.length > 0) {
-            if (!threats.suns.includes(piece.id)) {
-                this.message = "Force to move! You must select a threatened Sun Flower.";
-                return;
-            }
-        }
-
-        if (this.phase === "chysalith" && piece.kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
-        if (this.phase === "flower" && piece.kind === "chysalith" && this.movedThisTurn.has(piece.id)) { this.message = "This Chysalith already acted this turn. Select another piece."; return; }
-        
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) { this.message = "Chysalith is frozen by an active Shining Flower."; return; }
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) { this.message = "Shining flower is frozen by an enemy Sun Flower."; return; }
-        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
-            this.message = "Your Chysalith is trapped inside an enemy Harmony zone and cannot move!";
-            return;
-        }
-        if (piece.kind === "chysalith" && this.isClosestGardenCaptured(piece.owner)) {
-            this.message = "Your closest starting garden was fully captured! Your Chysaliths cannot move.";
+        if (this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) {
+            this.message = "Your piece is trapped inside an enemy Harmony zone and cannot move!";
             return;
         }
 
@@ -1152,35 +998,12 @@ class Game {
         this.selectedHandKind = null;
         this.legalMoves = this.generateMoves(piece);
         
-        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
-
-        if (hasThreat && this.legalMoves.length === 0) {
-            if ((this.phase === "chysalith" && threats.chys.includes(piece.id)) || 
-                (this.phase === "flower" && threats.suns.includes(piece.id))) {
-                this.message = `Selected ${PIECES[piece.kind].label} has no valid moves to escape the threat. You may still pick it up if it's a Sun.`;
-            } else {
-                this.message = `Force to move! Selected ${PIECES[piece.kind].label} cannot resolve the current threat.`;
-                this.selectedPieceId = null; 
-                return;
-            }
-        } else {
-            this.message = `Selected ${PIECES[piece.kind].label}. Valid moves: ${this.legalMoves.length}.`;
-        }
+        this.message = `Selected ${PIECES[piece.kind].label}. Valid moves: ${this.legalMoves.length}.`;
     }
 
     selectHand(kind) {
         this.enemyViewPieceId = null;
         this.enemyMoves = [];
-
-        let threats = this.getThreats(this.currentPlayer);
-        if (this.phase === "chysalith" && threats.chys.length > 0) {
-            this.message = "Force to move! You must resolve the threat to your Chysalith.";
-            return;
-        }
-        if (this.phase === "flower" && threats.suns.length > 0) {
-            this.message = "Force to move! You must resolve the threat to your Sun Flower.";
-            return;
-        }
 
         this.selectedPieceId = null;
         this.selectedHandKind = kind;
@@ -1239,7 +1062,7 @@ class Game {
             let ids = Array.from(this.board.fieldIdsAtVertex(move.dst));
             if(ids.length > 0) piece.homeField = Math.min(...ids);
         }
-        this.movedThisTurn.add(piece.id);
+        
         this.updateHarmonyCache(); 
         
         let isSkip = move.dst === piece.lastPosKey;
@@ -1251,7 +1074,7 @@ class Game {
     capturePiece(victim) {
         victim.pos = null;
         this.players[victim.owner].captured[victim.kind] = (this.players[victim.owner].captured[victim.kind] || 0) + 1;
-        this.checkChysalithLoss(victim.owner);
+        // Chysalith loss no longer eliminates
     }
 
     dropSelectedHand(key, kindOverride=null, isRemote=false) {
@@ -1269,8 +1092,6 @@ class Game {
         let player = this.players[this.currentPlayer];
         if ((player.hand[kind] || 0) <= 0) { this.message = `No ${PIECES[kind].label} left.`; return; }
         if (this.occupied().has(key)) { this.message = "Intersection is occupied."; return; }
-        if (this.phase === "setup_chysalith" && kind !== "chysalith") { this.message = "Setup requires a Chysalith."; return; }
-        if (this.phase === "chysalith" && kind !== "chysalith") { this.message = "First action: move/drop a Chysalith."; return; }
 
         let [ok, why] = this.canDrop(kind, key);
         if (!ok) { this.message = why; return; }
@@ -1284,7 +1105,7 @@ class Game {
         
         this.pieces.set(pid, { id: pid, owner: this.currentPlayer, kind, pos: key, homeField, animStart: performance.now(), animType: 'drop' });
         player.hand[kind]--;
-        this.movedThisTurn.add(pid);
+        
         this.updateHarmonyCache(); 
         
         if (!isRemote) this.selectedHandKind = null;
@@ -1296,14 +1117,11 @@ class Game {
     generateDropMoves(kind) {
         let moves = [];
         let occ = this.occupied();
-        let threats = this.getThreats(this.currentPlayer);
-        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
 
         for (let key of this.board.vertices.keys()) {
             if (occ.has(key)) continue;
             let [ok] = this.canDrop(kind, key);
             if (ok) {
-                if (hasThreat && !this.testDropResolvesThreat(key, kind)) continue;
                 moves.push({ dst: key, captureId: null });
             }
         }
@@ -1311,34 +1129,22 @@ class Game {
     }
 
     canDrop(kind, key) {
-        let touchesGate = this.board.vertexTouchesZone(key, "gate");
-        let ownGate = this.board.startGateForPlayer.get(this.currentPlayer) || new Set();
-        let touchesOwnGate = ownGate.has(key);
+        let touchesGate = this.board.allGateKeys.has(key);
         let touchesField = this.board.vertexTouchesZone(key, "field");
-
-        if (this.phase === "setup_chysalith") {
-            if (ownGate.size > 0) {
-                if (!touchesOwnGate) return [false, "Setup Chysalith must be on your starting gate."];
-            } else if (!touchesGate) {
-                return [false, "Setup Chysalith must touch a starting gate."];
-            }
-            return [true, ""];
-        }
         
         let pV = this.board.vertices.get(key);
-        if (kind === "chysalith" && this.isPointInEnemyHarmony(pV, this.currentPlayer)) {
-            return [false, "Cannot drop a Chysalith into an enemy Harmony."];
+        if (this.isPointInEnemyHarmony(pV, this.currentPlayer)) {
+            return [false, "Cannot drop into an enemy Harmony."];
         }
 
         if (kind === "water" && !touchesField) return [false, "Water Flowers must drop touching a green field."];
         if (kind === "chysalith" && this.fieldHasActiveShining(key, this.currentPlayer)) return [false, "Cannot drop Chysalith into a field with active Shining."];
         if (kind === "chysalith" && this.lineHasActiveShiningView(key, this.currentPlayer)) return [false, "Cannot drop where a Shining has line-of-sight."];
 
-        if (touchesOwnGate) return [true, ""];
+        if (touchesGate) return [true, ""];
         if (touchesField) return this.controlsFieldForDrop(this.currentPlayer, key);
-        if (touchesGate) return [false, `Not your designated starting gate.`];
         
-        return [false, "Drops only allowed on your starting gate or a controlled field."];
+        return [false, "Drops only allowed on any starting gate or a controlled field."];
     }
 
     controlsFieldForDrop(owner, key) {
@@ -1363,21 +1169,6 @@ class Game {
         return [false, "Need a piece here and not be outnumbered by enemy Chysaliths."];
     }
 
-    checkChysalithLoss(owner) {
-        let onBoard = this.piecesOnBoard(owner, "chysalith").length;
-        let inHand = this.players[owner].hand["chysalith"] || 0;
-        if (onBoard + inHand <= 0) {
-            if (!this.players[owner].eliminated) {
-                this.players[owner].eliminated = true;
-                this.message += ` Player ${owner+1} lost both Chysaliths and is eliminated.`;
-                for (let p of this.pieces.values()) {
-                    if (p.owner === owner) p.pos = null;
-                }
-                this.updateHarmonyCache();
-            }
-        }
-    }
-
     afterAction(msg) {
         this.selectedPieceId = null;
         this.legalMoves = [];
@@ -1389,79 +1180,11 @@ class Game {
             return;
         }
 
-        if (this.phase === "setup_chysalith") {
-            this.movedThisTurn.clear();
-            if (this.currentPlayer + 1 < this.playerCount) this.currentPlayer++;
-            else { 
-                this.currentPlayer = 0; 
-                this.phase = "chysalith"; 
-                this.turnNumber = 1; 
-            }
-            this.message = msg;
-            this.autoSelectChysalith();
-            return;
-        }
-        
-        if (this.phase === "chysalith") {
-            this.phase = "flower";
-            this.message = msg + " Now move/place any available piece.";
-        } else if (this.phase === "flower") {
-            let advanceMsg = this.advancePlayer();
-            this.phase = "chysalith";
-            this.message = msg + (advanceMsg ? " " + advanceMsg : "");
-            this.autoSelectChysalith();
-        }
-    }
-
-    getThreats(player) {
-        let suns = [], chys = [];
-        let occ = this.occupied();
-        for (let p of occ.values()) {
-            if (p.owner !== player) continue;
-            
-            if (this.isPieceProtectedByHarmony(p)) continue;
-            
-            if (p.kind === 'sun') {
-                for (let ep of occ.values()) {
-                    if (ep.owner !== player && ep.kind === 'chysalith') {
-                        if (!this.isPieceProtectedByHarmony(ep) && this.inView(p.pos, ep.pos)) { suns.push(p.id); break; }
-                    }
-                }
-            } 
-            else if (p.kind === 'chysalith') {
-                if (this.chysalithIsFrozen(p)) continue;
-                for (let ep of occ.values()) {
-                    if (ep.owner !== player && ep.kind === 'shining' && !this.shiningPausedBySun(ep)) {
-                        if (this.inView(p.pos, ep.pos)) { chys.push(p.id); break; }
-                    }
-                }
-            }
-        }
-        return { suns, chys };
+        let advanceMsg = this.advancePlayer();
+        this.message = msg + (advanceMsg ? " " + advanceMsg : " Turn ended.");
     }
 
     advancePlayer() {
-        let p = this.currentPlayer;
-        let endThreats = this.getThreats(p);
-        let msgs = [];
-        
-        for (let id of endThreats.suns) {
-            let piece = this.pieces.get(id);
-            if (piece && piece.pos) {
-                this.capturePiece(piece);
-                msgs.push(`Pinned Sun Flower removed.`);
-            }
-        }
-        for (let id of endThreats.chys) {
-            let piece = this.pieces.get(id);
-            if (piece && piece.pos) {
-                this.capturePiece(piece);
-                msgs.push(`Pinned Chysalith removed.`);
-            }
-        }
-        
-        this.movedThisTurn.clear();
-
         let start = this.currentPlayer;
         while (true) {
             this.currentPlayer = (this.currentPlayer + 1) % this.playerCount;
@@ -1469,49 +1192,7 @@ class Game {
             if (!this.players[this.currentPlayer].eliminated) break;
             if (this.currentPlayer === start) { this.phase = "game_over"; break; }
         }
-        return msgs.join(" ");
-    }
-
-    canPassPhase() {
-        let threats = this.getThreats(this.currentPlayer);
-        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
-
-        if (hasThreat) {
-            if (this.canResolveThreat()) {
-                this.message = "Force to move! You must resolve the threat (move, block, or drop).";
-                updateDOM();
-                return false;
-            }
-        }
-
-        if (this.phase === "chysalith" && this.piecesOnBoard(this.currentPlayer, "chysalith").length === 0) {
-            if (this.players[this.currentPlayer].hand["chysalith"] > 0) {
-                this.message = "You have no Chysalith on the board! You must drop one this phase.";
-                updateDOM();
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    passPhase(isRemote = false) {
-        if (isOnline && !isRemote) {
-            if (waitingForServer) return;
-            if (!this.canPassPhase()) return;
-            
-            waitingForServer = true;
-            socket.emit('sdsAction', { gameId, action: { type: 'passPhase' } });
-            return;
-        }
-        if (isOnline && isRemote) waitingForServer = false;
-        
-        if (!isRemote) {
-            if (!this.canPassPhase()) return;
-        }
-
-        this.afterAction("Passed phase.");
-        updateDOM();
+        return "";
     }
 
     pickupSelectedSun(overridePieceId=null, isRemote=false) {
@@ -1528,11 +1209,9 @@ class Game {
         if (pid === null) { this.message = "Select your Sun Flower first."; updateDOM(); return; }
         let p = this.pieces.get(pid);
         if (p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; updateDOM(); return; }
-        if (this.phase !== "flower") { this.message = "Picking up Sun uses the flower phase."; updateDOM(); return; }
         
         p.pos = null;
         this.players[p.owner].hand["sun"]++;
-        this.movedThisTurn.add(pid);
         this.updateHarmonyCache();
         
         if (!isRemote) this.selectedPieceId = null;
@@ -1545,24 +1224,19 @@ class Game {
         
         if (piece.kind === "chysalith" && this.chysalithIsFrozen(piece)) return [];
         if (piece.kind === "shining" && this.shiningPausedBySun(piece)) return [];
-        if (piece.kind === "chysalith" && this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) return [];
+        if (this.isPointInEnemyHarmony(this.board.vertices.get(piece.pos), piece.owner)) return [];
 
         let moves = [];
         if (piece.kind === "star") moves = this.starMoves(piece);
         else if (piece.kind === "clover") moves = this.fixedStepMoves(piece, 4).concat(this.cloverSpecialMoves(piece));
         else moves = this.fixedStepMoves(piece, PIECES[piece.kind].steps);
 
-        // --- NEW RULE: EVEN STEP PIECES CAN SKIP TURN ---
         let steps = PIECES[piece.kind].steps;
         if (steps !== null && steps % 2 === 0) {
-            // Adds its own current position as a valid legal move destination
             moves.push({ pieceId: piece.id, dst: piece.pos, captureId: null, path: [] });
         }
 
         moves = moves.filter(m => this.isMoveLegalSpecial(piece, m));
-        
-        let threats = this.getThreats(piece.owner);
-        let hasThreat = (this.phase === "chysalith" && threats.chys.length > 0) || (this.phase === "flower" && threats.suns.length > 0);
 
         let out = [];
         let seen = new Set();
@@ -1570,9 +1244,7 @@ class Game {
             let k = `${m.dst}-${m.captureId}`;
             if (!seen.has(k)) { 
                 seen.add(k); 
-                if (!hasThreat || this.testMoveResolvesThreat(piece, m)) {
-                    out.push(m); 
-                }
+                out.push(m); 
             }
         }
         return out;
@@ -1585,14 +1257,13 @@ class Game {
             let path = [];
             let prev = piece.pos;
             let riverCrossed = false;
-            let stepsPastRiver = 0; // New counter for post-river tracking
+            let stepsPastRiver = 0; 
             
             for (let dst of this.board.ray(piece.pos, dir)) {
-                let crossingRiverNow = this.board.edgeHasRiverOnBothSides(prev, dst);
+                let crossingRiverNow = this.board.edgeTriggersRiverLimit(prev, dst);
                 
                 if (riverCrossed) {
                     stepsPastRiver++;
-                    // Breaking only if we try to take more than ONE step past the river
                     if (stepsPastRiver > 1) break; 
                 }
                 
@@ -1632,6 +1303,10 @@ class Game {
                 out.push({pieceId: piece.id, dst: cur, captureId: null, path: [...path]});
             }
             if (used >= steps) continue;
+            
+            if (piece.kind === "shining" && used > 0 && this.lineHasEnemySunView(cur, piece.owner, piece.id)) {
+                continue; // Cannot move further from this point
+            }
 
             let neighbors = this.board.neighbors(cur);
             for (let dir in neighbors) {
@@ -1696,16 +1371,14 @@ class Game {
         }
         if (piece.kind === "sun") {
             if (move.captureId !== null) return false;
-            let occ = this.occupied();
-            for (let ep of occ.values()) {
-                if (ep.owner !== piece.owner && ep.kind === 'chysalith') {
-                    if (!this.isPieceProtectedByHarmony(ep) && this.inView(move.dst, ep.pos, piece.id)) return false;
-                }
+            let fullPath = move.path && move.path.length > 0 ? move.path : [move.dst];
+            for (let step of fullPath) {
+                if (this.lineHasEnemyChysalithView(step, piece.owner, piece.id)) return false;
             }
         }
         if (piece.kind === "chysalith") {
             if (this.fieldHasActiveShining(move.dst, piece.owner)) return false;
-            let fullPath = move.path || [move.dst];
+            let fullPath = move.path && move.path.length > 0 ? move.path : [move.dst];
             for (let step of fullPath) {
                 if (this.lineHasActiveShiningView(step, piece.owner, piece.id)) return false;
                 if (this.isPointInEnemyHarmony(this.board.vertices.get(step), piece.owner)) return false;
@@ -1716,7 +1389,39 @@ class Game {
 
     canCapture(attacker, victim) {
         if (attacker.owner === victim.owner) return false;
-        if (attacker.kind === "sun" || victim.kind === "sun") return false;
+        
+        if (victim.kind === "sun") {
+            let victimFieldIds = this.board.fieldIdsAtVertex(victim.pos);
+            let protectedByChysalith = false;
+            
+            // Check if in the same field as a friendly Chysalith
+            if (victimFieldIds.size > 0) {
+                 protectedByChysalith = Array.from(this.pieces.values()).some(p => 
+                    p.owner === victim.owner && 
+                    p.kind === "chysalith" && 
+                    p.pos && 
+                    Array.from(this.board.fieldIdsAtVertex(p.pos)).some(fid => victimFieldIds.has(fid))
+                );
+            }
+            
+            // If not protected by field, check if in view of a friendly Chysalith
+            if (!protectedByChysalith) {
+                protectedByChysalith = Array.from(this.pieces.values()).some(p => 
+                    p.owner === victim.owner && 
+                    p.kind === "chysalith" && 
+                    p.pos && 
+                    this.inView(p.pos, victim.pos)
+                );
+            }
+            
+            // If the sun is protected/invulnerable, only an opponent's Chysalith can capture it
+            if (protectedByChysalith) {
+                if (attacker.kind !== "chysalith") return false;
+            }
+            // If not protected, anyone can capture it (normal rules apply)
+        }
+        
+        if (attacker.kind === "sun") return false; // Sun cannot capture
         return true;
     }
 
@@ -1745,6 +1450,18 @@ class Game {
         return this.piecesOnBoard(null, "sun").some(sun => sun.owner !== shining.owner && sun.pos && this.inView(sun.pos, shining.pos));
     }
 
+    lineHasEnemySunView(key, owner, ignoreId=null) {
+        return this.piecesOnBoard(null, "sun").some(sun => {
+            return sun.owner !== owner && sun.pos && this.inView(sun.pos, key, ignoreId);
+        });
+    }
+
+    lineHasEnemyChysalithView(key, owner, ignoreId=null) {
+        return this.piecesOnBoard(null, "chysalith").some(chys => {
+            return chys.owner !== owner && chys.pos && this.inView(chys.pos, key, ignoreId);
+        });
+    }
+
     lineHasActiveShiningView(key, owner, ignoreId=null) {
         return this.activeEnemyShiningPieces(owner).some(sh => sh.pos && this.inView(sh.pos, key, ignoreId));
     }
@@ -1769,69 +1486,38 @@ class Game {
         let alive = this.players.map((p,i)=>({i,p})).filter(x=>!x.p.eliminated).map(x=>x.i);
         if (alive.length === 1) return alive[0];
         
-        let ownersByGarden = new Map();
-        let hasChysInGarden = new Map();
+        let centerGid = 1;
+        let centerCorners = this.board.gardenCorners.get(centerGid);
+        if (!centerCorners) return null;
+
         let occ = this.occupied();
         
-        for (let [gid, corners] of this.board.gardenCorners.entries()) {
-            let holders = [];
-            let hasChys = false;
-            for (let k of corners) {
-                let p = occ.get(k);
-                if (p) {
-                    holders.push(p.owner);
-                    if (p.kind === "chysalith") hasChys = true;
-                }
-            }
-            let owner = null;
-            if (holders.length === corners.size && holders.every(h => h === holders[0])) {
-                owner = holders[0];
-            }
-            ownersByGarden.set(gid, owner);
-            hasChysInGarden.set(gid, hasChys);
+        // Win condition 1: Occupy all corners of the center garden
+        let holders = [];
+        for (let k of centerCorners) {
+            let p = occ.get(k);
+            if (p) holders.push(p.owner);
+        }
+        if (holders.length === centerCorners.size && holders.every(h => h === holders[0])) {
+            return holders[0];
         }
 
+        // Win condition 2: Enclose center garden in a harmony
         for (let player of alive) {
             let hData = this.harmonyData.get(player);
             if (!hData || hData.activePolys.length === 0) continue;
             
             for (let poly of hData.activePolys) {
-                for (let [gid, corners] of this.board.gardenCorners.entries()) {
-                    let allCornersInHarmony = true;
-                    for (let c of corners) {
-                        if (!pointInPolygonOrOnEdge(this.board.vertices.get(c), poly)) {
-                            allCornersInHarmony = false; break;
-                        }
-                    }
-                    if (allCornersInHarmony) {
-                        let currentOwner = ownersByGarden.get(gid);
-                        
-                        if (currentOwner === null) {
-                            ownersByGarden.set(gid, player); 
-                            hasChysInGarden.set(gid, true); 
-                        } else if (currentOwner !== player) {
-                            ownersByGarden.set(gid, null); 
-                        }
+                let allCornersInHarmony = true;
+                for (let c of centerCorners) {
+                    if (!pointInPolygonOrOnEdge(this.board.vertices.get(c), poly)) {
+                        allCornersInHarmony = false; break;
                     }
                 }
+                if (allCornersInHarmony) return player;
             }
         }
 
-        let centralGid = null;
-        for (let [gid, name] of this.board.gardenName.entries()) if (name === "central") centralGid = gid;
-
-        let neededSmall = {2:2, 3:1, 4:0}[this.playerCount] || 2;
-
-        for (let owner of alive) {
-            let ownedGardens = Array.from(ownersByGarden.entries()).filter(([gid, o]) => o === owner);
-            let ownsCenter = ownedGardens.some(([gid]) => gid === centralGid);
-            let smallCount = ownedGardens.filter(([gid]) => gid !== centralGid).length;
-            
-            if (ownsCenter && smallCount >= neededSmall) {
-                let validWin = ownedGardens.some(([gid]) => hasChysInGarden.get(gid));
-                if (validWin) return owner;
-            }
-        }
         return null;
     }
 }
@@ -1891,7 +1577,6 @@ function showPieceInfo(kind, owner = null) {
 
 function updateDOM() {
     const turnIndicator = document.getElementById('turn-indicator');
-    const phaseDisplay = document.getElementById('phase-display');
     const gameMessage = document.getElementById('game-message');
 
     if (game.phase === "game_over") {
@@ -1906,11 +1591,10 @@ function updateDOM() {
         turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
     }
     
-    phaseDisplay.textContent = game.phase;
     gameMessage.textContent = game.message;
 
-    document.getElementById('pass-btn').disabled = waitingForServer;
-    document.getElementById('pickup-btn').disabled = waitingForServer;
+    const pickupBtn = document.getElementById('pickup-btn');
+    if (pickupBtn) pickupBtn.disabled = waitingForServer;
 
     const handsContainer = document.getElementById('hands-container');
     handsContainer.innerHTML = ''; 
@@ -2293,7 +1977,6 @@ window.addEventListener('keydown', (e) => {
         const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
         game.selectHand(kinds[e.key - '1']);
     }
-    else if (e.key.toLowerCase() === 'n') game.passPhase();
     else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
     else if (!isOnline && e.key === 'F1') { e.preventDefault(); game.reset(2); }
     else if (!isOnline && e.key === 'F2') { e.preventDefault(); game.reset(3); }
@@ -2326,7 +2009,6 @@ if (isOnline) {
 function applyRemoteAction(act) {
     if (act.type === 'applyMove') game.applyMove(act.move, true);
     else if (act.type === 'dropSelectedHand') game.dropSelectedHand(act.key, act.kind, true);
-    else if (act.type === 'passPhase') game.passPhase(true);
     else if (act.type === 'pickupSelectedSun') game.pickupSelectedSun(act.pieceId, true);
 }
 </script>
