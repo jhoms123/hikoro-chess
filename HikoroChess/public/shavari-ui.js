@@ -3,7 +3,7 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const params = new URLSearchParams(location.search), gameId = params.get('gameId');
-    const online = Boolean(gameId), storeKey = 'shavari-local-v2';
+    const online = Boolean(gameId), storeKey = 'shavari-local-v3';
     const courts = { 1: 'Carnelian', 2: 'Turquoise' };
     let state = Shavari.initial(), selected = null, mode = 'all', flipped = false;
     let journal = [], cursor = 0, mySeat = null, connected = false, pending = false, socket;
@@ -13,13 +13,13 @@
     function notice(message) { $('notice').textContent = message; $('notice').hidden = !message; }
     function persist() {
         if (online) return;
-        try { localStorage.setItem(storeKey, JSON.stringify({ version: 2, journal, cursor, flipped })); }
+        try { localStorage.setItem(storeKey, JSON.stringify({ version: 3, journal, cursor, flipped })); }
         catch { notice('Automatic saving is unavailable. Use Save record to keep this match.'); }
     }
     if (!online) {
         try {
             const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
-            if (saved?.version === 2 && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
+            if (saved?.version === 3 && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
                 journal = saved.journal; cursor = saved.cursor; state = Shavari.replay(journal, cursor); flipped = Boolean(saved.flipped);
                 if (cursor) notice('Your local match has been restored.');
             }
@@ -100,7 +100,7 @@
         const focus = document.activeElement;
         nodes.forEach((node,i) => {
             const x=i%9,y=Math.floor(i/9),stack=state.board[`${x},${y}`] || [], top=stack.at(-1);
-            const legal=moves.find(m=>m.x===x&&m.y===y), isSelected=selected?.x===x&&selected?.y===y;
+            const legal=moves.find(m=>m.x===x&&m.y===y&&m.kind==='cover')||moves.find(m=>m.x===x&&m.y===y), isSelected=selected?.x===x&&selected?.y===y;
             node.style.left = `${(flipped ? 8-x : x)*12.5}%`; node.style.top = `${(flipped ? 8-y : y)*12.5}%`;
             node.className='intersection'+(legal ? ` legal legal-${legal.kind}`:'')+(isSelected?' selected':'');
             if ([state.lastMove?.from,state.lastMove?.to].some(p=>p?.x===x&&p?.y===y)) node.classList.add('last');
@@ -185,7 +185,7 @@
     for(const [type,info] of Object.entries(Shavari.TYPES)){
         const card=document.createElement('article');card.className='guide-card';
         const img=document.createElement('img');img.src=`assets/shavari/${info.icon}.svg`;img.alt='';
-        const h=document.createElement('h3');h.textContent=info.name;const desc=document.createElement('p');desc.textContent=info.range===1?'One step along a line, in any orthogonal direction.':'Slide along a line. Taller formations can pass over shorter ones.';
+        const h=document.createElement('h3');h.textContent=info.name;const desc=document.createElement('p');desc.textContent=info.description;
         const small=document.createElement('small');small.textContent=type==='G'?'G · capture this to win':`${type} · ${type==='P'?'five':'two'} per court`;card.append(img,h,desc,small);$('guide-cards').appendChild(card);
     }
     if(online){
