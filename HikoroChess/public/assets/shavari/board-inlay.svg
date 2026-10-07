@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800"><defs>
+<linearGradient id="wood" x2="1" y2="1"><stop stop-color="#352417"/><stop offset=".5" stop-color="#725034"/><stop offset="1" stop-color="#211d18"/></linearGradient>
+<radialGradient id="sand"><stop stop-color="#eee0ae"/><stop offset="1" stop-color="#bd9861"/></radialGradient>
+<pattern id="grain" width="80" height="50" patternUnits="userSpaceOnUse"><path d="M0 10Q40 0 80 13M0 20Q40 30 80 24M0 42Q50 26 80 39" fill="none" stroke="#795c35" stroke-opacity=".12" stroke-width="1"/></pattern>
+<pattern id="inlay" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M20 2L25 12L36 8L32 20L38 26L26 28L20 38L14 28L2 26L8 20L4 8L15 12Z" fill="#56847a" stroke="#d5b878" stroke-width="1"/><path d="M20 12L28 20L20 28L12 20Z" fill="#d5b878"/></pattern>
+</defs><rect width="800" height="800" rx="16" fill="url(#wood)"/>
+<rect x="13" y="13" width="774" height="774" rx="10" fill="none" stroke="#d6b678" stroke-width="2"/>
+<rect x="22" y="22" width="756" height="756" rx="8" fill="url(#inlay)"/>
+<rect x="46" y="46" width="708" height="708" rx="6" fill="#34291e" stroke="#e8c789" stroke-width="3"/>
+<rect x="55" y="55" width="690" height="690" rx="4" fill="url(#sand)"/>
+<rect x="55" y="55" width="690" height="690" fill="url(#grain)"/>
+<g fill="none" stroke="#745530" stroke-width="1.3" opacity=".75">
+<path d="M60 60H740M60 60V740"/>
+<path d="M60 145H740M145 60V740"/>
+<path d="M60 230H740M230 60V740"/>
+<path d="M60 315H740M315 60V740"/>
+<path d="M60 400H740M400 60V740"/>
+<path d="M60 485H740M485 60V740"/>
+<path d="M60 570H740M570 60V740"/>
+<path d="M60 655H740M655 60V740"/>
+<path d="M60 740H740M740 60V740"/>
+</g>
+<circle cx="230" cy="230" r="4" fill="#7a5633"/>
+<circle cx="570" cy="230" r="4" fill="#7a5633"/>
+<circle cx="400" cy="400" r="4" fill="#7a5633"/>
+<circle cx="230" cy="570" r="4" fill="#7a5633"/>
+<circle cx="570" cy="570" r="4" fill="#7a5633"/>
+<g fill="none" stroke="#3e675e" stroke-opacity=".12" stroke-width="2"><path d="M400 312L419 352L461 339L448 381L488 400L448 419L461 461L419 448L400 488L381 448L339 461L352 419L312 400L352 381L339 339L381 352Z"/><circle cx="400" cy="400" r="36"/></g></svg>

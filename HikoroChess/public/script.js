@@ -72,15 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
+            singlePlayerBtn.disabled = !socket.connected && gameType !== 'shavari';
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             
-            if (gameType === 'shodansho') {
+            if (gameType !== 'hikoro') {
                 if (startReplayBtn) {
                     startReplayBtn.disabled = true;
-                    startReplayBtn.title = "Replay is not available for Sho Dan Sho";
+                    startReplayBtn.title = "This replay panel is for Hikoro records";
                 }
                 if (kifuPasteArea) kifuPasteArea.disabled = true;
-                if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'flex';
+                if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = gameType === 'shodansho' ? 'flex' : 'none';
             } else {
                 if (startReplayBtn) {
                     startReplayBtn.disabled = false;
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     singlePlayerBtn.addEventListener('click', () => {
+        if (gameTypeSelect.value === 'shavari') { window.location.href = '/shavari.html'; return; }
         isSinglePlayer = true;
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
@@ -143,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('disconnect', () => {
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = true;
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = gameTypeSelect.value !== 'shavari';
     });
     socket.on('roomClosed', message => announce(message));
     socket.on('connect_error', (err) => {
@@ -349,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const infoSpan = document.createElement('span');
             const creatorName = game.creatorName || 'Player 1';
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
-            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : "Hikoro Chess";
+            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : "Hikoro Chess";
 
             infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
             gameItem.appendChild(infoSpan);
@@ -380,6 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
+        if (initialGameState.gameType === 'shavari') {
+            window.location.href = initialGameState.isSinglePlayer ? '/shavari.html' : `/shavari.html?gameId=${encodeURIComponent(initialGameState.id)}`;
+            return;
+        }
         // Safe navigation directly to the Sho Dan Sho canvas environment
         if (initialGameState.gameType === 'shodansho') {
             const myIndex = initialGameState.players.indexOf(socket.id); // Valid index for SP or Online
@@ -1712,6 +1718,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      if (rulesBtn) {
         rulesBtn.addEventListener('click', () => {
+            if (gameTypeSelect.value === 'shavari') { window.location.href = '/shavari.html?showRules=1'; return; }
             if (gameTypeSelect.value === 'shodansho') { window.location.href = '/shodansho.html?showRules=1'; return; }
             populateHikoroRules();
             if (rulesModal) rulesModal.style.display = 'block';
