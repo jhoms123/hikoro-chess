@@ -6,6 +6,7 @@ const socketIo = require('socket.io');
 const hikoroLogic = require('./gamelogic');
 const { remainingTime, commitClock } = require('./clock');
 const { createSdsValidator, applySdsAction } = require('./sds-validator');
+const Shavari = require('./public/shavari-engine');
 
 function createServer() {
     const app = express();
@@ -26,14 +27,25 @@ function createServer() {
     const state = game => { const { logic, ...publicState } = game; return publicState; };
     const err = (socket, message) => socket.emit('errorMsg', message);
     const ticket = () => crypto.randomBytes(24).toString('hex');
-    const seat = (game, socket) => game.gameType === 'shodansho' ? game.players.indexOf(socket.id)
+    const seat = (game, socket) => game.gameType !== 'hikoro' ? game.players.indexOf(socket.id)
         : game.players.white === socket.id ? 0 : game.players.black === socket.id ? 1 : -1;
     const member = (game, socket) => seat(game, socket) !== -1;
+    function sendShavari(game, onlySocket) {
+        const engine = sessions.get(game.id)?.engine;
+        if (!engine) return;
+        const { positions, ...publicEngine } = engine;
+        game.players.forEach((id, playerIndex) => {
+            if (!onlySocket || id === onlySocket.id) io.to(id).emit('shavariState', { gameId: game.id, state: publicEngine, playerIndex });
+        });
+    }
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
         game.lastActivity = Date.now();
-        io.to(game.id).emit('gameStateUpdate', state(game));
-        if (game.gameType === 'shodansho') io.to(game.id).emit('roomClosed', reason);
+        if (game.gameType === 'shavari') {
+            sessions.get(game.id).engine.result = { winner: winner === 'draw' ? 0 : Number(winner), reason };
+            sendShavari(game);
+        } else io.to(game.id).emit('gameStateUpdate', state(game));
+        if (game.gameType !== 'hikoro') io.to(game.id).emit('roomClosed', reason);
     }
     function remove(game) {
         games.delete(game.id); sessions.delete(game.id); lobby.delete(game.id); emitLobby();
@@ -41,12 +53,12 @@ function createServer() {
     function options(data) {
         if (!data || typeof data !== 'object') return null;
         const gameType = data.gameType || 'hikoro';
-        if (!['hikoro', 'shodansho'].includes(gameType)) return null;
+        if (!['hikoro', 'shodansho', 'shavari'].includes(gameType)) return null;
         const maxPlayers = gameType === 'shodansho' ? Number(data.sdsPlayerCount || 2) : 2;
         if (![2, 3, 4].includes(maxPlayers)) return null;
         const tc = data.timeControl || { main: 300, byoyomiTime: 30 };
         if (![-1, 0, 300, 900, 1800, 3600].includes(tc.main) || ![0, 15, 30, 60].includes(tc.byoyomiTime)) return null;
-        const timeControl = gameType === 'shodansho' ? { main: -1, byoyomiTime: 0 }
+        const timeControl = gameType !== 'hikoro' ? { main: -1, byoyomiTime: 0 }
             : { main: tc.main, byoyomiTime: tc.main === -1 ? 0 : tc.main === 0 && tc.byoyomiTime === 0 ? 15 : tc.byoyomiTime };
         return { gameType, maxPlayers, timeControl, name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
     }
@@ -59,7 +71,7 @@ function createServer() {
             moveList: [], whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true, sdsActions: [] };
         games.set(id, game);
         const tokens = [ticket()];
-        sessions.set(id, { tokens, engine: config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
+        sessions.set(id, { tokens, engine: config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
         socket.join(id);
         socket.emit('seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
         return game;
@@ -100,6 +112,7 @@ function createServer() {
         socket.on('createSinglePlayerGame', data => {
             const config = options({ ...data, timeControl: { main: -1, byoyomiTime: 0 } });
             if (!config) return err(socket, 'Invalid game settings.');
+            if (config.gameType === 'shavari') return err(socket, 'Local Shavari play is available at /shavari.html.');
             if (!canCreate()) return;
             socket.emit('gameStart', state(newGame(socket, config, true)));
         });
@@ -108,7 +121,7 @@ function createServer() {
             if (!game || game.started || game.gameOver) return err(socket, 'This room is no longer available.');
             if (member(game, socket)) return err(socket, 'You are already in this room.');
             let index;
-            if (game.gameType === 'shodansho') {
+            if (game.gameType !== 'hikoro') {
                 if (game.players.length >= game.maxPlayers) return err(socket, 'This room is full.');
                 index = game.players.push(socket.id) - 1;
             } else { if (game.players.black) return err(socket, 'This room is full.'); game.players.black = socket.id; index = 1; }
@@ -125,22 +138,41 @@ function createServer() {
             }
             emitLobby();
         });
-        function resume(data, sds) {
+        function resume(data, type) {
             const game = games.get(data?.gameId); const session = sessions.get(data?.gameId);
             const index = session?.tokens.indexOf(data?.token);
-            if (!game || !session || index === -1 || index === undefined || (game.gameType === 'shodansho') !== sds)
+            if (!game || !session || index === -1 || index === undefined || game.gameType !== type)
                 return err(socket, 'This seat could not be restored. Return to the lobby to start a new game.');
-            const oldId = sds ? game.players[index] : game.players[index === 0 ? 'white' : 'black'];
+            const arraySeats = type !== 'hikoro';
+            const oldId = arraySeats ? game.players[index] : game.players[index === 0 ? 'white' : 'black'];
             if (oldId !== socket.id && io.sockets.sockets.has(oldId)) io.sockets.sockets.get(oldId).leave(game.id);
-            if (sds) game.players[index] = socket.id;
+            if (arraySeats) game.players[index] = socket.id;
             else { game.players[index === 0 ? 'white' : 'black'] = socket.id; if (game.isSinglePlayer) game.players.black = socket.id; }
             socket.join(game.id); game.lastActivity = Date.now();
-            if (sds) socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers });
+            if (type === 'shavari') {
+                if (!game.started) return socket.emit('gameCreated', { gameId: game.id, color: 'waiting' });
+                sendShavari(game, socket);
+            } else if (type === 'shodansho') socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers });
             else if (!game.started) socket.emit('gameCreated', { gameId: game.id, color: index === 0 ? 'white' : 'black' });
             else socket.emit('gameStart', state(game));
         }
-        socket.on('resumeGame', data => resume(data, false));
-        socket.on('joinSdsRoom', data => resume(data, true));
+        socket.on('resumeGame', data => resume(data, 'hikoro'));
+        socket.on('joinSdsRoom', data => resume(data, 'shodansho'));
+        socket.on('joinShavariRoom', data => resume(data, 'shavari'));
+        socket.on('shavariAction', data => {
+            const game = games.get(data?.gameId), engine = sessions.get(data?.gameId)?.engine;
+            if (!game || game.gameType !== 'shavari' || !game.started || game.gameOver || seat(game, socket) !== engine.player - 1)
+                return err(socket, 'Not your turn or this seat is no longer active.');
+            const next = Shavari.apply(engine, data?.action);
+            if (!next) return err(socket, 'That move is not legal.');
+            sessions.get(game.id).engine = next; game.lastActivity = Date.now();
+            game.gameOver = Boolean(next.result); sendShavari(game);
+        });
+        socket.on('shavariResign', data => {
+            const game = games.get(data?.gameId);
+            if (!game || game.gameType !== 'shavari' || !game.started || game.gameOver || !member(game, socket)) return err(socket, 'You do not hold an active seat in this game.');
+            finish(game, 2 - seat(game, socket), 'Resignation');
+        });
         socket.on('makeGameMove', data => {
             const game = games.get(data?.gameId); const move = data?.move;
             if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return err(socket, 'You do not hold a seat in this game.');
@@ -180,7 +212,7 @@ function createServer() {
             const game = games.get(id);
             if (!game || !member(game, socket)) return err(socket, 'You do not hold a seat in this room.');
             if (game.started && !game.isSinglePlayer && !game.gameOver) finish(game,
-                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : 'draw', 'A player left the room.');
+                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : game.gameType === 'shavari' ? 2 - seat(game, socket) : 'draw', 'A player left the room.');
             else io.to(id).emit('roomClosed', 'This room was closed.');
             socket.leave(id); remove(game);
         });

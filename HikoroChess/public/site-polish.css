@@ -11,7 +11,7 @@
 .collection-intro h1 { font-weight:normal; font-size:clamp(30px,4vw,48px); line-height:1.2; margin:12px 0; }
 .collection-intro > p:last-child { color:var(--muted); font-style:italic; margin:12px 0 0; }
 .hikoro-site #lobby { width:min(100% - 36px,1060px); max-width:none; padding:0; background:none; border:none; margin:0 auto 40px; }
-.game-choices { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:0 0 24px; }
+.game-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin:0 0 24px; }
 .hikoro-site button { cursor:pointer; font-family:Georgia,serif; }
 .hikoro-site .game-choice { display:flex; align-items:center; gap:20px; padding:24px; background:#322319; border:1px solid #a8844855; border-radius:3px; color:var(--ink); text-align:left; transition:border-color .15s,background .15s; }
 .game-choice[aria-pressed="true"] { outline:1px solid #cfa96a; background:#48321e; box-shadow:inset 0 0 30px #b6905320; }
@@ -73,3 +73,5 @@
 .hikoro-site #game-controls button { border:10px solid transparent; border-image:url('assets/medieval/wood-button.png') 12 16 16 16 fill / 10px 14px / 0 stretch; background:none; color:#fff0cb; padding:3px 10px; border-radius:0; }
 .hikoro-site #game-controls #resign-button { border-image-source:url('assets/medieval/ivory-button.png'); color:#782d20; }
 .hikoro-site #white-time-hikoro,.hikoro-site #black-time-hikoro { border:1px solid #aa854155; background:#1d160e; color:#e5c58c; border-radius:3px; font:18px/1.5 monospace; }
+
+@media(min-width:701px) and (max-width:1100px){.game-choices{grid-template-columns:1fr 1fr}.game-choice:last-child{grid-column:1/-1}}

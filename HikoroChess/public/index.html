@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hikoro Chess & Sho Dan Sho</title>
+    <title>Hikoro · Three games of strategy</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="site-polish.css">
 </head>
 <body class="hikoro-site">
     <a class="skip-link" href="#lobby">Skip to game setup</a>
     <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/harmony-seal.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
-    <section class="collection-intro"><p class="eyebrow">TWO GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command the creatures of the deep, or cultivate a garden of harmony.</p></section>
+    <section class="collection-intro"><p class="eyebrow">THREE GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command an ocean kingdom, cultivate a garden, or lead the Shavari courts.</p></section>
     <div id="site-notice" role="status" aria-live="polite" hidden></div>
 
     <div id="lobby">
         <div class="game-choices" aria-label="Choose a game">
             <button class="game-choice" data-game="hikoro" aria-pressed="true"><img src="sprites/lupa_white.png" alt="" width="60" height="60"><span><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span></button>
             <button class="game-choice" data-game="shodansho" aria-pressed="false"><img src="sprites/chysalith_flower_blue.png" alt="" width="60" height="60"><span><strong>Sho Dan Sho</strong><small>Build harmony in the garden.</small><em>2–4 players · Placement &amp; territory</em></span></button>
+            <button class="game-choice" data-game="shavari" aria-pressed="false"><img src="assets/shavari/lotus.svg" alt="" width="60" height="60"><span><strong>Shavari chess</strong><small>Lead the lotus. Build your formations.</small><em>2 players · Stacking &amp; line tactics</em></span></button>
         </div>
         <section class="setup-panel"><div class="section-title"><span class="eyebrow">YOUR TABLE</span><h2>Set up a game</h2></div>
         <div id="time-controls">
@@ -25,6 +26,7 @@
                 <select id="game-type-select">
                     <option value="hikoro" selected>Hikoro Chess</option>
                     <option value="shodansho">Sho Dan Sho</option>
+                    <option value="shavari">Shavari chess</option>
                 </select>
             </div>
             
