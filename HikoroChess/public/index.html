@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hikoro · Six games of strategy</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="site-polish.css">
+    <link rel="stylesheet" href="site-polish.css">\n    <link rel="stylesheet" href="premium-home.css">
 <link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script></head>
 <body data-audio-theme="lobby" class="hikoro-site">
     <a class="skip-link" href="#lobby">Skip to game setup</a>
@@ -15,12 +15,68 @@
 
     <div id="lobby">
         <div class="game-choices" aria-label="Choose a game">
-            <button class="game-choice" data-game="hikoro" aria-pressed="true"><img src="sprites/lupa_white.png" alt="" width="60" height="60"><span><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span></button>
-            <button class="game-choice" data-game="shodansho" aria-pressed="false"><img src="sprites/chysalith_flower_blue.png" alt="" width="60" height="60"><span><strong>Sho Dan Sho</strong><small>Build harmony in the garden.</small><em>2–4 players · Placement &amp; territory</em></span></button>
-            <button class="game-choice" data-game="shavari" aria-pressed="false"><img src="assets/shavari/lotus.svg" alt="" width="60" height="60"><span><strong>Shavari chess</strong><small>Lead the lotus. Build your formations.</small><em>2 players · Stacking &amp; line tactics</em></span></button>
-            <button class="game-choice" data-game="hikoruka" aria-pressed="false"><img src="assets/hikoruka/crown.svg" alt="" width="60" height="60"><span><strong>Hikorüka chess</strong><small>Five pieces. One citadel.</small><em>5 × 5 · Two players or bot</em></span></button>
-            <button class="game-choice" data-game="go" aria-pressed="false"><span class="go-card-art" aria-hidden="true">● ◇ ○</span><span><strong>Shield Go</strong><small>Leap, shield, and surround.</small><em>9 × 9 or 13 × 13 · Two players</em></span></button>
-            <button class="game-choice" data-game="academy" aria-pressed="false"><img src="sprites/yoli_white.png" alt="" width="60" height="60"><span><strong>Hikoro Academy</strong><small>Learn movements, royals, and sanctuaries.</small><em>8 × 8 · Practice &amp; teaching matches</em></span></button>
+            <button class="game-choice" data-game="hikoro" aria-pressed="true">
+                <span class="promo-art promo-ocean" aria-hidden="true">
+                    <span class="mini-hikoro-board"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                        <span class="mh-piece mh-p1"><img src="sprites/lupa_white.png" alt=""></span>
+                        <span class="mh-piece mh-p2"><img src="sprites/prince_white.png" alt=""></span>
+                        <span class="mh-piece mh-p3"><img src="sprites/sult_white.png" alt=""></span>
+                        <span class="mh-piece dark mh-p4"><img src="sprites/lupa_black.png" alt=""></span>
+                        <span class="mh-piece dark mh-p5"><img src="sprites/yoli_black.png" alt=""></span>
+                    </span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Ocean kingdom · Full game</span><strong>Hikoro Chess</strong><small>A sprawling royal war of palaces, sanctuaries, promotions, captures, and sea-born armies.</small><em>2 players · Captures &amp; promotions</em><span class="card-detail">The flagship table. Deep ocean, pearl, bronze, and an army large enough to make every match feel like a campaign.</span></span>
+            </button>
+            <button class="game-choice" data-game="shodansho" aria-pressed="false">
+                <span class="promo-art promo-garden" aria-hidden="true">
+                    <img class="flower-chip fc1" src="sprites/star_flower_blue.png" alt="">
+                    <img class="flower-hero" src="sprites/chysalith_flower_blue.png" alt="">
+                    <img class="flower-chip fc2" src="sprites/water_flower_purple.png" alt="">
+                    <span class="garden-divider"></span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Garden manuscript · Harmony</span><strong>Sho Dan Sho</strong><small>A botanical contest of placement, movement, line-of-sight harmony, and territorial control.</small><em>2–4 players · Placement &amp; territory</em><span class="card-detail">Parchment, carved wood, botanical ornament, and the original flower artwork stay central instead of being reduced to an icon.</span></span>
+            </button>
+            <button class="game-choice" data-game="shavari" aria-pressed="false">
+                <span class="promo-art promo-shavari" aria-hidden="true">
+                    <span class="shavari-board-mini">
+                        <span class="sh-token red sht1"><img src="assets/shavari/lotus.svg" alt=""></span>
+                        <span class="sh-token red stack-chip sht2"><img src="assets/shavari/elephant-head.svg" alt=""></span>
+                        <span class="sh-token teal sht3"><img src="assets/shavari/camel.svg" alt=""></span>
+                        <span class="sh-token teal stack-chip sht4"><img src="assets/shavari/gold-scarab.svg" alt=""></span>
+                    </span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Turquoise &amp; carnelian court</span><strong>Shavari chess</strong><small>Build formations three levels high, split stacks, cover enemies, and hunt the opposing Lotus general.</small><em>2 players · Stacking &amp; line tactics</em><span class="card-detail">Court colors, geometric board lines, raised tokens, and credited emblems make the stacking system visible before you open the game.</span></span>
+            </button>
+            <button class="game-choice" data-game="hikoruka" aria-pressed="false">
+                <span class="promo-art promo-citadel" aria-hidden="true">
+                    <span class="citadel-mini"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                        <span class="cit-piece cp1"><img src="assets/hikoruka/crown.svg" alt=""></span>
+                        <span class="cit-piece cp2"><img src="assets/hikoruka/castle.svg" alt=""></span>
+                        <span class="cit-piece ivory cp3"><img src="assets/hikoruka/crown.svg" alt=""></span>
+                        <span class="cit-piece ivory cp4"><img src="assets/hikoruka/horse-head.svg" alt=""></span>
+                    </span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Medieval citadel · Compact war</span><strong>Hikorüka chess</strong><small>Five roles, eight pieces, and a brutally compact battlefield where every move immediately matters.</small><em>5 × 5 · Two players or bot</em><span class="card-detail">Timber, ivory, bronze, heraldic tokens, and a true miniature citadel board—not a generic brown card.</span></span>
+            </button>
+            <button class="game-choice" data-game="go" aria-pressed="false">
+                <span class="promo-art promo-go" aria-hidden="true">
+                    <span class="go-mini">
+                        <span class="stone black gs1"></span><span class="stone white gs2"></span>
+                        <span class="stone black shield gs3"></span><span class="stone white shield gs4"></span>
+                    </span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Stone table · Territory</span><strong>Shield Go</strong><small>Place, leap, convert stones into shields, and surround territory on a restrained wooden table.</small><em>9 × 9 or 13 × 13 · Two players</em><span class="card-detail">The quietest table in the collection: engraved grid, tactile stones, and defensive shield forms with minimal visual noise.</span></span>
+            </button>
+            <button class="game-choice" data-game="academy" aria-pressed="false">
+                <span class="promo-art promo-academy" aria-hidden="true">
+                    <span class="academy-book">
+                        <span class="lesson-board"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span><span></span>
+                        <span class="lesson-piece alp1"><img src="sprites/yoli_white.png" alt=""></span>
+                        <span class="lesson-piece alp2"><img src="sprites/prince_white.png" alt=""></span>
+                    </span>
+                </span>
+                <span class="promo-copy"><span class="promo-kicker">Start here · Learning codex</span><strong>Hikoro Academy</strong><small>Learn eight real Hikoro pieces through guided lessons and a smaller teaching match before taking on the full sea.</small><em>8 × 8 · Practice &amp; teaching matches</em><span class="card-detail">Presented as a training codex with a miniature board, movement lessons, badges, and a deliberate path into full Hikoro.</span></span>
+            </button>
         </div>
         <section class="setup-panel"><div class="section-title"><span class="eyebrow">YOUR TABLE</span><h2>Set up a game</h2></div>
         <div id="time-controls">
