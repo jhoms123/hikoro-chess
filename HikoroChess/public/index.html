@@ -5,12 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hikoro Chess & Sho Dan Sho</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="site-polish.css">
 </head>
-<body>
-    <h1>Hikoro Chess & Sho Dan Sho</h1>
+<body class="hikoro-site">
+    <a class="skip-link" href="#lobby">Skip to game setup</a>
+    <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/harmony-seal.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
+    <section class="collection-intro"><p class="eyebrow">TWO GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command the creatures of the deep, or cultivate a garden of harmony.</p></section>
+    <div id="site-notice" role="status" aria-live="polite" hidden></div>
 
     <div id="lobby">
-        <h2>Game Lobby</h2>
+        <div class="game-choices" aria-label="Choose a game">
+            <button class="game-choice" data-game="hikoro" aria-pressed="true"><img src="sprites/lupa_white.png" alt="" width="60" height="60"><span><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span></button>
+            <button class="game-choice" data-game="shodansho" aria-pressed="false"><img src="sprites/chysalith_flower_blue.png" alt="" width="60" height="60"><span><strong>Sho Dan Sho</strong><small>Build harmony in the garden.</small><em>2–4 players · Placement &amp; territory</em></span></button>
+        </div>
+        <section class="setup-panel"><div class="section-title"><span class="eyebrow">YOUR TABLE</span><h2>Set up a game</h2></div>
         <div id="time-controls">
             <div>
                 <label for="game-type-select">Game Type:</label>
@@ -50,22 +58,22 @@
             </div>
         </div>
         
-        <button id="create-game-btn">Create New Game</button>
-        <button id="single-player-btn">Single Player (Pass & Play)</button>
-        <button id="rules-btn">Rules & Movesets</button>
+        <div class="lobby-actions"><button id="create-game-btn">Create online room</button>
+        <button id="single-player-btn">Play locally</button>
+        <button id="rules-btn">Read the rules</button></div><p class="setup-hint" id="setup-hint">Online rooms need a second player. Local play shares this device.</p></section>
 
         <div id="replay-section" style="margin-top: 20px; border-top: 1px solid #777; padding-top: 15px; width: 90%; margin-left: auto; margin-right: auto;">
-            <h3>Replay Game</h3>
+            <details><summary>Review a Hikoro game</summary><p>Paste saved Kifu notation to step through a previous match.</p><label for="kifu-paste-area">Game notation</label>
             <textarea id="kifu-paste-area" placeholder="Paste Kifu notation here...&#10;Example:&#10;1. S*e10 S*f7&#10;2. B*c5 KPa8" rows="5" style="width: 100%; background-color: #555; color: #eee; border: 1px solid #777; box-sizing: border-box;"></textarea>
-            <button id="start-replay-btn" style="margin-top: 10px; padding: 8px 16px;">Start Replay</button>
+            <button id="start-replay-btn" style="margin-top: 10px; padding: 8px 16px;">Start replay</button></details>
         </div>
 
-        <div style="margin: 15px 0;">
+        <div class="player-name-field">
             <label for="player-name">Your Name:</label>
             <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
         </div>
-        <h3>Available Games:</h3>
-        <div id="game-list"></div>
+        <section class="rooms-section"><div class="section-title"><span class="eyebrow">PLAY TOGETHER</span><h3>Open tables</h3></div>
+        <div id="game-list" aria-live="polite"></div></section>
     </div>
 	
 
@@ -106,7 +114,7 @@
         <div id="replay-controls" style="display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;">
             <button id="replay-first-btn" title="First Move">|&lt;</button>
             <button id="replay-prev-btn" title="Previous Move">&lt;</button>
-            <span id="replay-move-number">0 / 0</span>
+            <span id="replay-move-number" role="status">0 / 0</span>
             <button id="replay-next-btn" title="Next Move">&gt;</button>
             <button id="replay-last-btn" title="Last Move">&gt;|</button>
         </div>
@@ -118,9 +126,9 @@
         </div>
     </div>
 
-    <div id="rules-modal" class="modal">
+    <div id="rules-modal" class="modal" role="dialog" aria-modal="true" aria-label="Hikoro rules">
         <div class="modal-content">
-            <span class="close-btn" id="close-rules-btn">&times;</span>
+            <button type="button" class="close-btn" id="close-rules-btn" aria-label="Close rules">&times;</button>
           <div id="rules-body"></div>
         </div>
     </div>
@@ -128,6 +136,8 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="gamelogic.js"></script>
     <script src="script.js"></script>
+    <script src="site-ui.js"></script>
 
+    <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="assets/medieval/CREDITS.md">Artwork credits</a></footer>
 </body>
 </html>
