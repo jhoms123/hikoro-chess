@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sho Dan Sho - Online</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shodansho-utilities.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         
         body {
             font-family: 'Inter', sans-serif;
@@ -97,6 +97,7 @@
         }
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
+    <link rel="stylesheet" href="shodansho-medieval.css">
 </head>
 <body class="sds-page text-slate-100">
     <header class="site-header">
@@ -104,13 +105,20 @@
         <span class="header-caption">A garden of strategy &amp; harmony</span>
         <button class="header-rules" onclick="toggleRulesModal()" aria-haspopup="dialog">How to play <span aria-hidden="true">↗</span></button>
     </header>
+    <section class="garden-masthead" aria-label="Game introduction">
+        <div class="masthead-ornament" aria-hidden="true"></div>
+        <p class="edition-label">THE HIKORO COLLECTION</p>
+        <h1>Sho Dan Sho</h1>
+        <p class="masthead-subtitle">The art of harmony, written in flowers.</p>
+        <div class="masthead-ornament ornament-right" aria-hidden="true"></div>
+    </section>
     <main class="game-layout" aria-label="Sho Dan Sho game">
 
     <aside aria-label="Game status and actions" class="game-sidebar flex flex-col gap-4 w-72 shrink-0 z-10 h-full overflow-y-auto pr-2 pb-4">
         
         <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-5 flex flex-col items-center">
-            <div class="edition-label">THE HARMONY GARDEN</div>
-            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest mb-1 drop-shadow-sm">Sho Dan Sho</h1>
+            <div class="edition-label">YOUR MATCH</div>
+            <h2 class="status-heading">The garden</h2>
             <p class="text-xs text-slate-400 mb-5 font-medium tracking-wide">Place a flower. Shape the garden.</p>
             
             <div id="turn-indicator" class="w-full py-2 px-4 rounded-xl font-bold text-center text-lg shadow-inner border border-white/10 mb-4 transition-colors duration-300">
@@ -179,13 +187,13 @@
         </div>
     </aside>
     </main>
-    <footer class="site-footer"><span>SHO DAN SHO</span><span>Movement · Balance · Harmony</span><button id="cancel-selection-btn" onclick="cancelSelection()">Clear selection <kbd>Esc</kbd></button></footer>
+    <footer class="site-footer"><span>SHO DAN SHO</span><span>Movement · Balance · Harmony</span><a class="asset-credits" href="assets/medieval/CREDITS.md" target="_blank" rel="noopener">Art credits</a><button id="cancel-selection-btn" onclick="cancelSelection()">Clear selection <kbd>Esc</kbd></button></footer>
 
     <div id="rules-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden-modal p-4 sm:p-8">
         <div id="rules-content" class="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden">
             
             <div class="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-800/50">
-                <h2 id="rules-title" class="text-2xl font-bold text-amber-400 tracking-wide">Rules of Sho Dan Sho</h2>
+                <h2 id="rules-title" class="text-2xl font-bold text-amber-400 tracking-wide">The Book of Harmony</h2>
                 <button id="close-rules" aria-label="Close rules" onclick="toggleRulesModal()" class="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 rounded-lg p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
