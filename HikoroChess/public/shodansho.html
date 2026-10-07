@@ -97,7 +97,7 @@
         }
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
-    <link rel="stylesheet" href="shodansho-medieval.css">
+    <link rel="stylesheet" href="shodansho-medieval.css">\n    <link rel="stylesheet" href="visual-refresh.css">
 <link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
@@ -416,7 +416,7 @@ let spritesPending = 0;
 
 spriteKinds.forEach(kind => {
     loadedSprites[kind] = {};
-    SPRITE_COLORS.forEach(color => {
+    SPRITE_COLORS.slice(0, game.playerCount).forEach(color => {
         spritesPending++;
         let img = new Image();
         img.src = `sprites/${kind}_flower_${color}.png`;
@@ -510,7 +510,7 @@ function updateDOM() {
                 
                 item.innerHTML = `
                     <div class="relative w-6 h-6 flex-shrink-0">
-                        <img src="${imgSrc}" class="piece-icon-img absolute inset-0 w-full h-full object-contain" alt="${kind}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img src="${imgSrc}" loading="lazy" decoding="async" class="piece-icon-img absolute inset-0 w-full h-full object-contain" alt="${kind}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div style="display:none;" class="absolute inset-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold border border-white/20" style="color:${PLAYER_COLORS[p]}">${PIECES[kind].letter}</div>
                     </div>
                     <span class="text-xs font-medium text-slate-300 flex-grow">${PIECES[kind].label}</span>
