@@ -24,6 +24,31 @@ document.addEventListener('DOMContentLoaded', () => {
     selector.addEventListener('change', updateChoice);
     document.querySelectorAll('.game-choice').forEach(b => b.addEventListener('click', () => { selector.value = b.dataset.game; selector.dispatchEvent(new Event('change')); }));
     selector.dispatchEvent(new Event('change'));
+
+    // Surface one useful local save without forcing the player to inspect every table.
+    const saveCandidates = [
+        { key:'hikoro-academy-local-v3', title:'Hikoro Academy', detail:'Continue your saved lesson or teaching match.', href:'academy.html' },
+        { key:'shavari-local-v3', title:'Shavari chess', detail:'Continue your saved formation battle.', href:'shavari.html' },
+        { key:'hikoruka-local-v1', title:'Hikorüka chess', detail:'Return to your saved citadel match.', href:'hikoruka.html' },
+        { key:'shield-go-local-v1', title:'Shield Go', detail:'Return to your saved stone-and-shield table.', href:'go.html' }
+    ];
+    const resumePanel = document.getElementById('resume-panel');
+    if (resumePanel) {
+        let savedChoice = null;
+        for (const candidate of saveCandidates) {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(candidate.key) || 'null');
+                const progress = Number(parsed?.cursor || 0);
+                if (progress > 0) { savedChoice = { ...candidate, progress }; break; }
+            } catch {}
+        }
+        if (savedChoice) {
+            document.getElementById('resume-title').textContent = savedChoice.title;
+            document.getElementById('resume-detail').textContent = savedChoice.detail;
+            document.getElementById('resume-link').href = savedChoice.href;
+            resumePanel.hidden = false;
+        }
+    }
     const lobby = document.getElementById('lobby');
     new MutationObserver(() => document.body.classList.toggle('game-active', lobby.style.display === 'none')).observe(lobby, { attributes:true, attributeFilter:['style'] });
     const modal = document.getElementById('rules-modal');
