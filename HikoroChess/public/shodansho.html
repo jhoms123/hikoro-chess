@@ -96,20 +96,28 @@
             border: 4px solid rgba(255,255,255,0.05);
         }
     </style>
+    <link rel="stylesheet" href="shodansho-ui.css">
 </head>
-<body class="text-slate-100 flex h-screen p-4 gap-6 box-border overflow-hidden">
+<body class="sds-page text-slate-100">
+    <header class="site-header">
+        <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
+        <span class="header-caption">A garden of strategy &amp; harmony</span>
+        <button class="header-rules" onclick="toggleRulesModal()" aria-haspopup="dialog">How to play <span aria-hidden="true">↗</span></button>
+    </header>
+    <main class="game-layout" aria-label="Sho Dan Sho game">
 
-    <div class="flex flex-col gap-4 w-72 shrink-0 z-10 h-full overflow-y-auto pr-2 pb-4">
+    <aside aria-label="Game status and actions" class="game-sidebar flex flex-col gap-4 w-72 shrink-0 z-10 h-full overflow-y-auto pr-2 pb-4">
         
         <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-5 flex flex-col items-center">
+            <div class="edition-label">THE HARMONY GARDEN</div>
             <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 uppercase tracking-widest mb-1 drop-shadow-sm">Sho Dan Sho</h1>
-            <p class="text-xs text-slate-400 mb-5 font-medium tracking-wide">Strategic Board Game</p>
+            <p class="text-xs text-slate-400 mb-5 font-medium tracking-wide">Place a flower. Shape the garden.</p>
             
             <div id="turn-indicator" class="w-full py-2 px-4 rounded-xl font-bold text-center text-lg shadow-inner border border-white/10 mb-4 transition-colors duration-300">
                 Turn 1 | P1
             </div>
             
-            <div id="game-message" class="text-sm text-sky-200 italic text-center min-h-[48px] flex items-center justify-center bg-black/40 rounded-lg p-3 border border-sky-500/20 shadow-inner w-full">
+            <div id="game-message" role="status" aria-live="polite" class="text-sm text-sky-200 italic text-center min-h-[48px] flex items-center justify-center bg-black/40 rounded-lg p-3 border border-sky-500/20 shadow-inner w-full">
                 Loading game state...
             </div>
         </div>
@@ -121,14 +129,14 @@
             </h3>
             <div class="flex flex-col gap-2">
                 <button id="pickup-btn" class="w-full py-2 px-3 text-sm bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
-                    Pickup Sun (P)
+                    Pick up Sun <kbd>P</kbd>
                 </button>
                 <div class="flex gap-2 mt-1">
                     <button class="flex-1 py-2 px-3 text-sm bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold rounded-xl border border-indigo-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0" onclick="toggleRulesModal()">
                         Rules
                     </button>
                     <button id="main-menu-btn" class="flex-1 py-2 px-3 text-sm bg-rose-600/80 hover:bg-rose-500 text-white font-bold rounded-xl border border-rose-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0" onclick="window.location.href='/'">
-                        Exit
+                        Leave game
                     </button>
                 </div>
             </div>
@@ -144,7 +152,7 @@
             </div>
         </div>
 
-        <div class="mt-auto bg-black/30 rounded-xl p-4 border border-white/5 text-xs text-slate-400 shadow-inner">
+        <div class="controls-guide mt-auto bg-black/30 rounded-xl p-4 border border-white/5 text-xs text-slate-400 shadow-inner">
             <strong class="text-slate-300 block mb-1">Controls:</strong>
             <ul class="list-disc pl-4 space-y-1">
                 <li><span class="text-white">L-Click</span> friendly: Move</li>
@@ -153,29 +161,32 @@
                 <li><span class="text-rose-300">R-Click</span>: Cancel Selection</li>
             </ul>
         </div>
-    </div>
+    </aside>
 
     <div id="board-wrapper" class="flex-grow flex items-center justify-center z-10 shrink-0">
         <canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
     </div>
 
-    <div class="flex flex-col gap-4 w-80 shrink-0 z-10 h-full overflow-y-auto pl-2 pb-4">
+    <aside aria-label="Player inventories" class="inventory-sidebar flex flex-col gap-4 w-80 shrink-0 z-10 h-full overflow-y-auto pl-2 pb-4">
         <div class="bg-game-panel backdrop-blur-md rounded-2xl border border-white/10 shadow-lg p-5 flex flex-col h-full">
             <h2 class="text-xl font-bold text-slate-200 mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
                 <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                Inventories
+                Flower reserves
             </h2>
+            <p class="reserve-intro">Choose a flower from the active player’s hand to place it in the garden.</p>
             <div id="hands-container" class="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">
                 </div>
         </div>
-    </div>
+    </aside>
+    </main>
+    <footer class="site-footer"><span>SHO DAN SHO</span><span>Movement · Balance · Harmony</span><button id="cancel-selection-btn" onclick="cancelSelection()">Clear selection <kbd>Esc</kbd></button></footer>
 
-    <div id="rules-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden-modal p-4 sm:p-8">
+    <div id="rules-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden-modal p-4 sm:p-8">
         <div id="rules-content" class="bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden">
             
             <div class="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-800/50">
-                <h2 class="text-2xl font-bold text-amber-400 tracking-wide">Rules of Sho Dan Sho</h2>
-                <button onclick="toggleRulesModal()" class="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 rounded-lg p-2">
+                <h2 id="rules-title" class="text-2xl font-bold text-amber-400 tracking-wide">Rules of Sho Dan Sho</h2>
+                <button id="close-rules" aria-label="Close rules" onclick="toggleRulesModal()" class="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 rounded-lg p-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
@@ -338,9 +349,28 @@ let socket = null;
 let waitingForServer = false;
 
 // Modal Logic
+let rulesReturnFocus = null;
 function toggleRulesModal() {
     const modal = document.getElementById('rules-modal');
-    modal.classList.toggle('hidden-modal');
+    const opening = modal.classList.contains('hidden-modal');
+    if (opening) rulesReturnFocus = document.activeElement;
+    modal.classList.toggle('hidden-modal', !opening);
+    modal.setAttribute('aria-hidden', String(!opening));
+    document.querySelector('main').inert = opening;
+    document.querySelector('.site-header').inert = opening;
+    document.querySelector('.site-footer').inert = opening;
+    document.body.classList.toggle('rules-open', opening);
+    if (opening) document.getElementById('close-rules').focus();
+    else if (rulesReturnFocus) rulesReturnFocus.focus();
+}
+function cancelSelection() {
+    game.selectedPieceId = null;
+    game.selectedHandKind = null;
+    game.legalMoves = [];
+    game.enemyViewPieceId = null;
+    game.enemyMoves = [];
+    game.message = "Selection cleared. Choose a flower or a piece.";
+    updateDOM();
 }
 // Close on outside click
 document.getElementById('rules-modal').addEventListener('click', function(e) {
@@ -1602,8 +1632,9 @@ function updateDOM() {
     for (let p = 0; p < game.playerCount; p++) {
         let player = game.players[p];
         let handDiv = document.createElement('div');
-        handDiv.className = `p-3 rounded-xl border ${p === game.currentPlayer && game.phase !== "game_over" ? 'border-amber-500/50 bg-amber-500/10 shadow-[inset_0_0_15px_rgba(245,158,11,0.1)]' : 'border-white/5 bg-slate-800/40'}`;
+        handDiv.className = `reserve-card p-3 rounded-xl border ${p === game.currentPlayer && game.phase !== "game_over" ? 'border-amber-500/50 bg-amber-500/10 shadow-[inset_0_0_15px_rgba(245,158,11,0.1)]' : 'border-white/5 bg-slate-800/40'}`;
 
+        handDiv.dataset.active = String(p === game.currentPlayer && game.phase !== "game_over");
         let handTitle = document.createElement('div');
         handTitle.className = 'flex justify-between items-center text-sm font-semibold mb-3 border-b border-white/10 pb-1';
         let youSuffix = (isOnline && p === myPlayerIndex) ? " (You)" : "";
@@ -1617,9 +1648,11 @@ function updateDOM() {
         kinds.forEach(kind => {
             let count = player.hand[kind] || 0;
             if (count > 0 || (game.currentPlayer === p && game.selectedHandKind === kind)) {
-                let item = document.createElement('div');
+                let item = document.createElement('button');
+                item.type = 'button';
+                item.setAttribute('aria-label', `${PIECES[kind].label}, ${count} available, player ${p + 1}`);
                 let isSelected = (game.currentPlayer === p && game.selectedHandKind === kind && game.selectedPieceId === null);
-                item.className = `flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer select-none transition-all ${isSelected ? 'hand-item-active' : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700'}`;
+                item.className = `reserve-flower flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer select-none transition-all ${isSelected ? 'hand-item-active' : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700'}`;
                 
                 let colorName = SPRITE_COLORS[p];
                 let imgSrc = `sprites/${kind}_flower_${colorName}.png`;
@@ -1633,6 +1666,10 @@ function updateDOM() {
                     <span class="bg-black/50 px-1.5 py-0.5 rounded text-[10px] font-mono border border-white/10 text-slate-300">${count}</span>
                 `;
                 
+                item.setAttribute('aria-pressed', String(isSelected));
+                item.disabled = game.currentPlayer !== p || game.phase === 'game_over' || waitingForServer || (isOnline && game.currentPlayer !== myPlayerIndex);
+                item.onfocus = () => showPieceInfo(kind, p);
+                item.onblur = () => showPieceInfo(null);
                 item.onmouseenter = () => showPieceInfo(kind, p);
                 item.onmouseleave = () => showPieceInfo(null);
 
@@ -1973,6 +2010,15 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('rules-modal');
+    if (!modal.classList.contains('hidden-modal')) {
+        if (e.key === 'Escape') { e.preventDefault(); toggleRulesModal(); }
+        if (e.key === 'Tab') { e.preventDefault(); document.getElementById('close-rules').focus(); }
+        return;
+    }
+    if (e.key === 'Escape') { e.preventDefault(); cancelSelection(); return; }
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+    if (waitingForServer || (isOnline && game.currentPlayer !== myPlayerIndex)) return;
     if (e.key >= '1' && e.key <= '7') {
         const kinds = ["chysalith", "star", "clover", "daisy", "water", "sun", "shining"];
         game.selectHand(kinds[e.key - '1']);
