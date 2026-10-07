@@ -98,7 +98,7 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
     <link rel="stylesheet" href="shodansho-medieval.css">
-<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script></head>
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
@@ -419,7 +419,7 @@ spriteKinds.forEach(kind => {
     SPRITE_COLORS.forEach(color => {
         spritesPending++;
         let img = new Image();
-        img.src = `sprites/${kind}_flower_${color}.png`;
+        img.src = `assets/flowers/${kind}_flower_${color}.webp`;
         img.onload = () => { 
             spritesPending--; 
             if(spritesPending === 0) requestAnimationFrame(drawBoard); 
@@ -506,7 +506,7 @@ function updateDOM() {
                 item.className = `reserve-flower flex items-center gap-2 px-2 py-1.5 rounded-lg border cursor-pointer select-none transition-all ${isSelected ? 'hand-item-active' : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700'}`;
                 
                 let colorName = SPRITE_COLORS[p];
-                let imgSrc = `sprites/${kind}_flower_${colorName}.png`;
+                let imgSrc = `assets/flowers/${kind}_flower_${colorName}.webp`;
                 
                 item.innerHTML = `
                     <div class="relative w-6 h-6 flex-shrink-0">
@@ -546,10 +546,10 @@ function updateDOM() {
 const boardImage = new Image();
 let imageLoadError = false;
 
-boardImage.src = 'shodanshoboardsmall.png'; 
+boardImage.src = 'assets/collection/garden-board.webp';
 
 boardImage.onload = () => { imageLoadError = false; startBoardAnimation(); }; 
-boardImage.onerror = () => { imageLoadError = true; console.error("Could not find shodanshoboardsmall.png"); startBoardAnimation(); };
+boardImage.onerror = () => { imageLoadError = true; console.error("Could not load the garden board"); startBoardAnimation(); };
 
 function drawDottedLine(ctx, x1, y1, x2, y2, color) {
     let dx = x2 - x1, dy = y2 - y1;
@@ -603,7 +603,7 @@ function drawBoard(timestamp) {
             ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
             ctx.fillStyle = "#ffffff";
             ctx.font = "20px Inter, Arial";
-            ctx.fillText(`Check that "shodanshoboardsmall.png" exists in your public folder`, canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText(`The garden board could not load. Please refresh.`, canvas.width/2, canvas.height/2 + 20);
             ctx.restore();
         }
     }
@@ -796,7 +796,8 @@ function drawBoard(timestamp) {
 function startBoardAnimation() {
     if (hasSpun) return;
     hasSpun = true;
-    isAnimatingBoard = true;
+    isAnimatingBoard = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!isAnimatingBoard) currentRotationAngle = targetRotationAngle;
     requestAnimationFrame(drawBoard);
 }
 

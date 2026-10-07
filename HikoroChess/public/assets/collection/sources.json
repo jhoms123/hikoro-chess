@@ -1,0 +1,57 @@
+{
+  "icons": {
+    "hikoro": "delapouite/giant-squid",
+    "academy": "lorc/open-book",
+    "shodansho": "delapouite/flower-emblem",
+    "shavari": "lorc/lotus",
+    "hikoruka": "delapouite/castle",
+    "go": "delapouite/shield-opposition",
+    "compass": "lorc/compass",
+    "rules": "lorc/open-book",
+    "undo": "lorc/arrow-dunk",
+    "save": "delapouite/scroll-quill",
+    "play": "lorc/crossed-swords",
+    "leave": "delapouite/exit-door",
+    "seed": "delapouite/seedling",
+    "wave": "lorc/waves",
+    "crown": "lorc/crown"
+  },
+  "license": "CC BY 3.0",
+  "changes": [
+    "background removal",
+    "foreground recoloring"
+  ],
+  "materials": [
+    {
+      "asset": "materials/timber.webp",
+      "title": "Wood Table 001",
+      "artists": [
+        "Dimitrios Savva (photography)",
+        "Rico Cilliers (processing)"
+      ],
+      "source": "https://polyhaven.com/a/wood_table_001",
+      "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_001/wood_table_001_diff_1k.jpg",
+      "license": "CC0",
+      "changes": "Resized to 768 px and converted to WebP; CSS shading."
+    },
+    {
+      "asset": "materials/stone.webp",
+      "title": "Rock 01",
+      "artists": [
+        "Rob Tuytel"
+      ],
+      "source": "https://polyhaven.com/a/rock_01",
+      "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_01/rock_01_diff_1k.jpg",
+      "license": "CC0",
+      "changes": "Resized to 768 px and converted to WebP; CSS shading."
+    }
+  ],
+  "font": {
+    "family": "EB Garamond",
+    "authors": "The EB Garamond Project Authors (Octavio Pardo project)",
+    "license": "SIL Open Font License 1.1",
+    "source": "https://github.com/octaviopardo/EBGaramond12",
+    "distribution": "https://github.com/google/fonts/tree/main/ofl/ebgaramond",
+    "changes": "None"
+  }
+}

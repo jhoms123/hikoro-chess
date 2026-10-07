@@ -1,0 +1,162 @@
+[
+  {
+    "name": "home",
+    "mobile": false,
+    "title": "Hikoro · Six games of strategy",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "hikoro",
+    "mobile": false,
+    "title": "Hikoro · Six games of strategy",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "shodansho",
+    "mobile": false,
+    "title": "Sho Dan Sho - Online",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "shavari",
+    "mobile": false,
+    "title": "Shavari chess · Hikoro collection",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "hikoruka",
+    "mobile": false,
+    "title": "Hikorüka chess · Hikoro collection",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "go",
+    "mobile": false,
+    "title": "Shield Go · Hikoro collection",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "academy",
+    "mobile": false,
+    "title": "Hikoro Academy · Hikoro collection",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "credits",
+    "mobile": false,
+    "title": "Artists & credits · Hikoro",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "home",
+    "mobile": true,
+    "title": "Hikoro · Six games of strategy",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "hikoro",
+    "mobile": true,
+    "title": "Hikoro · Six games of strategy",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "shodansho",
+    "mobile": true,
+    "title": "Sho Dan Sho - Online",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "shavari",
+    "mobile": true,
+    "title": "Shavari chess · Hikoro collection",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "hikoruka",
+    "mobile": true,
+    "title": "Hikorüka chess · Hikoro collection",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "go",
+    "mobile": true,
+    "title": "Shield Go · Hikoro collection",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "academy",
+    "mobile": true,
+    "title": "Hikoro Academy · Hikoro collection",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  },
+  {
+    "name": "credits",
+    "mobile": true,
+    "title": "Artists & credits · Hikoro",
+    "width": 390,
+    "scrollWidth": 390,
+    "brokenImages": [],
+    "failures": [],
+    "errors": []
+  }
+]

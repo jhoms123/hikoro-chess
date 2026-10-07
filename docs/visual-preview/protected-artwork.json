@@ -1,0 +1,37 @@
+{
+  "base": "c7c08595415a2bc9ec98774e956cf2962f8918cc",
+  "unchanged_files": [
+    "HikoroChess/public/script.js",
+    "HikoroChess/public/academy-ui.js",
+    "HikoroChess/public/style.css",
+    "HikoroChess/public/academy.css"
+  ],
+  "hikoro": {
+    "original_and_preview_board_dimensions": [
+      400,
+      640
+    ],
+    "original_and_preview_piece_dimensions": [
+      34.1875,
+      34.1875
+    ],
+    "sample_sprite": "sprites/pawn_white.png",
+    "imageRendering": "crisp-edges",
+    "filter": "none",
+    "playing_grid_screenshot_pixel_identical": true
+  },
+  "academy": {
+    "original_and_preview_board_dimensions": [
+      656,
+      656
+    ],
+    "original_and_preview_piece_dimensions": [
+      68.359375,
+      68.359375
+    ],
+    "sample_sprite": "sprites/chair_black.png",
+    "imageRendering": "pixelated",
+    "filter": "drop-shadow(rgba(0, 28, 50, 0.565) 0px 3px 2px)",
+    "note": "Sprite sources, sizing and image effects match the original; no replacement-piece stylesheet or sprite renderer is loaded."
+  }
+}
