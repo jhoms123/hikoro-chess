@@ -18,7 +18,8 @@
 .game-choice strong { display:block; font:normal 26px/1.3 Georgia,serif; }
 .game-choice small { display:block; color:var(--muted); font-size:14px; margin-top:4px; }
 .game-choice em { display:block; color:#d1b478; font:10px/1.8 Arial,sans-serif; margin-top:10px; letter-spacing:.4px; }
-.game-choice img { object-fit:contain; filter:drop-shadow(0 3px 5px #0008); }
+.game-choice img { object-fit:contain; flex-shrink:0; filter:none; }
+.game-choice[data-game="hikoro"]>img,.game-choice[data-game="academy"]>img{width:64px;height:64px;image-rendering:pixelated;}
 .setup-panel { border:1px solid #aa854155; border-radius:3px; background:#2e2218; padding:26px; }
 .section-title h2,.section-title h3 { font-weight:normal; font-size:25px; margin:4px 0 18px; }
 .hikoro-site #time-controls { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; width:100%; padding:0; margin:0 0 24px; background:none; border:none; }
