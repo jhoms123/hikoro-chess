@@ -98,8 +98,8 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
     <link rel="stylesheet" href="shodansho-medieval.css">
-</head>
-<body class="sds-page text-slate-100">
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script></head>
+<body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
         <span class="header-caption">A garden of strategy &amp; harmony</span>
@@ -368,6 +368,7 @@ function toggleRulesModal() {
     document.querySelector('main').inert = opening;
     document.querySelector('.site-header').inert = opening;
     document.querySelector('.site-footer').inert = opening;
+    const audioPanel=document.querySelector('.collection-audio');if(audioPanel)audioPanel.inert=opening;
     document.body.classList.toggle('rules-open', opening);
     if (opening) document.getElementById('close-rules').focus();
     else if (rulesReturnFocus) rulesReturnFocus.focus();
@@ -898,7 +899,8 @@ if (isOnline) {
         targetRotationAngle = myPlayerIndex === 1 ? Math.PI : myPlayerIndex === 2 ? Math.PI / 2 : myPlayerIndex === 3 ? -Math.PI / 2 : 0;
         game.reset(onlinePlayerCount);
         if (actions) {
-            actions.forEach(act => applyRemoteAction(act));
+            const restore=()=>actions.forEach(act => applyRemoteAction(act));
+            if(window.SiteAudio)window.SiteAudio.silence(restore);else restore();
         }
         waitingForServer = false;
         updateDOM();

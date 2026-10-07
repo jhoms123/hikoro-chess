@@ -44,7 +44,7 @@
         if(!canPlay() || !Shavari.legalMoves(state,action.from,action.mode).some(m=>m.x===action.to.x&&m.y===action.to.y&&m.kind===action.kind))return;
 
         if(online){pending=true;socket.emit('shavariAction',{gameId,action});render();}
-        else{journal=journal.slice(0,cursor);journal.push(action);cursor++;state=Shavari.apply(state,action);selected=null;persist();render();}
+        else{journal=journal.slice(0,cursor);journal.push(action);cursor++;const next=Shavari.apply(state,action);window.SiteAudio?.transition('shavari',state,next);state=next;selected=null;persist();render();}
     }
     function choose(to) {
         if(!canPlay())return;
@@ -176,7 +176,7 @@
         });
         socket.on('disconnect',()=>{connected=false;pending=false;selected=null;render();});
         socket.on('shavariState',data=>{
-            if(data.gameId!==gameId)return;pendingAction=null;$('landing-dialog').close();state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
+            if(data.gameId!==gameId)return;pendingAction=null;$('landing-dialog').close();if(hasSynced)window.SiteAudio?.transition('shavari',state,data.state);state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
             notice('');render();
         });
         socket.on('errorMsg',message=>{pending=false;notice(String(message));render();});

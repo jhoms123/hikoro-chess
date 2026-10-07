@@ -382,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
+        window.SiteAudio?.setTheme(initialGameState.gameType==='hikoro'?'hikoro':'lobby');
         if (['shavari','hikoruka','go','academy'].includes(initialGameState.gameType)) {
             window.location.href = initialGameState.isSinglePlayer ? `/${initialGameState.gameType}.html` : `/${initialGameState.gameType}.html?gameId=${encodeURIComponent(initialGameState.id)}`;
             return;
@@ -419,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateLocalState(newGameState) {
+        if (!isReplayMode) window.SiteAudio?.transition('hikoro',gameState,newGameState);
         gameState = newGameState;
         updateTimerDisplay({ whiteTime: gameState.timeControl?.main === -1 ? -1 : gameState.whiteTimeLeft || gameState.timeControl?.byoyomiTime || 0, blackTime: gameState.timeControl?.main === -1 ? -1 : gameState.blackTimeLeft || gameState.timeControl?.byoyomiTime || 0, isInByoyomiWhite: gameState.whiteTimeLeft === 0, isInByoyomiBlack: gameState.blackTimeLeft === 0 });
 
@@ -1583,6 +1585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayReplayState(node) {
+        window.SiteAudio?.setTheme('hikoro');
         if (!node) return;
         currentReplayNode = node; 
 
