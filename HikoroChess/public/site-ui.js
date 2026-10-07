@@ -10,12 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } catch { /* Storage may be disabled. Defaults remain usable. */ }
     function updateChoice() {
-        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari';
+        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari', mini = selector.value === 'hikoruka';
         document.querySelectorAll('.game-choice').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.game === selector.value)));
         ['time-control', 'byoyomi-control'].forEach(id => {
-            const el = document.getElementById(id); el.disabled = sds || shavari; el.parentElement.hidden = sds || shavari;
+            const el = document.getElementById(id); el.disabled = sds || shavari || mini; el.parentElement.hidden = sds || shavari || mini;
         });
-        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : 'Online rooms need a second player. Local play shares this device.';
+        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : mini ? 'Hikorüka is untimed. Play locally with a friend or the bot, or open a two-player online table.' : 'Online rooms need a second player. Local play shares this device.';
     }
     preferences.forEach(id => document.getElementById(id).addEventListener('change', () => {
         try { localStorage.setItem('hikoro-preferences', JSON.stringify(Object.fromEntries(preferences.map(id => [id, document.getElementById(id).value])))); } catch {}
