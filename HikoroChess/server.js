@@ -8,6 +8,7 @@ const { remainingTime, commitClock } = require('./clock');
 const { createSdsValidator, applySdsAction } = require('./sds-validator');
 const Shavari = require('./public/shavari-engine');
 const Hikoruka = require('./public/hikoruka-engine');
+const Go = require('./public/go-engine');
 
 function createServer() {
     const app = express();
@@ -42,7 +43,7 @@ function createServer() {
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
         game.lastActivity = Date.now();
-        if (['shavari','hikoruka'].includes(game.gameType)) {
+        if (['shavari','hikoruka','go'].includes(game.gameType)) {
             sessions.get(game.id).engine.result = { winner: winner === 'draw' ? 0 : Number(winner), reason };
             sendVariant(game);
         } else io.to(game.id).emit('gameStateUpdate', state(game));
@@ -54,14 +55,16 @@ function createServer() {
     function options(data) {
         if (!data || typeof data !== 'object') return null;
         const gameType = data.gameType || 'hikoro';
-        if (!['hikoro', 'shodansho', 'shavari', 'hikoruka'].includes(gameType)) return null;
+        if (!['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go'].includes(gameType)) return null;
         const maxPlayers = gameType === 'shodansho' ? Number(data.sdsPlayerCount || 2) : 2;
         if (![2, 3, 4].includes(maxPlayers)) return null;
         const tc = data.timeControl || { main: 300, byoyomiTime: 30 };
         if (![-1, 0, 300, 900, 1800, 3600].includes(tc.main) || ![0, 15, 30, 60].includes(tc.byoyomiTime)) return null;
         const timeControl = gameType !== 'hikoro' ? { main: -1, byoyomiTime: 0 }
             : { main: tc.main, byoyomiTime: tc.main === -1 ? 0 : tc.main === 0 && tc.byoyomiTime === 0 ? 15 : tc.byoyomiTime };
-        return { gameType, maxPlayers, timeControl, name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
+        const boardSize = Number(data.boardSize || 9);
+        if (gameType === 'go' && ![9,13].includes(boardSize)) return null;
+        return { gameType, maxPlayers, timeControl, ...(gameType === 'go' ? {boardSize} : {}), name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
     }
     function newGame(socket, config, single) {
         const id = `${single ? 'sp' : 'game'}_${crypto.randomBytes(8).toString('hex')}`;
@@ -72,7 +75,7 @@ function createServer() {
             moveList: [], whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true, sdsActions: [] };
         games.set(id, game);
         const tokens = [ticket()];
-        sessions.set(id, { tokens, engine: config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
+        sessions.set(id, { tokens, engine: config.gameType === 'go' ? Go.initial(config.boardSize) : config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
         socket.join(id);
         socket.emit('seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
         return game;
@@ -107,13 +110,13 @@ function createServer() {
             if (!config) return err(socket, 'Invalid game settings.');
             if (!canCreate()) return;
             const game = newGame(socket, config, false);
-            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: config.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers });
+            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: config.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, boardSize: game.boardSize });
             socket.emit('gameCreated', { gameId: game.id, color: game.gameType === 'hikoro' ? 'white' : 'waiting' }); emitLobby();
         });
         socket.on('createSinglePlayerGame', data => {
             const config = options({ ...data, timeControl: { main: -1, byoyomiTime: 0 } });
             if (!config) return err(socket, 'Invalid game settings.');
-            if (['shavari','hikoruka'].includes(config.gameType)) return err(socket, `Local play is available at /${config.gameType}.html.`);
+            if (['shavari','hikoruka','go'].includes(config.gameType)) return err(socket, `Local play is available at /${config.gameType}.html.`);
             if (!canCreate()) return;
             socket.emit('gameStart', state(newGame(socket, config, true)));
         });
@@ -150,7 +153,7 @@ function createServer() {
             if (arraySeats) game.players[index] = socket.id;
             else { game.players[index === 0 ? 'white' : 'black'] = socket.id; if (game.isSinglePlayer) game.players.black = socket.id; }
             socket.join(game.id); game.lastActivity = Date.now();
-            if (['shavari','hikoruka'].includes(type)) {
+            if (['shavari','hikoruka','go'].includes(type)) {
                 if (!game.started) return socket.emit('gameCreated', { gameId: game.id, color: 'waiting' });
                 sendVariant(game, socket);
             } else if (type === 'shodansho') socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers });
@@ -161,7 +164,8 @@ function createServer() {
         socket.on('joinSdsRoom', data => resume(data, 'shodansho'));
         socket.on('joinShavariRoom', data => resume(data, 'shavari'));
         socket.on('joinHikorukaRoom', data => resume(data, 'hikoruka'));
-        for (const [type, rules] of [['shavari',Shavari],['hikoruka',Hikoruka]]) {
+        socket.on('joinGoRoom', data => resume(data, 'go'));
+        for (const [type, rules] of [['shavari',Shavari],['hikoruka',Hikoruka],['go',Go]]) {
             socket.on(`${type}Action`, data => {
                 const game = games.get(data?.gameId), engine = sessions.get(data?.gameId)?.engine;
                 if (!game || game.gameType !== type || !game.started || game.gameOver || seat(game,socket) !== engine.player-1)
@@ -215,7 +219,7 @@ function createServer() {
             const game = games.get(id);
             if (!game || !member(game, socket)) return err(socket, 'You do not hold a seat in this room.');
             if (game.started && !game.isSinglePlayer && !game.gameOver) finish(game,
-                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : ['shavari','hikoruka'].includes(game.gameType) ? 2 - seat(game, socket) : 'draw', 'A player left the room.');
+                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : ['shavari','hikoruka','go'].includes(game.gameType) ? 2 - seat(game, socket) : 'draw', 'A player left the room.');
             else io.to(id).emit('roomClosed', 'This room was closed.');
             socket.leave(id); remove(game);
         });
