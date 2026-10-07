@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } catch { /* Storage may be disabled. Defaults remain usable. */ }
     function updateChoice() {
-        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari', mini = selector.value === 'hikoruka', go = selector.value === 'go';
+        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari', mini = selector.value === 'hikoruka', go = selector.value === 'go', academy = selector.value === 'academy';
         document.getElementById('go-size-container').hidden = !go;
         document.querySelectorAll('.game-choice').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.game === selector.value)));
         ['time-control', 'byoyomi-control'].forEach(id => {
-            const el = document.getElementById(id); el.disabled = sds || shavari || mini || go; el.parentElement.hidden = sds || shavari || mini || go;
+            const el = document.getElementById(id); el.disabled = sds || shavari || mini || go || academy; el.parentElement.hidden = sds || shavari || mini || go || academy;
         });
-        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : mini ? 'Hikorüka is untimed. Play locally with a friend or the bot, or open a two-player online table.' : go ? 'Shield Go is untimed. Choose a board size, then share this device or open an online table for two players.' : 'Online rooms need a second player. Local play shares this device.';
+        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : mini ? 'Hikorüka is untimed. Play locally with a friend or the bot, or open a two-player online table.' : go ? 'Shield Go is untimed. Choose a board size, then share this device or open an online table for two players.' : academy ? 'Learn six real Hikoro pieces on 8 × 8. Local play includes guided practice; online rooms use a two-player teaching match.' : 'Online rooms need a second player. Local play shares this device.';
     }
     preferences.forEach(id => document.getElementById(id).addEventListener('change', () => {
         try { localStorage.setItem('hikoro-preferences', JSON.stringify(Object.fromEntries(preferences.map(id => [id, document.getElementById(id).value])))); } catch {}

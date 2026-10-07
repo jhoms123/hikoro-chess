@@ -3,11 +3,11 @@
     'use strict';
     const SIZE=5;
     const TYPES=Object.freeze({
-        H:{name:'Hikoro commander',sprite:'lupa',value:10000,description:'One square in any direction. Capture the opposing commander to win.'},
-        S:{name:'Striker',sprite:'jotu',value:500,description:'Slide any distance horizontally or vertically; stop at the first occupied square.'},
-        I:{name:'Infiltrator',sprite:'chair',value:350,description:'Slide diagonally; stop at the first occupied square.'},
-        N:{name:'Ninja',sprite:'cope',value:300,description:'Jump two squares along one axis and one along the other, over intervening pieces.'},
-        V:{name:'Vanguard',sprite:'pawn',value:100,description:'Move one square forward into an empty square; capture one square diagonally forward. No double move or promotion.'}
+        H:{name:'Sovereign',sprite:'crown',value:10000,description:'One square in any direction. Capture the opposing Sovereign to win.'},
+        S:{name:'Castellan',sprite:'castle',value:500,description:'Slide any distance horizontally or vertically; stop at the first occupied square.'},
+        I:{name:'Archer',sprite:'bow-arrow',value:350,description:'Slide diagonally; stop at the first occupied square.'},
+        N:{name:'Cavalier',sprite:'horse-head',value:300,description:'Jump two squares along one axis and one along the other, over intervening pieces.'},
+        V:{name:'Squire',sprite:'round-shield',value:100,description:'Move one square forward into an empty square; capture one square diagonally forward. No double move or promotion.'}
     });
     const inBounds=(r,c)=>Number.isInteger(r)&&Number.isInteger(c)&&r>=0&&r<SIZE&&c>=0&&c<SIZE;
     const point=p=>p&&inBounds(p.r,p.c);
@@ -41,7 +41,7 @@
         const record={from,to,player:s.player,type:piece.type,captured:target?.type||null};
         if(target)next.captured[s.player].push(target.type);
         next.board[to.r][to.c]=piece;next.board[from.r][from.c]=null;next.player=3-s.player;next.ply++;next.lastMove=record;next.history.push(record);
-        if(target?.type==='H')next.result={winner:s.player,reason:'Commander captured'};
+        if(target?.type==='H')next.result={winner:s.player,reason:'Sovereign captured'};
         const sig=signature(next);next.positions[sig]=(next.positions[sig]||0)+1;
         if(!next.result&&next.positions[sig]>=3)next.result={winner:0,reason:'Threefold repetition'};
         if(!next.result&&!allMoves(next).length)next.result={winner:0,reason:'No legal moves'};

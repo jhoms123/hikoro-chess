@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hikoro · Five games of strategy</title>
+    <title>Hikoro · Six games of strategy</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="site-polish.css">
 </head>
 <body class="hikoro-site">
     <a class="skip-link" href="#lobby">Skip to game setup</a>
     <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/harmony-seal.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
-    <section class="collection-intro"><p class="eyebrow">FIVE GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command an ocean kingdom, cultivate a garden, lead the Shavari courts, battle on a smaller sea, or explore Shield Go.</p></section>
+    <section class="collection-intro"><p class="eyebrow">SIX GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command an ocean kingdom, cultivate a garden, lead the Shavari courts, hold Hikorüka’s citadel, explore Shield Go, or learn Hikoro on a smaller board.</p></section>
     <div id="site-notice" role="status" aria-live="polite" hidden></div>
 
     <div id="lobby">
@@ -18,8 +18,9 @@
             <button class="game-choice" data-game="hikoro" aria-pressed="true"><img src="sprites/lupa_white.png" alt="" width="60" height="60"><span><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span></button>
             <button class="game-choice" data-game="shodansho" aria-pressed="false"><img src="sprites/chysalith_flower_blue.png" alt="" width="60" height="60"><span><strong>Sho Dan Sho</strong><small>Build harmony in the garden.</small><em>2–4 players · Placement &amp; territory</em></span></button>
             <button class="game-choice" data-game="shavari" aria-pressed="false"><img src="assets/shavari/lotus.svg" alt="" width="60" height="60"><span><strong>Shavari chess</strong><small>Lead the lotus. Build your formations.</small><em>2 players · Stacking &amp; line tactics</em></span></button>
-            <button class="game-choice" data-game="hikoruka" aria-pressed="false"><img src="sprites/cope_white.png" alt="" width="60" height="60"><span><strong>Hikorüka chess</strong><small>A smaller sea. A swift battle.</small><em>5 × 5 · Two players or bot</em></span></button>
+            <button class="game-choice" data-game="hikoruka" aria-pressed="false"><img src="assets/hikoruka/crown.svg" alt="" width="60" height="60"><span><strong>Hikorüka chess</strong><small>Five pieces. One citadel.</small><em>5 × 5 · Two players or bot</em></span></button>
             <button class="game-choice" data-game="go" aria-pressed="false"><span class="go-card-art" aria-hidden="true">● ◇ ○</span><span><strong>Shield Go</strong><small>Leap, shield, and surround.</small><em>9 × 9 or 13 × 13 · Two players</em></span></button>
+            <button class="game-choice" data-game="academy" aria-pressed="false"><img src="sprites/yoli_white.png" alt="" width="60" height="60"><span><strong>Hikoro Academy</strong><small>Learn the real movements, step by step.</small><em>8 × 8 · Practice &amp; teaching matches</em></span></button>
         </div>
         <section class="setup-panel"><div class="section-title"><span class="eyebrow">YOUR TABLE</span><h2>Set up a game</h2></div>
         <div id="time-controls">
@@ -31,6 +32,7 @@
                     <option value="shavari">Shavari chess</option>
                     <option value="hikoruka">Hikorüka chess</option>
                     <option value="go">Shield Go</option>
+                    <option value="academy">Hikoro Academy · 8 × 8 learner’s board</option>
                 </select>
             </div>
             
