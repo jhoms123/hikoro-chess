@@ -1,0 +1,378 @@
+/* Premium collection lobby V2.
+   Keeps existing game artwork; this file only composes it into richer promotional scenes. */
+
+.hikoro-site{
+  --gold:#d2b06d;
+  --gold-soft:#b78f50;
+  --cream:#f3e2bd;
+  --cream-dim:#ccb793;
+  --deep:#17100b;
+  --panel:#2d2118;
+  --panel-2:#3a291b;
+}
+.hikoro-site .collection-header{
+  max-width:1320px;
+  padding:22px 34px;
+  background:linear-gradient(180deg,#1c130dcc,#1a120dcc);
+  border-bottom:1px solid #b68e4f66;
+  box-shadow:0 10px 28px #0005;
+}
+.hikoro-site .collection-brand img{
+  width:48px;height:48px;
+  filter:drop-shadow(0 4px 6px #0008);
+}
+.hikoro-site .collection-brand{
+  font-size:27px;
+  text-shadow:0 2px 8px #0007;
+}
+.hikoro-site .collection-intro{
+  width:min(1320px,100% - 42px);
+  margin:26px auto 28px;
+  padding:38px 42px 34px;
+  position:relative;
+  overflow:hidden;
+  text-align:left;
+  border:18px solid transparent;
+  border-image:url('assets/medieval/wood-panel.png') 24 fill / 18px / 0 stretch;
+  background:
+    radial-gradient(circle at 70% 10%,#b78d4c12,transparent 30%),
+    linear-gradient(115deg,#20150fe6,#2f2116e8 54%,#1a120ce8);
+  filter:drop-shadow(0 16px 28px #0007);
+}
+.hikoro-site .collection-intro::before{
+  content:"";
+  position:absolute;inset:20px;
+  border:1px solid #d5b46d2b;
+  pointer-events:none;
+}
+.hikoro-site .collection-intro::after{
+  content:"";
+  position:absolute;
+  right:34px;top:28px;
+  width:350px;height:96px;
+  opacity:.26;
+  background:url('assets/medieval/ornament-divider.png') center/100% 100% no-repeat;
+  filter:sepia(1) saturate(1.4) brightness(1.35);
+}
+.hikoro-site .collection-intro .eyebrow{font-size:10px;letter-spacing:4px}
+.hikoro-site .collection-intro h1{
+  max-width:820px;
+  font-size:clamp(42px,5.4vw,74px);
+  letter-spacing:-1.8px;
+  line-height:1;
+  margin:12px 0 18px;
+  text-shadow:0 5px 18px #0007;
+}
+.hikoro-site .collection-intro>p:last-child{
+  max-width:850px;
+  font-size:16px;
+  line-height:1.8;
+  color:#d4c2a0;
+  font-style:italic;
+}
+
+.hikoro-site #lobby{width:min(1320px,100% - 42px)}
+.hikoro-site .game-choices{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:24px;
+  margin:0 0 30px;
+}
+.hikoro-site .game-choice{
+  --accent:#cfa95e;
+  position:relative;
+  min-height:310px;
+  display:grid;
+  grid-template-columns:minmax(230px,42%) 1fr;
+  gap:0;
+  padding:0;
+  overflow:hidden;
+  text-align:left;
+  color:var(--cream);
+  background:
+    linear-gradient(145deg,#33251b,#241a13);
+  border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
+  border-radius:8px;
+  box-shadow:0 15px 30px #0005,inset 0 1px #ffffff08;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.hikoro-site .game-choice:hover{
+  transform:translateY(-4px);
+  box-shadow:0 22px 38px #0007,inset 0 1px #ffffff10;
+  border-color:color-mix(in srgb,var(--accent) 70%,transparent);
+}
+.hikoro-site .game-choice[aria-pressed="true"]{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  background:linear-gradient(145deg,#49331f,#281d14);
+}
+.game-choice .promo-art{
+  position:relative;
+  min-height:308px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  isolation:isolate;
+  border-right:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+}
+.game-choice .promo-art::before,
+.game-choice .promo-art::after{content:"";position:absolute;pointer-events:none}
+.game-choice .promo-art::after{
+  inset:14px;
+  border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
+  box-shadow:inset 0 0 28px #0004;
+}
+.game-choice .promo-copy{
+  padding:34px 30px 28px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.game-choice .promo-kicker{
+  display:block;
+  color:var(--accent);
+  font:700 9px/1.5 Arial,sans-serif;
+  letter-spacing:2.8px;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.game-choice .promo-copy strong{
+  display:block;
+  font:normal 31px/1.1 Georgia,serif;
+  letter-spacing:-.5px;
+  margin-bottom:8px;
+}
+.game-choice .promo-copy small{
+  display:block;
+  max-width:390px;
+  color:#d2c0a1;
+  font:italic 14px/1.6 Georgia,serif;
+  margin-bottom:14px;
+}
+.game-choice .promo-copy em{
+  display:block;
+  color:#e0c58f;
+  font:700 9px/1.7 Arial,sans-serif;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  font-style:normal;
+}
+.game-choice .promo-copy .card-detail{
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid color-mix(in srgb,var(--accent) 20%,transparent);
+  color:#ae9c80;
+  font:11px/1.55 Arial,sans-serif;
+}
+
+/* ---------- Hikoro ocean scene ---------- */
+.game-choice[data-game="hikoro"]{--accent:#73bec7}
+.promo-ocean{
+  background:
+    radial-gradient(ellipse at 50% 110%,#0e7281 0 12%,transparent 13%),
+    radial-gradient(ellipse at 50% 115%,transparent 0 20%,#2a96a844 21% 23%,transparent 24% 32%,#78cbd633 33% 35%,transparent 36%),
+    linear-gradient(180deg,#062331,#0b4e5d 52%,#071b28);
+}
+.promo-ocean::before{
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  width:220px;height:220px;border-radius:50%;
+  border:1px solid #c9f0eb44;
+  box-shadow:0 0 0 16px #072d3838,0 0 60px #56c7d222;
+}
+.mini-hikoro-board{
+  position:relative;z-index:2;
+  width:195px;height:236px;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  grid-template-rows:repeat(8,1fr);
+  padding:10px;
+  background:linear-gradient(#d8b56f,#b9894e);
+  border:7px solid #6b452a;
+  box-shadow:0 12px 22px #0008,inset 0 0 0 2px #eccf8f;
+  transform:rotate(-2deg);
+}
+.mini-hikoro-board span{border:1px solid #6b452a55;background:#e7c885}
+.mini-hikoro-board span:nth-child(2n){background:#d4a65e}
+.mini-hikoro-board .mh-piece{
+  position:absolute;z-index:4;
+  width:35px;height:35px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  border:2px solid #e8c77f;
+  background:#0c5663;
+  box-shadow:0 4px 6px #0007;
+}
+.mini-hikoro-board .mh-piece.dark{background:#14222a;border-color:#71969e}
+.mini-hikoro-board .mh-piece img{width:22px!important;height:22px!important;image-rendering:pixelated}
+.mh-p1{left:24px;bottom:26px}.mh-p2{left:78px;bottom:51px}.mh-p3{right:24px;bottom:26px}
+.mh-p4{left:30px;top:26px}.mh-p5{right:54px;top:44px}
+
+/* ---------- Sho Dan Sho manuscript garden ---------- */
+.game-choice[data-game="shodansho"]{--accent:#b7c776}
+.promo-garden{
+  background:
+    linear-gradient(#1f2a1ccc,#182218dd),
+    url('assets/medieval/aged-parchment.webp') center/cover;
+}
+.promo-garden::before{
+  width:240px;height:240px;border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%,#d7c98b 0 8%,transparent 9% 20%,#9da66c55 21% 22%,transparent 23% 36%,#d8c28245 37% 38%,transparent 39%),
+    repeating-conic-gradient(from 22deg,#6d7f4a55 0 7deg,transparent 8deg 22deg);
+  border:3px solid #c7ac6c;
+  box-shadow:0 14px 24px #0008,inset 0 0 0 7px #334328;
+}
+.promo-garden .flower-hero{
+  z-index:3;width:112px!important;height:112px!important;object-fit:contain;
+  filter:drop-shadow(0 8px 10px #0007);
+}
+.promo-garden .flower-chip{
+  position:absolute;z-index:4;width:46px!important;height:46px!important;object-fit:contain;
+  border-radius:50%;background:#263723;border:1px solid #dacb8a;padding:5px;
+}
+.promo-garden .fc1{left:40px;top:54px}.promo-garden .fc2{right:40px;bottom:54px}
+.promo-garden .garden-divider{
+  position:absolute;bottom:24px;width:150px;height:22px;z-index:5;
+  background:url('assets/medieval/ornament-divider.png') center/100% 100% no-repeat;
+  filter:sepia(1) saturate(.8) hue-rotate(45deg) brightness(1.6);
+}
+
+/* ---------- Shavari court ---------- */
+.game-choice[data-game="shavari"]{--accent:#efab6d}
+.promo-shavari{
+  background:
+    linear-gradient(115deg,#0b4c49 0 48%,#702d22 49% 100%);
+}
+.shavari-board-mini{
+  position:relative;z-index:2;width:230px;height:230px;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 27px,#f0d7a33d 28px 29px),
+    repeating-linear-gradient(90deg,transparent 0 27px,#f0d7a33d 28px 29px),
+    radial-gradient(circle at center,#154e4a,#103b39);
+  border:9px solid #9f6944;
+  box-shadow:0 14px 24px #0008,inset 0 0 0 2px #e6c180;
+  transform:rotate(2deg);
+}
+.sh-token{
+  position:absolute;z-index:4;width:47px;height:47px;border-radius:50%;
+  display:grid;place-items:center;border:2px solid #eed49b;box-shadow:0 5px 8px #0007;
+}
+.sh-token img{width:31px!important;height:31px!important}
+.sh-token.red{background:radial-gradient(circle at 30% 20%,#c76b43,#793827)}
+.sh-token.teal{background:radial-gradient(circle at 30% 20%,#3d9d99,#155250)}
+.sht1{left:32px;bottom:35px}.sht2{left:92px;bottom:86px}.sht3{right:34px;top:34px}.sht4{right:76px;top:100px}
+.shavari-board-mini .stack-chip{box-shadow:0 4px 0 #d5b36f,0 8px 0 #5c3b28,0 11px 8px #0008}
+
+/* ---------- Hikorüka citadel ---------- */
+.game-choice[data-game="hikoruka"]{--accent:#d7b777}
+.promo-citadel{
+  background:
+    linear-gradient(#3b2b20cc,#1c140fdd),
+    url('assets/medieval/wood-panel.png') center/cover;
+}
+.citadel-mini{
+  position:relative;z-index:2;width:228px;height:228px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:8px;
+  background:#50351f;border:10px solid #7b5533;
+  box-shadow:0 14px 24px #0008,inset 0 0 0 2px #d9b879;
+  transform:rotate(-1deg);
+}
+.citadel-mini span{background:#d9c08f}.citadel-mini span:nth-child(even){background:#8f6b47}
+.cit-piece{
+  position:absolute;z-index:5;width:45px;height:45px;border-radius:50% 50% 35% 35%;
+  display:grid;place-items:center;background:#7a3f29;border:2px solid #dfb36e;box-shadow:0 5px 8px #0007;
+}
+.cit-piece.ivory{background:#d9c59b;border-color:#8d7042}
+.cit-piece img{width:29px!important;height:29px!important}
+.cp1{left:27px;bottom:28px}.cp2{left:82px;bottom:74px}.cp3{right:30px;top:28px}.cp4{right:78px;top:79px}
+
+/* ---------- Shield Go table ---------- */
+.game-choice[data-game="go"]{--accent:#c6b284}
+.promo-go{
+  background:
+    linear-gradient(135deg,#3c3327,#242019);
+}
+.go-mini{
+  position:relative;z-index:2;width:232px;height:232px;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 27px,#5f4429 28px 30px),
+    repeating-linear-gradient(90deg,transparent 0 27px,#5f4429 28px 30px),
+    linear-gradient(#dbb477,#bd8a53);
+  border:10px solid #57432c;
+  box-shadow:0 14px 24px #0008,inset 0 0 0 2px #dfc08c;
+  transform:rotate(1deg);
+}
+.go-mini .stone{
+  position:absolute;width:43px;height:43px;border-radius:50%;z-index:4;
+  box-shadow:0 5px 9px #0007;
+}
+.go-mini .black{background:radial-gradient(circle at 35% 25%,#46534d,#111814 65%)}
+.go-mini .white{background:radial-gradient(circle at 35% 25%,#fffdf0,#c5c5ac 65%)}
+.go-mini .shield{border-radius:28%;transform:rotate(45deg);border:3px solid #a3793c}
+.gs1{left:42px;bottom:50px}.gs2{left:100px;bottom:106px}.gs3{right:38px;top:45px}.gs4{right:84px;top:102px}
+
+/* ---------- Academy codex ---------- */
+.game-choice[data-game="academy"]{--accent:#82c0c8}
+.promo-academy{
+  background:
+    linear-gradient(#20343bcc,#18292fdd),
+    url('assets/medieval/aged-parchment.webp') center/cover;
+}
+.academy-book{
+  position:relative;z-index:2;width:245px;height:210px;
+  display:grid;grid-template-columns:1fr 1fr;
+  background:linear-gradient(90deg,#e3cca0 0 49%,#b49363 50%,#e7d3aa 51% 100%);
+  border:8px solid #6c492f;
+  border-radius:6px 10px 10px 6px;
+  box-shadow:0 15px 25px #0008,inset 0 0 0 2px #f3dfb7;
+  transform:rotate(-2deg);
+  padding:18px;
+}
+.academy-book::after{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:2px;background:#7d5b3a88}
+.academy-book .lesson-board{
+  width:88px;height:88px;display:grid;grid-template-columns:repeat(4,1fr);border:3px solid #735132;
+  align-self:center;justify-self:center;
+}
+.academy-book .lesson-board span{background:#d6bd8b}.academy-book .lesson-board span:nth-child(even){background:#6e9593}
+.academy-book .lesson-piece{position:absolute;z-index:5;width:44px;height:44px;border-radius:50%;background:#155966;border:2px solid #d7b673;display:grid;place-items:center;box-shadow:0 4px 8px #0006}
+.academy-book .lesson-piece img{width:25px!important;height:25px!important;image-rendering:pixelated}
+.alp1{right:35px;top:46px}.alp2{right:70px;bottom:35px}
+
+/* ---------- Table setup ---------- */
+.hikoro-site .setup-panel{
+  border:16px solid transparent;
+  border-image:url('assets/medieval/wood-panel.png') 24 fill / 16px / 0 stretch;
+  background:none;
+  padding:18px 22px 24px;
+  filter:drop-shadow(0 12px 22px #0006);
+}
+.hikoro-site #time-controls{
+  padding:18px;
+  background:#1d160fd9;
+  border:1px solid #a9824d45;
+}
+.hikoro-site .lobby-actions button{
+  min-height:48px;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+.hikoro-site #create-game-btn{box-shadow:0 4px 8px #0005}
+.hikoro-site #rules-btn{filter:sepia(.16)}
+.collection-footer{margin-top:44px}
+
+/* ---------- Responsive ---------- */
+@media(max-width:980px){
+  .hikoro-site .game-choices{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .hikoro-site .collection-intro{width:calc(100% - 28px);padding:30px 22px;border-width:12px}
+  .hikoro-site .collection-intro::after{display:none}
+  .hikoro-site #lobby{width:calc(100% - 28px)}
+  .hikoro-site .game-choice{grid-template-columns:1fr;min-height:0}
+  .game-choice .promo-art{min-height:245px;border-right:0;border-bottom:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+  .game-choice .promo-copy{padding:24px}
+  .game-choice .promo-copy strong{font-size:28px}
+  .hikoro-site .setup-panel{border-width:12px;padding:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hikoro-site .game-choice{transition:none}
+  .hikoro-site .game-choice:hover{transform:none}
+}
