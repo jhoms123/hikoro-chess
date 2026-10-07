@@ -4,7 +4,7 @@ Adds the user-supplied 9x9 line-intersection game to the collection at `/shavari
 
 ## Combined movement and elevation rules
 
-Every carried piece contributes its movement, including buried enemy pieces. General and Pawn step orthogonally; Lance and Cannon slide orthogonally. With the current four movement types, the union is the largest carried orthogonal range. The top piece's owner controls the formation, independently of the other members' ownership.
+Every carried piece contributes its movement, including buried enemy pieces. Camel moves exactly two intersections diagonally in any direction; its intermediate intersection obeys the existing height-blocking rule. Lotus has six king-style steps: the four orthogonal steps and two backward diagonals, excluding both forward diagonals. Forward is defined by each piece’s original owner (Carnelian toward row 9, Turquoise toward row 1), including buried enemy pieces. Pawn still steps orthogonally and Cannon still slides orthogonally. Each carried piece’s pattern is generated independently and combined without duplicate destinations. The top piece's owner controls the formation, independently of the other members' ownership.
 
 Whole stack moves all members. Top piece detaches one. Top two detaches the upper pair. Height comparisons use the moving portion, not the height left at the source. A taller moving portion can pass over shorter formations along its legal movement path. Equal and taller formations block travel beyond them. Friendly landing combines stacks within the three-piece cap.
 
@@ -12,7 +12,7 @@ Enemy landing offers **Capture** or, when legal, **Cover**. Capture removes the 
 
 Capture of a General wins for the other owner of that General. Covering a General does not capture it. Capturing your own General inside an enemy-controlled formation loses; removing both Generals draws. Threefold repetition, no legal moves, and the 4,000-ply safety limit draw. No check, checkmate, promotion, captured-piece drops, cannon screens, or AI opponent are used.
 
-These rules supersede the original upload's top-only demonstration code, following the user's clarified combined-movement and elevation rules. New local matches use a version-2 storage key so older move journals are not silently reinterpreted under changed rules.
+These rules supersede the original upload's top-only demonstration code, following the user's clarified combined-movement and elevation rules. New local matches use a version-3 storage key so older move journals are not silently reinterpreted under changed rules.
 
 ## Presentation and controls
 
@@ -33,7 +33,7 @@ No AI opponent was added. Local play is two people on one device; online play is
 
 ## Validation
 
-`npm test`: 18 tests pass, including eleven Shavari tests for movement, blocking, stacking, splitting, buried-General capture, malformed actions, repetition, journal reconstruction, 500 randomized legal plies, online turn enforcement, ticket restoration, old-seat rejection, resignation authorization, inherited enemy movement, strict jump heights, explicit cover/capture validation, top-pair splitting, control restoration, and mixed-General capture results. Existing reliability tests remain green.
+`npm test`: 20 tests pass, including eleven Shavari tests for movement, blocking, stacking, splitting, buried-General capture, malformed actions, repetition, journal reconstruction, 500 randomized legal plies, online turn enforcement, ticket restoration, old-seat rejection, resignation authorization, inherited enemy movement, strict jump heights, explicit cover/capture validation, top-pair splitting, control restoration, and mixed-General capture results. Existing reliability tests remain green.
 
 Real Chromium checks passed at 1440, 900, and 390 pixels: no horizontal overflow; 20 initial pieces; legal highlights; formation stacking and splitting; local undo/redo and refresh restoration; rules and confirmation dialogs; keyboard navigation; board flipping; record download; lobby local launch; online room creation and joining; two-seat move synchronization; authenticated page refresh; and resignation. No page errors occurred.
 
@@ -41,4 +41,6 @@ Real Chromium checks passed at 1440, 900, and 390 pixels: no horizontal overflow
 
 Merge this change and deploy `main` on the existing Render service. Service root: `HikoroChess`; build: `npm ci`; start: `npm start`; health path: `/health`. No dependency or environment-variable changes are needed.
 
-Follow-up real Chromium checks passed for capture/cover choice and cancellation, mixed-stack inspection without changing selection or journal, top-pair splitting and control restoration, undo/redo and version-2 refresh recovery, responsive layouts, online covering synchronization, and authenticated refresh of mixed formations.
+Follow-up real Chromium checks passed for capture/cover choice and cancellation, mixed-stack inspection without changing selection or journal, top-pair splitting and control restoration, undo/redo and version-3 refresh recovery, responsive layouts, online covering synchronization, and authenticated refresh of mixed formations.
+
+Movement follow-up: 20 tests pass, including exact two-step camel diagonals, intermediate height blockers, owner-relative six-step lotus movement, and mixed-stack pattern union. Chromium verified both changed pieces in local and online games, lotus direction after board flipping, version-3 save recovery, rules text, and mobile layout without page errors.

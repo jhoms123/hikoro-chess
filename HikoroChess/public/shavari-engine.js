@@ -6,10 +6,10 @@
     'use strict';
     const SIZE = 9;
     const TYPES = Object.freeze({
-        G: { name: 'Lotus general', icon: 'lotus', range: 1 },
-        L: { name: 'Caravan lance', icon: 'camel', range: 8 },
-        C: { name: 'Elephant cannon', icon: 'elephant-head', range: 8 },
-        P: { name: 'Scarab pawn', icon: 'gold-scarab', range: 1 }
+        G: { name: 'Lotus general', icon: 'lotus', range: 1, description: 'One step like a king, except the two forward diagonals. Forward follows this piece’s original court.' },
+        L: { name: 'Caravan lance', icon: 'camel', range: 2, description: 'Exactly two intersections diagonally, in any direction. Equal or taller formations block the intermediate intersection.' },
+        C: { name: 'Elephant cannon', icon: 'elephant-head', range: 8, description: 'Slide along a horizontal or vertical line. Taller formations can pass over shorter ones.' },
+        P: { name: 'Scarab pawn', icon: 'gold-scarab', range: 1, description: 'One intersection horizontally or vertically, in any direction.' }
     });
     const validPoint = p => p && Number.isInteger(p.x) && Number.isInteger(p.y) && p.x >= 0 && p.x < SIZE && p.y >= 0 && p.y < SIZE;
     const key = p => `${p.x},${p.y}`;
@@ -40,24 +40,33 @@
         if (!stack?.length || stack.at(-1).owner !== s.player) return [];
         const moving = movingPieces(stack, mode);
         if (!moving.length) return [];
-        // Union of every carried piece's moves, including buried enemy pieces.
-        const distance = Math.max(...moving.map(p => TYPES[p.type].range));
-        const moves = [];
-        for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
-            for (let step = 1; step <= distance; step++) {
-                const to = { x: from.x + dx * step, y: from.y + dy * step };
-                if (!validPoint(to)) break;
-                const target = s.board[key(to)] || [];
-                if (!target.length) moves.push({ ...to, kind: 'move' });
-                else {
-                    const enemy = target.at(-1).owner !== s.player;
-                    if (enemy) {
-                        moves.push({ ...to, kind: 'capture' });
-                        if (moving.length > target.length && moving.length + target.length <= 3)
-                            moves.push({ ...to, kind: 'cover' });
-                    } else if (target.length + moving.length <= 3) moves.push({ ...to, kind: 'stack' });
-                    // Taller moving formations may travel beyond shorter blockers.
-                    if (moving.length <= target.length) break;
+        // Generate each carried piece's pattern independently, then union destinations.
+        const orthogonal = [[0,-1],[0,1],[-1,0],[1,0]];
+        const moves = [], seen = new Set();
+        const add = (to, kind) => {
+            const id = `${to.x},${to.y},${kind}`;
+            if (!seen.has(id)) { seen.add(id); moves.push({ ...to, kind }); }
+        };
+        for (const piece of moving) {
+            const backward = piece.owner === 1 ? 1 : -1;
+            const directions = piece.type === 'L' ? [[-1,-1],[1,-1],[-1,1],[1,1]]
+                : piece.type === 'G' ? [...orthogonal,[-1,backward],[1,backward]] : orthogonal;
+            const distance = TYPES[piece.type].range;
+            const minimum = piece.type === 'L' ? 2 : 1;
+            for (const [dx, dy] of directions) {
+                for (let step = 1; step <= distance; step++) {
+                    const to = { x: from.x + dx * step, y: from.y + dy * step };
+                    if (!validPoint(to)) break;
+                    const target = s.board[key(to)] || [];
+                    if (step >= minimum) {
+                        if (!target.length) add(to, 'move');
+                        else if (target.at(-1).owner !== s.player) {
+                            add(to, 'capture');
+                            if (moving.length > target.length && moving.length + target.length <= 3) add(to, 'cover');
+                        } else if (target.length + moving.length <= 3) add(to, 'stack');
+                    }
+                    // Camel's intermediate step obeys the same elevation rule as sliding paths.
+                    if (target.length && moving.length <= target.length) break;
                 }
             }
         }

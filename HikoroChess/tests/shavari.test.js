@@ -10,23 +10,23 @@ const once = (socket,event) => new Promise((resolve,reject)=>{
 });
 test('Shavari combines carried ranges, preserves initial armies and applies height blocking',()=>{
     const s=Shavari.initial();assert.equal(Object.values(s.board).flat().length,20);
-    assert.deepEqual(Shavari.legalMoves(s,{x:0,y:8}).map(m=>[m.x,m.y,m.kind]),[[0,7,'stack'],[1,8,'move'],[2,8,'stack']]);
+    assert.deepEqual(Shavari.legalMoves(s,{x:0,y:8}).map(m=>[m.x,m.y,m.kind]),[[2,6,'move']]);
     assert.equal(Shavari.legalMoves(s,{x:0,y:0}).length,0);
-    const custom=Shavari.initial();custom.board={'4,4':[{type:'L',owner:1},{type:'G',owner:1}], '4,6':[{type:'P',owner:2}]};
-    assert.ok(Shavari.legalMoves(custom,{x:4,y:4}).length>4); // buried lance contributes its range
-    assert.equal(Shavari.legalMoves(custom,{x:4,y:4},'top').length,4);
-    custom.board['4,4'].reverse(); // lance on top: long range, blocked by opponent
+    const custom=Shavari.initial();custom.board={'4,4':[{type:'C',owner:1},{type:'G',owner:1}], '4,6':[{type:'P',owner:2}]};
+    assert.ok(Shavari.legalMoves(custom,{x:4,y:4}).length>4); // buried cannon contributes its range
+    assert.equal(Shavari.legalMoves(custom,{x:4,y:4},'top').length,6);
+    custom.board['4,4'].reverse(); // cannon on top: long range, blocked by opponent
     const ray=Shavari.legalMoves(custom,{x:4,y:4});assert.ok(ray.some(m=>m.x===4&&m.y===6&&m.kind==='capture'));assert.ok(ray.some(m=>m.x===4&&m.y===7));
 });
 test('friendly formations cap at three and top detachment preserves the base and piece order',()=>{
-    const s=Shavari.initial();s.board={'4,4':[{type:'G',owner:1},{type:'L',owner:1}], '5,4':[{type:'P',owner:1},{type:'C',owner:1}], '0,0':[{type:'G',owner:2}]};
+    const s=Shavari.initial();s.board={'4,4':[{type:'G',owner:1},{type:'C',owner:1}], '5,4':[{type:'P',owner:1},{type:'C',owner:1}], '0,0':[{type:'G',owner:2}]};
     assert.equal(Shavari.apply(s,move([4,4],[5,4])),null);
     const next=Shavari.apply(s,move([4,4],[5,4],'top'));assert.ok(next);
-    assert.deepEqual(next.board['4,4'],[{type:'G',owner:1}]);assert.deepEqual(next.board['5,4'].map(p=>p.type),['P','C','L']);
+    assert.deepEqual(next.board['4,4'],[{type:'G',owner:1}]);assert.deepEqual(next.board['5,4'].map(p=>p.type),['P','C','C']);
     assert.equal(next.player,2);assert.equal(s.board['4,4'].length,2); // immutable input
 });
 test('capture removes the entire enemy formation and a buried general ends the game',()=>{
-    const s=Shavari.initial();s.board={'0,4':[{type:'L',owner:1}],'4,4':[{type:'G',owner:2},{type:'P',owner:2}],'0,8':[{type:'G',owner:1}]};
+    const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1}],'4,4':[{type:'G',owner:2},{type:'P',owner:2}],'0,8':[{type:'G',owner:1}]};
     const next=Shavari.apply(s,move([0,4],[4,4]));assert.equal(next.result.winner,1);assert.deepEqual(next.history[0].captured,['G','P']);
     assert.equal(Shavari.apply(next,move([4,4],[5,4])),null);
 });
@@ -36,9 +36,9 @@ test('malformed actions, wrong owners and non-orthogonal moves are rejected',()=
     assert.equal(Shavari.replay([move([0,7],[0,5])]),null);
 });
 test('replay reconstructs stacks and splitting; third repeated position is a draw',()=>{
-    const actions=[move([0,8],[0,7]),move([0,1],[0,2]),move([0,7],[1,7],'top')];
-    const s=Shavari.replay(actions);assert.equal(s.ply,3);assert.equal(s.board['0,7'][0].type,'P');assert.equal(s.board['1,7'][0].type,'L');
-    assert.equal(Shavari.replay(actions,1).board['0,7'].length,2);
+    const actions=[move([2,8],[2,7]),move([0,1],[0,2]),move([2,7],[3,7],'top')];
+    const s=Shavari.replay(actions);assert.equal(s.ply,3);assert.equal(s.board['2,7'][0].type,'P');assert.equal(s.board['3,7'][0].type,'C');
+    assert.equal(Shavari.replay(actions,1).board['2,7'].length,2);
     const cycle=[move([0,7],[0,6]),move([0,1],[0,2]),move([0,6],[0,7]),move([0,2],[0,1])];
     assert.deepEqual(Shavari.replay([...cycle,...cycle]).result,{winner:0,reason:'Threefold repetition'});
 });
@@ -63,8 +63,8 @@ test('online Shavari validates turns, protects seats, restores state and permits
     let error=once(outsider,'errorMsg');outsider.emit('shavariAction',{gameId,action:move([0,7],[0,6])});await error;
     error=once(b,'errorMsg');b.emit('shavariAction',{gameId,action:move([0,7],[0,6])});await error;
     error=once(a,'errorMsg');a.emit('shavariAction',{gameId,action:move([0,7],[0,5])});await error;
-    sync=once(a,'shavariState');const syncB=once(b,'shavariState');a.emit('shavariAction',{gameId,action:move([0,8],[0,7])});const [sa,sb]=await Promise.all([sync,syncB]);assert.equal(sa.state.ply,1);assert.deepEqual(sa.state,sb.state);assert.equal(sb.playerIndex,1);
-    const replacement=await client();sync=once(replacement,'shavariState');replacement.emit('joinShavariRoom',{gameId,token:ta.token});assert.equal((await sync).state.board['0,7'].length,2);
+    sync=once(a,'shavariState');const syncB=once(b,'shavariState');a.emit('shavariAction',{gameId,action:move([2,8],[2,7])});const [sa,sb]=await Promise.all([sync,syncB]);assert.equal(sa.state.ply,1);assert.deepEqual(sa.state,sb.state);assert.equal(sb.playerIndex,1);
+    const replacement=await client();sync=once(replacement,'shavariState');replacement.emit('joinShavariRoom',{gameId,token:ta.token});assert.equal((await sync).state.board['2,7'].length,2);
     error=once(a,'errorMsg');a.emit('shavariResign',{gameId});await error;
     error=once(outsider,'errorMsg');outsider.emit('joinShavariRoom',{gameId,token:'wrong'});await error;
     sync=once(replacement,'shavariState');replacement.emit('shavariResign',{gameId});assert.deepEqual((await sync).state.result,{winner:2,reason:'Resignation'});
@@ -77,7 +77,7 @@ test('a taller moving formation jumps shorter blockers; equal, larger and detach
     assert.equal(Shavari.apply(s,{...move([0,4],[4,4]),kind:'cover'}),null);
 });
 test('cover retains enemy movement and ownership; detaching the top restores enemy control',()=>{
-    const s=Shavari.initial();s.board={'2,4':[{type:'G',owner:1},{type:'P',owner:1}], '3,4':[{type:'L',owner:2}], '8,0':[{type:'G',owner:2}]};
+    const s=Shavari.initial();s.board={'2,4':[{type:'G',owner:1},{type:'P',owner:1}], '3,4':[{type:'C',owner:2}], '8,0':[{type:'G',owner:2}]};
     const covered=Shavari.apply(s,{...move([2,4],[3,4]),kind:'cover'});assert.ok(covered);assert.deepEqual(covered.board['3,4'].map(p=>p.owner),[2,1,1]);assert.equal(covered.result,null);
     assert.equal(Shavari.legalMoves(covered,{x:3,y:4}).length,0);covered.player=1;
     assert.ok(Shavari.legalMoves(covered,{x:3,y:4}).some(m=>m.x===8&&m.y===4));
@@ -95,4 +95,31 @@ test('covering generals does not win; capturing your own buried general loses an
     assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}).result,null);
     s.board['3,4']=[{type:'G',owner:1},{type:'P',owner:2}];assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result.winner,2);
     s.board['3,4']=[{type:'G',owner:1},{type:'G',owner:2},{type:'P',owner:2}];assert.deepEqual(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result,{winner:0,reason:'Both generals captured'});
+});
+
+test('camel moves exactly two diagonally, with elevation blocking at the intermediate intersection',()=>{
+    const s=Shavari.initial();s.board={'4,4':[{type:'L',owner:1}]};
+    const coords=Shavari.legalMoves(s,{x:4,y:4}).map(m=>[m.x,m.y]).sort();
+    assert.deepEqual(coords,[[2,2],[2,6],[6,2],[6,6]]);
+    for(const to of [[4,2],[5,5],[7,7]])assert.equal(Shavari.apply(s,move([4,4],to)),null);
+    s.board['5,5']=[{type:'P',owner:2}];assert.ok(!Shavari.legalMoves(s,{x:4,y:4}).some(m=>m.x===6&&m.y===6));
+    s.board['4,4'].push({type:'P',owner:1});assert.ok(Shavari.legalMoves(s,{x:4,y:4}).some(m=>m.x===6&&m.y===6));
+    s.board['5,5'].push({type:'P',owner:2});assert.ok(!Shavari.legalMoves(s,{x:4,y:4}).some(m=>m.x===6&&m.y===6));
+    delete s.board['5,5'];s.board['6,6']=[{type:'P',owner:2}];assert.ok(Shavari.legalMoves(s,{x:4,y:4}).some(m=>m.x===6&&m.y===6&&m.kind==='cover'));
+    assert.ok(!Shavari.legalMoves(s,{x:4,y:4},'top').some(m=>m.x===6&&m.y===6));
+});
+test('lotus excludes its original court forward diagonals and combines with buried enemy camel moves',()=>{
+    for(const owner of [1,2]){
+        const s=Shavari.initial();s.player=owner;s.board={'4,4':[{type:'G',owner}]};
+        const legal=Shavari.legalMoves(s,{x:4,y:4}),forward=owner===1?-1:1;
+        assert.equal(legal.length,6);for(const dx of [-1,1]){
+            assert.ok(!legal.some(m=>m.x===4+dx&&m.y===4+forward));
+            assert.ok(legal.some(m=>m.x===4+dx&&m.y===4-forward));
+        }
+    }
+    const s=Shavari.initial();s.board={'4,4':[{type:'G',owner:2},{type:'L',owner:2},{type:'P',owner:1}]};
+    const all=Shavari.legalMoves(s,{x:4,y:4});assert.equal(all.length,10);assert.ok(all.some(m=>m.x===3&&m.y===3));assert.ok(!all.some(m=>m.x===3&&m.y===5));
+    const pair=Shavari.legalMoves(s,{x:4,y:4},'pair');assert.equal(pair.length,8);
+    assert.equal(Shavari.legalMoves(s,{x:4,y:4},'top').length,4);
+    assert.equal(new Set(all.map(m=>`${m.x},${m.y},${m.kind}`)).size,all.length);
 });
