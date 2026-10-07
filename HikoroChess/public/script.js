@@ -1,10 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const productionUrl = 'https://HikoroChess.org';
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
-
-    const socket = io(serverUrl);
+    const socket = io();
+    const announce = message => {
+        const notice = document.getElementById('site-notice');
+        notice.textContent = message; notice.hidden = false;
+    };
+    let seatToken = null;
+    socket.on('seatAssigned', data => {
+        seatToken = data.token;
+        sessionStorage.setItem('hikoro-seat-' + data.gameId, data.token);
+    });
 
     const HIKORO_BOARD_WIDTH = 10;
     const HIKORO_BOARD_HEIGHT = 16;
@@ -124,10 +129,26 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('timeUpdate', updateTimerDisplay);
     socket.on('validMoves', drawHikoroHighlights); 
-    socket.on('errorMsg', (message) => alert(message));
+    socket.on('errorMsg', message => {
+        if (message.includes('could not be restored')) { sessionStorage.removeItem('hikoro-active-room'); gameId = null; }
+        announce(message);
+    });
+    socket.on('connect', () => {
+        document.getElementById('connection-status').textContent = 'Connected · Ready to play';
+        createGameBtn.disabled = false; singlePlayerBtn.disabled = false;
+        if (!gameId && !isReplayMode) {
+            try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
+        }
+        if (gameId && !isReplayMode && seatToken) socket.emit('resumeGame', { gameId, token: seatToken });
+    });
+    socket.on('disconnect', () => {
+        document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = true;
+    });
+    socket.on('roomClosed', message => announce(message));
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
-        alert("Failed to connect to the server. Check the developer console (F12) for more info.");
+        announce("Cannot reach the game server. Retrying automatically. You can still review a saved Hikoro game.");
     });
 
     rulesBtnIngame.addEventListener('click', () => {
@@ -136,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     mainMenuBtn.addEventListener('click', () => {
+        sessionStorage.removeItem('hikoro-active-room');
         if (gameId && !isReplayMode) {
             socket.emit('leaveGame', gameId);
         }
@@ -146,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resignButton.addEventListener('click', () => {
             if (gameState.gameOver || isReplayMode || !gameId) return;
             if (isSinglePlayer) {
-                alert("Cannot resign in a local pass-and-play game.");
+                announce("Local games do not need resignation. Return to the menu to start again.");
                 return;
             }
             if (confirm("Are you sure you want to resign?")) {
@@ -162,11 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
         copyKifuBtn.addEventListener('click', () => {
             if (gameState && gameState.moveList) {
                 const kifuText = gameState.moveList.join('\n');
+                if (!navigator.clipboard?.writeText) { announce('Clipboard access is unavailable. Use Download Kifu instead.'); return; }
                 navigator.clipboard.writeText(kifuText).then(() => {
-                    alert('Kifu copied to clipboard!');
+                    announce('Game notation copied to your clipboard.');
                 }, (err) => {
                     console.error('Failed to copy kifu: ', err);
-                    alert('Failed to copy. See console for details.');
+                    announce('Clipboard permission was denied. Use Download Kifu instead.');
                 });
             }
         });
@@ -314,6 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLobby(games) {
         gameListElement.innerHTML = '';
+        if (!Object.keys(games).length) {
+            const empty = document.createElement('p'); empty.className = 'empty-rooms';
+            empty.textContent = 'No open tables yet. Create a room and invite someone to join.';
+            gameListElement.appendChild(empty);
+        }
         for (const id in games) {
             const game = games[id];
             const gameItem = document.createElement('div');
@@ -336,8 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameCreated(data) {
+        document.getElementById('site-notice').hidden = true;
         gameId = data.gameId;
         myColor = data.color;
+        if (data.color !== 'waiting') sessionStorage.setItem('hikoro-active-room', gameId);
         isSinglePlayer = false;
         isReplayMode = false;
 
@@ -354,11 +384,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initialGameState.gameType === 'shodansho') {
             const myIndex = initialGameState.players.indexOf(socket.id); // Valid index for SP or Online
             const pQuery = myIndex !== -1 ? `&p=${myIndex}` : '';
-            window.location.href = `/shodansho.html?gameId=${initialGameState.id}${pQuery}&players=${initialGameState.maxPlayers}`;
+            window.location.href = `/shodansho.html?gameId=${encodeURIComponent(initialGameState.id)}${pQuery}&players=${initialGameState.maxPlayers}`;
             return;
         }
 
+        document.getElementById('site-notice').hidden = true;
         gameId = initialGameState.id;
+        sessionStorage.setItem('hikoro-active-room', gameId);
         gameState = initialGameState; 
         isReplayMode = false;
         isSinglePlayer = initialGameState.isSinglePlayer;
@@ -366,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isSinglePlayer) {
             myColor = 'white'; 
         } else {
-            if (!myColor) myColor = 'black'; 
+            myColor = initialGameState.players.white === socket.id ? 'white' : 'black';
         }
 
         lobbyElement.style.display = 'none';
@@ -381,10 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateLocalState(newGameState) {
-        const isNewGameOver = newGameState.gameOver && !gameState.gameOver;
-        gameState = newGameState; 
+        gameState = newGameState;
+        updateTimerDisplay({ whiteTime: gameState.timeControl?.main === -1 ? -1 : gameState.whiteTimeLeft || gameState.timeControl?.byoyomiTime || 0, blackTime: gameState.timeControl?.main === -1 ? -1 : gameState.blackTimeLeft || gameState.timeControl?.byoyomiTime || 0, isInByoyomiWhite: gameState.whiteTimeLeft === 0, isInByoyomiBlack: gameState.blackTimeLeft === 0 });
 
-        if (isNewGameOver && newGameState.winner) {
+        if (newGameState.gameOver && newGameState.winner) {
             const winnerTextEl = document.getElementById('winnerText');
             if (winnerTextEl) {
                 const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
@@ -1680,6 +1712,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      if (rulesBtn) {
         rulesBtn.addEventListener('click', () => {
+            if (gameTypeSelect.value === 'shodansho') { window.location.href = '/shodansho.html?showRules=1'; return; }
             populateHikoroRules();
             if (rulesModal) rulesModal.style.display = 'block';
         });

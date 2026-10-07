@@ -373,7 +373,7 @@ exports.getValidMoves = function(game, data) {
 
     const { x, y } = data.square;
     // Safety check for board dimensions
-    if (y < 0 || y >= game.boardState.length || x < 0 || x >= game.boardState[0].length) {
+    if (!Number.isInteger(x) || !Number.isInteger(y) || y < 0 || y >= game.boardState.length || x < 0 || x >= game.boardState[0].length) {
         console.error("getValidMoves: Invalid coordinates", data.square);
         return [];
     }
@@ -396,6 +396,10 @@ exports.getValidMoves = function(game, data) {
  * move: { type: 'board', from, to } or { type: 'drop', piece, to }
  */
 exports.makeMove = function(game, move, playerColor) {
+    if (!move || typeof move !== 'object' || !['white', 'black'].includes(playerColor) || game.gameOver) return { success: false, error: 'Invalid move or finished game.' };
+    const validCoord = c => c && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.x < BOARD_WIDTH && c.y >= 0 && c.y < BOARD_HEIGHT;
+    if ((move.type === 'board' && (!validCoord(move.from) || !validCoord(move.to))) || (move.type === 'drop' && !validCoord(move.to))) return { success: false, error: 'Invalid coordinates.' };
+    if (game.bonusMoveInfo && move.type === 'drop') return { success: false, error: 'Complete the bonus move before dropping a piece.' };
     // Deep clone the game state to prevent mutation issues
     // Note: JSON stringify/parse is a simple way, but can be slow for large states or complex objects.
     // Consider a dedicated deep cloning library if performance becomes an issue.

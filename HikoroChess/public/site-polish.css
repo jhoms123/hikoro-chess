@@ -1,0 +1,75 @@
+/* Shared collection interface; existing boards and sprites keep their artwork. */
+.hikoro-site { --ink:#f3e5c5; --muted:#c9b48f; --square-size:min(4.5vh,40px,calc((100vw - 48px)/11.5)); display:block; padding:0; min-height:100vh; color:var(--ink); font:15px/1.6 Georgia,serif; background:#24180f; background-image:linear-gradient(#1c140ee8,#26190feb),url('assets/medieval/aged-parchment.webp'); background-size:100% 100%; background-attachment:scroll; }
+.hikoro-site::before { display:none; }
+.hikoro-site * { box-sizing:border-box; }
+.collection-header { max-width:1180px; margin:auto; padding:20px 28px; border-bottom:1px solid #b6905350; display:flex; justify-content:space-between; align-items:center; gap:15px; }
+.collection-brand { display:flex; align-items:center; gap:12px; color:var(--ink); text-decoration:none; font-size:23px; letter-spacing:3px; }
+.collection-brand small { display:block; color:var(--muted); font:9px/2 Arial,sans-serif; letter-spacing:2px; }
+#connection-status { font:11px/1.6 Arial,sans-serif; color:var(--muted); text-align:right; }
+.collection-intro { text-align:center; padding:44px 20px 30px; }
+.eyebrow { color:#c5a66a; font:10px/1.6 Arial,sans-serif; letter-spacing:2.5px; }
+.collection-intro h1 { font-weight:normal; font-size:clamp(30px,4vw,48px); line-height:1.2; margin:12px 0; }
+.collection-intro > p:last-child { color:var(--muted); font-style:italic; margin:12px 0 0; }
+.hikoro-site #lobby { width:min(100% - 36px,1060px); max-width:none; padding:0; background:none; border:none; margin:0 auto 40px; }
+.game-choices { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:0 0 24px; }
+.hikoro-site button { cursor:pointer; font-family:Georgia,serif; }
+.hikoro-site .game-choice { display:flex; align-items:center; gap:20px; padding:24px; background:#322319; border:1px solid #a8844855; border-radius:3px; color:var(--ink); text-align:left; transition:border-color .15s,background .15s; }
+.game-choice[aria-pressed="true"] { outline:1px solid #cfa96a; background:#48321e; box-shadow:inset 0 0 30px #b6905320; }
+.game-choice strong { display:block; font:normal 26px/1.3 Georgia,serif; }
+.game-choice small { display:block; color:var(--muted); font-size:14px; margin-top:4px; }
+.game-choice em { display:block; color:#d1b478; font:10px/1.8 Arial,sans-serif; margin-top:10px; letter-spacing:.4px; }
+.game-choice img { object-fit:contain; filter:drop-shadow(0 3px 5px #0008); }
+.setup-panel { border:1px solid #aa854155; border-radius:3px; background:#2e2218; padding:26px; }
+.section-title h2,.section-title h3 { font-weight:normal; font-size:25px; margin:4px 0 18px; }
+.hikoro-site #time-controls { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; width:100%; padding:0; margin:0 0 24px; background:none; border:none; }
+.hikoro-site #time-controls > div { display:flex; flex-direction:column; align-items:stretch!important; gap:8px; }
+.hikoro-site label { display:block; font:12px/1.6 Arial,sans-serif; color:var(--muted)!important; font-weight:normal!important; }
+.hikoro-site select,.hikoro-site input,.hikoro-site textarea { background:#17120e!important; color:#f3e5c5!important; border:1px solid #94704488!important; border-radius:3px!important; padding:12px!important; font:14px/1.5 Arial,sans-serif; width:100%; }
+.lobby-actions { display:flex; gap:12px; flex-wrap:wrap; }
+.hikoro-site button:not(.game-choice):not(.close-btn) { border:10px solid transparent; border-image:url('assets/medieval/wood-button.png') 12 16 16 16 fill / 10px 14px / 0 stretch; background:none; color:#fff0cb; min-height:44px; padding:3px 10px; font-size:13px; border-radius:0; margin:0; max-width:none; width:auto; }
+.hikoro-site #create-game-btn { border-image-source:url('assets/medieval/ivory-button.png'); color:#45301a; }
+.hikoro-site button:hover:not(:disabled) { filter:brightness(1.16); }
+.hikoro-site button:disabled { opacity:.5; cursor:not-allowed; }
+.hikoro-site button:focus-visible,.hikoro-site a:focus-visible,.hikoro-site input:focus-visible,.hikoro-site select:focus-visible,.hikoro-site textarea:focus-visible,.hikoro-site summary:focus-visible { outline:2px solid #f2c982; outline-offset:4px; }
+.setup-hint { color:var(--muted); font:12px/1.7 Arial,sans-serif; margin:16px 0 0; }
+.hikoro-site #replay-section { width:100%!important; border-top:1px solid #95734455!important; margin:20px 0!important; padding:20px 0!important; }
+#replay-section summary { font-size:20px; cursor:pointer; color:#dfc48f; }
+#replay-section p { color:var(--muted); font-size:13px; }
+#replay-section textarea { margin:10px 0; resize:vertical; }
+.player-name-field { max-width:340px; margin:20px 0 26px; }
+.player-name-field input { margin-top:8px; }
+.rooms-section { border-top:1px solid #95734455; padding-top:22px; }
+.hikoro-site #game-list { width:100%; margin:0; padding:0; max-height:none; border:none; background:none; }
+.hikoro-site .game-item { padding:14px 18px; background:#31251a; border:1px solid #94704455; border-radius:3px; margin:10px 0; display:flex; justify-content:space-between; gap:16px; align-items:center; }
+.empty-rooms { border:1px dashed #94704466; padding:24px; color:var(--muted); text-align:center; font-style:italic; }
+#site-notice { max-width:1060px; margin:15px auto; padding:14px 20px; border:1px solid #be985466; background:#3d2c1a; color:var(--ink); font:13px/1.6 Arial,sans-serif; }
+.collection-footer { max-width:1180px; margin:26px auto 0; padding:20px 28px; display:flex; justify-content:space-between; gap:15px; border-top:1px solid #94704444; color:var(--muted); font:10px/1.6 Arial,sans-serif; letter-spacing:1.3px; }
+.collection-footer a { color:var(--muted); letter-spacing:0; }
+.skip-link { position:absolute; left:15px; top:-100px; color:var(--ink); background:#322319; padding:10px; z-index:2000; }
+.skip-link:focus { top:10px; }
+.hikoro-site.game-active .collection-intro { display:none; }
+.hikoro-site #hikoro-game-wrapper { max-width:1300px; padding:28px 18px; margin:auto; align-items:flex-start; gap:18px; }
+.hikoro-site .captured-area,.hikoro-site #move-history-container { background:#302319; border:1px solid #aa854155; border-radius:3px; padding:14px; box-shadow:0 5px 15px #0004; }
+.hikoro-site .captured-area { width:150px; flex-shrink:0; }
+.hikoro-site .captured-area h3,.hikoro-site #move-history-container h3 { font-weight:normal; color:#e5c58c; font-size:17px; margin:0 0 10px; }
+.hikoro-site #move-history-container { width:200px; height:400px; overflow:auto; }
+.hikoro-site #move-history { font:12px/1.8 monospace; }
+.hikoro-site .captured-pieces-box { background:#1c160f; border:1px solid #94704444; border-radius:2px; min-height:58px; }
+.hikoro-site #turn-indicator-container { width:min(100% - 32px,1060px); margin:0 auto 26px; text-align:center; }
+.hikoro-site #turn-indicator { font-weight:normal; color:var(--ink); }
+.hikoro-site #game-controls,.hikoro-site #post-game-controls,.hikoro-site #replay-controls { flex-wrap:wrap; gap:10px; justify-content:center; }
+.hikoro-site #resign-button { color:#ffdfcd; }
+.hikoro-site .modal { background:#0e0907c9; }
+.hikoro-site .modal-content { color:#44301d; background:#d7c49e url('assets/medieval/aged-parchment.webp') center/100% 100%; border:18px solid transparent; border-image:url('assets/medieval/wood-panel.png') 24 / 18px / 0 stretch; border-radius:0; padding:24px; width:min(94%,850px); }
+.hikoro-site .modal-content h2,.hikoro-site .modal-content h3 { color:#44301d; }
+.hikoro-site .close-btn { color:#44301d; border:none; background:transparent; padding:0 8px; top:0; right:0; }
+.hikoro-site .piece-entry { color:#44301d; background:#f6e7c955; border-color:#99775066; }
+@media(max-width:1100px) { .hikoro-site #hikoro-game-wrapper { flex-wrap:wrap; } .hikoro-site #move-history-container { width:min(100%,650px); height:180px; } }
+@media(max-width:700px) { .collection-header { padding:16px 18px; } .collection-brand { font-size:19px; } .collection-brand small { font-size:8px; } .collection-intro { padding:30px 18px 22px; } .game-choices { grid-template-columns:1fr; gap:12px; } .hikoro-site .game-choice { padding:19px; gap:15px; } .game-choice strong { font-size:24px; } .setup-panel { padding:20px; } .hikoro-site #time-controls { grid-template-columns:1fr 1fr; gap:15px; } .lobby-actions { display:grid; grid-template-columns:1fr; } .hikoro-site #hikoro-game-wrapper { flex-direction:column; align-items:center; padding:18px 0; } .hikoro-site .captured-area,.hikoro-site #move-history-container { width:calc(100% - 32px); } .hikoro-site #black-captured-area { order:1; } .hikoro-site #board-container { order:2; } .hikoro-site #white-captured-area { order:3; } .hikoro-site #move-history-container { order:4; } .hikoro-site .captured-pieces-box { display:flex; flex-wrap:wrap; min-height:50px; } .collection-footer { padding:20px 18px; letter-spacing:.7px; } #site-notice { margin:12px 18px; } }
+@media(prefers-reduced-motion:reduce) { .hikoro-site * { transition:none!important; } }
+.hikoro-site [hidden] { display:none!important; }
+.hikoro-site .collection-intro h1,.hikoro-site .captured-area h3 { background:none; border:none; border-radius:0; padding:0; }
+.hikoro-site #turn-indicator-container { background:#302319; border:1px solid #aa854155; border-radius:3px; padding:18px; }
+.hikoro-site #game-controls button { border:10px solid transparent; border-image:url('assets/medieval/wood-button.png') 12 16 16 16 fill / 10px 14px / 0 stretch; background:none; color:#fff0cb; padding:3px 10px; border-radius:0; }
+.hikoro-site #game-controls #resign-button { border-image-source:url('assets/medieval/ivory-button.png'); color:#782d20; }
+.hikoro-site #white-time-hikoro,.hikoro-site #black-time-hikoro { border:1px solid #aa854155; background:#1d160e; color:#e5c58c; border-radius:3px; font:18px/1.5 monospace; }

@@ -1,314 +1,207 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const crypto = require('crypto');
 const socketIo = require('socket.io');
-
-const app = express();
-const server = http.createServer(app);
-
-const io = socketIo(server, {
-  cors: {
-    origin: ["https://hikorochess.org", "https://www.hikorochess.org", "http://localhost:3000"],
-    methods: ["GET", "POST"]
-  },
-  pingInterval: 25000,
-  pingTimeout: 20000
-});
-
-const PORT = process.env.PORT || 3000;
-
-// Serve the public folder for HTML, CSS, images, etc.
-app.use(express.static('public'));
-
-// Explicitly serve gamelogic.js from the root folder to the browser
-app.get('/gamelogic.js', (req, res) => {
-    res.sendFile(__dirname + '/gamelogic.js');
-});
-
-let games = {};
-let lobbyGames = {};
-
 const hikoroLogic = require('./gamelogic');
+const { remainingTime, commitClock } = require('./clock');
+const { createSdsValidator, applySdsAction } = require('./sds-validator');
 
-function gameTimerTick() {
-    const now = Date.now();
-    for (const gameId in games) {
-        const game = games[gameId];
-        if (!game || game.gameOver || game.timeControl.main === -1 || !game.players.black || !game.lastMoveTimestamp) continue;
-
-        const activePlayerColor = game.isWhiteTurn ? 'white' : 'black';
-        const opponentColor = game.isWhiteTurn ? 'black' : 'white';
-        
-        let timeLeft = game[`${activePlayerColor}TimeLeft`];
-        const timeSpent = (now - game.lastMoveTimestamp) / 1000;
-        let displayTime = timeLeft - timeSpent;
-        let isInByoyomi = timeLeft <= 0;
-
-        if (displayTime < 0) {
-            isInByoyomi = true;
-            const byoyomiTimeUsed = Math.abs(displayTime);
-            if (game.timeControl.byoyomiTime > 0 && byoyomiTimeUsed > game.timeControl.byoyomiTime) {
-                endGame(gameId, opponentColor, "Timeout");
-                continue;
-            }
-            if (game.timeControl.byoyomiTime > 0) displayTime = game.timeControl.byoyomiTime - byoyomiTimeUsed;
-            else {
-                endGame(gameId, opponentColor, "Timeout");
-                continue;
-            }
+function createServer() {
+    const app = express();
+    const server = http.createServer(app);
+    const io = socketIo(server, { maxHttpBufferSize: 32768,
+        cors: { origin: (process.env.ALLOWED_ORIGINS || 'https://hikorochess.org,https://www.hikorochess.org,http://localhost:3000').split(','), methods: ['GET', 'POST'] },
+        pingInterval: 25000, pingTimeout: 20000 });
+    app.disable('x-powered-by');
+    app.use(express.static(path.join(__dirname, 'public')));
+    app.get('/gamelogic.js', (req, res) => res.sendFile(path.join(__dirname, 'gamelogic.js')));
+    app.get('/health', (req, res) => res.json({ status: 'ok' }));
+    // Keep the old bookmarked URL on the maintained game page.
+    app.get('/shodan', (req, res) => res.redirect('/shodansho.html' + (req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '')));
+    const games = new Map();
+    const lobby = new Map();
+    const sessions = new Map();
+    const emitLobby = () => io.emit('lobbyUpdate', Object.fromEntries(lobby));
+    const state = game => { const { logic, ...publicState } = game; return publicState; };
+    const err = (socket, message) => socket.emit('errorMsg', message);
+    const ticket = () => crypto.randomBytes(24).toString('hex');
+    const seat = (game, socket) => game.gameType === 'shodansho' ? game.players.indexOf(socket.id)
+        : game.players.white === socket.id ? 0 : game.players.black === socket.id ? 1 : -1;
+    const member = (game, socket) => seat(game, socket) !== -1;
+    function finish(game, winner, reason) {
+        game.gameOver = true; game.winner = winner; game.reason = reason;
+        game.lastActivity = Date.now();
+        io.to(game.id).emit('gameStateUpdate', state(game));
+        if (game.gameType === 'shodansho') io.to(game.id).emit('roomClosed', reason);
+    }
+    function remove(game) {
+        games.delete(game.id); sessions.delete(game.id); lobby.delete(game.id); emitLobby();
+    }
+    function options(data) {
+        if (!data || typeof data !== 'object') return null;
+        const gameType = data.gameType || 'hikoro';
+        if (!['hikoro', 'shodansho'].includes(gameType)) return null;
+        const maxPlayers = gameType === 'shodansho' ? Number(data.sdsPlayerCount || 2) : 2;
+        if (![2, 3, 4].includes(maxPlayers)) return null;
+        const tc = data.timeControl || { main: 300, byoyomiTime: 30 };
+        if (![-1, 0, 300, 900, 1800, 3600].includes(tc.main) || ![0, 15, 30, 60].includes(tc.byoyomiTime)) return null;
+        const timeControl = gameType === 'shodansho' ? { main: -1, byoyomiTime: 0 }
+            : { main: tc.main, byoyomiTime: tc.main === -1 ? 0 : tc.main === 0 && tc.byoyomiTime === 0 ? 15 : tc.byoyomiTime };
+        return { gameType, maxPlayers, timeControl, name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
+    }
+    function newGame(socket, config, single) {
+        const id = `${single ? 'sp' : 'game'}_${crypto.randomBytes(8).toString('hex')}`;
+        const game = { id, ...config, players: config.gameType === 'hikoro' ? { white: socket.id, black: single ? socket.id : null } : [socket.id],
+            boardState: hikoroLogic.getInitialBoard(), isWhiteTurn: true, turnCount: 0, gameOver: false,
+            whiteTimeLeft: config.timeControl.main, blackTimeLeft: config.timeControl.main,
+            lastMoveTimestamp: single ? Date.now() : null, lastActivity: Date.now(), isSinglePlayer: single, started: single,
+            moveList: [], whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true, sdsActions: [] };
+        games.set(id, game);
+        const tokens = [ticket()];
+        sessions.set(id, { tokens, engine: config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
+        socket.join(id);
+        socket.emit('seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
+        return game;
+    }
+    function tick() {
+        const now = Date.now();
+        for (const game of games.values()) {
+            const ttl = game.gameOver ? 3600000 : game.started ? 21600000 : 1800000;
+            if (now - game.lastActivity > ttl) { io.to(game.id).emit('roomClosed', 'This inactive room has expired.'); remove(game); continue; }
+            if (game.gameType !== 'hikoro' || !game.started || game.gameOver || game.timeControl.main === -1) continue;
+            const t = remainingTime(game, now);
+            if (t.expired) { finish(game, t.color === 'white' ? 'black' : 'white', 'Timeout'); continue; }
+            io.to(game.id).emit('timeUpdate', {
+                whiteTime: t.color === 'white' ? t.display : game.whiteTimeLeft || game.timeControl.byoyomiTime,
+                blackTime: t.color === 'black' ? t.display : game.blackTimeLeft || game.timeControl.byoyomiTime,
+                isInByoyomiWhite: t.color === 'white' ? t.byoyomi : game.whiteTimeLeft <= 0,
+                isInByoyomiBlack: t.color === 'black' ? t.byoyomi : game.blackTimeLeft <= 0 });
         }
-
-        io.to(gameId).emit('timeUpdate', {
-            whiteTime: game.isWhiteTurn ? displayTime : game.whiteTimeLeft,
-            blackTime: !game.isWhiteTurn ? displayTime : game.blackTimeLeft,
-            isInByoyomiWhite: game.isWhiteTurn ? isInByoyomi : (game.whiteTimeLeft <= 0),
-            isInByoyomiBlack: !game.isWhiteTurn ? isInByoyomi : (game.blackTimeLeft <= 0),
+    }
+    const interval = setInterval(tick, 1000);
+    interval.unref(); server.on('close', () => clearInterval(interval));
+    io.on('connection', socket => {
+        socket.emit('lobbyUpdate', Object.fromEntries(lobby));
+        let createTimes = [];
+        function canCreate() {
+            createTimes = createTimes.filter(t => Date.now() - t < 60000);
+            if (createTimes.length >= 5 || games.size >= 500) { err(socket, 'Please wait before creating another room.'); return false; }
+            createTimes.push(Date.now()); return true;
+        }
+        socket.on('createGame', data => {
+            const config = options(data);
+            if (!config) return err(socket, 'Invalid game settings.');
+            if (!canCreate()) return;
+            const game = newGame(socket, config, false);
+            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: config.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers });
+            socket.emit('gameCreated', { gameId: game.id, color: game.gameType === 'hikoro' ? 'white' : 'waiting' }); emitLobby();
         });
-    }
-}
-setInterval(gameTimerTick, 1000);
-
-function updateTimeOnMove(game) {
-    if (!game.lastMoveTimestamp || game.timeControl.main === -1) return;
-    
-    const now = Date.now();
-    const timeSpent = (now - game.lastMoveTimestamp) / 1000;
-    const playerWhoMovedColor = !game.isWhiteTurn ? 'white' : 'black';
-    
-    game[`${playerWhoMovedColor}TimeLeft`] -= timeSpent;
-    if (game[`${playerWhoMovedColor}TimeLeft`] < 0) game[`${playerWhoMovedColor}TimeLeft`] = 0; 
-    
-    game.lastMoveTimestamp = now;
-}
-
-function endGame(gameId, winner, reason) {
-    const game = games[gameId];
-    if (game) {
-        game.gameOver = true;
-        game.winner = winner;
-        game.reason = reason;
-        const stateToSend = { ...game };
-        delete stateToSend.logic;
-        io.to(gameId).emit('gameStateUpdate', stateToSend);
-    }
-}
-
-function createGameObject(gameId, timeControl, isSinglePlayer, socketId, gameType = 'hikoro', maxPlayers = 2) {
-    return {
-        id: gameId,
-        gameType: gameType,
-        maxPlayers: maxPlayers,
-        logic: {
-            makeMove: hikoroLogic.makeMove,
-            getValidMoves: hikoroLogic.getValidMoves,
-        },
-        players: gameType === 'hikoro' 
-            ? { white: socketId, black: isSinglePlayer ? socketId : null }
-            : [socketId], // Treat SDS players as an array
-        boardState: hikoroLogic.getInitialBoard(),
-        isWhiteTurn: true,
-        turnCount: 0,
-        gameOver: false,
-        timeControl,
-        whiteTimeLeft: timeControl.main,
-        blackTimeLeft: timeControl.main,
-        lastMoveTimestamp: isSinglePlayer ? Date.now() : null,
-        isSinglePlayer,
-        moveList: [],
-        whiteCaptured: [], blackCaptured: [],
-        whitePrinceOnBoard: true, blackPrinceOnBoard: true,
-        sdsActions: [] // Make sure this defaults to an array!
-    };
-}
-
-io.on('connection', (socket) => {
-    socket.emit('lobbyUpdate', lobbyGames);
-
-    socket.on('createGame', (data) => {
-        const { playerName, timeControl, gameType } = data;
-        const gameId = `game_${Math.random().toString(36).substr(2, 9)}`;
-        const tc = timeControl || { main: 300, byoyomiTime: 30 };
-        const gt = gameType || 'hikoro';
-        
-        const sdsPlayerCount = data.sdsPlayerCount || 2;
-        const maxPlayers = gt === 'shodansho' ? sdsPlayerCount : 2;
-        
-        games[gameId] = createGameObject(gameId, tc, false, socket.id, gt, maxPlayers);
-        
-        lobbyGames[gameId] = { id: gameId, gameType: gt, creatorName: playerName || 'Anonymous', timeControl: tc, currentPlayers: 1, maxPlayers: maxPlayers };
-        
-        socket.join(gameId);
-        socket.emit('gameCreated', { gameId, color: gt === 'shodansho' ? 'waiting' : 'white' });
-        io.emit('lobbyUpdate', lobbyGames);
-    });
-
-    socket.on('joinGame', (gameId) => {
-        const game = games[gameId];
-        if (!game) return socket.emit('errorMsg', 'Game not found.');
-
-        if (game.gameType === 'shodansho') {
-            if (game.players.length < game.maxPlayers && !game.players.includes(socket.id)) {
-                game.players.push(socket.id);
-                socket.join(gameId);
-                
-                if (lobbyGames[gameId]) {
-                    lobbyGames[gameId].currentPlayers = game.players.length;
-                    io.emit('lobbyUpdate', lobbyGames);
-                }
-
-                if (game.players.length === game.maxPlayers) {
-                    delete lobbyGames[gameId];
-                    io.emit('lobbyUpdate', lobbyGames);
-
-                    game.started = true;
-                    game.lastMoveTimestamp = Date.now();
-                    const stateToSend = { ...game };
-                    delete stateToSend.logic;
-                    io.to(gameId).emit('gameStart', stateToSend);
-                } else {
-                    socket.emit('gameCreated', { gameId, color: 'waiting' });
-                }
+        socket.on('createSinglePlayerGame', data => {
+            const config = options({ ...data, timeControl: { main: -1, byoyomiTime: 0 } });
+            if (!config) return err(socket, 'Invalid game settings.');
+            if (!canCreate()) return;
+            socket.emit('gameStart', state(newGame(socket, config, true)));
+        });
+        socket.on('joinGame', id => {
+            const game = games.get(id);
+            if (!game || game.started || game.gameOver) return err(socket, 'This room is no longer available.');
+            if (member(game, socket)) return err(socket, 'You are already in this room.');
+            let index;
+            if (game.gameType === 'shodansho') {
+                if (game.players.length >= game.maxPlayers) return err(socket, 'This room is full.');
+                index = game.players.push(socket.id) - 1;
+            } else { if (game.players.black) return err(socket, 'This room is full.'); game.players.black = socket.id; index = 1; }
+            const token = ticket(); sessions.get(id).tokens[index] = token;
+            socket.emit('seatAssigned', { gameId: id, token, playerIndex: index }); socket.join(id);
+            game.lastActivity = Date.now();
+            const count = game.gameType === 'hikoro' ? 2 : game.players.length;
+            if (count === game.maxPlayers) {
+                game.started = true; game.lastMoveTimestamp = Date.now(); lobby.delete(id);
+                io.to(id).emit('gameStart', state(game));
             } else {
-                socket.emit('errorMsg', 'Game full or you are already in it.');
+                lobby.get(id).currentPlayers = count;
+                socket.emit('gameCreated', { gameId: id, color: 'waiting' });
             }
-        } else {
-            // Hikoro
-            if (!game.players.black) {
-                game.players.black = socket.id;
-                delete lobbyGames[gameId]; 
-                socket.join(gameId);
-                game.started = true;
-                game.lastMoveTimestamp = Date.now();
-                
-                const stateToSend = { ...game };
-                delete stateToSend.logic;
-                io.to(gameId).emit('gameStart', stateToSend);
-                io.emit('lobbyUpdate', lobbyGames);
-            } else {
-                socket.emit('errorMsg', 'Game full or not found.');
+            emitLobby();
+        });
+        function resume(data, sds) {
+            const game = games.get(data?.gameId); const session = sessions.get(data?.gameId);
+            const index = session?.tokens.indexOf(data?.token);
+            if (!game || !session || index === -1 || index === undefined || (game.gameType === 'shodansho') !== sds)
+                return err(socket, 'This seat could not be restored. Return to the lobby to start a new game.');
+            const oldId = sds ? game.players[index] : game.players[index === 0 ? 'white' : 'black'];
+            if (oldId !== socket.id && io.sockets.sockets.has(oldId)) io.sockets.sockets.get(oldId).leave(game.id);
+            if (sds) game.players[index] = socket.id;
+            else { game.players[index === 0 ? 'white' : 'black'] = socket.id; if (game.isSinglePlayer) game.players.black = socket.id; }
+            socket.join(game.id); game.lastActivity = Date.now();
+            if (sds) socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers });
+            else if (!game.started) socket.emit('gameCreated', { gameId: game.id, color: index === 0 ? 'white' : 'black' });
+            else socket.emit('gameStart', state(game));
+        }
+        socket.on('resumeGame', data => resume(data, false));
+        socket.on('joinSdsRoom', data => resume(data, true));
+        socket.on('makeGameMove', data => {
+            const game = games.get(data?.gameId); const move = data?.move;
+            if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return err(socket, 'You do not hold a seat in this game.');
+            if (!game.started || game.gameOver) return err(socket, 'This game is not accepting moves.');
+            if (!move || typeof move !== 'object') return err(socket, 'Invalid move.');
+            const color = game.isSinglePlayer ? (game.isWhiteTurn ? 'white' : 'black') : seat(game, socket) === 0 ? 'white' : 'black';
+            if (move.type !== 'resign' && (color === 'white') !== game.isWhiteTurn) return err(socket, 'Not your turn.');
+            const now = Date.now();
+            if (game.timeControl.main !== -1 && remainingTime(game, now).expired) return finish(game, game.isWhiteTurn ? 'black' : 'white', 'Timeout');
+            let result;
+            try { result = hikoroLogic.makeMove(game, move, color); } catch { return err(socket, 'Invalid move data.'); }
+            if (!result.success) return err(socket, result.error);
+            const next = result.updatedGame;
+            const complete = game.isWhiteTurn !== next.isWhiteTurn;
+            commitClock(game, now, complete);
+            next.whiteTimeLeft = game.whiteTimeLeft; next.blackTimeLeft = game.blackTimeLeft; next.lastMoveTimestamp = game.lastMoveTimestamp;
+            next.lastActivity = now; games.set(game.id, next);
+            io.to(game.id).emit('gameStateUpdate', state(next));
+        });
+        socket.on('getValidMoves', data => {
+            const game = games.get(data?.gameId);
+            if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return;
+            socket.emit('validMoves', hikoroLogic.getValidMoves(game, data.data));
+        });
+        socket.on('sdsAction', data => {
+            const game = games.get(data?.gameId); const engine = sessions.get(data?.gameId)?.engine;
+            if (!game || !engine || !game.started || game.gameOver || seat(game, socket) !== engine.currentPlayer)
+                return err(socket, 'Not your turn or this seat is no longer active.');
+            if (game.sdsActions.length >= 10000) return err(socket, 'This room has reached its move limit.');
+            let action;
+            try { action = applySdsAction(engine, data.action); } catch { return err(socket, 'Invalid action data.'); }
+            if (!action) return err(socket, 'That action is not legal.');
+            game.sdsActions.push(action); game.lastActivity = Date.now(); game.gameOver = engine.phase === 'game_over';
+            io.to(game.id).emit('sdsAction', action);
+        });
+        socket.on('leaveGame', id => {
+            const game = games.get(id);
+            if (!game || !member(game, socket)) return err(socket, 'You do not hold a seat in this room.');
+            if (game.started && !game.isSinglePlayer && !game.gameOver) finish(game,
+                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : 'draw', 'A player left the room.');
+            else io.to(id).emit('roomClosed', 'This room was closed.');
+            socket.leave(id); remove(game);
+        });
+        socket.on('disconnect', () => {
+            for (const game of games.values()) {
+                if (!member(game, socket)) continue;
+                if (game.started) continue; // Authenticated seats can reconnect after a page redirect or network interruption.
+                if (game.gameType === 'hikoro') { remove(game); continue; }
+                const index = game.players.indexOf(socket.id);
+                game.players.splice(index, 1); sessions.get(game.id).tokens.splice(index, 1);
+                if (!game.players.length) { remove(game); continue; }
+                lobby.get(game.id).currentPlayers = game.players.length;
+                game.players.forEach((id, i) => io.to(id).emit('seatAssigned', { gameId: game.id, token: sessions.get(game.id).tokens[i], playerIndex: i }));
+                emitLobby();
             }
-        }
+        });
     });
-
-    socket.on('createSinglePlayerGame', (data) => {
-        const gt = (data && data.gameType) ? data.gameType : 'hikoro';
-        const spCount = (data && data.sdsPlayerCount) ? data.sdsPlayerCount : 2;
-        const gameId = `sp_${Math.random().toString(36).substr(2, 9)}`;
-        const tc = { main: -1, byoyomiTime: 0 };
-        
-        games[gameId] = createGameObject(gameId, tc, true, socket.id, gt, spCount);
-        games[gameId].started = true;
-        
-        socket.join(gameId);
-        const stateToSend = { ...games[gameId] };
-        delete stateToSend.logic;
-        socket.emit('gameStart', stateToSend);
-    });
-
-    socket.on('makeGameMove', (data) => {
-        const { gameId, move } = data;
-        const game = games[gameId];
-        if (!game) return socket.emit('errorMsg', 'Game not found.');
-
-        let playerColor = game.players.white === socket.id ? 'white' : 'black';
-        if (game.isSinglePlayer) playerColor = game.isWhiteTurn ? 'white' : 'black';
-
-        // Turn Validation
-        const isTurn = (playerColor === 'white' && game.isWhiteTurn) || (playerColor === 'black' && !game.isWhiteTurn);
-        if (!isTurn && move.type !== 'resign') return socket.emit('errorMsg', "Not your turn.");
-
-        updateTimeOnMove(game);
-        if (game.gameOver) return;
-
-        const result = game.logic.makeMove(game, move, playerColor);
-
-        if (result.success) {
-            // Re-attach logic functions (they are lost on struct copy/JSON parse)
-            const originalLogic = game.logic;
-            games[gameId] = result.updatedGame;
-            games[gameId].logic = originalLogic;
-
-            const stateToSend = { ...games[gameId] };
-            delete stateToSend.logic;
-            io.to(gameId).emit('gameStateUpdate', stateToSend);
-        } else {
-            socket.emit('errorMsg', result.error);
-        }
-    });
-
-    socket.on('getValidMoves', (data) => {
-        const { gameId, data: moveData } = data;
-        const game = games[gameId];
-        if (game && game.logic) {
-            socket.emit('validMoves', game.logic.getValidMoves(game, moveData));
-        }
-    });
-
-    // Sho Dan Sho Action Syncing
-    socket.on('joinSdsRoom', (gameId) => {
-        socket.join(gameId);
-        if (games[gameId]) {
-            // Always emit sdsSync to tell client to unblock, even if empty array!
-            socket.emit('sdsSync', games[gameId].sdsActions || []);
-        }
-    });
-
-    socket.on('sdsAction', (data) => {
-        const game = games[data.gameId];
-        if (game) {
-            if (!game.sdsActions) game.sdsActions = [];
-            game.sdsActions.push(data.action);
-        }
-        io.to(data.gameId).emit('sdsAction', data.action);
-    });
-
-    socket.on('leaveGame', (gameId) => {
-        const game = games[gameId];
-        if (game) {
-            if (!game.isSinglePlayer && !game.gameOver) {
-                endGame(gameId, game.players.white === socket.id ? 'black' : 'white', "Opponent Forfeited");
-            }
-            delete games[gameId];
-            delete lobbyGames[gameId];
-            io.emit('lobbyUpdate', lobbyGames);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        for (const gameId in games) {
-            const game = games[gameId];
-            if ((game.gameType === 'hikoro' && (game.players.white === socket.id || game.players.black === socket.id)) ||
-                (game.gameType === 'shodansho' && game.players.includes && game.players.includes(socket.id))) {
-                
-                // Do not delete game if it hasn't fully started yet (lobby abandonment)
-                if (game.gameType === 'shodansho' && !game.started) {
-                    game.players = game.players.filter(id => id !== socket.id);
-                    if (lobbyGames[gameId]) {
-                        lobbyGames[gameId].currentPlayers = game.players.length;
-                        io.emit('lobbyUpdate', lobbyGames);
-                    }
-                    if (game.players.length === 0) {
-                        delete games[gameId];
-                        delete lobbyGames[gameId];
-                        io.emit('lobbyUpdate', lobbyGames);
-                    }
-                    continue;
-                }
-
-                // CRITICAL FIX: If a Sho Dan Sho game HAS started, players are redirecting to the dedicated page.
-                // Their lobby sockets will disconnect. We MUST NOT delete the game here!
-                if (game.gameType === 'shodansho' && game.started) {
-                    continue; 
-                }
-
-                if (!game.isSinglePlayer && !game.gameOver) {
-                    endGame(gameId, "disconnected", "Player Disconnected");
-                }
-                delete games[gameId];
-                delete lobbyGames[gameId];
-                io.emit('lobbyUpdate', lobbyGames);
-            }
-        }
-    });
-});
-
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    return { server, io };
+}
+if (require.main === module) {
+    const { server } = createServer();
+    server.listen(process.env.PORT || 3000, () => console.log(`Server running on port ${server.address().port}`));
+}
+module.exports = { createServer };
