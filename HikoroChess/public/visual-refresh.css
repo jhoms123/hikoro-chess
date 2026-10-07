@@ -1,0 +1,277 @@
+/* 2026 collection visual refresh.
+   No generated imagery. Reuses credited local assets; see assets/VISUAL_CREDITS.md. */
+
+:root {
+  --vr-brass:#c9a96a;
+  --vr-ivory:#f4e6c6;
+  --vr-ink:#22170f;
+  --vr-shadow:#08050480;
+}
+
+/* ---------- Collection hero ---------- */
+.hikoro-site .collection-hero {
+  width:min(1180px,100% - 36px);
+  margin:0 auto;
+  padding:48px 0 32px;
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);
+  gap:46px;
+  align-items:center;
+  text-align:left;
+}
+.hikoro-site .collection-hero .hero-copy { padding-left:10px; }
+.hikoro-site .collection-hero h1 {
+  max-width:700px;
+  font-size:clamp(40px,5.2vw,68px);
+  letter-spacing:-1.6px;
+  margin:12px 0 18px;
+}
+.hikoro-site .collection-hero .hero-copy > p:last-child {
+  max-width:690px;
+  margin:0;
+  color:var(--muted);
+  font-style:italic;
+  font-size:16px;
+}
+.strategy-hall {
+  position:relative;
+  min-height:340px;
+  border:18px solid transparent;
+  border-image:url('assets/medieval/wood-panel.png') 24 fill / 18px / 0 stretch;
+  padding:22px;
+  filter:drop-shadow(0 18px 26px #0008);
+  isolation:isolate;
+}
+.strategy-hall::before {
+  content:"";
+  position:absolute;
+  inset:18px;
+  background:
+    radial-gradient(circle at 50% 42%,#8c6844 0 3%,transparent 3.5%),
+    radial-gradient(ellipse at 50% 58%,#65462f 0 18%,#3a271b 48%,#1b120d 100%);
+  z-index:-1;
+  box-shadow:inset 0 0 45px #0009;
+}
+.hall-seal {
+  position:absolute;
+  inset:50% auto auto 50%;
+  transform:translate(-50%,-50%);
+  width:92px;
+  height:92px;
+  display:grid;
+  place-items:center;
+  border:1px solid #d8bc8366;
+  border-radius:50%;
+  background:#24170ed9;
+  box-shadow:0 0 0 8px #2d1c1288,0 10px 25px #0008;
+}
+.hall-seal img { width:66px;height:66px; }
+.hall-world {
+  position:absolute;
+  width:78px;
+  height:78px;
+  border:1px solid #d1af7055;
+  background:#25180fdd;
+  box-shadow:0 7px 16px #0007,inset 0 0 0 3px #ffffff05;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font:700 12px/1 Arial,sans-serif;
+  letter-spacing:1px;
+  color:#f0dfbd;
+}
+.hall-world::after { content:"";position:absolute;inset:8px;border:1px solid currentColor;border-radius:50%;opacity:.3; }
+.hall-ocean{left:10%;top:11%;color:#78b9c8}.hall-garden{right:10%;top:11%;color:#a9bb72}
+.hall-shavari{left:5%;bottom:11%;color:#df926a}.hall-citadel{right:5%;bottom:11%;color:#d7b67b}
+.hall-go{left:calc(50% - 39px);top:4%;color:#adb7a0}.hall-academy{left:calc(50% - 39px);bottom:4%;color:#7db9c0}
+.hall-world b{font:normal 24px Georgia,serif}.hall-world small{position:absolute;top:100%;margin-top:5px;color:#d3c09d;font:8px/1 Arial,sans-serif;letter-spacing:1.5px;white-space:nowrap}
+
+/* ---------- Game cards ---------- */
+.hikoro-site .game-choices {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:16px;
+}
+.hikoro-site .game-choice {
+  min-height:244px;
+  padding:0;
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:116px 1fr;
+  align-items:stretch;
+  gap:0;
+  border-radius:7px;
+  transform:translateY(0);
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+.hikoro-site .game-choice:hover {
+  transform:translateY(-3px);
+  border-color:#d4b17099;
+  box-shadow:0 15px 28px #0005;
+}
+.hikoro-site .game-choice[aria-pressed="true"] {
+  outline:2px solid #d9b979;
+  outline-offset:2px;
+}
+.game-choice .card-copy {
+  padding:17px 19px 20px;
+  display:block;
+}
+.game-choice .card-copy strong { font-size:23px; }
+.game-choice .card-copy small { font-size:12px; line-height:1.5; }
+.game-choice .card-copy em { margin-top:7px; }
+.card-art {
+  position:relative;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-bottom:1px solid #d1ab6b33;
+}
+.card-art::before,.card-art::after { content:"";position:absolute;pointer-events:none; }
+.card-art img { position:relative;z-index:2;object-fit:contain; }
+
+/* Hikoro: ocean kingdom; original sprite kept near native display size. */
+.card-art-ocean {
+  background:
+    radial-gradient(circle at 50% 45%,#184f5c 0 9%,transparent 10%),
+    repeating-radial-gradient(ellipse at 50% 115%,transparent 0 13px,#4a94a33b 14px 16px,transparent 17px 27px),
+    linear-gradient(145deg,#082c3c,#0a5361 58%,#0b2535);
+}
+.card-art-ocean::before { inset:12px;border:1px solid #8dc6cc55;border-radius:50% 50% 44% 44%; }
+.kraken-medallion {
+  width:70px;height:70px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 25%,#f4e9cd,#b9a475);
+  border:3px solid #bb884e;box-shadow:0 5px 14px #00151d;
+}
+.kraken-medallion img { width:32px!important;height:32px!important;image-rendering:pixelated; }
+.card-art-ocean .bubble {position:absolute;border:1px solid #b7e5e780;border-radius:50%}
+.card-art-ocean .b1{width:11px;height:11px;left:20%;top:22%}.card-art-ocean .b2{width:7px;height:7px;right:23%;top:31%}
+
+/* Sho Dan Sho: CSS botanical motif, avoiding the heavyweight flower PNG on the lobby. */
+.card-art-garden {
+  background:
+    radial-gradient(circle at 50% 45%,#dec989 0 4%,#87904e 5% 12%,transparent 13%),
+    radial-gradient(circle at 38% 36%,#d7b96e 0 7%,#667644 8% 15%,transparent 16%),
+    radial-gradient(circle at 63% 60%,#e2d09c 0 6%,#536d44 7% 14%,transparent 15%),
+    linear-gradient(135deg,#162317,#39482d);
+}
+.card-art-garden::before {
+  width:160px;height:54px;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:url('assets/medieval/ornament-divider.png') center/100% 100% no-repeat;
+  opacity:.7;filter:sepia(1) hue-rotate(55deg) saturate(.7) brightness(1.4);
+}
+
+/* Shavari: credited Game-icons emblems. */
+.card-art-shavari { background:linear-gradient(130deg,#0e5b58,#164843 48%,#8f3e2b 49%,#b05f40); }
+.card-art-shavari img:first-child{width:58px;height:58px;transform:translateX(-26px)}
+.card-art-shavari img:last-child{width:48px;height:48px;position:absolute;transform:translateX(31px) translateY(13px);opacity:.9}
+.card-art-shavari::before{width:118px;height:118px;border:1px solid #f1d9a466;border-radius:50%;}
+
+/* Hikorüka: heraldry and timber. */
+.card-art-citadel { background:linear-gradient(#433326cc,#211913dd),url('assets/medieval/wood-panel.png') center/cover; }
+.card-art-citadel img:first-child{width:56px;height:56px;transform:translateX(-24px)}
+.card-art-citadel img:last-child{width:46px;height:46px;position:absolute;transform:translateX(31px) translateY(10px);opacity:.82}
+.card-art-citadel::before{width:128px;height:82px;border:1px solid #d6b87966;border-radius:50% 50% 8px 8px;}
+
+/* Shield Go: quiet stone-and-wood table. */
+.card-art-go { background:linear-gradient(145deg,#d0aa6f,#a87b49); }
+.card-art-go::before { inset:14px;background:
+  repeating-linear-gradient(0deg,transparent 0 20px,#60462d55 21px 22px),
+  repeating-linear-gradient(90deg,transparent 0 20px,#60462d55 21px 22px);border:1px solid #725035; }
+.go-stone-art{position:absolute;width:43px;height:43px;border-radius:50%;box-shadow:0 5px 9px #0006;z-index:2}
+.go-stone-art.black{background:radial-gradient(circle at 35% 25%,#46534d,#111814 66%);transform:translate(-24px,10px)}
+.go-stone-art.white{background:radial-gradient(circle at 35% 25%,#fffdf0,#c5c5ac 66%);transform:translate(25px,-12px)}
+.go-shield-art{position:absolute;width:38px;height:38px;z-index:3;border:3px solid #8b6a35;transform:rotate(45deg) translate(24px,22px);background:#f0d08f66}
+
+/* Academy: small original sprite in a book/lesson frame rather than blown up. */
+.card-art-academy {
+  background:
+    linear-gradient(90deg,transparent 49%,#9d7a4d55 50% 51%,transparent 52%),
+    linear-gradient(145deg,#e3d2a8,#a88a61);
+}
+.card-art-academy::before{width:122px;height:82px;border:2px solid #785937;border-radius:5px;background:#f1e4c6aa;box-shadow:inset 0 0 0 6px #8b6b4030}
+.card-art-academy::after{width:1px;height:69px;background:#8c6743;left:50%;top:23px}
+.academy-token{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#0f5a65;border:2px solid #d9ba77;z-index:2;box-shadow:0 4px 8px #513e2b66}
+.academy-token img{width:28px!important;height:28px!important;image-rendering:pixelated}
+
+/* ---------- Purpose-specific controls across the collection ---------- */
+body[data-audio-theme] {
+  --vr-accent:#c6a56b;
+  --vr-control-bg:#2f271f;
+  --vr-control-fg:#f5e7c8;
+}
+body[data-audio-theme="hikoro"],body[data-audio-theme="academy"]{--vr-accent:#76b8c1}
+body[data-audio-theme="shodansho"]{--vr-accent:#a9b86e}
+body[data-audio-theme="shavari"]{--vr-accent:#df9a67}
+body[data-audio-theme="hikoruka"]{--vr-accent:#d4b473}
+body[data-audio-theme="go"]{--vr-accent:#aab49b}
+
+body[data-audio-theme] :is(
+  #rules-button,#rules-btn,#rules-btn-ingame,.header-rules,
+  #undo-button,#redo-button,#save-button,#copy-kifu-btn,#download-kifu-btn,
+  #main-menu-btn,#lobby-link,#new-button,#resign-button,#create-game-btn,#single-player-btn
+) {
+  position:relative;
+  gap:7px;
+  border-color:color-mix(in srgb,var(--vr-accent) 48%,transparent);
+}
+body[data-audio-theme] :is(
+  #rules-button,#rules-btn,#rules-btn-ingame,.header-rules,
+  #undo-button,#redo-button,#save-button,#copy-kifu-btn,#download-kifu-btn,
+  #main-menu-btn,#new-button,#resign-button,#create-game-btn,#single-player-btn
+)::before {
+  display:inline-grid;place-items:center;
+  min-width:18px;height:18px;
+  font:700 14px/1 Georgia,serif;
+  color:var(--vr-accent);
+}
+body[data-audio-theme] :is(#rules-button,#rules-btn,#rules-btn-ingame,.header-rules)::before{content:"▤"}
+body[data-audio-theme] #undo-button::before{content:"↶"}
+body[data-audio-theme] #redo-button::before{content:"↷"}
+body[data-audio-theme] :is(#save-button,#copy-kifu-btn,#download-kifu-btn)::before{content:"◆"}
+body[data-audio-theme] #main-menu-btn::before{content:"⌂"}
+body[data-audio-theme] #new-button::before{content:"✦"}
+body[data-audio-theme] #resign-button::before{content:"⚑";color:#df8d77}
+body[data-audio-theme] #create-game-btn::before{content:"✦"}
+body[data-audio-theme] #single-player-btn::before{content:"◈"}
+
+/* Theme-specific material cues without moving controls around. */
+body[data-audio-theme="hikoro"] :is(#create-game-btn,#single-player-btn,#rules-btn,#rules-btn-ingame,#main-menu-btn,#resign-button){
+  box-shadow:inset 0 -3px #062a35aa,0 3px 8px #0004;
+}
+body[data-audio-theme="shodansho"] :is(.header-rules,#pickup-btn,#main-menu-btn,#cancel-selection-btn){
+  letter-spacing:.2px;
+}
+body[data-audio-theme="shavari"] :is(.quiet-button,.primary-button){
+  box-shadow:inset 0 0 0 1px #f0cf8f12;
+}
+body[data-audio-theme="hikoruka"] :is(.quiet-button,.primary-button){
+  border-radius:2px;
+  letter-spacing:.15px;
+}
+body[data-audio-theme="go"] :is(.quiet-button,.primary-button){
+  border-radius:10px 4px 10px 4px;
+}
+body[data-audio-theme="academy"] :is(.quiet-button,.primary-button){
+  border-radius:5px;
+}
+
+/* ---------- Responsive ---------- */
+@media(max-width:980px){
+  .hikoro-site .collection-hero{grid-template-columns:1fr;gap:26px;text-align:center}
+  .hikoro-site .collection-hero .hero-copy{padding:0}
+  .hikoro-site .collection-hero .hero-copy>p:last-child{margin-inline:auto}
+  .strategy-hall{width:min(570px,100%);margin:auto;min-height:300px}
+  .hikoro-site .game-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .hikoro-site .collection-hero{width:calc(100% - 32px);padding:28px 0 22px}
+  .hikoro-site .collection-hero h1{font-size:clamp(36px,11vw,52px)}
+  .strategy-hall{min-height:250px;padding:12px;border-width:12px}
+  .hall-world{width:62px;height:62px}.hall-world b{font-size:18px}.hall-seal{width:74px;height:74px}.hall-seal img{width:52px;height:52px}
+  .hikoro-site .game-choices{grid-template-columns:1fr}
+  .hikoro-site .game-choice{min-height:220px;grid-template-rows:104px 1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .hikoro-site .game-choice{transition:none}
+  .hikoro-site .game-choice:hover{transform:none}
+}
