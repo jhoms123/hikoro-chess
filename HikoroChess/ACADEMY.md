@@ -35,6 +35,6 @@ Responsive 64-square button board, arrow/Enter/Space/Escape controls, selected-p
 
 44 Node tests pass. Eight Academy tests cover setup/lessons, actual leaps/non-capture steps/rays, 360 blocker-filled movement comparisons against full Hikoro, wrong turns and malformed actions, King capture, replay, 300 random plies, and online synchronization/seat replacement/stale sockets/resignation. Existing Go, Hikorüka, Shavari, Sho Dan Sho and Hikoro tests remain green.
 
-Real Chromium checks cover six collection cards, all lesson choices, either-color practice, captures, cancellation/reset/undo/redo/refresh, mode switching, original sprite loading, 24-piece teaching match, rules, keyboard/flip/download, phone/tablet/desktop sizing, and online play/reconnection/resignation. Hikorüka's five new SVGs and display names are also checked on desktop and phone.
+Real Chromium checks cover six collection cards, all lesson choices, either-color practice, captures, cancellation/reset/undo/redo/refresh, mode switching, original sprite loading, 24-piece teaching match, rules, keyboard/flip/download, phone/tablet/desktop sizing, and online play/reconnection/resignation. Hikorüka's five new SVGs and display names are also checked on desktop and phone. Preview images are in `docs/academy/` and `docs/hikoruka-citadel/`.
 
 Merge into main and use the existing Render configuration: root HikoroChess, build npm ci, start npm start, health /health. No new dependencies or hosting changes.
