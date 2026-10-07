@@ -13,4 +13,4 @@ Changes: removed solid background and tinted emblems warm ivory. The UI mounts t
 board-inlay.svg is original geometric artwork made for this project, dedicated to the public domain under CC0: https://creativecommons.org/publicdomain/zero/1.0/
 Its geometry and floral corner inlays are a fictional visual interpretation, not a claim of historical authenticity.
 
-Gameplay adapted from the user-supplied 9x9_Line_Chess_Stacking_Elevation.html. The original top-piece movement, orthogonal ranges, blocked rays, whole-stack capture, and three-piece stacking cap are preserved.
+Gameplay adapted from the user-supplied 9x9_Line_Chess_Stacking_Elevation.html. The user-specified rules extend the upload with combined movement, height-based jumping, mixed-owner covering, and top-owner control. The orthogonal piece ranges and three-piece stacking cap remain.

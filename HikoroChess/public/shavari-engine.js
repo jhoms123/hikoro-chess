@@ -27,13 +27,21 @@
         s.positions[signature(s)] = 1;
         return s;
     }
+    function movingPieces(stack, mode) {
+        if (!stack?.length) return [];
+        if (mode === 'all') return stack;
+        if (mode === 'top') return stack.slice(-1);
+        if (mode === 'pair' && stack.length >= 2) return stack.slice(-2);
+        return [];
+    }
     function legalMoves(s, from, mode = 'all') {
-        if (!s || s.result || !validPoint(from) || !['all','top'].includes(mode)) return [];
+        if (!s || s.result || !validPoint(from)) return [];
         const stack = s.board[key(from)];
         if (!stack?.length || stack.at(-1).owner !== s.player) return [];
-        const moving = mode === 'top' ? 1 : stack.length;
-        // Preserve the upload's movement: the top piece leads, even for a whole stack.
-        const distance = TYPES[stack.at(-1).type].range;
+        const moving = movingPieces(stack, mode);
+        if (!moving.length) return [];
+        // Union of every carried piece's moves, including buried enemy pieces.
+        const distance = Math.max(...moving.map(p => TYPES[p.type].range));
         const moves = [];
         for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
             for (let step = 1; step <= distance; step++) {
@@ -42,31 +50,40 @@
                 const target = s.board[key(to)] || [];
                 if (!target.length) moves.push({ ...to, kind: 'move' });
                 else {
-                    if (target.at(-1).owner !== s.player) moves.push({ ...to, kind: 'capture' });
-                    else if (target.length + moving <= 3) moves.push({ ...to, kind: 'stack' });
-                    break;
+                    const enemy = target.at(-1).owner !== s.player;
+                    if (enemy) {
+                        moves.push({ ...to, kind: 'capture' });
+                        if (moving.length > target.length && moving.length + target.length <= 3)
+                            moves.push({ ...to, kind: 'cover' });
+                    } else if (target.length + moving.length <= 3) moves.push({ ...to, kind: 'stack' });
+                    // Taller moving formations may travel beyond shorter blockers.
+                    if (moving.length <= target.length) break;
                 }
             }
         }
         return moves;
     }
     function hasMove(s) {
-        return Object.keys(s.board).some(k => { const [x,y] = k.split(',').map(Number); return legalMoves(s, {x,y}, 'top').length; });
+        return Object.keys(s.board).some(k => { const [x,y] = k.split(',').map(Number);
+            return ['all','top','pair'].some(mode => legalMoves(s, {x,y}, mode).length); });
     }
     function apply(s, action) {
-        if (!action || !validPoint(action.from) || !validPoint(action.to) || !['all','top'].includes(action.mode)) return null;
-        const legal = legalMoves(s, action.from, action.mode).find(m => m.x === action.to.x && m.y === action.to.y);
+        if (!action || !validPoint(action.from) || !validPoint(action.to) || !['all','top','pair'].includes(action.mode)) return null;
+        if (action.kind !== undefined && !['move','stack','capture','cover'].includes(action.kind)) return null;
+        const legal = legalMoves(s, action.from, action.mode).find(m => m.x === action.to.x && m.y === action.to.y && (action.kind === undefined ? m.kind !== 'cover' : m.kind === action.kind));
         if (!legal) return null;
         const next = JSON.parse(JSON.stringify(s));
         const from = key(action.from), to = key(action.to);
-        const moving = action.mode === 'top' ? [next.board[from].pop()] : next.board[from].splice(0);
+        const count = movingPieces(next.board[from], action.mode).length;
+        const moving = next.board[from].splice(-count);
         if (!next.board[from].length) delete next.board[from];
         const captured = legal.kind === 'capture' ? (next.board[to] || []) : [];
         next.board[to] = legal.kind === 'capture' ? moving : [...(next.board[to] || []), ...moving];
         const record = { from: { x: action.from.x, y: action.from.y }, to: { x: action.to.x, y: action.to.y }, mode: action.mode, player: s.player,
-            types: moving.map(p => p.type), captured: captured.map(p => p.type), height: next.board[to].length };
+            kind: legal.kind, types: moving.map(p => p.type), owners: moving.map(p => p.owner), captured: captured.map(p => p.type), height: next.board[to].length };
         next.lastMove = record; next.history.push(record); next.ply++; next.player = 3 - s.player;
-        if (captured.some(p => p.type === 'G')) next.result = { winner: s.player, reason: 'General captured' };
+        const lostGenerals = new Set(captured.filter(p => p.type === 'G').map(p => p.owner));
+        if (lostGenerals.size) next.result = { winner: lostGenerals.size === 2 ? 0 : 3 - [...lostGenerals][0], reason: lostGenerals.size === 2 ? 'Both generals captured' : 'General captured' };
         const sig = signature(next); next.positions[sig] = (next.positions[sig] || 0) + 1;
         if (!next.result && next.positions[sig] >= 3) next.result = { winner: 0, reason: 'Threefold repetition' };
         if (!next.result && !hasMove(next)) next.result = { winner: 0, reason: 'No legal moves' };
@@ -79,5 +96,5 @@
         for (const action of actions.slice(0, cursor)) { s = apply(s, action); if (!s) return null; }
         return s;
     }
-    return { SIZE, TYPES, initial, legalMoves, apply, replay, coord };
+    return { SIZE, TYPES, initial, movingPieces, legalMoves, apply, replay, coord };
 });
