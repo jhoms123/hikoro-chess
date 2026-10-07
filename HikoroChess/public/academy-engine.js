@@ -12,6 +12,7 @@ const lessonOrigin=lesson=>lesson==='lupa'?{r:7,c:3}:{r:4,c:3};
 const TYPES=Object.freeze({
     lupa:{name:'King Kraken',notation:'K',description:'One square in any direction, inside its 3 × 2 home palace while its Prince survives. If its Prince is captured, the Kraken can leave. Reach a yellow sanctuary to win.',lesson:'The Kraken starts in the outlined home palace. Move a Black target to capture its Prince, then explore the released Kraken’s paths.'},
     prince:{name:'Kraken Prince',notation:'KP',description:'One step forward or one step diagonally in any direction. No sideways or straight backward step. Reach a yellow sanctuary to win, even if your Kraken has been captured.',lesson:'White advances toward rank 8; Black toward rank 1. The Prince can roam from the start, while its Kraken stays in the home palace.'},
+    pilut:{name:'Squid',notation:'S',description:'Move one or two squares straight forward into empty squares, without jumping or capturing. Shields the friendly piece directly behind it.',lesson:'White advances toward rank 8; Black toward rank 1. Move the blocker to compare one-step and two-step advances. A Squid shields the friendly piece immediately behind it.'},
     pawn:{name:'Fish',notation:'F',description:'One square orthogonally or exactly two squares diagonally. The diagonal leap can jump over intervening pieces.',lesson:'This is not a normal chess pawn: it moves and captures in the same eight directions, with no forward restriction.'},
     yoli:{name:'Big Eye Squid',notation:'B',description:'A 2 + 1 knight jump, plus one square orthogonally. All leaps jump over intervening pieces.',lesson:'Compare the eight L-shaped leaps with the four short orthogonal steps.'},
     fin:{name:'One Pincer Crab',notation:'Oc',description:'Slide diagonally. A one-square horizontal step is allowed only into an empty square.',lesson:'Green marks empty destinations; red marks captures. A horizontal enemy cannot be captured by this piece.'},
@@ -27,8 +28,7 @@ function initial(mode='match',lesson='pawn'){
     if(mode==='match')for(const owner of [1,2]){
         const back=owner===1?7:0,front=owner===1?6:1;
         ['chair','yoli','fin','lupa','prince','fin','yoli','chair'].forEach((type,c)=>s.board[back][c]={type,owner});
-        s.board[front][2]={type:'kota',owner};
-        for(const c of [1,3,4,6])s.board[front][c]={type:'pawn',owner};
+        ['pilut','pawn','pilut','pilut','pilut','pilut','pawn','pilut'].forEach((type,c)=>s.board[front][c]={type,owner});
     }else{
         const origin=lessonOrigin(lesson);s.board[origin.r][origin.c]={type:lesson,owner:1};
         for(const [r,c]of [[2,1],[4,4],[6,5]])s.board[r][c]={type:'pawn',owner:2};
@@ -36,7 +36,7 @@ function initial(mode='match',lesson='pawn'){
             s.board[6][3]={type:'pawn',owner:1};
             s.board[6][4]={type:'prince',owner:1};
         }else{
-            s.board[3][3]={type:'pawn',owner:1};
+            s.board[lesson==='pilut'?2:3][3]={type:'pawn',owner:1};
             if(lesson==='prince')s.board[7][3]={type:'lupa',owner:1};
         }
     }
@@ -45,22 +45,14 @@ function initial(mode='match',lesson='pawn'){
 function movesFor(board,from){
     if(!point(from)||!TYPES[board[from.r]?.[from.c]?.type])return[];
     const current=board[from.r][from.c];
-    // The teaching palace has different bounds from the full board's palace.
-    if(current.type==='lupa'){
-        const moves=[];
-        for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
-            if(!dr&&!dc)continue;
-            const to={r:from.r+dr,c:from.c+dc};
-            if(point(to)&&board[to.r][to.c]?.owner!==current.owner&&(!hasPrince(board,current.owner)||inPalace(to,current.owner)))moves.push(to);
-        }
-        return moves;
-    }
     // Embed the 8×8 square in the full board's uninterrupted center, away from cut-out corners.
     // Map White's forward toward rank 8 (decreasing rows), Black toward rank 1.
     const padded=Array.from({length:full.BOARD_HEIGHT},()=>Array(full.BOARD_WIDTH).fill(null));
     for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){const p=board[r][c];if(p)padded[r+4][c+1]={type:p.type,color:p.owner===1?'black':'white'};}
+    // Let the full engine handle Kraken steps and Squid shields, then apply the smaller palace.
+    if(current.type==='lupa')for(const row of padded)for(let c=0;c<row.length;c++)if(row[c]?.type==='prince'&&row[c].color===(current.owner===1?'black':'white'))row[c]=null;
     const piece=padded[from.r+4][from.c+1],seen=new Set();
-    return full.getValidMovesForPiece(piece,from.c+1,from.r+4,padded).map(m=>({r:m.y-4,c:m.x-1})).filter(m=>{const k=m.r+','+m.c;if(!point(m)||seen.has(k))return false;seen.add(k);return true;});
+    return full.getValidMovesForPiece(piece,from.c+1,from.r+4,padded).map(m=>({r:m.y-4,c:m.x-1})).filter(m=>{const k=m.r+','+m.c;if(!point(m)||seen.has(k)||current.type==='lupa'&&hasPrince(board,current.owner)&&!inPalace(m,current.owner))return false;seen.add(k);return true;});
 }
 function legalMoves(s,from){if(!s||s.result||!point(from)||!s.board[from.r][from.c]||s.mode==='match'&&s.board[from.r][from.c].owner!==s.player)return[];return movesFor(s.board,from);}
 function allMoves(s){if(!s||s.result)return[];const moves=[];for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(s.board[r][c]&&(s.mode==='lesson'||s.board[r][c].owner===s.player))for(const to of legalMoves(s,{r,c}))moves.push({from:{r,c},to});return moves;}

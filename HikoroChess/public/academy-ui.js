@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const A=HikoroAcademy,$=id=>document.getElementById(id),names={1:'White',2:'Black'},params=new URLSearchParams(location.search),gameId=params.get('gameId'),online=Boolean(gameId),storageKey='hikoro-academy-local-v2';
+const A=HikoroAcademy,$=id=>document.getElementById(id),names={1:'White',2:'Black'},params=new URLSearchParams(location.search),gameId=params.get('gameId'),online=Boolean(gameId),storageKey='hikoro-academy-local-v3';
 let mode=online?'match':'lesson',lesson='pawn',state=A.initial(mode,lesson),journal=[],cursor=0,selected=online?null:A.lessonOrigin(lesson),flipped=false;
 let socket,mySeat=null,connected=false,synced=false,pending=false,closed=false,confirmation=null;
 const cells=[],sprite=(type,owner)=>`sprites/${type}_${owner===1?'white':'black'}.png`;
