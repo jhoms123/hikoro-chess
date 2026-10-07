@@ -3,22 +3,23 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const params = new URLSearchParams(location.search), gameId = params.get('gameId');
-    const online = Boolean(gameId), storeKey = 'shavari-local-v1';
+    const online = Boolean(gameId), storeKey = 'shavari-local-v2';
     const courts = { 1: 'Carnelian', 2: 'Turquoise' };
     let state = Shavari.initial(), selected = null, mode = 'all', flipped = false;
     let journal = [], cursor = 0, mySeat = null, connected = false, pending = false, socket;
+    let inspectMode = false, pendingAction = null;
     let confirmation = null, roomClosed = false, hasSynced = false;
     const nodes = [];
     function notice(message) { $('notice').textContent = message; $('notice').hidden = !message; }
     function persist() {
         if (online) return;
-        try { localStorage.setItem(storeKey, JSON.stringify({ version: 1, journal, cursor, flipped })); }
+        try { localStorage.setItem(storeKey, JSON.stringify({ version: 2, journal, cursor, flipped })); }
         catch { notice('Automatic saving is unavailable. Use Save record to keep this match.'); }
     }
     if (!online) {
         try {
             const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
-            if (saved?.version === 1 && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
+            if (saved?.version === 2 && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
                 journal = saved.journal; cursor = saved.cursor; state = Shavari.replay(journal, cursor); flipped = Boolean(saved.flipped);
                 if (cursor) notice('Your local match has been restored.');
             }
@@ -29,31 +30,57 @@
         const node = document.createElement('button'); node.type = 'button'; node.className = 'intersection';
         node.dataset.x = x; node.dataset.y = y; node.tabIndex = -1;
         node.addEventListener('click', () => choose({x,y}));
+        node.addEventListener('pointerenter', e => { if(e.pointerType !== 'touch' && (state.board[`${x},${y}`]?.length || 0)>1) inspect({x,y}); });
+        node.addEventListener('focus', () => {if((state.board[`${x},${y}`]?.length||0)>1)inspect({x,y});});
         node.addEventListener('keydown', e => {
             const directions = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
             if (directions[e.key]) {
                 e.preventDefault(); const [dx,dy] = directions[e.key], sign = flipped ? -1 : 1;
                 const nx = Math.max(0,Math.min(8,x + dx * sign)), ny = Math.max(0,Math.min(8,y + dy * sign));
                 nodes.forEach(b => b.tabIndex = -1); nodes[ny * 9 + nx].tabIndex = 0; nodes[ny * 9 + nx].focus();
-            } else if (e.key === 'Escape') { selected = null; render(); }
+            } else if (e.key === 'Escape') { selected = null; $('stack-inspector').hidden=true; render(); }
         });
         nodes.push(node); $('board-nodes').appendChild(node);
     }
+    function inspect(at) {
+        const stack=state.board[`${at.x},${at.y}`];
+        if(!stack?.length) { $('stack-inspector').hidden=true; return; }
+        const panel=$('stack-inspector'), content=$('inspector-content'); content.replaceChildren();
+        const title=document.createElement('strong');title.textContent=`${Shavari.coord(at)} · ${courts[stack.at(-1).owner]} controls`;content.appendChild(title);
+        [...stack].reverse().forEach((p,i)=>{
+            const row=document.createElement('div');row.className=`inspector-piece p${p.owner}`;
+            const img=document.createElement('img');img.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;img.alt='';
+            const text=document.createElement('span');text.textContent=`${i===0?'Top':i===stack.length-1?'Base':'Middle'} · ${courts[p.owner]} ${Shavari.TYPES[p.type].name}`;
+            row.append(img,text);content.appendChild(row);
+        });
+        panel.hidden=false;
+        const board=$('board'), width=board.clientWidth, height=board.clientHeight;
+        const cx=width*(.075+(flipped?8-at.x:at.x)*.10625),cy=height*(.075+(flipped?8-at.y:at.y)*.10625);
+        panel.style.left=`${Math.max(8,Math.min(width-panel.offsetWidth-8,cx+18))}px`;
+        panel.style.top=`${Math.max(8,Math.min(height-panel.offsetHeight-8,cy+22))}px`;
+    }
+    function execute(action) {
+        if(!canPlay() || !Shavari.legalMoves(state,action.from,action.mode).some(m=>m.x===action.to.x&&m.y===action.to.y&&m.kind===action.kind))return;
+        $('stack-inspector').hidden=true;
+        if(online){pending=true;socket.emit('shavariAction',{gameId,action});render();}
+        else{journal=journal.slice(0,cursor);journal.push(action);cursor++;state=Shavari.apply(state,action);selected=null;persist();render();}
+    }
     function choose(to) {
-        if (!canPlay()) { notice(state.result ? 'This match has ended.' : online ? pending ? 'Waiting for the server to confirm your move.' : 'Wait for your court’s turn and a live connection.' : 'This room is closed.'); return; }
+        if(inspectMode){inspect(to);return;}
+        if(!canPlay()){inspect(to);return;}
         notice('');
-        if (selected) {
-            const action = {from: selected, to, mode};
-            const legal = Shavari.legalMoves(state, selected, mode).some(m => m.x === to.x && m.y === to.y);
-            if (legal) {
-                if (online) { pending = true; socket.emit('shavariAction', {gameId, action}); render(); }
-                else { journal = journal.slice(0,cursor); journal.push(action); cursor++; state = Shavari.apply(state, action); selected = null; persist(); render(); }
+        if(selected){
+            const choices=Shavari.legalMoves(state,selected,mode).filter(m=>m.x===to.x&&m.y===to.y);
+            if(choices.length){
+                const action={from:{...selected},to,mode};
+                if(choices.some(m=>m.kind==='cover')){pendingAction=action;$('landing-dialog').showModal();$('cancel-landing').focus();}
+                else execute({...action,kind:choices[0].kind});
                 return;
             }
         }
-        const stack = state.board[`${to.x},${to.y}`];
-        selected = selected?.x === to.x && selected?.y === to.y ? null : stack?.at(-1).owner === state.player ? to : null;
-        render();
+        const stack=state.board[`${to.x},${to.y}`];
+        if(stack?.at(-1).owner!==state.player){inspect(to);return;}
+        selected=selected?.x===to.x&&selected?.y===to.y?null:to;render();
     }
     function drawCoordinates() {
         $('coordinates').replaceChildren();
@@ -77,12 +104,15 @@
             node.style.left = `${(flipped ? 8-x : x)*12.5}%`; node.style.top = `${(flipped ? 8-y : y)*12.5}%`;
             node.className='intersection'+(legal ? ` legal legal-${legal.kind}`:'')+(isSelected?' selected':'');
             if ([state.lastMove?.from,state.lastMove?.to].some(p=>p?.x===x&&p?.y===y)) node.classList.add('last');
-            node.setAttribute('aria-label', `${Shavari.coord({x,y})}: ${top ? courts[top.owner]+' '+stack.map(p=>Shavari.TYPES[p.type].name).join(', ')+'; '+stack.length+' piece'+(stack.length===1?'':'s')+', base to top' : 'empty'}${legal ? '; legal '+legal.kind : ''}`);
+            node.setAttribute('aria-label', `${Shavari.coord({x,y})}: ${top ? courts[top.owner]+' controls; '+stack.map(p=>courts[p.owner]+' '+Shavari.TYPES[p.type].name).join(', ')+'; '+stack.length+' piece'+(stack.length===1?'':'s')+', base to top' : 'empty'}${legal ? '; legal '+legal.kind : ''}`);
             node.setAttribute('aria-pressed', String(isSelected)); node.replaceChildren();
             if (top) {
                 const token=document.createElement('span'); token.className=`token p${top.owner} height-${stack.length}`;
                 const img=document.createElement('img'); img.src=`assets/shavari/${Shavari.TYPES[top.type].icon}.svg`;img.alt='';token.appendChild(img);
-                if (stack.length>1) { const badge=document.createElement('span'); badge.className='height-badge';badge.textContent=stack.length;token.appendChild(badge); }
+                if (stack.length>1) {
+                    const ribbon=document.createElement('span');ribbon.className='stack-ribbon';
+                    stack.forEach(p=>{const mini=document.createElement('img');mini.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;mini.alt='';mini.className=`p${p.owner}`;ribbon.appendChild(mini);});token.appendChild(ribbon);
+                    const badge=document.createElement('span'); badge.className='height-badge';badge.textContent=stack.length;token.appendChild(badge); }
                 node.appendChild(token);
             }
         });
@@ -91,18 +121,19 @@
         drawCoordinates();
         $('turn-status').textContent=state.result ? (state.result.winner ? `${courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : `${courts[state.player]} to move`;
         if (state.result) $('connection-status').textContent=state.result.reason;
-        else if (!online) $('connection-status').textContent=selected ? `${moves.length} legal destinations · ${mode==='top'?'detach the top piece':'move the full formation'}` : 'Select a piece to see its paths.';
+        else if (!online) $('connection-status').textContent=selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
         else $('connection-status').textContent=roomClosed ? 'Return to the collection to open another room.' : !connected ? 'Reconnecting… Moves are paused.' : !hasSynced ? 'Restoring your seat…' : pending ? 'Confirming your move…' : mySeat===state.player ? 'Your court’s turn.' : 'Waiting for the other court.';
-        $('mode-all').setAttribute('aria-pressed',String(mode==='all'));$('mode-top').setAttribute('aria-pressed',String(mode==='top'));
+        $('mode-all').setAttribute('aria-pressed',String(mode==='all'));$('mode-top').setAttribute('aria-pressed',String(mode==='top'));$('mode-pair').setAttribute('aria-pressed',String(mode==='pair'));
+        $('inspect-button').setAttribute('aria-pressed',String(inspectMode));
         document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
         const detail=$('selection-detail');detail.replaceChildren();
         if (selected) {
             const stack=state.board[`${selected.x},${selected.y}`];
             const icons=document.createElement('div');icons.className='selection-pieces';
-            stack.forEach(p=>{const img=document.createElement('img');img.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;img.alt=Shavari.TYPES[p.type].name;icons.appendChild(img);});
+            stack.forEach(p=>{const img=document.createElement('img');img.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;img.alt=courts[p.owner]+' '+Shavari.TYPES[p.type].name;img.className=`p${p.owner}`;icons.appendChild(img);});
             const text=document.createElement('div'),heading=document.createElement('strong'),small=document.createElement('small');
             heading.textContent=`${Shavari.coord(selected)} · ${stack.length===1?'Single piece':stack.length+'-piece formation'}`;
-            small.textContent=`${Shavari.TYPES[stack.at(-1).type].name} leads · ${stack.length>1?'base → top':'select a highlighted path'}`;
+            small.textContent=`${courts[stack.at(-1).owner]} controls · combined moves · ${stack.length>1?'base → top':'select a highlighted path'}`;
             text.append(heading,small);detail.append(icons,text);
         } else detail.textContent='Choose one of the active court’s pieces.';
         for (const p of [1,2]) {
@@ -115,7 +146,7 @@
         state.history.slice(-100).forEach((m,i)=>{
             const li=document.createElement('li'),number=document.createElement('span'),move=document.createElement('span');number.className='ply-no';
             number.textContent=String(Math.max(0,state.history.length-100)+i+1)+'.';
-            move.textContent=`${courts[m.player]} ${m.types.join('+')} · ${Shavari.coord(m.from)} ${m.captured.length?'×':'→'} ${Shavari.coord(m.to)}${m.height>1?' · '+m.height+' high':''}`;
+            move.textContent=`${courts[m.player]} ${m.types.join('+')} · ${Shavari.coord(m.from)} ${m.kind==='cover'?'⊕':m.captured.length?'×':'→'} ${Shavari.coord(m.to)}${m.height>1?' · '+m.height+' high':''}`;
             li.append(number,move);history.appendChild(li);
         });
         if (!state.history.length) {const li=document.createElement('li');li.className='empty-history';li.textContent='The first move is yours.';history.appendChild(li);}
@@ -127,7 +158,11 @@
         $('board').parentElement.before(firstStrip);$('board').parentElement.after(lastStrip);
     }
     document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;render();}));
-    for (const id of ['all','top']) $(`mode-${id}`).addEventListener('click',()=>{mode=id;render();});
+    for (const id of ['all','top','pair']) $(`mode-${id}`).addEventListener('click',()=>{mode=id;render();});
+    $('inspect-button').addEventListener('click',()=>{inspectMode=!inspectMode;if(!inspectMode)$('stack-inspector').hidden=true;render();});
+    $('close-inspector').addEventListener('click',()=>{$('stack-inspector').hidden=true;});
+    $('cancel-landing').addEventListener('click',()=>$('landing-dialog').close());
+    for(const kind of ['capture','cover']) $(`${kind}-landing`).addEventListener('click',()=>{const action=pendingAction;$('landing-dialog').close();pendingAction=null;if(action)execute({...action,kind});});
     $('flip-button').addEventListener('click',()=>{flipped=!flipped;persist();render();});
     $('undo-button').addEventListener('click',()=>{if(online||!cursor)return;state=Shavari.replay(journal,--cursor);selected=null;notice('');persist();render();});
     $('redo-button').addEventListener('click',()=>{if(online||cursor>=journal.length)return;state=Shavari.replay(journal,++cursor);selected=null;notice('');persist();render();});
@@ -144,13 +179,13 @@
     });
     $('rules-button').addEventListener('click',()=>$('rules-dialog').showModal());$('close-rules').addEventListener('click',()=>$('rules-dialog').close());
     $('save-button').addEventListener('click',()=>{
-        const lines=['SHAVARI CHESS','9 × 9 · top-piece movement · maximum stack height 3','',...state.history.map((m,i)=>`${i+1}. ${courts[m.player]} ${m.types.join('+')} ${Shavari.coord(m.from)} ${m.captured.length?'x':'-'} ${Shavari.coord(m.to)} (${m.mode})${m.captured.length?' captured '+m.captured.join('+'):''}`), '',state.result?`${state.result.winner?courts[state.result.winner]+' wins':'Draw'}: ${state.result.reason}`:`${courts[state.player]} to move`];
+        const lines=['SHAVARI CHESS','9 × 9 · combined movement · height-based jumping and covering · maximum stack height 3','',...state.history.map((m,i)=>`${i+1}. ${courts[m.player]} ${m.types.join('+')} ${Shavari.coord(m.from)} ${m.kind==='cover'?'cover':m.captured.length?'x':'-'} ${Shavari.coord(m.to)} (${m.mode})${m.captured.length?' captured '+m.captured.join('+'):''}`), '',state.result?`${state.result.winner?courts[state.result.winner]+' wins':'Draw'}: ${state.result.reason}`:`${courts[state.player]} to move`];
         const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='shavari-match.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Match record downloaded.');
     });
     for(const [type,info] of Object.entries(Shavari.TYPES)){
         const card=document.createElement('article');card.className='guide-card';
         const img=document.createElement('img');img.src=`assets/shavari/${info.icon}.svg`;img.alt='';
-        const h=document.createElement('h3');h.textContent=info.name;const desc=document.createElement('p');desc.textContent=info.range===1?'One step along a line, in any orthogonal direction.':'Slide along a line. Stop at the first formation.';
+        const h=document.createElement('h3');h.textContent=info.name;const desc=document.createElement('p');desc.textContent=info.range===1?'One step along a line, in any orthogonal direction.':'Slide along a line. Taller formations can pass over shorter ones.';
         const small=document.createElement('small');small.textContent=type==='G'?'G · capture this to win':`${type} · ${type==='P'?'five':'two'} per court`;card.append(img,h,desc,small);$('guide-cards').appendChild(card);
     }
     if(online){
@@ -164,7 +199,7 @@
         });
         socket.on('disconnect',()=>{connected=false;pending=false;selected=null;render();});
         socket.on('shavariState',data=>{
-            if(data.gameId!==gameId)return;state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
+            if(data.gameId!==gameId)return;pendingAction=null;$('landing-dialog').close();$('stack-inspector').hidden=true;state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
             notice('');render();
         });
         socket.on('errorMsg',message=>{pending=false;notice(String(message));render();});
