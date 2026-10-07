@@ -18,7 +18,7 @@ test('vanguards have owner-relative forward movement, diagonal captures, and no 
  const edge=position([[1,2,'V',1],[4,0,'H',1],[4,4,'H',2]]);const next=M.apply(edge,move([1,2],[0,2]));assert.equal(next.board[0][2].type,'V');next.player=1;assert.deepEqual(coords(next,[0,2]),[]);
 });
 test('commander capture preserves the final position and prevents all later moves',()=>{
- const s=position([[2,0,'S',1],[2,4,'H',2],[4,4,'H',1]]),next=M.apply(s,move([2,0],[2,4]));assert.deepEqual(next.result,{winner:1,reason:'Commander captured'});assert.equal(next.board[2][4].type,'S');assert.deepEqual(next.captured[1],['H']);assert.equal(s.board[2][0].type,'S');assert.equal(M.apply(next,move([4,4],[3,4])),null);
+ const s=position([[2,0,'S',1],[2,4,'H',2],[4,4,'H',1]]),next=M.apply(s,move([2,0],[2,4]));assert.deepEqual(next.result,{winner:1,reason:'Sovereign captured'});assert.equal(next.board[2][4].type,'S');assert.deepEqual(next.captured[1],['H']);assert.equal(s.board[2][0].type,'S');assert.equal(M.apply(next,move([4,4],[3,4])),null);
 });
 test('invalid coordinates, ownership, malformed requests and illegal pawn moves are rejected',()=>{
  const s=M.initial();for(const action of [null,{},move([3.5,1],[2,1]),move([3,1],[5,1]),move([1,1],[2,1]),move([3,1],[1,1]),move([3,1],[2,0])])assert.equal(M.apply(s,action),null);assert.equal(M.replay([move([3,1],[2,1])],-1),null);
