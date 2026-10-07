@@ -5,22 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hikoro · Six games of strategy</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="site-polish.css">
+    <link rel="stylesheet" href="site-polish.css">\n    <link rel="stylesheet" href="visual-refresh.css">
 <link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script></head>
 <body data-audio-theme="lobby" class="hikoro-site">
     <a class="skip-link" href="#lobby">Skip to game setup</a>
     <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/harmony-seal.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
-    <section class="collection-intro"><p class="eyebrow">SIX GAMES. A WORLD OF STRATEGY.</p><h1>Choose your next challenge.</h1><p>Command an ocean kingdom, cultivate a garden, lead the Shavari courts, hold Hikorüka’s citadel, explore Shield Go, or learn Hikoro on a smaller board.</p></section>
+    <section class="collection-intro collection-hero">
+        <div class="hero-copy">
+            <p class="eyebrow">SIX GAMES. A WORLD OF STRATEGY.</p>
+            <h1>Enter the strategy hall.</h1>
+            <p>Six tables, six distinct traditions. Command an ocean kingdom, cultivate a garden, lead the Shavari courts, defend Hikorüka’s citadel, master Shield Go, or begin at the Academy.</p>
+        </div>
+        <div class="strategy-hall" aria-hidden="true">
+            <div class="hall-seal"><img src="assets/harmony-seal.svg" alt="" width="66" height="66"></div>
+            <div class="hall-world hall-ocean"><b>≈</b><small>HIKORO</small></div>
+            <div class="hall-world hall-garden"><b>✿</b><small>SHO DAN SHO</small></div>
+            <div class="hall-world hall-shavari"><b>◇</b><small>SHAVARI</small></div>
+            <div class="hall-world hall-citadel"><b>♜</b><small>HIKORÜKA</small></div>
+            <div class="hall-world hall-go"><b>●</b><small>SHIELD GO</small></div>
+            <div class="hall-world hall-academy"><b>▤</b><small>ACADEMY</small></div>
+        </div>
+    </section>
     <div id="site-notice" role="status" aria-live="polite" hidden></div>
 
     <div id="lobby">
         <div class="game-choices" aria-label="Choose a game">
-            <button class="game-choice" data-game="hikoro" aria-pressed="true"><img src="sprites/lupa_white.png" alt="" width="60" height="60"><span><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span></button>
-            <button class="game-choice" data-game="shodansho" aria-pressed="false"><img src="sprites/chysalith_flower_blue.png" alt="" width="60" height="60"><span><strong>Sho Dan Sho</strong><small>Build harmony in the garden.</small><em>2–4 players · Placement &amp; territory</em></span></button>
-            <button class="game-choice" data-game="shavari" aria-pressed="false"><img src="assets/shavari/lotus.svg" alt="" width="60" height="60"><span><strong>Shavari chess</strong><small>Lead the lotus. Build your formations.</small><em>2 players · Stacking &amp; line tactics</em></span></button>
-            <button class="game-choice" data-game="hikoruka" aria-pressed="false"><img src="assets/hikoruka/crown.svg" alt="" width="60" height="60"><span><strong>Hikorüka chess</strong><small>Five pieces. One citadel.</small><em>5 × 5 · Two players or bot</em></span></button>
-            <button class="game-choice" data-game="go" aria-pressed="false"><span class="go-card-art" aria-hidden="true">● ◇ ○</span><span><strong>Shield Go</strong><small>Leap, shield, and surround.</small><em>9 × 9 or 13 × 13 · Two players</em></span></button>
-            <button class="game-choice" data-game="academy" aria-pressed="false"><img src="sprites/yoli_white.png" alt="" width="60" height="60"><span><strong>Hikoro Academy</strong><small>Learn movements, royals, and sanctuaries.</small><em>8 × 8 · Practice &amp; teaching matches</em></span></button>
+            <button class="game-choice" data-game="hikoro" aria-pressed="true">
+                <span class="card-art card-art-ocean" aria-hidden="true"><span class="bubble b1"></span><span class="bubble b2"></span><span class="kraken-medallion"><img src="sprites/lupa_white.png" alt="" width="32" height="32"></span></span>
+                <span class="card-copy"><strong>Hikoro Chess</strong><small>Command an ocean kingdom.</small><em>2 players · Captures &amp; promotions</em></span>
+            </button>
+            <button class="game-choice" data-game="shodansho" aria-pressed="false">
+                <span class="card-art card-art-garden" aria-hidden="true"></span>
+                <span class="card-copy"><strong>Sho Dan Sho</strong><small>Build harmony in a garden manuscript.</small><em>2–4 players · Placement &amp; territory</em></span>
+            </button>
+            <button class="game-choice" data-game="shavari" aria-pressed="false">
+                <span class="card-art card-art-shavari" aria-hidden="true"><img src="assets/shavari/lotus.svg" alt="" width="58" height="58"><img src="assets/shavari/gold-scarab.svg" alt="" width="48" height="48"></span>
+                <span class="card-copy"><strong>Shavari chess</strong><small>Lead the lotus court and build formations.</small><em>2 players · Stacking &amp; line tactics</em></span>
+            </button>
+            <button class="game-choice" data-game="hikoruka" aria-pressed="false">
+                <span class="card-art card-art-citadel" aria-hidden="true"><img src="assets/hikoruka/crown.svg" alt="" width="56" height="56"><img src="assets/hikoruka/castle.svg" alt="" width="46" height="46"></span>
+                <span class="card-copy"><strong>Hikorüka chess</strong><small>Raise the banners of a compact medieval citadel.</small><em>5 × 5 · Two players or bot</em></span>
+            </button>
+            <button class="game-choice" data-game="go" aria-pressed="false">
+                <span class="card-art card-art-go" aria-hidden="true"><span class="go-stone-art black"></span><span class="go-stone-art white"></span><span class="go-shield-art"></span></span>
+                <span class="card-copy"><strong>Shield Go</strong><small>Leap, shield, and surround on a quiet stone table.</small><em>9 × 9 or 13 × 13 · Two players</em></span>
+            </button>
+            <button class="game-choice" data-game="academy" aria-pressed="false">
+                <span class="card-art card-art-academy" aria-hidden="true"><span class="academy-token"><img src="sprites/yoli_white.png" alt="" width="28" height="28"></span></span>
+                <span class="card-copy"><strong>Hikoro Academy</strong><small>Start here: learn the army before entering the full sea.</small><em>8 × 8 · Guided practice &amp; teaching</em></span>
+            </button>
         </div>
         <section class="setup-panel"><div class="section-title"><span class="eyebrow">YOUR TABLE</span><h2>Set up a game</h2></div>
         <div id="time-controls">
@@ -147,6 +180,6 @@
     <script src="script.js"></script>
     <script src="site-ui.js"></script>
 
-    <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="assets/medieval/CREDITS.md">Artwork credits</a></footer>
+    <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="assets/VISUAL_CREDITS.md">Artwork &amp; asset credits</a></footer>
 </body>
 </html>
