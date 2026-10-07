@@ -1,0 +1,62 @@
+/* Sho Dan Sho's surrounding interface. Canvas rendering and piece artwork remain in the game. */
+.sds-page { --ink:#171d19; --panel:#222922; --brass:#c5a66a; --paper:#ede2c9; --muted:#b7b3a0; color:var(--paper); font-family:Georgia,'Times New Roman',serif; background:#171d19; background-image:radial-gradient(ellipse at 50% 35%,#39413780,transparent 65%),repeating-linear-gradient(115deg,#ffffff02 0 1px,transparent 1px 5px); display:block; min-height:100vh; height:auto; padding:0; margin:0; overflow-x:hidden; overflow-y:auto; }
+.sds-page::before { background:radial-gradient(ellipse at center,transparent,#0a100c88); backdrop-filter:none; -webkit-backdrop-filter:none; }
+.site-header { max-width:1680px; margin:auto; height:88px; padding:0 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #c5a66a35; gap:20px; }
+.site-brand { display:flex; align-items:center; gap:12px; color:var(--paper); text-decoration:none; font-size:19px; letter-spacing:3px; }
+.site-brand small { display:block; font:9px/2 Arial,sans-serif; letter-spacing:2px; color:var(--muted); }
+.header-caption { color:var(--muted); font-size:14px; font-style:italic; }
+.sds-page button { font-family:Arial,sans-serif; cursor:pointer; }
+.header-rules { border:1px solid #c5a66a55; border-radius:4px; background:transparent; padding:11px 18px; color:var(--paper); font-size:12px; }
+.header-rules span { color:var(--brass); margin-left:15px; }
+.game-layout { max-width:1680px; margin:auto; padding:32px; display:grid; grid-template-columns:248px minmax(0,1fr) 276px; align-items:start; gap:28px; }
+.sds-page .game-sidebar,.sds-page .inventory-sidebar { width:auto; height:auto; overflow:visible; padding:0; gap:18px; }
+.sds-page .bg-game-panel { background:linear-gradient(140deg,#2d352bbb,#1e251fee); border:1px solid #c5a66a40; border-radius:5px; box-shadow:0 8px 24px #0003,inset 0 1px #ffffff04; backdrop-filter:none; -webkit-backdrop-filter:none; padding:20px; }
+.edition-label { font:9px/1.5 Arial,sans-serif; color:var(--brass); letter-spacing:2.6px; margin:2px 0 12px; }
+.sds-page h1 { font:normal 30px/1.2 Georgia,serif; color:var(--paper); background:none; -webkit-text-fill-color:var(--paper); text-transform:none; letter-spacing:-.8px; white-space:nowrap; margin-bottom:8px; }
+.sds-page h1 + p { color:var(--muted); font:italic 12px/1.6 Georgia,serif; letter-spacing:0; margin-bottom:22px; }
+.sds-page h2,.sds-page h3 { color:var(--paper); font-family:Georgia,serif; font-weight:normal; }
+.sds-page aside h3,.inventory-sidebar h2 { font-size:17px; border-bottom:1px solid #c5a66a25; padding-bottom:12px; }
+.sds-page aside h3 svg,.inventory-sidebar h2 svg { color:var(--brass); stroke-width:1.4; }
+#turn-indicator { border-radius:3px; font:600 12px/1.7 Arial,sans-serif; letter-spacing:.5px; }
+#game-message { background:#0f161080; border:1px solid #c5a66a25; border-radius:3px; font:13px/1.7 Georgia,serif; color:var(--paper); min-height:76px; }
+.game-sidebar button { border-radius:3px; min-height:44px; background:#30382e; color:var(--paper); border:1px solid #c5a66a55; box-shadow:none; font-size:12px; font-weight:500; }
+.game-sidebar #pickup-btn { background:linear-gradient(#d0b47c,#ad8c53); color:#1d241c; border-color:#dfc594; font-weight:700; }
+.game-sidebar #main-menu-btn { background:transparent; color:var(--muted); }
+.sds-page button:hover:not(:disabled) { border-color:var(--brass); filter:brightness(1.13); }
+.sds-page button:focus-visible,.site-brand:focus-visible { outline:2px solid #efcb83; outline-offset:4px; }
+.sds-page button:disabled { cursor:default; opacity:.65; }
+kbd { font:10px/1.5 Arial,sans-serif; border:1px solid currentColor; border-radius:2px; padding:1px 4px; opacity:.7; margin-left:8px; }
+#piece-info-content { color:var(--muted); font:12px/1.75 Arial,sans-serif; min-height:78px; }
+#piece-info-content h4 { color:var(--paper); }
+.sds-page .controls-guide { background:transparent; padding:4px 8px; color:var(--muted); border:none; box-shadow:none; font:11px/1.9 Arial,sans-serif; }
+.controls-guide strong { font:normal 14px/2 Georgia,serif; color:var(--brass); }
+.controls-guide ul { padding-left:14px; }
+.reserve-intro { color:var(--muted); font:12px/1.7 Arial,sans-serif; margin:-3px 0 20px; }
+.sds-page #hands-container { overflow:visible; padding:0; gap:16px; }
+.sds-page .reserve-card { border:1px solid #c5a66a30; background:#151c17; border-radius:3px; padding:12px; box-shadow:none; }
+.sds-page .reserve-card[data-active="true"] { border-color:#c5a66a99; background:#30392b; box-shadow:inset 3px 0 var(--brass); }
+.reserve-card > div:first-child { font:600 11px/1.7 Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; border-color:#c5a66a25; }
+.sds-page .reserve-card > div:nth-child(2) { display:grid; grid-template-columns:1fr; gap:6px; }
+.sds-page .reserve-flower { width:100%; background:#252e24; border:1px solid #c5a66a20; border-radius:3px; min-height:38px; padding:6px 9px; text-align:left; }
+.sds-page .hand-item-active { background:#4a4930!important; border-color:var(--brass)!important; box-shadow:none; transform:none; }
+.reserve-flower > span:last-child { background:#11180e80; border-color:#c5a66a25; border-radius:2px; }
+.sds-page aside [class*="text-slate-"],.sds-page #rules-content [class*="text-slate-"] { color:var(--muted); }
+.site-footer { max-width:1616px; margin:0 auto; padding:18px 0 24px; border-top:1px solid #c5a66a25; color:var(--muted); font:10px/1.6 Arial,sans-serif; letter-spacing:1.4px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.site-footer > span:first-child { color:var(--brass); }
+#cancel-selection-btn { color:var(--muted); background:transparent; border:1px solid #c5a66a40; padding:8px 12px; border-radius:3px; letter-spacing:0; }
+/* Only size the board's container; the canvas and its artwork are untouched. */
+.sds-page #board-wrapper { width:100%; min-width:0; max-width:none; max-height:none; align-self:center; }
+.sds-page #rules-modal { background:#080f0cbb; }
+.sds-page #rules-content { background:#20271f; border:1px solid #c5a66a66; border-radius:5px; color:var(--paper); }
+#rules-content > div:first-child { background:#2c3428; border-color:#c5a66a40; }
+#rules-content h2 { color:var(--brass); font-size:24px; }
+#rules-content h3 { color:var(--paper); }
+#rules-content h4 { color:var(--paper); border-color:#c5a66a40; }
+#rules-content .bg-slate-800 { background:#c5a66a25; }
+#close-rules { background:#1b241b; color:var(--paper); border:1px solid #c5a66a55; border-radius:3px; }
+.rules-open { overflow:hidden; }
+.sds-page ::-webkit-scrollbar-thumb { background:#8c7856; }
+@media(min-width:1450px) { .game-layout { grid-template-columns:264px minmax(0,1fr) 292px; gap:36px; } }
+@media(max-width:1150px) { .game-layout { grid-template-columns:210px minmax(0,1fr); gap:22px; padding:24px; } .inventory-sidebar { grid-column:1/-1; } .sds-page #hands-container { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .sds-page .reserve-card > div:nth-child(2) { grid-template-columns:repeat(2,minmax(0,1fr)); } .site-footer { margin:0 24px; } .sds-page h1 { font-size:25px; } }
+@media(max-width:700px) { .site-header { height:72px; padding:0 18px; } .header-caption { display:none; } .site-brand { font-size:16px; } .site-brand small { font-size:8px; } .header-rules { padding:9px 11px; } .game-layout { padding:18px 14px; grid-template-columns:minmax(0,1fr); gap:18px; } .sds-page #board-wrapper { grid-row:1; } .sds-page .game-sidebar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .game-sidebar > div:first-child { grid-column:1/-1; } .sds-page .bg-game-panel { padding:16px; } .controls-guide { grid-column:1/-1; } .sds-page #hands-container { grid-template-columns:1fr; } .sds-page .reserve-card > div:nth-child(2) { grid-template-columns:repeat(2,minmax(0,1fr)); } .site-footer { margin:0 14px; flex-wrap:wrap; } .site-footer > span:nth-child(2) { display:none; } #rules-title { font-size:20px; } }
+@media(prefers-reduced-motion:reduce) { .sds-page *, .sds-page *::before,.sds-page *::after { transition:none!important; scroll-behavior:auto!important; } }
