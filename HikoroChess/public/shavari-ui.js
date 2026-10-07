@@ -7,7 +7,7 @@
     const courts = { 1: 'Carnelian', 2: 'Turquoise' };
     let state = Shavari.initial(), selected = null, mode = 'all', flipped = false;
     let journal = [], cursor = 0, mySeat = null, connected = false, pending = false, socket;
-    let inspectMode = false, pendingAction = null;
+    let pendingAction = null;
     let confirmation = null, roomClosed = false, hasSynced = false;
     const nodes = [];
     function notice(message) { $('notice').textContent = message; $('notice').hidden = !message; }
@@ -30,44 +30,24 @@
         const node = document.createElement('button'); node.type = 'button'; node.className = 'intersection';
         node.dataset.x = x; node.dataset.y = y; node.tabIndex = -1;
         node.addEventListener('click', () => choose({x,y}));
-        node.addEventListener('pointerenter', e => { if(e.pointerType !== 'touch' && (state.board[`${x},${y}`]?.length || 0)>1) inspect({x,y}); });
-        node.addEventListener('focus', () => {if((state.board[`${x},${y}`]?.length||0)>1)inspect({x,y});});
         node.addEventListener('keydown', e => {
             const directions = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
             if (directions[e.key]) {
                 e.preventDefault(); const [dx,dy] = directions[e.key], sign = flipped ? -1 : 1;
                 const nx = Math.max(0,Math.min(8,x + dx * sign)), ny = Math.max(0,Math.min(8,y + dy * sign));
                 nodes.forEach(b => b.tabIndex = -1); nodes[ny * 9 + nx].tabIndex = 0; nodes[ny * 9 + nx].focus();
-            } else if (e.key === 'Escape') { selected = null; $('stack-inspector').hidden=true; render(); }
+            } else if (e.key === 'Escape') { selected = null;  render(); }
         });
         nodes.push(node); $('board-nodes').appendChild(node);
     }
-    function inspect(at) {
-        const stack=state.board[`${at.x},${at.y}`];
-        if(!stack?.length) { $('stack-inspector').hidden=true; return; }
-        const panel=$('stack-inspector'), content=$('inspector-content'); content.replaceChildren();
-        const title=document.createElement('strong');title.textContent=`${Shavari.coord(at)} · ${courts[stack.at(-1).owner]} controls`;content.appendChild(title);
-        [...stack].reverse().forEach((p,i)=>{
-            const row=document.createElement('div');row.className=`inspector-piece p${p.owner}`;
-            const img=document.createElement('img');img.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;img.alt='';
-            const text=document.createElement('span');text.textContent=`${i===0?'Top':i===stack.length-1?'Base':'Middle'} · ${courts[p.owner]} ${Shavari.TYPES[p.type].name}`;
-            row.append(img,text);content.appendChild(row);
-        });
-        panel.hidden=false;
-        const board=$('board'), width=board.clientWidth, height=board.clientHeight;
-        const cx=width*(.075+(flipped?8-at.x:at.x)*.10625),cy=height*(.075+(flipped?8-at.y:at.y)*.10625);
-        panel.style.left=`${Math.max(8,Math.min(width-panel.offsetWidth-8,cx+18))}px`;
-        panel.style.top=`${Math.max(8,Math.min(height-panel.offsetHeight-8,cy+22))}px`;
-    }
     function execute(action) {
         if(!canPlay() || !Shavari.legalMoves(state,action.from,action.mode).some(m=>m.x===action.to.x&&m.y===action.to.y&&m.kind===action.kind))return;
-        $('stack-inspector').hidden=true;
+
         if(online){pending=true;socket.emit('shavariAction',{gameId,action});render();}
         else{journal=journal.slice(0,cursor);journal.push(action);cursor++;state=Shavari.apply(state,action);selected=null;persist();render();}
     }
     function choose(to) {
-        if(inspectMode){inspect(to);return;}
-        if(!canPlay()){inspect(to);return;}
+        if(!canPlay())return;
         notice('');
         if(selected){
             const choices=Shavari.legalMoves(state,selected,mode).filter(m=>m.x===to.x&&m.y===to.y);
@@ -79,7 +59,7 @@
             }
         }
         const stack=state.board[`${to.x},${to.y}`];
-        if(stack?.at(-1).owner!==state.player){inspect(to);return;}
+        if(stack?.at(-1).owner!==state.player)return;
         selected=selected?.x===to.x&&selected?.y===to.y?null:to;render();
     }
     function drawCoordinates() {
@@ -124,7 +104,6 @@
         else if (!online) $('connection-status').textContent=selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
         else $('connection-status').textContent=roomClosed ? 'Return to the collection to open another room.' : !connected ? 'Reconnecting… Moves are paused.' : !hasSynced ? 'Restoring your seat…' : pending ? 'Confirming your move…' : mySeat===state.player ? 'Your court’s turn.' : 'Waiting for the other court.';
         $('mode-all').setAttribute('aria-pressed',String(mode==='all'));$('mode-top').setAttribute('aria-pressed',String(mode==='top'));$('mode-pair').setAttribute('aria-pressed',String(mode==='pair'));
-        $('inspect-button').setAttribute('aria-pressed',String(inspectMode));
         document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
         const detail=$('selection-detail');detail.replaceChildren();
         if (selected) {
@@ -159,8 +138,6 @@
     }
     document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;render();}));
     for (const id of ['all','top','pair']) $(`mode-${id}`).addEventListener('click',()=>{mode=id;render();});
-    $('inspect-button').addEventListener('click',()=>{inspectMode=!inspectMode;if(!inspectMode)$('stack-inspector').hidden=true;render();});
-    $('close-inspector').addEventListener('click',()=>{$('stack-inspector').hidden=true;});
     $('cancel-landing').addEventListener('click',()=>$('landing-dialog').close());
     for(const kind of ['capture','cover']) $(`${kind}-landing`).addEventListener('click',()=>{const action=pendingAction;$('landing-dialog').close();pendingAction=null;if(action)execute({...action,kind});});
     $('flip-button').addEventListener('click',()=>{flipped=!flipped;persist();render();});
@@ -199,7 +176,7 @@
         });
         socket.on('disconnect',()=>{connected=false;pending=false;selected=null;render();});
         socket.on('shavariState',data=>{
-            if(data.gameId!==gameId)return;pendingAction=null;$('landing-dialog').close();$('stack-inspector').hidden=true;state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
+            if(data.gameId!==gameId)return;pendingAction=null;$('landing-dialog').close();state=data.state;mySeat=data.playerIndex+1;hasSynced=true;pending=false;selected=null;
             notice('');render();
         });
         socket.on('errorMsg',message=>{pending=false;notice(String(message));render();});

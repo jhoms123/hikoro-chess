@@ -75,3 +75,5 @@
 .hikoro-site #white-time-hikoro,.hikoro-site #black-time-hikoro { border:1px solid #aa854155; background:#1d160e; color:#e5c58c; border-radius:3px; font:18px/1.5 monospace; }
 
 @media(min-width:701px) and (max-width:1100px){.game-choices{grid-template-columns:1fr 1fr}.game-choice:last-child{grid-column:auto}}
+
+.go-card-art{display:grid;place-items:center;min-width:60px;height:60px;border-radius:5px;background:linear-gradient(120deg,#e0b97c,#a97542);color:#25382c;font-size:20px;letter-spacing:2px;border:2px solid #60432d}.game-choice[data-game="go"]{grid-column:1/-1}

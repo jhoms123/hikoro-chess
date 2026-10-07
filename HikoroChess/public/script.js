@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka'].includes(gameType);
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go'].includes(gameType);
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             
             if (gameType !== 'hikoro') {
@@ -112,12 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
         };
 
-        const dataToSend = { playerName, timeControl, gameType, sdsPlayerCount };
+        const dataToSend = { playerName, timeControl, gameType, sdsPlayerCount, boardSize: Number(document.getElementById('go-board-size').value) };
         socket.emit('createGame', dataToSend);
     });
 
     singlePlayerBtn.addEventListener('click', () => {
-        if (['shavari','hikoruka'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html`; return; }
+        if (['shavari','hikoruka','go'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html${gameTypeSelect.value === 'go' ? '?size=' + document.getElementById('go-board-size').value : ''}`; return; }
         isSinglePlayer = true;
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('disconnect', () => {
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => announce(message));
     socket.on('connect_error', (err) => {
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const infoSpan = document.createElement('span');
             const creatorName = game.creatorName || 'Player 1';
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
-            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : game.gameType === 'hikoruka' ? "Hikorüka chess" : "Hikoro Chess";
+            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : game.gameType === 'hikoruka' ? "Hikorüka chess" : game.gameType === 'go' ? `Shield Go (${game.boardSize || 9} × ${game.boardSize || 9})` : "Hikoro Chess";
 
             infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
             gameItem.appendChild(infoSpan);
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onGameStart(initialGameState) {
-        if (['shavari','hikoruka'].includes(initialGameState.gameType)) {
+        if (['shavari','hikoruka','go'].includes(initialGameState.gameType)) {
             window.location.href = initialGameState.isSinglePlayer ? `/${initialGameState.gameType}.html` : `/${initialGameState.gameType}.html?gameId=${encodeURIComponent(initialGameState.id)}`;
             return;
         }
@@ -1718,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      if (rulesBtn) {
         rulesBtn.addEventListener('click', () => {
-            if (['shavari','hikoruka'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html?showRules=1`; return; }
+            if (['shavari','hikoruka','go'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html?showRules=1`; return; }
             if (gameTypeSelect.value === 'shodansho') { window.location.href = '/shodansho.html?showRules=1'; return; }
             populateHikoroRules();
             if (rulesModal) rulesModal.style.display = 'block';

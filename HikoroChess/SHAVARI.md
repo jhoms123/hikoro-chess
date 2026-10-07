@@ -19,7 +19,7 @@ These rules supersede the original upload's top-only demonstration code, followi
 - Original CC0 geometric inlay board with drawn grain, turquoise pattern work, and coordinate labels.
 - CC BY 3.0 lotus, camel, elephant-head, and scarab emblems from Game-icons.net, mounted on turquoise and carnelian tokens. Attribution is visible in the footer; `public/assets/shavari/CREDITS.md` lists authors, sources, licenses, and modifications.
 - Stack-height rings and badges, owner-colored mini emblems on stacks, legal move/stack/capture/cover highlights, full selected-formation composition, move chronicle, and piece guide.
-- Read-only hover/focus stack inspection and a touch inspection toggle. The inspector shows each type, original owner, and base-to-top order without changing the selected formation, board, turn, or saved journal.
+- Always-visible board member symbols and selected-formation sidebar show stack types and original owners. The floating hover/focus inspector and touch inspection toggle have been removed.
 - Desktop, tablet, and phone layouts; movement-mode controls beside the board on phones.
 - Native rules and confirmation dialogs; arrow-key board navigation, Enter/Space activation, Escape deselection, board flipping, focus indicators, and reduced-motion support.
 
@@ -41,6 +41,6 @@ Real Chromium checks passed at 1440, 900, and 390 pixels: no horizontal overflow
 
 Merge this change and deploy `main` on the existing Render service. Service root: `HikoroChess`; build: `npm ci`; start: `npm start`; health path: `/health`. No dependency or environment-variable changes are needed.
 
-Follow-up real Chromium checks passed for capture/cover choice and cancellation, mixed-stack inspection without changing selection or journal, top-pair splitting and control restoration, undo/redo and version-3 refresh recovery, responsive layouts, online covering synchronization, and authenticated refresh of mixed formations.
+Follow-up real Chromium checks passed for capture/cover choice and cancellation, mixed-stack member display, top-pair splitting and control restoration, undo/redo and version-3 refresh recovery, responsive layouts, online covering synchronization, and authenticated refresh of mixed formations.
 
 Movement follow-up: 20 tests pass, including exact two-step camel diagonals, intermediate height blockers, owner-relative six-step lotus movement, and mixed-stack pattern union. Chromium verified both changed pieces in local and online games, lotus direction after board flipping, version-3 save recovery, rules text, and mobile layout without page errors.
