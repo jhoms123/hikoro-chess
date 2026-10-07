@@ -1,0 +1,62 @@
+{
+  "wood": {
+    "original_file": "impactWood_light_000.ogg",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0"
+  },
+  "wood-capture": {
+    "original_file": "impactWood_medium_002.ogg",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0"
+  },
+  "stone": {
+    "original_file": "impactGeneric_light_000.ogg",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0"
+  },
+  "stone-capture": {
+    "original_file": "impactMining_001.ogg",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0"
+  },
+  "flower": {
+    "original_file": "drop_001.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  },
+  "flower-capture": {
+    "original_file": "glass_001.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  },
+  "water": {
+    "original_file": "water.ogg",
+    "source": "https://opengameart.org/content/skippy-fish-water-sound-collection",
+    "license": "CC0-1.0"
+  },
+  "water-capture": {
+    "original_file": "bubbles.ogg",
+    "source": "https://opengameart.org/content/skippy-fish-water-sound-collection",
+    "license": "CC0-1.0"
+  },
+  "ui": {
+    "original_file": "click_001.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  },
+  "shield": {
+    "original_file": "confirmation_001.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  },
+  "victory": {
+    "original_file": "confirmation_004.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  },
+  "finish": {
+    "original_file": "confirmation_002.wav",
+    "source": "https://kenney.nl/assets/interface-sounds",
+    "license": "CC0-1.0"
+  }
+}

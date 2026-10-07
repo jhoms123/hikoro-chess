@@ -1,0 +1,72 @@
+[
+  {
+    "theme": "lobby",
+    "title": "The Old Tower Inn",
+    "author": "RandomMind",
+    "page": "https://opengameart.org/content/medieval-the-old-tower-inn",
+    "original": "https://opengameart.org/sites/default/files/Loop_The_Old_Tower_Inn.wav",
+    "file": "lobby.mp3",
+    "bytes": 500422,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "hikoruka",
+    "title": "Exploration",
+    "author": "RandomMind",
+    "page": "https://opengameart.org/content/medieval-exploration",
+    "original": "https://opengameart.org/sites/default/files/Exploration.wav",
+    "file": "hikoruka.mp3",
+    "bytes": 2345841,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "academy",
+    "title": "The Bard\u2019s Tale",
+    "author": "RandomMind",
+    "page": "https://opengameart.org/content/medieval-the-bards-tale",
+    "original": "https://opengameart.org/sites/default/files/Loop_The_Bards_Tale.wav",
+    "file": "academy.mp3",
+    "bytes": 578003,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "hikoro",
+    "title": "Underwater World",
+    "author": "Indieteur",
+    "page": "https://opengameart.org/content/underwater-world",
+    "original": "https://opengameart.org/sites/default/files/Underwater%20World_0.mp3",
+    "file": "hikoro.mp3",
+    "bytes": 1505859,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "shodansho",
+    "title": "Asianoriental1",
+    "author": "Tozan",
+    "page": "https://opengameart.org/content/asianoriental1",
+    "original": "https://opengameart.org/sites/default/files/asianoriental1_0.ogg",
+    "file": "shodansho.mp3",
+    "bytes": 1034494,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "shavari",
+    "title": "Desert Loop",
+    "author": "iamoneabe",
+    "page": "https://opengameart.org/content/desert-loop",
+    "original": "https://opengameart.org/sites/default/files/desert_loop_0.mp3",
+    "file": "shavari.mp3",
+    "bytes": 640619,
+    "license": "CC0-1.0"
+  },
+  {
+    "theme": "go",
+    "title": "First Light Particles",
+    "author": "Yoiyami",
+    "page": "https://opengameart.org/content/first-light-particles-\u2013-cc0-atmospheric-pianoambient-track",
+    "original": "https://opengameart.org/sites/default/files/first_light_particles_0.wav",
+    "file": "go.mp3",
+    "bytes": 1317923,
+    "license": "CC0-1.0"
+  }
+]

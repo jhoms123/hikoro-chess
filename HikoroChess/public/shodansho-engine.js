@@ -705,7 +705,7 @@ class Game {
         this.updateHarmonyCache(); 
         
         let isSkip = move.dst === piece.lastPosKey;
-        this.afterAction(isSkip ? "Skipped." : (move.reason || "Moved."));
+        this.afterAction(isSkip ? "Skipped." : (move.reason || "Moved."),move.captureId!==null?"capture":"move");
         
         requestAnimationFrame(drawBoard);
     }
@@ -808,7 +808,7 @@ class Game {
         return [false, "Need a piece here and not be outnumbered by enemy Chysaliths."];
     }
 
-    afterAction(msg) {
+    afterAction(msg, sound="move") {
         this.selectedPieceId = null;
         this.legalMoves = [];
         let win = this.checkWinner();
@@ -816,10 +816,12 @@ class Game {
             this.phase = "game_over";
             this.winner = win;
             this.message = `Player ${win+1} wins! ${msg}`;
+            globalThis.SiteAudio?.action("shodansho","win");
             return;
         }
 
         let advanceMsg = this.advancePlayer();
+        globalThis.SiteAudio?.action("shodansho",this.phase==="game_over"?"end":sound);
         this.message = msg + (advanceMsg ? " " + advanceMsg : " Turn ended.");
     }
 
