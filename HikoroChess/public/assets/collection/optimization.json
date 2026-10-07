@@ -1,0 +1,176 @@
+[
+  {
+    "source": "sprites/chysalith_flower_blue.png",
+    "delivery": "assets/flowers/chysalith_flower_blue.webp",
+    "before": 879943,
+    "after": 14430
+  },
+  {
+    "source": "sprites/chysalith_flower_purple.png",
+    "delivery": "assets/flowers/chysalith_flower_purple.webp",
+    "before": 847315,
+    "after": 14370
+  },
+  {
+    "source": "sprites/chysalith_flower_red.png",
+    "delivery": "assets/flowers/chysalith_flower_red.webp",
+    "before": 838465,
+    "after": 14450
+  },
+  {
+    "source": "sprites/chysalith_flower_yellow.png",
+    "delivery": "assets/flowers/chysalith_flower_yellow.webp",
+    "before": 981125,
+    "after": 14758
+  },
+  {
+    "source": "sprites/clover_flower_blue.png",
+    "delivery": "assets/flowers/clover_flower_blue.webp",
+    "before": 975764,
+    "after": 12658
+  },
+  {
+    "source": "sprites/clover_flower_purple.png",
+    "delivery": "assets/flowers/clover_flower_purple.webp",
+    "before": 924480,
+    "after": 12602
+  },
+  {
+    "source": "sprites/clover_flower_red.png",
+    "delivery": "assets/flowers/clover_flower_red.webp",
+    "before": 922211,
+    "after": 12640
+  },
+  {
+    "source": "sprites/clover_flower_yellow.png",
+    "delivery": "assets/flowers/clover_flower_yellow.webp",
+    "before": 1120857,
+    "after": 12930
+  },
+  {
+    "source": "sprites/daisy_flower_blue.png",
+    "delivery": "assets/flowers/daisy_flower_blue.webp",
+    "before": 794836,
+    "after": 11100
+  },
+  {
+    "source": "sprites/daisy_flower_purple.png",
+    "delivery": "assets/flowers/daisy_flower_purple.webp",
+    "before": 754879,
+    "after": 11032
+  },
+  {
+    "source": "sprites/daisy_flower_red.png",
+    "delivery": "assets/flowers/daisy_flower_red.webp",
+    "before": 753690,
+    "after": 10968
+  },
+  {
+    "source": "sprites/daisy_flower_yellow.png",
+    "delivery": "assets/flowers/daisy_flower_yellow.webp",
+    "before": 895037,
+    "after": 11130
+  },
+  {
+    "source": "sprites/shining_flower_blue.png",
+    "delivery": "assets/flowers/shining_flower_blue.webp",
+    "before": 969678,
+    "after": 12928
+  },
+  {
+    "source": "sprites/shining_flower_purple.png",
+    "delivery": "assets/flowers/shining_flower_purple.webp",
+    "before": 922950,
+    "after": 12888
+  },
+  {
+    "source": "sprites/shining_flower_red.png",
+    "delivery": "assets/flowers/shining_flower_red.webp",
+    "before": 919552,
+    "after": 12762
+  },
+  {
+    "source": "sprites/shining_flower_yellow.png",
+    "delivery": "assets/flowers/shining_flower_yellow.webp",
+    "before": 1110182,
+    "after": 13080
+  },
+  {
+    "source": "sprites/star_flower_blue.png",
+    "delivery": "assets/flowers/star_flower_blue.webp",
+    "before": 987388,
+    "after": 12538
+  },
+  {
+    "source": "sprites/star_flower_purple.png",
+    "delivery": "assets/flowers/star_flower_purple.webp",
+    "before": 930013,
+    "after": 12560
+  },
+  {
+    "source": "sprites/star_flower_red.png",
+    "delivery": "assets/flowers/star_flower_red.webp",
+    "before": 928568,
+    "after": 12542
+  },
+  {
+    "source": "sprites/star_flower_yellow.png",
+    "delivery": "assets/flowers/star_flower_yellow.webp",
+    "before": 1138575,
+    "after": 12726
+  },
+  {
+    "source": "sprites/sun_flower_blue.png",
+    "delivery": "assets/flowers/sun_flower_blue.webp",
+    "before": 939232,
+    "after": 14096
+  },
+  {
+    "source": "sprites/sun_flower_purple.png",
+    "delivery": "assets/flowers/sun_flower_purple.webp",
+    "before": 900544,
+    "after": 13916
+  },
+  {
+    "source": "sprites/sun_flower_red.png",
+    "delivery": "assets/flowers/sun_flower_red.webp",
+    "before": 893021,
+    "after": 13982
+  },
+  {
+    "source": "sprites/sun_flower_yellow.png",
+    "delivery": "assets/flowers/sun_flower_yellow.webp",
+    "before": 1061573,
+    "after": 14364
+  },
+  {
+    "source": "sprites/water_flower_blue.png",
+    "delivery": "assets/flowers/water_flower_blue.webp",
+    "before": 762742,
+    "after": 12102
+  },
+  {
+    "source": "sprites/water_flower_purple.png",
+    "delivery": "assets/flowers/water_flower_purple.webp",
+    "before": 730216,
+    "after": 12052
+  },
+  {
+    "source": "sprites/water_flower_red.png",
+    "delivery": "assets/flowers/water_flower_red.webp",
+    "before": 727650,
+    "after": 11970
+  },
+  {
+    "source": "sprites/water_flower_yellow.png",
+    "delivery": "assets/flowers/water_flower_yellow.webp",
+    "before": 848146,
+    "after": 12210
+  },
+  {
+    "source": "shodanshoboardsmall.png",
+    "delivery": "assets/collection/garden-board.webp",
+    "before": 13199203,
+    "after": 422708
+  }
+]
