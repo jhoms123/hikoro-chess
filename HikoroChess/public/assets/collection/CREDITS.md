@@ -1,6 +1,6 @@
 # Collection material artwork credits
 
-No AI-generated artwork is used. The home cards and hero show screenshots of the actual game boards with original game pieces. Engine-validated example positions are recorded in matches/positions.json. Hikoro and Academy sprite rendering remains unchanged from main.
+No AI-generated artwork is used. The home cards and hero show screenshots of the actual game boards with original game pieces. Engine-validated example positions are recorded in matches/positions.json. Hikoro and Academy now use the user-supplied wooden piece set. Full Hikoro uses the supplied wooden board. See ../hikoro-wood/CREDITS.md for provenance.
 
 ## Photographic materials — Poly Haven, CC0
 

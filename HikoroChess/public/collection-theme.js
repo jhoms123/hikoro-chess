@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const icons={rules:'rules',undo:'undo',save:'save',play:'play',leave:'leave',seed:'seed',compass:'compass',crown:'crown'};
     function decorate(root=document){
         root.querySelectorAll('button,a.quiet-button,a.collection-link,a.atlas-primary,a.atlas-secondary,details.collection-audio>summary').forEach(b=>{
-            if(b.matches('.game-choice,.mini-cell,.intersection,.reserve-flower'))return;
+            if(b.matches('.game-choice,.mini-cell,.intersection,.reserve-flower,.captured-piece'))return;
             b.classList.add('material-control');
             const id=b.id,text=b.textContent.trim();let icon=null;
             if(/rules|close-rules/.test(id)||b.classList.contains('header-rules'))icon='rules';
