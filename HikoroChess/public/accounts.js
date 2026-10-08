@@ -43,6 +43,71 @@
         finally { busy = false; panel.removeAttribute('aria-busy'); }
     }
     function check(result) { if (result.error) throw result.error; return result.data; }
+    async function usernameRequest(action, username, password) {
+        const response = await fetch('/api/account/username/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }), signal: AbortSignal.timeout(20000) });
+        const result = await response.json();
+        if (!response.ok) throw Error(result.error || 'Account access is temporarily unavailable.');
+        if (result.session) {
+            check(await client.auth.setSession({ access_token: result.session.access_token, refresh_token: result.session.refresh_token }));
+            session = result.session;
+        }
+        return result;
+    }
+    function drawSignIn(body) {
+        const methods = element('div', '', 'auth-methods');
+        for (const provider of config.providers) methods.append(button('Continue with ' + (provider === 'github' ? 'GitHub' : 'Google'), async () => {
+            check(await client.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + '/?account=1' } }));
+        }));
+        body.append(methods);
+        const tabs = element('nav', '', 'journal-tabs'); tabs.setAttribute('aria-label', 'Account access method');
+        const content = element('section', '', 'journal-card'); body.append(tabs, content);
+        function draw(mode, signup = false) {
+            for (const tab of tabs.children) tab.setAttribute('aria-pressed', String(tab.dataset.method === mode));
+            content.replaceChildren(element('h3', signup ? 'Take your place in the hall' : 'Welcome back'));
+            const username = mode === 'username';
+            if (username) content.append(element('p', 'No email needed. Your login username stays fixed; you can choose a different name for the board in Profile.'),
+                element('small', 'Without an email, a forgotten password cannot be recovered. Keep your username and password somewhere safe.'));
+            else content.append(element('p', 'Use your email for sign-in and password recovery.'));
+            const form = element('form', '', 'account-access-form');
+            form.innerHTML = username
+                ? '<label>Username<input name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="24" pattern="[A-Za-z][A-Za-z0-9_]{2,23}" required></label><small>3–24 letters, numbers or underscores. Start with a letter. Capitalization does not matter.</small>'
+                : '<label>Email<input name="identifier" type="email" autocomplete="username" required maxlength="254"></label>';
+            const label = element('label', 'Password'), password = element('input'); password.name = 'password'; password.type = 'password';
+            password.autocomplete = signup ? 'new-password' : 'current-password'; password.minLength = signup || username ? 8 : 6; password.maxLength = 128; password.required = true; label.append(password); form.append(label);
+            if (signup) { const confirm = element('label', 'Confirm password'), field = element('input'); field.name = 'confirm'; field.type = 'password'; field.autocomplete = 'new-password'; field.required = true; field.maxLength = 128; confirm.append(field); form.append(confirm); }
+            const submit = element('button', signup ? 'Create ' + (username ? 'username' : 'email') + ' account' : 'Sign in'); submit.type = 'submit';
+            if (signup && !username && !config.emailSignup) submit.disabled = true;
+            form.append(submit);
+            form.onsubmit = event => { event.preventDefault(); run(async () => {
+                const data = new FormData(form), identifier = data.get('identifier'), secret = data.get('password');
+                if (signup && secret !== data.get('confirm')) throw Error('The passwords do not match.');
+                if (username) {
+                    const result = await usernameRequest(signup ? 'signup' : 'signin', identifier, secret);
+                    form.reset();
+                    if (!result.session) { draw(mode); message('Account created. Sign in with your username and password.'); return; }
+                } else if (signup) {
+                    if (!config.emailSignup) throw Error('Email signup is waiting for email delivery to be configured. You can create a username account without email.');
+                    const result = check(await client.auth.signUp({ email: identifier, password: secret, options: { emailRedirectTo: location.origin + '/?account=1' } }));
+                    form.reset(); if (!result.session) { draw(mode); message('Check your email to confirm your account, then sign in.'); return; }
+                } else { check(await client.auth.signInWithPassword({ email: identifier, password: secret })); form.reset(); }
+                await renderAccount();
+            }); };
+            content.append(form);
+            if (!signup && !username) content.append(button('Forgot password?', async () => {
+                const field = form.elements.identifier;
+                if (!field.value || !field.checkValidity()) throw Error('Enter your email address first.');
+                check(await client.auth.resetPasswordForEmail(field.value, { redirectTo: location.origin + '/player.html?reset=1' }));
+                message('If an account exists, check your email for the reset link.');
+            }));
+            content.append(button(signup ? 'I already have an account' : 'Create an account', async () => draw(mode, !signup)));
+            if (!username && !config.emailSignup) content.append(element('small', 'New email accounts and email recovery need production email delivery. Username accounts and GitHub sign-in are available without it.'));
+        }
+        for (const [mode, title] of [...(config.usernameSignup ? [['username', 'Username · no email']] : []), ['email', 'Email & password']]) {
+            const tab = element('button', title); tab.type = 'button'; tab.dataset.method = mode; tab.onclick = () => { message(''); draw(mode); }; tabs.append(tab);
+        }
+        draw(config.usernameSignup ? 'username' : 'email');
+    }
     async function archiveRecord(record){await ready;if(!client||!session)return false;check(await client.from('hikoro_matches').upsert({user_id:session.user.id,match_id:record.id,game_type:record.game,record,verified:false},{onConflict:'user_id,match_id',ignoreDuplicates:true}));return true;}
     async function listRecords(offset=0,game=''){await ready;if(!client||!session)return null;let query=client.from('hikoro_matches').select('*').eq('user_id',session.user.id).order('recorded_at',{ascending:false}).order('match_id',{ascending:false});if(game)query=query.eq('game_type',game);return check(await query.range(offset,offset+49));}
     function recordTools(body){
@@ -76,26 +141,7 @@
         if (!session) {
             recordTools(body);
             body.append(element('p', 'Keep your player name, saved tables, and learning progress across devices. Guest play stays available.'));
-            for (const provider of config.providers) body.append(button('Continue with ' + (provider === 'github' ? 'GitHub' : 'Google'), async () => {
-                check(await client.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + '/?account=1' } }));
-            }));
-            const form = element('form');
-            form.innerHTML = '<label>Email<input name="email" type="email" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="6"></label><button type="submit">Sign in</button>';
-            form.addEventListener('submit', event => { event.preventDefault(); run(async () => {
-                const data = new FormData(form);
-                check(await client.auth.signInWithPassword({ email: data.get('email'), password: data.get('password') }));
-                form.reset(); await renderAccount();
-            }); });
-            body.append(form);
-            body.append(button('Forgot password?',async()=>{const email=form.elements.email;if(!email.value||!email.checkValidity())throw Error('Enter your email address first.');check(await client.auth.resetPasswordForEmail(email.value,{redirectTo:location.origin+'/player.html?reset=1'}));message('If an account exists, check your email for the reset link.');}));
-            if (config.emailSignup) body.append(button('Create an email account', async () => {
-                if (!form.reportValidity()) return;
-                const data = new FormData(form);
-                const result = check(await client.auth.signUp({ email: data.get('email'), password: data.get('password'), options: { emailRedirectTo: location.origin + '/?account=1' } }));
-                form.reset();
-                if (result.session) await renderAccount(); else message('Check your email to confirm your account, then sign in.');
-            }));
-            else body.append(element('small', 'Email sign-in is for existing accounts. New email accounts open when email delivery is configured.'));
+            drawSignIn(body);
             return;
         }
         body.append(element('p', 'Loading your journal…'));
@@ -140,6 +186,13 @@
         const practice=card(panels.tables,'Academy progress');const lessons=Object.entries(profile.academy_progress||{});practice.append(element('p',lessons.length?lessons.map(([lesson,count])=>lesson+': '+count+' practice moves').join(' · '):'Save an Academy lesson to record your progress.'),link('Return to the learning table →','/academy.html'));
         const prefs=card(panels.settings,'Your device preferences');prefs.append(button('Save device preferences',async()=>{const preferences={};for(const key of ['hikoro-preferences','hikoro-audio-v1'])try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value&&typeof value==='object')preferences[key]=value;}catch{}check(await client.from('hikoro_profiles').update({preferences}).eq('user_id',session.user.id));message('Device preferences saved to your account.');}),button('Use saved preferences on this device',async()=>{await readProfile();if(!window.confirm('Replace this device’s game and audio preferences with your account preferences?'))return;for(const key of ['hikoro-preferences','hikoro-audio-v1'])if(profile.preferences[key])localStorage.setItem(key,JSON.stringify(profile.preferences[key]));message('Preferences restored. They take effect on your next page visit.');}));
         const auth=card(panels.settings,'Account access');auth.append(element('p','Passwords and sign-in are managed by Supabase. Your match journals remain attached to your account.'),button('Sign out',async()=>{check(await client.auth.signOut());session=null;profile=null;refreshButton();await renderAccount();message('Signed out. Account-bound online seats require the same account to reconnect.');}));
+        if (session.user.app_metadata?.hikoro_username_only) {
+            auth.prepend(element('p', 'Login username: ' + session.user.app_metadata.hikoro_username), element('small', 'This account has no email. A forgotten password cannot be reset. Your board name is separate from your login username.'));
+            const change = element('form'); change.innerHTML = '<label>Current password<input name="current" type="password" autocomplete="current-password" required maxlength="128"></label><label>New password<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label><label>Confirm new password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label><button type="submit">Change password</button>';
+            change.onsubmit = e => { e.preventDefault(); run(async () => { const data = new FormData(change); if (data.get('password') !== data.get('confirm')) throw Error('The passwords do not match.');
+                await usernameRequest('signin', session.user.app_metadata.hikoro_username, data.get('current'));
+                check(await client.auth.updateUser({ password: data.get('password') })); change.reset(); message('Password changed. Keep your new password safe.'); }); }; auth.append(change);
+        }
         if(new URLSearchParams(location.search).get('reset')==='1'){const reset=card(panels.settings,'Set a new password'),f=element('form');f.innerHTML='<label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit">Update password</button>';f.onsubmit=e=>{e.preventDefault();run(async()=>{const data=new FormData(f);if(data.get('password')!==data.get('confirm'))throw Error('The passwords do not match.');check(await client.auth.updateUser({password:data.get('password')}));f.reset();history.replaceState(null,'','/player.html');message('Password updated.');});};reset.append(f);[...tabbar.children].find(b=>b.textContent==='Settings').click();}
     }
     function identityChanged(){refreshButton();for(const socket of sockets)if(socket.connected)socket.emit('refreshPlayerIdentity',{token:session?.access_token});window.dispatchEvent(new Event('account-changed'));}

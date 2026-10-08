@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const Identity = require('./public/player-identity');
+const { installUsernameAuth } = require('./username-auth');
 
 const GAME_TYPES = ['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy'];
 function accountConfig(env = process.env) {
@@ -13,12 +14,14 @@ function accountConfig(env = process.env) {
     const enabled = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) && publicKey;
     const providers = (env.ACCOUNT_PROVIDERS || '').split(',').filter(p => ['google', 'github'].includes(p));
     return { enabled, url: enabled ? url : '', key: enabled ? key : '', providers,
-        emailSignup: env.ACCOUNT_EMAIL_SIGNUP === 'true' };
+        emailSignup: env.ACCOUNT_EMAIL_SIGNUP === 'true',
+        usernameSignup: Boolean(enabled && env.SUPABASE_SECRET_KEY && env.ACCOUNT_USERNAME_SIGNUP === 'true') };
 }
 function installAccounts(app, io, { env = process.env, clientFactory = createClient } = {}) {
     const config = accountConfig(env);
     const client = config.enabled ? clientFactory(config.url, config.key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
     const writer = config.enabled && env.SUPABASE_SECRET_KEY ? clientFactory(config.url, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
+    installUsernameAuth(app, { config, writer, clientFactory, env });
     app.get('/api/account-config', (_req, res) => res.json({ ...config, verifiedResults: Boolean(writer) }));
     app.get('/vendor/supabase.js', (_req, res) => res.sendFile(path.join(path.dirname(require.resolve('@supabase/supabase-js/package.json')), 'dist/umd/supabase.js')));
     const profileReaders=new WeakMap();

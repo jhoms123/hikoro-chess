@@ -23,7 +23,9 @@ player first and uses a revision condition to reject concurrent overwrites.
    - `ACCOUNT_PROVIDERS=google` or `github` (or both), only after enabling those
      providers in the Supabase dashboard with matching OAuth app credentials.
    - `ACCOUNT_EMAIL_SIGNUP=true` only after configuring production SMTP. Otherwise
-     existing email users can sign in but email sign-up stays hidden.
+     existing email users can sign in; the email registration form explains that delivery is pending.
+   - `ACCOUNT_USERNAME_SIGNUP=true` after applying the username account migration.
+   - `ACCOUNT_SITE_ORIGINS=https://hikorochess.org,https://www.hikorochess.org` restricts username credential requests to the website.
 3. In Supabase Authentication URL Configuration, set the site URL to the production
    website origin and allow its exact `/?account=1` return URL. Add the `www` origin
    only if the website actually uses it. OAuth app callbacks must use Supabase's
@@ -55,6 +57,32 @@ Supabase's default email sender refuses delivery to addresses outside the projec
 team and is intended for testing. Public email sign-up requires custom SMTP.
 Google or GitHub OAuth can provide public accounts without an email delivery service.
 Documentation: https://supabase.com/docs/guides/auth/auth-smtp
+
+## Username accounts without email
+
+Players can choose GitHub, email/password, or a username/password. Username creation
+requires no email and does not send email. Login usernames are case-insensitive,
+3–24 ASCII letters, digits or underscores, starting with a letter. They stay fixed;
+the chosen board name remains editable in Profile. Passwords are 8–128 characters,
+hashed and managed by Supabase Auth. A player can change their password in Settings
+after entering the current password. Without email, a forgotten password cannot
+be recovered; this is stated before signup and in Settings.
+
+`20261008130000_username_accounts.sql` creates server-only login aliases and an
+atomic database throttle. Internal random `.invalid` identifiers are not personal
+email addresses and never receive mail. Anonymous/authenticated clients cannot
+read or write the username directory or throttles. Only the server can create the
+internal Auth account and reserve a unique username. Racing duplicate claims
+remove only their newly created, unreserved Auth user. Login uses an isolated
+Supabase client per request, and session responses have `Cache-Control: no-store`.
+Passwords/tokens are never written to application logs or database tables.
+
+Per-IP and per-username attempts are throttled for 15 minutes, with a global signup
+cap. IPs are HMAC-digested, stale throttle rows expire after one day, and throttles
+survive deploys. The server trusts Render's single forwarding proxy; deploying
+behind another proxy topology requires reviewing that setting. Registration fails
+closed if the throttle/database is unavailable. Email registration remains a
+separate verified-email flow and requires custom SMTP; confirmations stay enabled.
 
 ## Validation
 
