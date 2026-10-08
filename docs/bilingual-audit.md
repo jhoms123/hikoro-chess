@@ -50,3 +50,5 @@ Anonymous requests to notes/share tables returned zero rows, and restricted save
 ## Review and rollout
 
 The isolated hosted review uses SITE_REVIEW_MODE=true and has no production database keys. Its account journal and standings are sample data; online games are guest practice. Review translated desktop and phone pages before merging this localization branch. Once approved, merge and deploy main to the existing production Render service; do not enable review mode in production. Check /health, a browser connection, both language choices, a local move and a resumed online seat after rollout.
+
+Validation: 132 automated tests pass, including all authored page text/accessibility coverage, generated rulebook/audio/credit translations, local-state preservation, cross-tab language changes and origin rejection. Hosted phone review also verified English restoration without clearing selection.

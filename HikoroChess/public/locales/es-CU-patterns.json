@@ -142,5 +142,17 @@
   [
     "Local play is available at {0}.",
     "Puedes jugar aquí en {0}."
+  ],
+  [
+    "{0} practice",
+    "Práctica de {0}"
+  ],
+  [
+    "{0} hand in board corners",
+    "Mano de {0} en las esquinas del tablero"
+  ],
+  [
+    "{0} {1} hand page",
+    "{0} página de la mano de {1}"
   ]
 ]

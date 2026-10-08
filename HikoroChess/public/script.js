@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const gameItem = document.createElement('div');
             gameItem.classList.add('game-item');
             const infoSpan = document.createElement('span');
-            const creatorName = game.creatorName || 'Player 1';
+            const creatorName = game.creatorName || 'Player 1';if(game.creatorName)window.I18n?.registerNames([game.creatorName]);
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
             const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : game.gameType === 'hikoruka' ? "Hikorüka chess" : game.gameType === 'go' ? `Shield Go (${game.boardSize || 9} × ${game.boardSize || 9})` : game.gameType === 'academy' ? "Hikoro Academy" : "Hikoro Chess";
 
