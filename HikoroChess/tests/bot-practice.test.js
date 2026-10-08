@@ -21,6 +21,15 @@ test('both game pages link to their local bot practice editions', () => {
     }
 });
 
+test('game pages request the current translation catalog after a catalog update', () => {
+    for (const name of fs.readdirSync(publicDir).filter(name => name.endsWith('.html'))) {
+        const html = read(name);
+        if (html.includes('/i18n-catalog.js?')) {
+            assert.match(html, /\/i18n-catalog\.js\?v=20261008-bot-cuban-translations/, name);
+        }
+    }
+});
+
 test('Sho Dan Sho practice starts with the established v13.5.1 bot', () => {
     const dom = new JSDOM(read('shodansho-bot.html'));
     const page = dom.window.document;
