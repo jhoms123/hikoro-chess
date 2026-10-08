@@ -1,5 +1,6 @@
 (() => {
  'use strict';let socket,room,status;const titles={hikoro:'Hikoro',shodansho:'Sho Dan Sho',shavari:'Shavari',hikoruka:'Hikorüka',go:'Shield Go',academy:'Academy'};
+ function clearResumeIntent(gameId,store){if(!gameId)return false;try{if(store.getItem('hikoro-room-return')!==gameId)return false;store.removeItem('hikoro-room-return');store.removeItem('hikoro-room-type');return true;}catch{return false;}}
  function element(tag,text){const n=document.createElement(tag);if(text)n.textContent=text;return n;}
  function mount(){if(document.getElementById('table-companion'))return;const aside=element('aside');aside.id='table-companion';aside.className='table-companion';aside.hidden=true;aside.setAttribute('aria-label','Online table and invitation');const host=document.querySelector('main')||document.body;host.prepend(aside);}
  function draw(){mount();const box=document.getElementById('table-companion');box.hidden=!status;if(!status)return;box.replaceChildren();const heading=element('strong',titles[status.gameType]+' · '+(status.finished?'Match complete':status.started?'At the table':'Waiting for players'));box.append(heading);
@@ -21,5 +22,7 @@
   if(location.pathname==='/'&&/^game_[a-f0-9]{16}$/.test(invitation||''))next.once('lobbyUpdate',rooms=>{const found=rooms[invitation];if(!found){const n=document.getElementById('site-notice');if(n){n.hidden=false;n.textContent='This invitation has expired or the table has already started.';}return;}const sel=document.getElementById('game-type-select');if(sel){sel.value=found.gameType;sel.dispatchEvent(new Event('change'));}next.emit('joinGame',invitation);history.replaceState(null,'','/');});
   return next;
  }
- window.TableCompanion={attach};document.addEventListener('DOMContentLoaded',mount);
+ window.TableCompanion={attach,clearResumeIntent};window.leaveSdsGame=()=>{clearResumeIntent(new URLSearchParams(location.search).get('gameId'),sessionStorage);location.href='/';};
+ document.addEventListener('click',event=>{const link=event.target?.closest?.('a[href]');if(!link||location.pathname==='/')return;try{const target=new URL(link.href,location.href);if(target.origin===location.origin&&target.pathname==='/')clearResumeIntent(new URLSearchParams(location.search).get('gameId'),sessionStorage);}catch{}},true);
+ document.addEventListener('DOMContentLoaded',mount);
 })();
