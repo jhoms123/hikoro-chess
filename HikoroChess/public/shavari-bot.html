@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Shavari AI practice · Hikoro collection</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#f1eee4;background:#101c22;--bg:#101c22;--panel:#172b30;--line:#345057;--muted:#abbfc0;--cyan:#79dbd1;--clay:#f0a57d;--wood:#b28e63}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% 0%,#22434a 0,transparent 42%),linear-gradient(135deg,#101c22,#17282b 80%);min-height:100vh}button,select,input{font:inherit}button{cursor:pointer;color:inherit}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f1cb7a;outline-offset:3px}
+.top{max-width:1500px;margin:0 auto;padding:25px 26px 11px;display:flex;justify-content:space-between;align-items:start;gap:25px}.over{color:#9eddd1;text-transform:uppercase;letter-spacing:.19em;font-size:.73rem;font-weight:800;margin:0 0 7px}h1{margin:0;font-family:Georgia,'Times New Roman',serif;font-size:clamp(2.1rem,3.4vw,3.8rem);font-weight:500;letter-spacing:-.04em}h1 em{font-family:inherit;color:var(--clay);font-style:normal}header p.description{color:var(--muted);margin:10px 0 0;max-width:720px;line-height:1.55}.chip{padding:8px 14px;background:#244146;border:1px solid #496970;color:#c1e8e4;border-radius:99px;white-space:nowrap;font-size:.73rem;letter-spacing:.11em;text-transform:uppercase}
+.layout{max-width:1500px;margin:0 auto;padding:12px 26px 42px;display:grid;grid-template-columns:minmax(0,1fr) minmax(325px,400px);gap:24px;align-items:start}.board-area{min-width:0}.court{display:flex;align-items:center;gap:12px;margin:4px 6px 12px;color:#e4edf0}.court.bottom{margin:14px 6px 6px}.court .sigil{height:40px;width:40px;border-radius:14px;display:grid;place-items:center;font-family:Georgia,serif;font-size:22px;background:#26444c;color:var(--cyan);border:1px solid #558983}.court.south .sigil{background:#51372f;color:var(--clay);border-color:#ab7057}.court strong{display:block}.court small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}.court .count{margin-left:auto;color:#bad3cf;font-size:.85rem}.court.active strong{color:#fff}
+.board-frame{max-width:790px;margin:auto;padding:clamp(10px,2vw,21px);background:linear-gradient(135deg,#7d5b3f,#3d3027 35%,#7d583c 64%,#402f26);border:1px solid #c2a47b;box-shadow:0 26px 70px #0008, inset 0 2px 0 #dac2a06b;border-radius:17px}.board{width:100%;aspect-ratio:1;position:relative;isolation:isolate;overflow:hidden;border:2px solid #755a3c;border-radius:6px;background:radial-gradient(ellipse at 50% 48%,#ddc49a 0%,#c7a77c 75%,#b78e61 100%);box-shadow:inset 0 0 48px #65472966;user-select:none;touch-action:manipulation}.board::before{content:"";position:absolute;inset:0;opacity:.19;background:repeating-linear-gradient(88deg,transparent 0 7px,#7e6045 9px,transparent 12px),repeating-linear-gradient(0deg,transparent 0 23px,#fff6 24px,transparent 25px);pointer-events:none}
+#lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.spot{position:absolute;z-index:3;left:calc(8% + var(--x)*10.5%);top:calc(8% + var(--y)*10.5%);transform:translate(-50%,-50%);width:10.1%;height:10.1%;display:grid;place-items:center;border:0;background:transparent;border-radius:50%;padding:0}.spot::before{content:"";width:18%;aspect-ratio:1;border-radius:50%;background:#6b5440;opacity:.57;position:absolute}.spot.selected{background:#fff6;border:3px solid #fdf1ae;z-index:6}.spot.legal::before{width:48%;opacity:.85;background:#3f887e;border:2px solid #ddfff7}.spot.legal.capture::before{width:85%;background:transparent;border:4px solid #c55d42}.spot.legal.cover::before{background:#8a67b3;border-color:white}.spot.legal.stack::before{background:#45989e}.spot.last::after{content:"";position:absolute;inset:0;border:2px solid #ffe49c96;border-radius:50%}.spot.legal.selected::before{display:none}.token{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;width:95%;height:95%;border-radius:50%;border:3px solid #f3c5a3;background:radial-gradient(circle at 35% 24%,#c98361,#7c402f 75%);box-shadow:0 3px 6px #321d19a8,inset 0 2px 2px #ffe1c56b;color:#fff8ed}.token.p2{border-color:#b8f4ee;background:radial-gradient(circle at 35% 24%,#63b5ac,#23645f 75%);color:#f6fffe}.symbol{font-family:Georgia,serif;font-size:clamp(18px,4vw,40px);font-weight:700;line-height:1;text-shadow:0 1px 3px #0006}.type{font-family:Georgia,serif;font-size:clamp(9px,1.45vw,15px);font-weight:700;letter-spacing:.07em;position:absolute;bottom:10%}.token.multi{box-shadow:0 3px 2px #271d16,0 7px 0 -2px #e8c39b,0 10px 0 -3px #5d4030,0 13px 8px #251c1680}.token.p2.multi{box-shadow:0 3px 2px #0d3b3d,0 7px 0 -2px #9bd6cd,0 10px 0 -3px #2a625d,0 13px 8px #251c1680}.height{position:absolute;right:-3px;top:-7px;background:#162d30;color:#fff3cd;font-size:clamp(9px,1.5vw,13px);font-weight:900;border:1px solid #e8ce99;border-radius:50%;min-width:21px;height:21px;display:grid;place-items:center}.miniowners{position:absolute;bottom:-8%;left:50%;transform:translateX(-50%);display:flex;gap:2px}.miniowners i{width:9px;height:9px;border-radius:50%;border:1px solid #fff8;background:#ad5c3c}.miniowners i.p2{background:#3baba7}.labelcoord{position:absolute;z-index:2;font-size:clamp(9px,1.25vw,14px);color:#574633;font-weight:800}.labelcoord.top{top:1.3%}.labelcoord.left{left:1.6%}
+.board-help{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;color:#b3c9c7;margin:14px 7px;font-size:.78rem}.legend{display:flex;gap:13px;align-items:center;flex-wrap:wrap}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#3f887e;margin-right:4px}.dot.cap{background:#c55d42}.dot.cover{background:#8a67b3}.dot.stack{background:#45989e}
+.side{display:grid;gap:16px}.panel{background:linear-gradient(140deg,#20383b,#152a30);border:1px solid #39565a;border-radius:15px;padding:20px;box-shadow:0 10px 40px #0714172d}.panel h2{font-family:Georgia,serif;font-size:1.43rem;font-weight:500;margin:0 0 12px}.status{font-family:Georgia,serif;font-size:1.8rem;margin:2px 0 5px}.hint{font-size:.85rem;line-height:1.55;color:var(--muted);margin:5px 0 0}.button-row{display:flex;flex-wrap:wrap;gap:8px}.btn{border:1px solid #56737a;background:#284249;color:#edf4f0;border-radius:8px;padding:10px 12px;font-weight:700;font-size:.85rem;transition:.15s}.btn:hover:not(:disabled){background:#375a61}.btn.primary{background:#cb9370;color:#1b2425;border-color:#ffd0a4}.btn.primary:hover:not(:disabled){background:#ebaf87}.btn.active{border-color:#beece3;color:#b9f9ee;background:#33605f}.btn.small{font-size:.79rem;padding:8px 10px}.modes .btn{flex:1}.modes{display:flex;gap:6px}.setting{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;margin:9px 0}.setting label{font-size:.82rem;color:#cbdfdc}.setting select,.setting input{background:#0f2228;color:#eff;border:1px solid #517078;border-radius:7px;padding:9px;min-width:122px;max-width:160px}.setting input{width:100px}.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.metric{border:1px solid #36575b;border-radius:10px;padding:12px 9px;text-align:center;background:#10272d}.metric b{display:block;font-variant-numeric:tabular-nums;font-size:1.18rem}.metric small{display:block;color:#a7c3bf;text-transform:uppercase;letter-spacing:.09em;font-size:.63rem;margin-top:5px}.evaluation{height:9px;border-radius:20px;background:#3e817b;overflow:hidden;margin:12px 0}.eval-fill{height:100%;background:#dc9472;width:50%;transition:width .3s}.pv{padding:10px 12px;border-radius:8px;background:#10272c;font-size:.79rem;color:#c4e3dd;min-height:42px;line-height:1.6;overflow-wrap:anywhere}.history{margin:0;max-height:210px;min-height:75px;overflow-y:auto;display:grid;gap:5px;padding:0;list-style:none;font-size:.79rem}.history li{padding:7px 10px;border-bottom:1px solid #42616a6b;color:#cbdfd9}.history .move-count{font-weight:800;color:#f3d1aa;margin-right:8px}.rules{font-size:.82rem;line-height:1.6;color:#bad0d0}.rules p{margin:5px 0 9px}.rules strong{color:#f0dac0}details summary{cursor:pointer;color:#c7e5df;font-weight:700}.notice{min-height:22px;font-size:.78rem;color:#e9c49d;line-height:1.5}.footer{margin:20px 0;font-size:.75rem;color:#b1c6c6;line-height:1.6}.footer a{color:#acdbdb}.pane-label{font-size:.68rem;color:#b8d8d2;letter-spacing:.13em;text-transform:uppercase;margin:0 0 8px;font-weight:800}.spinner{animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.45}}.scan{font-variant-numeric:tabular-nums}.modal-backdrop{position:fixed;inset:0;z-index:20;background:#081516c9;display:grid;place-items:center;padding:20px}.modal{background:#1c3538;border:1px solid #9f9a77;border-radius:16px;padding:28px;max-width:410px;box-shadow:0 40px 90px #000b}.modal h2{font:normal 1.9rem Georgia,serif;margin:0 0 9px}.modal p{color:#bcd5cd;line-height:1.5}
+@media(max-width:1040px){.layout{grid-template-columns:minmax(0,1fr) 340px;gap:15px;padding:12px 15px 30px}.top{padding:22px 15px 7px}.panel{padding:16px}}@media(max-width:780px){.layout{display:block}.board-area{max-width:700px;margin:0 auto}.side{margin:20px auto;max-width:700px;grid-template-columns:repeat(2,minmax(0,1fr))}.panel.wide{grid-column:1/-1}.top .chip{display:none}}@media(max-width:520px){.top{padding:22px 15px 9px}h1{font-size:2.4rem}.layout{padding:5px 9px 32px}.board-frame{padding:9px;border-radius:9px}.side{grid-template-columns:1fr}.panel.wide{grid-column:auto}.symbol{font-size:clamp(17px,6vw,29px)}.type{font-size:clamp(8px,2.8vw,13px)}.token{border-width:2px}.height{min-width:16px;height:16px;font-size:9px;right:-4px;top:-6px}.board-help{font-size:.72rem}.court .count{font-size:.72rem}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style><script src="/i18n-catalog.js?v=20261008-bots"></script><script src="/i18n.js?v=20261008-bots"></script><link rel="stylesheet" href="/i18n.css?v=20261008-bots"><style>
+.hikoro-practice-banner{max-width:1500px;margin:1rem auto 0;padding:.8rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem 1.5rem;border:1px solid rgba(244,211,145,.35);border-radius:14px;background:rgba(20,32,34,.92);color:#f5e8cc;font:500 14px/1.5 system-ui,sans-serif}
+.hikoro-practice-banner a{color:#f4d391;text-decoration:none;font-weight:700;white-space:nowrap}.hikoro-practice-banner a:hover{text-decoration:underline}.hikoro-practice-note{color:#d0d9d5}
+@media(max-width:700px){.hikoro-practice-banner{margin:.65rem .65rem 0;align-items:flex-start;flex-direction:column;font-size:13px}.hikoro-practice-banner a{white-space:normal}}
+</style></head>
+<body><nav class="hikoro-practice-banner" aria-label="Hikoro bot practice"><a href="/shavari.html">← Return to the Shavari table</a><span class="hikoro-practice-note">Experimental AI v1.3.2 · local practice · its General stack limit is two pieces; the main game allows three</span></nav><header class="top"><div><p class="over">Independent Strategy Laboratory · Edition 1.3.2 · General Stack Cap 2</p><h1>Shavari <em>Engine</em></h1><p class="description">v1.3.2 Experimental Clock-Aware Exchange Guardian · as the no-capture draw clock advances, the search values positions in proportion to each side’s incentive to avoid or secure a draw.</p></div><span class="chip">No website changes</span></header>
+<main class="layout">
+<section class="board-area"><div class="court north" id="court2"><span class="sigil">Ⅱ</span><div><strong>Turquoise Court</strong><small id="seat2">Northern army</small></div><span class="count" id="count2">10 pieces</span></div>
+<div class="board-frame"><div class="board" id="board"><svg id="lines" aria-hidden="true" viewBox="0 0 1000 1000" preserveAspectRatio="none"><g stroke="#71553d" stroke-width="2.2" opacity=".8"><path d="M80 80H920 M80 185H920 M80 290H920 M80 395H920 M80 500H920 M80 605H920 M80 710H920 M80 815H920 M80 920H920 M80 80V920 M185 80V920 M290 80V920 M395 80V920 M500 80V920 M605 80V920 M710 80V920 M815 80V920 M920 80V920"/></g><g stroke="#477e79" stroke-width="5" opacity=".73"><path fill="none" d="M80 80h150v150H80z M770 80h150v150H770z M80 770h150v150H80z M770 770h150v150H770z"/></g><circle cx="500" cy="500" r="16" fill="none" stroke="#477e79" stroke-width="4"/></svg><div id="spots"></div></div></div>
+<div class="board-help"><span>Click a formation, then choose a highlighted intersection.</span><div class="legend"><span><i class="dot"></i> Move</span><span><i class="dot stack"></i> Stack</span><span><i class="dot cap"></i> Capture</span><span><i class="dot cover"></i> Cover</span></div></div>
+<div class="court south bottom" id="court1"><span class="sigil">Ⅰ</span><div><strong>Carnelian Court</strong><small id="seat1">Southern army · first move</small></div><span class="count" id="count1">10 pieces</span></div>
+<p class="footer">Based on the actual <a href="https://github.com/jhoms123/hikoro-chess/blob/main/HikoroChess/public/shavari-engine.js">Shavari rules</a> in the HikoroChess repository, checked October 8, 2026. Entirely self-contained: no CDN, login, network connection, or neural network required.</p></section>
+<aside class="side">
+<section class="panel wide"><p class="pane-label" id="state-badge">Ready to play</p><div class="status" id="status">Carnelian to move</div><p class="hint" id="status-detail">You control Carnelian. Select one of your pieces.</p><p class="notice" id="notice"></p><div class="button-row"><button class="btn primary" id="new-game">New game</button><button class="btn" id="undo">Undo turn</button><button class="btn" id="flip">Flip board</button><button class="btn" id="hint-button">Find best move</button></div></section>
+<section class="panel"><h2>Control a formation</h2><div class="modes"><button class="btn small active" data-mode="all">Whole stack</button><button class="btn small" data-mode="top">Top piece</button><button class="btn small" data-mode="pair">Top two</button></div><p class="hint" id="selection-info">All the carried pieces share their movement abilities. The top member determines control.</p></section>
+<section class="panel"><h2>AI configuration</h2><div class="setting"><label for="human">Your side</label><select id="human"><option value="1">Carnelian (first)</option><option value="2">Turquoise (second)</option><option value="0">Watch two bots</option></select></div><div class="setting"><label for="think">Search budget</label><select id="think"><option value="500">Rapid · 0.5 s</option><option value="2000" selected>Strong · 2 s</option><option value="6000">Expert · 6 s</option><option value="15000">Deep · 15 s</option><option value="30000">Maximum · 30 s</option></select></div><div class="setting"><label for="depth">Maximum depth</label><select id="depth"><option value="8">8 plies</option><option value="14" selected>14 plies</option><option value="20">20 plies</option></select></div><div class="button-row"><button class="btn small" id="pause">Pause bot</button><button class="btn small" id="copy">Copy position</button><button class="btn small" id="import">Import / replay</button></div></section>
+<section class="panel wide"><p class="pane-label">Search telemetry</p><h2 id="thinking">Engine idle</h2><div class="metric-grid"><div class="metric"><b id="m-depth">—</b><small>Depth / peak plies</small></div><div class="metric"><b id="m-nodes">—</b><small>Alpha-beta nodes</small></div><div class="metric"><b id="m-speed">—</b><small>Nodes/s</small></div></div><div class="evaluation"><div class="eval-fill" id="eval-bar"></div></div><div class="pv" id="pv">Principal variation appears here after search.</div><p class="hint">Score is from the side to move’s viewpoint. Near the no-capture draw threshold, the evaluation reflects whether the current side is leading or trailing; the actual 100-ply draw rule is unchanged.</p></section>
+<section class="panel"><h2>Move chronicle</h2><p class="hint" id="repetition-report" aria-live="polite">No-capture clock: 0/100</p><ol id="history" class="history"><li>First move is yours.</li></ol><div class="button-row" style="margin-top:12px"><button class="btn small" id="save">Save record</button><button class="btn small" id="reset-analysis">Clear analysis</button></div></section>
+<section class="panel"><h2>Quick rules</h2><div class="rules"><p><strong>Lotus General (G)</strong> steps orthogonally or backward diagonally. Capture a General to win.</p><p><strong>Caravan Lance (L)</strong> jumps exactly two diagonals, provided intervening stacks are shorter than the moving portion.</p><p><strong>Elephant Cannon (C)</strong> slides in four straight directions; <strong>Scarab Pawn (P)</strong> steps orthogonally.</p><details><summary>Stacking and special outcomes</summary><p>Carry one, two, or three pieces. Different pieces combine their moves. A stack may reach height three, except any stack containing a General is limited to height two. A General may stack with only one other piece. Taller formations jump over shorter blockers; equal or higher stacks stop them. A moving stack may cover a smaller enemy stack if the resulting height is legal (maximum three, or two when a General is present). Capturing eliminates every member, including buried Generals. Capturing your own General loses. Capturing both draws. After 100 consecutive plies without a capture, the game draws; a capture resets the clock. Threefold repetition, immobilization, or the 4000-ply cap also draw.</p></details></div></section>
+</aside></main>
+<div id="modal-root"></div>
+<script>
+'use strict';
+function shavariFactory(){
+'use strict';
+const TYPES=['G','L','C','P'], NAMES=['Lotus General','Caravan Lance','Elephant Cannon','Scarab Pawn'], GLYPHS=['✿','♞','♜','✦'];
+const VAL=[850,305,590,118], DIR4=[[-1,0],[1,0],[0,-1],[0,1]], DIAG=[[-1,-1],[1,-1],[-1,1],[1,1]];
+const KIND=['move','stack','capture','cover'], MATE=1000000, MAXPLY=4000, NO_CAPTURE_LIMIT=100;
+// Exchange Guardian v1.3: search scores near MATE are distances, not ordinary material.
+const MATE_ZONE=10000;
+const owner=p=>p>>2, type=p=>p&3, index=(x,y)=>y*9+x, sqname=i=>'ABCDEFGHI'[i%9]+(9-Math.floor(i/9));
+// Pseudorandom Zobrist tables, reproducible across browsers and workers.
+let seed=0x5A5A2026;const rand=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return seed>>>0;};
+const z1=new Uint32Array(81*3*8),z2=new Uint32Array(81*3*8);for(let i=0;i<z1.length;i++){z1[i]=rand();z2[i]=rand();}
+const turn1=rand(),turn2=rand();
+function hashBoard(board,side){let a=side===2?turn1:0,b=side===2?turn2:0;for(let sq=0;sq<81;sq++){const st=board[sq];for(let i=0;i<st.length;i++){const k=((sq*3+i)*8+(st[i]-4));a^=z1[k];b^=z2[k];}}return [a>>>0,b>>>0];}
+function keyHash(h){return h[0].toString(36)+'.'+h[1].toString(36);}
+function initial(){const board=Array.from({length:81},()=>[]);for(let side of [1,2]){const back=side===1?8:0,front=side===1?7:1;['L','C','G','C','L'].forEach((t,i)=>board[index(i*2,back)]=[(side<<2)+TYPES.indexOf(t)]);for(let x=0;x<9;x+=2)board[index(x,front)]=[(side<<2)+3];}const h=hashBoard(board,1),k=keyHash(h);return {board,player:1,ply:0,result:null,history:[],noCapturePlies:0,repetitions:{[k]:1}};}
+function noCaptureClock(state){if(Number.isInteger(state.noCapturePlies))return Math.max(0,state.noCapturePlies);let n=0;const history=state.history||[];for(let i=history.length-1;i>=0;i--){if(history[i]?.kind==='capture')break;n++;}return n;}
+// v1.3 movement geometry: one-time tables for all original ownership directions.
+// Rays are arrays of square indices. The shared path rules remain identical to the website.
+const PATHS=Array.from({length:3},()=>Array.from({length:4},()=>Array.from({length:81},()=>[])));
+for(let o=1;o<=2;o++)for(let t=0;t<4;t++)for(let sq=0;sq<81;sq++){
+ const x=sq%9,y=(sq/9)|0;
+ const directions=t===1?DIAG:t===0?DIR4.concat(o===1?[[1,1],[-1,1]]:[[1,-1],[-1,-1]]):DIR4;
+ const max=t===2?8:t===1?2:1,paths=PATHS[o][t][sq];
+ for(const [dx,dy] of directions){const ray=[];for(let d=1;d<=max;d++){
+  const nx=x+dx*d,ny=y+dy*d;if(nx<0||nx>8||ny<0||ny>8)break;
+  ray.push(ny*9+nx);
+ }if(ray.length)paths.push(ray);}
+}
+// Cached 81-bit reachable-destination masks for non-sliding, one-step pieces.
+const STATIC_REACH=Array.from({length:3},()=>Array.from({length:4},()=>Array.from({length:81},()=>[0,0,0])));
+for(let o=1;o<=2;o++)for(let t=0;t<4;t++)for(let sq=0;sq<81;sq++){
+ const bits=STATIC_REACH[o][t][sq];for(const ray of PATHS[o][t][sq])for(let k=0;k<ray.length;k++){
+  if(t===1&&k===0)continue;const to=ray[k];
+  bits[to>>>5]|=(1<<(to&31));
+ }
+}
+function bits32(x){x=x-((x>>>1)&0x55555555);x=(x&0x33333333)+((x>>>2)&0x33333333);return (((x+(x>>>4))&0x0f0f0f0f)*0x01010101)>>>24;}
+// Precompute positional diversity once for the 255 distinct piece/owner
+// combinations. Runtime evaluation needs just an 8-bit mask table lookup.
+const COMBO_MOBILITY=new Int16Array(81*256);
+for(let sq=0;sq<81;sq++){
+ const v0=new Uint32Array(256),v1=new Uint32Array(256),v2=new Uint32Array(256);
+ for(let mask=1;mask<256;mask++){
+  const bit=31-Math.clz32(mask&-mask),base=mask&(mask-1),b=STATIC_REACH[1+(bit>>>2)][bit&3][sq];
+  v0[mask]=v0[base]|b[0];v1[mask]=v1[base]|b[1];v2[mask]=v2[base]|b[2];
+  const mobility=bits32(v0[mask])+bits32(v1[mask])+bits32(v2[mask]);
+  COMBO_MOBILITY[sq*256+mask]=Math.min(15,mobility)*2+Math.min(8,Math.max(0,mobility-15));
+ }
+}
+let stamp=1;const seen=new Uint32Array(81*4);
+// A General may share a stack with only one other piece.
+function mayStackWith(source,count,target){
+ let containsGeneral=false;
+ for(let i=source.length-count;i<source.length;i++)if(type(source[i])===0){containsGeneral=true;break;}
+ if(!containsGeneral)for(let i=0;i<target.length;i++)if(type(target[i])===0){containsGeneral=true;break;}
+ return count+target.length<=(containsGeneral?2:3);
+}
+function generate(board,side,capturesOnly=false,onlyWinning=false){
+ const result=[];
+ for(let from=0;from<81;from++){
+  const st=board[from],height=st.length;if(!height||owner(st[height-1])!==side)continue;
+  for(let count=1;count<=height;count++){
+   ++stamp;if(stamp===0xffffffff){seen.fill(0);stamp=1;}
+   for(let layer=height-count;layer<height;layer++){
+    const token=st[layer],t=type(token),minimum=t===1?2:1;
+    for(const ray of PATHS[owner(token)][t][from]){
+     for(let i=0;i<ray.length;i++){
+      const to=ray[i],target=board[to],th=target.length;
+      if(i+1>=minimum){
+       let k=-1;
+       if(!th){if(!capturesOnly&&!onlyWinning)k=0;}
+       else if(owner(target[th-1])!==side){
+        if(!onlyWinning||captureWinner(target)===side)k=2;
+       }else if(!capturesOnly&&!onlyWinning&&mayStackWith(st,count,target))k=1;
+       if(k>=0){const slot=to*4+k;if(seen[slot]!==stamp){seen[slot]=stamp;result.push({from,to,count,kind:k,id:(((from*81+to)*3+count-1)*4+k)});}}
+       if(th&&owner(target[th-1])!==side&&!capturesOnly&&!onlyWinning&&count>th&&count+th<=3&&mayStackWith(st,count,target)){
+        const slot=to*4+3;if(seen[slot]!==stamp){seen[slot]=stamp;result.push({from,to,count,kind:3,id:(((from*81+to)*3+count-1)*4+3)});}
+       }
+      }
+      if(th&&count<=th)break;
+     }
+    }
+   }
+  }
+ }
+ return result;
+}
+function captureWinner(target){let ones=false,twos=false;for(const p of target){if(type(p)===0){if(owner(p)===1)ones=true;else twos=true;}}
+ if(ones&&twos)return 0;if(ones)return 2;if(twos)return 1;return null;
+}
+// Exact fast predicate: is there a legal capture that immediately wins?
+// Rather than allocating every other legal move, trace paths only to enemy
+// controlled stacks containing the opponent's General and not our own.
+function hasWinningCapture(board,side){
+ for(let to=0;to<81;to++){
+  const target=board[to],th=target.length;
+  if(!th||owner(target[th-1])===side||captureWinner(target)!==side)continue;
+  for(let from=0;from<81;from++){
+   const stack=board[from],height=stack.length;
+   if(!height||owner(stack[height-1])!==side)continue;
+   for(let count=1;count<=height;count++){
+    for(let layer=height-count;layer<height;layer++){
+     const p=stack[layer],t=type(p),minimum=t===1?2:1;
+     for(const ray of PATHS[owner(p)][t][from]){
+      const ix=ray.indexOf(to);if(ix<minimum-1)continue;
+      let blocked=false;
+      for(let j=0;j<ix;j++)if(board[ray[j]].length>=count){blocked=true;break;}
+      if(!blocked)return true;
+     }
+    }
+   }
+  }
+ }
+ return false;
+}
+// v1.3: Target-specific geometric captures, with all height and buried-ownership rules.
+// Each precomputed route records only the intermediate squares. Cannons can jump a
+// shorter intervening stack; a camel must reach its second diagonal intersection.
+const CAPTURE_ROUTES=Array.from({length:3},()=>Array.from({length:4},()=>Array.from({length:81},()=>Array(81).fill(null))));
+for(let o=1;o<=2;o++)for(let t=0;t<4;t++)for(let from=0;from<81;from++){
+ const dests=CAPTURE_ROUTES[o][t][from];
+ for(const ray of PATHS[o][t][from])for(let i=t===1?1:0;i<ray.length;i++)dests[ray[i]]=ray.slice(0,i);
+}
+function captureCandidates(board,side,to){
+ const target=board[to],th=target.length;
+ if(!th||owner(target[th-1])===side)return [];
+ const out=[];
+ for(let from=0;from<81;from++){
+  const st=board[from],h=st.length;if(!h||owner(st[h-1])!==side)continue;
+  for(let count=1;count<=h;count++){
+   let reachable=false;
+   for(let j=h-count;j<h&&!reachable;j++){
+    const t=st[j],intermediate=CAPTURE_ROUTES[owner(t)][type(t)][from][to];
+    if(intermediate===null)continue;
+    let clear=true;for(let i=0;i<intermediate.length;i++)if(board[intermediate[i]].length>=count){clear=false;break;}
+    if(clear)reachable=true;
+   }
+   if(reachable)out.push({from,to,count,kind:2,id:(((from*81+to)*3+count-1)*4+2)});
+  }
+ }
+ return out;
+}
+// Signed gain for capturing a stack. A captured own General is a loss, even
+// when the target's TOP member is enemy-controlled; both Generals is a draw.
+function stackGain(target,side){
+ const w=captureWinner(target);if(w!==null)return w===side?500000:w===0?0:-500000;
+ let gain=0;for(const p of target)gain+=(owner(p)===side? -1:1)*VAL[type(p)];
+ return gain;
+}
+// A bounded, target-square SEE: the opponent may choose to stop exchanging.
+// This is an ordering estimate, not a replacement for alpha-beta search.
+function replyExchange(board,side,to,remaining){
+ if(remaining<=0)return 0;
+ const target=board[to],w=captureWinner(target),options=captureCandidates(board,side,to);
+ if(!options.length)return 0;
+ if(w!==null){return w===side?500000:w===0?0:-500000;}
+ const gain=stackGain(target,side);
+ let best=0;
+ for(let k=0;k<options.length;k++){
+  const m=options[k],prev=change(board,m);
+  let continuation=0;
+  try{if(remaining>1)continuation=replyExchange(board,3-side,to,remaining-1);}finally{rollback(board,m,prev);}
+  const total=gain-continuation;
+  if(total>best)best=total;
+  if(best>=500000)break;
+ }
+ return best;
+}
+function seeMove(board,side,m,plies=2){
+ if(m.kind!==2&&m.kind!==3)return 0;
+ const dest=board[m.to],w=m.kind===2?captureWinner(dest):null;
+ if(w!==null)return w===side?500000:w===0?0:-500000;
+ const gain=m.kind===2?stackGain(dest,side):0;
+ const prev=change(board,m);
+ let reply;
+ try{reply=replyExchange(board,3-side,m.to,plies);}finally{rollback(board,m,prev);}
+ // A cover gains movement/control, but is not itself a material capture.
+ return gain-reply;
+}
+function orderMoves(ctx,moves,ttid,ply,useSEE=false){
+ // Score each action ONCE. Sorting-comparator SEE calls would repeat searches.
+ const priced=moves.map(m=>{
+  let score=sortScore(ctx,m,ttid,ply);
+  if(useSEE&&m.id!==ttid&&(m.kind===2||m.kind===3)){
+   const winner=m.kind===2?captureWinner(ctx.board[m.to]):null;
+   if(winner===null){const see=seeMove(ctx.board,ctx.side,m,1);
+    if(m.kind===2){score=see>=0?450000+Math.min(80000,see*32):Math.max(-40000,-1000+see*24);}
+    else score=see< -180?Math.max(-25000,see*16):65000+Math.min(12000,see*10);
+   }
+  }
+  return {m,score};
+ });
+ priced.sort((a,b)=>b.score-a.score);
+ for(let i=0;i<priced.length;i++)moves[i]=priced[i].m;
+ return moves;
+}
+
+function moveKind(m){return KIND[m.kind];}
+function change(board,m){const a=board[m.from],b=board[m.to];const moved=a.slice(a.length-m.count);board[m.from]=a.slice(0,a.length-m.count);board[m.to]=m.kind===2?moved:b.concat(moved);return [a,b,m.kind===2?captureWinner(b):null];}
+function rollback(board,m,prev){board[m.from]=prev[0];board[m.to]=prev[1];}
+function signature(board,side){let s=side+'|';for(let i=0;i<81;i++){if(board[i].length)s+=i+':'+board[i].join(',')+';';}return s;}
+function apply(state,m){if(state.result)return null;const legal=generate(state.board,state.player).find(v=>v.id===m.id);if(!legal)return null;
+ const board=state.board.map(st=>st.slice()),b=board[legal.to].slice(),moving=board[legal.from].slice(-legal.count),who=state.player;
+ const noCapturePlies=legal.kind===2?0:noCaptureClock(state)+1;
+ change(board,legal);let winner=legal.kind===2?captureWinner(b):null;
+ const h=hashBoard(board,3-who),hk=keyHash(h),repetitions={...state.repetitions};repetitions[hk]=(repetitions[hk]||0)+1;
+ let result=winner!==null?{winner,reason:winner===0?'Both generals captured':'General captured'}:null;
+ if(!result&&repetitions[hk]>=3)result={winner:0,reason:'Threefold repetition'};
+ if(!result&&generate(board,3-who).length===0)result={winner:0,reason:'No legal moves'};
+ if(!result&&noCapturePlies>=NO_CAPTURE_LIMIT)result={winner:0,reason:'100 plies without a capture'};
+ if(!result&&state.ply+1>=MAXPLY)result={winner:0,reason:'Move limit reached'};
+ const rec={from:legal.from,to:legal.to,count:legal.count,mode:legal.count===state.board[legal.from].length?'all':legal.count===1?'top':'pair',kind:KIND[legal.kind],player:who,moved:moving.map(p=>TYPES[type(p)]).join('+'),movedKey:moving.join('.'),captured:legal.kind===2?b.map(p=>TYPES[type(p)]).join('+'):'',height:board[legal.to].length};
+ return{board,player:3-who,ply:state.ply+1,result,history:[...state.history,rec],noCapturePlies,repetitions};}
+function generalPressure(board,side){
+ let target=-1;
+ outer:for(let sq=0;sq<81;sq++)for(const p of board[sq])if(owner(p)!==side&&type(p)===0){target=sq;break outer;}
+ if(target<0)return 0;
+ const weight=[0,34,28,20,12,5],pressures=[];
+ for(let sq=0;sq<81;sq++){
+  const st=board[sq];if(!st.length||owner(st[st.length-1])!==side)continue;
+  if(st.some(p=>owner(p)===side&&type(p)===0)||!st.some(p=>owner(p)===side&&type(p)!==0))continue;
+  const d=Math.abs(sq%9-target%9)+Math.abs((sq/9|0)-(target/9|0));if(d>0&&d<=5)pressures.push(weight[d]);
+ }
+ pressures.sort((a,b)=>b-a);
+ return Math.min(48,(pressures[0]||0)+Math.round((pressures[1]||0)*.3)+Math.round((pressures[2]||0)*.1));
+}
+function backtrackPenalty(history,board,side,m){
+ if(m.kind>=2)return 0;
+ const stack=board[m.from]||[],movedPieces=stack.slice(-m.count),movedKey=movedPieces.join('.'),movedTypes=movedPieces.map(p=>TYPES[type(p)]).join('+');
+ let previous=null;for(let i=history.length-1;i>=0;i--)if(history[i]?.player===side){previous=history[i];break;}
+ if(!previous||previous.kind==='capture'||previous.kind==='cover'||previous.from!==m.to||previous.to!==m.from)return 0;
+ if(previous.movedKey?previous.movedKey!==movedKey:previous.moved!==movedTypes)return 0;
+ let prior=0;for(let i=Math.max(2,history.length-28);i<history.length;i++){
+  const cur=history[i],before=history[i-2];if(cur?.player===side&&before?.player===side&&cur.from===before.to&&cur.to===before.from&&((cur.movedKey&&before.movedKey)?cur.movedKey===before.movedKey:cur.moved===before.moved))prior++;
+ }
+ return Math.min(72,24+16*prior);
+}
+// Search leaf evaluation: permanent original ownership, current formation control,
+// and the extra terrain a stack can reach over lower blockers are distinct resources.
+// Exact tactical General loss is handled by search, never by an arbitrary value here.
+function evaluate(board,side){let total=0;
+ for(let sq=0;sq<81;sq++){
+  const st=board[sq],h=st.length;if(!h)continue;
+  const x=sq%9,y=(sq/9)|0,central=8-Math.abs(x-4)-Math.abs(y-4),controller=owner(st[h-1]);
+  let mask=0,combo=0,buriedEnemy=0,ownedValue=0;
+  for(let j=0;j<h;j++){
+   const p=st[j],o=owner(p),t=type(p),sgn=o===side?1:-1;
+   mask|=1<<t;combo|=1<<(p-4);ownedValue+=VAL[t];
+   // General mobility is not a substitute for General safety.
+   const positional=t===0?(-4*central+2*Math.abs(y-(o===1?8:0))):
+    t===1?4*central:t===2?5*central:2*central+2*(o===1?8-y:y);
+   total+=sgn*(VAL[t]+positional);
+   if(j<h-1&&o!==controller)buriedEnemy++;
+  }
+  const sg=controller===side?1:-1,distinct=popcount(mask);
+  if(h>1){
+   // Elevation makes a full stack able to cross lower formations. Identical
+   // stacked pieces give height, but fewer new movement possibilities.
+   total+=sg*((h-1)*30+(distinct-1)*18+buriedEnemy*12);
+   // Being caught in a tall stack loses more material at once. Modest
+   // fragility penalty prevents unlimited stacking into exposed one-shot targets.
+   total-=sg*Math.min(25,Math.round(ownedValue/75))*(h-1);
+  }
+  // Table-driven movement synergy. Height-aware nearby obstruction checks
+  // retain basic terrain sensitivity without tracing every piece's full rays.
+  let obstruction=0;
+  if(mask&4){ // A carried Cannon contributes four sliding directions.
+   for(let j=0;j<h;j++)if(type(st[j])===2){
+    for(const ray of PATHS[owner(st[j])][2][sq])if(ray.length>1&&board[ray[0]].length>=h)obstruction+=8;
+   }
+  }
+  if(mask&2){for(let j=0;j<h;j++)if(type(st[j])===1){
+   for(const ray of PATHS[owner(st[j])][1][sq])if(ray.length===2&&board[ray[0]].length>=h)obstruction+=3;
+  }}
+  total+=sg*(COMBO_MOBILITY[sq*256+combo]-Math.min(30,obstruction));
+ }
+ return total+generalPressure(board,side)-generalPressure(board,3-side);
+}
+function popcount(x){let n=0;while(x){n+=x&1;x>>=1;}return n;}
+function makeHash(ctx,m,prev){const h=ctx.h;
+ for(let j=0;j<prev[0].length;j++){const i=(m.from*3+j)*8+prev[0][j]-4;h[0]^=z1[i];h[1]^=z2[i];}
+ for(let j=0;j<prev[1].length;j++){const i=(m.to*3+j)*8+prev[1][j]-4;h[0]^=z1[i];h[1]^=z2[i];}
+ for(let j=0;j<ctx.board[m.from].length;j++){const i=(m.from*3+j)*8+ctx.board[m.from][j]-4;h[0]^=z1[i];h[1]^=z2[i];}
+ for(let j=0;j<ctx.board[m.to].length;j++){const i=(m.to*3+j)*8+ctx.board[m.to][j]-4;h[0]^=z1[i];h[1]^=z2[i];}
+ h[0]^=turn1;h[1]^=turn2;h[0]>>>=0;h[1]>>>=0;
+}
+// Scores move urgency, without pretending that a whole captured mixed stack has one owner.
+// A capture that removes our own General is a terminal loss, regardless of its material gain.
+function sortScore(ctx,m,ttid,ply){if(m.id===ttid)return 10000000;
+ const b=ctx.board[m.to],sgn=ctx.side,from=ctx.board[m.from];
+ if(m.kind===2){const win=captureWinner(b);if(win!==null)return win===sgn?9000000:win===0?2100000:-900000;
+  let gain=0;for(const p of b)gain+=VAL[type(p)]*(owner(p)===sgn?-1:1);
+  let carried=0;for(let j=from.length-m.count;j<from.length;j++)carried+=VAL[type(from[j])];
+  // Capture priority = whole-stack material gain, with a modest risk/exposure adjustment.
+  return 450000+gain*17-carried*1.5+b.length*120;
+ }
+ if(m.kind===3){let borrowed=0;for(const p of b)borrowed+=VAL[type(p)];
+  const types=new Set(from.slice(-m.count).map(type));return 60000+borrowed*.23+m.count*90+types.size*35;
+ }
+ if(m.kind===1){let movedMask=0;for(let j=from.length-m.count;j<from.length;j++)movedMask|=1<<type(from[j]);
+  return 21500+370*m.count+90*popcount(movedMask);}
+ const killers=ctx.killers[ply]||[];if(killers[0]===m.id)return 13000;if(killers[1]===m.id)return 12000;
+ const history=ctx.history[m.id]||0,center=8-Math.abs(m.to%9-4)-Math.abs((m.to/9|0)-4);
+ return history+center*3;
+}
+function mateToTT(score,ply){return score>MATE-MATE_ZONE?score+ply:score< -MATE+MATE_ZONE?score-ply:score;}
+function mateFromTT(score,ply){return score>MATE-MATE_ZONE?score-ply:score< -MATE+MATE_ZONE?score+ply:score;}
+function search(state,options={},update=()=>{}){
+ const ctx={board:state.board.map(s=>s.slice()),side:state.player,noCapturePlies:noCaptureClock(state),h:hashBoard(state.board,state.player),nodes:0,qnodes:0,tt:new Map(),ttMax:240000,history:new Int32Array(81000),gameHistory:state.history||[],pathMoves:[],killers:[],rep:new Map(Object.entries(state.repetitions||{})),ttHits:0,threatEvasions:0,tacticalExtensions:0,start:performance.now(),ms:Math.max(25,options.ms||2000),deadline:0,stop:false,selDepth:0,ply:state.ply};
+ ctx.deadline=ctx.start+ctx.ms;let best=null,score=0,depthReached=0,stats=null,completed=false;const STOP={};
+ const key=()=>keyHash(ctx.h),ttKey=()=>key()+'|nc'+ctx.noCapturePlies;
+ function tick(ply){ctx.nodes++;ctx.selDepth=Math.max(ctx.selDepth,ply);if((ctx.nodes&511)===0&&performance.now()>=ctx.deadline)throw STOP;}
+ function step(m){const noCapturePrev=ctx.noCapturePlies,prev=change(ctx.board,m);makeHash(ctx,m,prev);ctx.noCapturePlies=m.kind===2?0:noCapturePrev+1;ctx.side=3-ctx.side;const k=key();ctx.rep.set(k,(ctx.rep.get(k)||0)+1);return {prev,k,noCapturePrev};}
+ function unstep(m,u){ctx.rep.set(u.k,ctx.rep.get(u.k)-1);if(ctx.rep.get(u.k)===0)ctx.rep.delete(u.k);ctx.side=3-ctx.side;ctx.noCapturePlies=u.noCapturePrev;makeHash(ctx,m,u.prev);rollback(ctx.board,m,u.prev);}
+ function outcome(m,who,ply){if(m.kind!==2)return null;const winner=captureWinner(ctx.board[m.to]);if(winner===null)return null;return winner===who?MATE-ply-1:winner===0?0:-MATE+ply+1;}
+ function terminalChild(m,prev,who,ply){if(prev[2]===null)return null;return prev[2]===who?MATE-ply-1:prev[2]===0?0:-MATE+ply+1;}
+ // Safety-first quiescence: threat evasions are mandatory even when nominal q-depth runs out.
+ // Quiescence cannot use stand-pat when the enemy can immediately capture our General.
+ function evaluateAtClock(board,side){
+  const raw=evaluate(board,side),urgency=Math.max(0,Math.min(1,(ctx.noCapturePlies-55)/(NO_CAPTURE_LIMIT-55)));
+  // A leading score loses value as a clock draw nears; a trailing score
+  // moves toward zero, correctly making the draw more attractive to that side.
+  return raw*(1-0.72*urgency);
+ }
+ function qsearch(alpha,beta,ply,remaining){tick(ply);ctx.qnodes++;
+  if(ctx.ply+ply>=MAXPLY||ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return 0;
+  const side=ctx.side;
+  // Immediate General capture beats speculative positional evaluation (including buried Generals).
+  if(hasWinningCapture(ctx.board,side))return MATE-ply-1;
+  const danger=hasWinningCapture(ctx.board,3-side);
+  const stand=evaluateAtClock(ctx.board,side);
+  if(!danger){
+   if(remaining<=0)return stand;
+   if(stand>=beta)return stand;
+   if(stand>alpha)alpha=stand;
+  }
+  // A threatened General has NO safe static fallback. Search every available escape,
+  // even past q-depth, then verify that the enemy's General capture was really stopped.
+  const moves=danger?generate(ctx.board,side):remaining>=2?generate(ctx.board,side).filter(m=>m.kind===2||m.kind===3):generate(ctx.board,side,true);
+  if(!moves.length)return danger?0:stand;
+  orderMoves(ctx,moves,-1,ply,ply<=2);
+  let best=danger?-MATE+ply:stand;
+  for(let i=0;i<moves.length;i++){
+   const m=moves[i],who=ctx.side,u=step(m);
+   let val;
+   try{
+    val=terminalChild(m,u.prev,who,ply);
+    if(val===null){
+     if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+     else if(danger && hasWinningCapture(ctx.board,ctx.side)){
+      // The candidate fails to evade an immediate opposing winning capture.
+      val=-MATE+ply+2;
+     }else if(remaining<=-1){
+      // Bounded defensive extension, only after verifying the General is safe.
+      val=-evaluateAtClock(ctx.board,ctx.side);
+     }else{
+      val=-qsearch(-beta,-alpha,ply+1,remaining-1);
+     }
+    }
+   }finally{unstep(m,u);}
+   if(val>best)best=val;
+   if(val>alpha)alpha=val;
+   if(alpha>=beta)break;
+  }
+  if(danger)ctx.threatEvasions++;
+  return best;
+ }
+ function negamax(depth,alpha,beta,ply,pv){tick(ply);
+  if(ctx.ply+ply>=MAXPLY||ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return 0;
+  const k=key(),ttk=ttKey(),reps=ctx.rep.get(k)||0;if(reps>=3)return 0;
+  if(depth<=0)return qsearch(alpha,beta,ply,3);
+  const alphaStart=alpha, entry=ctx.tt.get(ttk),ttid=entry?.move??-1;
+  if(entry&&entry.depth>=depth&&reps<2&&!pv){const value=mateFromTT(entry.value,ply);ctx.ttHits++;if(entry.flag===0)return value;if(entry.flag===1&&value>=beta)return value;if(entry.flag===-1&&value<=alpha)return value;}
+  const side=ctx.side,moves=generate(ctx.board,side);if(!moves.length)return 0;
+  orderMoves(ctx,moves,ttid,ply,ply<=2&&depth>=2);
+  let best=-MATE*2,bestId=-1;
+  for(let i=0;i<moves.length;i++){
+   const m=moves[i],who=ctx.side,u=step(m);let val;
+   try{val=terminalChild(m,u.prev,who,ply);
+    if(val===null){if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+     else{
+      const tactical=m.kind>=1||(m.count<u.prev[0].length&&owner(u.prev[0][u.prev[0].length-m.count-1])!==who);
+      let reduction=!pv&&!tactical&&depth>=4&&i>=5&&ply>0?Math.min(2,1+(i>13?1:0)):0;
+      if(i===0){val=-negamax(depth-1,-beta,-alpha,ply+1,pv);}
+      else{val=-negamax(depth-1-reduction,-alpha-1,-alpha,ply+1,false);
+        if(reduction&&val>alpha)val=-negamax(depth-1,-alpha-1,-alpha,ply+1,false);
+        if(val>alpha&&val<beta)val=-negamax(depth-1,-beta,-alpha,ply+1,pv);
+      }
+     }
+    }
+   }finally{unstep(m,u);}
+   if(val>best){best=val;bestId=m.id;}
+   if(val>alpha)alpha=val;
+   if(alpha>=beta){if(m.kind<2){const killers=ctx.killers[ply]||(ctx.killers[ply]=[-1,-1]);if(killers[0]!==m.id){killers[1]=killers[0];killers[0]=m.id;}ctx.history[m.id]=Math.min(10000,ctx.history[m.id]+depth*depth*2);}break;}
+  }
+  // Retain useful entries instead of flushing the entire table at capacity.
+  if(ctx.tt.size>ctx.ttMax){let n=0;for(const oldKey of ctx.tt.keys()){ctx.tt.delete(oldKey);if(++n>=ctx.ttMax/8)break;}}
+  if(reps<2&&(!entry||depth>=entry.depth||best>=MATE-MATE_ZONE))ctx.tt.set(ttk,{depth,value:mateToTT(best,ply),flag:best<=alphaStart?-1:best>=beta?1:0,move:bestId});
+  return best;
+ }
+ function root(depth,low=-MATE*2,high=MATE*2){const moves=generate(ctx.board,ctx.side),entry=ctx.tt.get(ttKey());orderMoves(ctx,moves,entry?.move??-1,0,true);
+  let alpha=low,beta=high,best=-MATE*2,bestMove=null;
+  for(let i=0;i<moves.length;i++){
+   const m=moves[i],who=ctx.side,penalty=hasWinningCapture(ctx.board,3-who)?0:backtrackPenalty(ctx.gameHistory,ctx.board,who,m),u=step(m);let val;
+   try{val=terminalChild(m,u.prev,who,0);
+    if(val===null){if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+     else if(i===0)val=-negamax(depth-1,-beta,-alpha,1,true);
+     else{val=-negamax(depth-1,-alpha-1,-alpha,1,false);if(val>alpha&&val<beta)val=-negamax(depth-1,-beta,-alpha,1,true);}
+    }
+   }finally{unstep(m,u);}
+   val-=penalty;
+   if(val>best){best=val;bestMove=m;}if(val>alpha)alpha=val;if(alpha>=beta)break;
+  }
+  if(bestMove)ctx.tt.set(ttKey(),{depth,value:mateToTT(best,0),flag:best<=low?-1:best>=high?1:0,move:bestMove.id});
+  return{best:bestMove,score:best};
+ }
+ function pvLine(max=12){const seenPV=new Set(),made=[],list=[];
+  try{for(let i=0;i<max;i++){const k=key();if(seenPV.has(k))break;seenPV.add(k);const e=ctx.tt.get(ttKey());if(!e)break;const m=generate(ctx.board,ctx.side).find(x=>x.id===e.move);if(!m)break;
+   list.push(sqname(m.from)+(m.kind===2?'×':m.kind===3?'⊕':m.kind===1?'+':'–')+sqname(m.to)+(m.count>1?'['+m.count+']':''));const u=step(m);made.push([m,u]);if(u.prev[2]!==null)break;
+  }}finally{for(let i=made.length-1;i>=0;i--)unstep(...made[i]);}return list;}
+ if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return {move:null,score:0,depth:0,nodes:0,ms:0,pv:[]};
+ const avail=generate(ctx.board,ctx.side);if(!avail.length)return {move:null,score:0,depth:0,nodes:0,ms:0,pv:[]};
+ best=avail[0];
+ for(let depth=1;depth<=Math.max(1,options.maxDepth||14);depth++){
+  if(performance.now()>=ctx.deadline&&depth>1)break;
+  try{let r;
+   if(depth>=4&&Math.abs(score)<MATE/2){let delta=65;while(true){r=root(depth,score-delta,score+delta);if(r.score<=score-delta||r.score>=score+delta){delta*=3;if(delta>MATE){r=root(depth);break;}}else break;}}
+   else r=root(depth);
+   if(r.best)best=r.best;score=r.score;depthReached=depth;completed=true;
+   stats={move:best,score,depth:depthReached,nodes:ctx.nodes,ms:Math.round(performance.now()-ctx.start),pv:pvLine(depth+2),selDepth:ctx.selDepth,qnodes:ctx.qnodes,ttHits:ctx.ttHits,threatEvasions:ctx.threatEvasions};
+   update(stats);
+   if(Math.abs(score)>MATE-200)break;
+   if(performance.now()>ctx.deadline-(ctx.ms/15)&&depth>1)break;
+  }catch(e){if(e!==STOP)throw e;break;}
+ }
+ return stats||{move:best,score:evaluateAtClock(ctx.board,ctx.side),depth:0,nodes:ctx.nodes,ms:Math.round(performance.now()-ctx.start),pv:[]};
+}
+return {VERSION:'1.3.2 Experimental Clock-Aware Exchange Guardian',TYPES,NAMES,GLYPHS,KIND,MATE,NO_CAPTURE_LIMIT,initial,owner,type,index,sqname,hashBoard,keyHash,signature,generate,apply,search,evaluate,generalPressure,backtrackPenalty,noCaptureClock,captureWinner,hasWinningCapture,captureCandidates,seeMove,stackGain};
+}
+const ShavariLab=shavariFactory();
+window.ShavariLab=ShavariLab;window.ShavariFactory=shavariFactory;
+</script>
+<script>
+(() => {'use strict';
+const $=id=>document.getElementById(id), S=ShavariLab;
+let state=S.initial(), snapshots=[state],selected=-1,mode='all',flipped=false,paused=false,worker=null,generation=0,hintMode=false,latest=null;
+const spots=[];for(let i=0;i<81;i++){let b=document.createElement('button');b.type='button';b.className='spot';b.style.setProperty('--x',i%9);b.style.setProperty('--y',(i/9)|0);b.setAttribute('aria-label',S.sqname(i));b.dataset.sq=i;b.addEventListener('click',()=>clickSpot(i));spots.push(b);$('spots').append(b);}
+function log(t){$('notice').textContent=t;}
+function kill(){generation++;if(worker){worker.terminate();worker=null;}latest=null;$('thinking').textContent='Engine idle';}
+function setupGame(){kill();state=S.initial();snapshots=[state];selected=-1;paused=false;hintMode=false;$('pause').textContent='Pause bot';log('New match started.');render();schedule();}
+function humanSide(){return Number($('human').value);}
+function humansTurn(){return state.player===humanSide();}
+function thinking(){return !!worker;}
+function countPieces(side){let n=0;for(const stack of state.board)for(const t of stack)if(S.owner(t)===side)n++;return n;}
+function moveColor(m){return ['legal','legal stack','legal capture','legal cover'][m.kind];}
+function describe(stack){return stack.map(p=>(S.owner(p)===1?'Carnelian':'Turquoise')+' '+S.NAMES[S.type(p)]).join(' → ');}
+function render(){const moves=selected>=0&&!state.result&&humansTurn()?S.generate(state.board,state.player).filter(m=>m.from===selected&&((mode==='all'&&m.count===state.board[selected].length)||(mode==='top'&&m.count===1)||(mode==='pair'&&m.count===2))):[];
+ let map=new Map();for(const m of moves){let old=map.get(m.to);if(!old||m.kind===3||m.kind===2)map.set(m.to,m);}
+ spots.forEach((b,i)=>{const x=i%9,y=(i/9)|0,st=state.board[i],top=st.at(-1),m=map.get(i),bx=flipped?8-x:x,by=flipped?8-y:y;
+  b.style.setProperty('--x',bx);b.style.setProperty('--y',by);b.className='spot'+(selected===i?' selected':'')+(m?' '+moveColor(m):'')+(state.history.length&&(state.history.at(-1).from===i||state.history.at(-1).to===i)?' last':'');b.innerHTML='';b.setAttribute('aria-label',S.sqname(i)+(st.length?': '+describe(st):': empty')+(m?'; legal '+S.KIND[m.kind]:''));b.title=st.length?describe(st):S.sqname(i);
+  if(top){const token=document.createElement('div');token.className='token p'+S.owner(top)+(st.length>1?' multi':'');const s=document.createElement('span');s.className='symbol';s.textContent=S.GLYPHS[S.type(top)];const mark=document.createElement('span');mark.className='type';mark.textContent=S.TYPES[S.type(top)];token.append(s,mark);
+   if(st.length>1){const height=document.createElement('span');height.className='height';height.textContent=st.length;token.append(height);const owners=document.createElement('span');owners.className='miniowners';st.forEach(p=>{const d=document.createElement('i');if(S.owner(p)===2)d.className='p2';owners.append(d);});token.append(owners);}
+   b.append(token);
+  }return b;});
+ // Coordinate labels are separate so they remain legible even when flipped.
+ document.querySelectorAll('.labelcoord').forEach(el=>el.remove());for(let n=0;n<9;n++){const f=document.createElement('span');f.className='labelcoord top';f.textContent='ABCDEFGHI'[flipped?8-n:n];f.style.left=(8+n*10.5)+'%';$('board').append(f);const rank=document.createElement('span');rank.className='labelcoord left';rank.textContent=flipped?n+1:9-n;rank.style.top=(8+n*10.5)+'%';$('board').append(rank);}
+ for(let side=1;side<=2;side++){$('count'+side).textContent=countPieces(side)+' pieces';$('court'+side).classList.toggle('active',state.player===side&&!state.result);$('seat'+side).textContent=humanSide()===side?'Human player':humanSide()===0?'AI engine':'AI opponent';}
+ $('status').textContent=state.result?(state.result.winner?(state.result.winner===1?'Carnelian wins':'Turquoise wins'):'Draw'):(state.player===1?'Carnelian to move':'Turquoise to move');
+ $('status-detail').textContent=state.result?state.result.reason:thinking()?'The engine is evaluating moves…':humansTurn()?'Choose one of your formations.':'The bot is ready to calculate.';
+ $('state-badge').textContent=state.result?'Match complete':thinking()?'Searching…':humansTurn()?'Your turn':paused?'Bot paused':'AI turn';
+ $('selection-info').textContent=selected<0?'Select a formation to inspect its members.':S.sqname(selected)+' · '+describe(state.board[selected])+' · '+moves.length+' legal actions ('+new Set(moves.map(m=>m.to)).size+' destinations).';
+ for(const b of document.querySelectorAll('[data-mode]'))b.classList.toggle('active',b.dataset.mode===mode);
+ $('undo').disabled=snapshots.length<=1;$('hint-button').disabled=!!state.result||thinking();
+ $('history').replaceChildren();if(!state.history.length){const li=document.createElement('li');li.textContent='No moves yet';$('history').append(li);}
+ else for(let i=Math.max(0,state.history.length-90);i<state.history.length;i++){const r=state.history[i],li=document.createElement('li');const span=document.createElement('span');span.className='move-count';span.textContent=(i+1)+'.';li.append(span,document.createTextNode((r.player===1?'Carnelian ':'Turquoise ')+r.moved+' '+S.sqname(r.from)+(r.kind==='capture'?' × ':r.kind==='cover'?' ⊕ ':r.kind==='stack'?' + ':' → ')+S.sqname(r.to)+(r.count>1?' ['+r.count+']':'')));$('history').append(li);}const hist=$('history');hist.scrollTop=hist.scrollHeight;
+ const rep=state.repetitions?.[S.keyHash(S.hashBoard(state.board,state.player))]||1;const recent=state.history.slice(-28),previous={1:null,2:null};let reversals=0;for(const rec of recent){const p=previous[rec.player];if(p&&p.from===rec.to&&p.to===rec.from&&(p.movedKey&&rec.movedKey?p.movedKey===rec.movedKey:p.moved===rec.moved))reversals++;previous[rec.player]=rec;}
+ $('repetition-report').textContent='Current board occurrence: '+rep+'/3 · No-capture clock: '+S.noCaptureClock(state)+'/100 · Backtracks in recent 28 plies: '+reversals;
+}
+function visibleMoves(from){if(from<0)return [];const length=state.board[from].length,c=mode==='all'?length:mode==='top'?1:2;return S.generate(state.board,state.player).filter(m=>m.from===from&&m.count===c);}
+function clickSpot(i){if(state.result||!humansTurn()||thinking())return;const m=selected<0?[]:visibleMoves(selected).filter(m=>m.to===i);
+ if(m.length){if(m.some(x=>x.kind===3))showChoice(m);else makeMove(m[0]);return;}
+ const st=state.board[i];if(st.length&&S.owner(st.at(-1))===state.player){selected=selected===i?-1:i;if(selected!==-1&&mode==='pair'&&st.length<2)mode='all';render();}else{selected=-1;render();}}
+function showChoice(moves){const outer=document.createElement('div');outer.className='modal-backdrop';outer.innerHTML='<div class="modal" role="dialog" aria-modal="true"><p class="pane-label">Enemy formation</p><h2>Capture or cover?</h2><p><strong>Capture</strong> removes every enemy piece. <strong>Cover</strong> keeps the opponent beneath your formation, adding its abilities.</p><div class="button-row"><button class="btn" id="cancelchoice">Cancel</button><button class="btn" id="capturechoice">Capture</button><button class="btn primary" id="coverchoice">Cover</button></div></div>';
+ $('modal-root').replaceChildren(outer);const dismiss=()=>outer.remove();outer.querySelector('#cancelchoice').onclick=dismiss;outer.querySelector('#capturechoice').onclick=()=>{dismiss();makeMove(moves.find(m=>m.kind===2));};outer.querySelector('#coverchoice').onclick=()=>{dismiss();makeMove(moves.find(m=>m.kind===3));};}
+function makeMove(m){if(!m)return;const next=S.apply(state,m);if(!next){log('Illegal move ignored.');return;}
+ state=next;snapshots.push(state);selected=-1;log(state.result?state.result.reason:'');render();if(!state.result)schedule();}
+function showStats(s,forSide){latest=s;$('m-depth').textContent=s.depth+' / '+(s.selDepth||s.depth);$('m-nodes').textContent=s.nodes>=1000000?(s.nodes/1000000).toFixed(2)+'m':s.nodes>=1000?(s.nodes/1000).toFixed(1)+'k':s.nodes;$('m-speed').textContent=s.ms?Math.round(s.nodes*1000/s.ms).toLocaleString():'—';$('thinking').textContent=s.depth?'Depth '+s.depth+' complete':'Evaluating first moves';
+ const cp=s.score*(forSide===1?1:-1);$('eval-bar').style.width=(100/(1+Math.exp(-Math.max(-2000,Math.min(2000,cp))/350))).toFixed(1)+'%';
+ $('pv').textContent=(Math.abs(s.score)>S.MATE-200?'Forced General result · ':'Score '+(cp>=0?'+':'')+(cp/100).toFixed(2)+' · ')+(s.pv?.join('  ')||'Position evaluation');}
+function createWorker(){const source='const E=('+shavariFactory.toString()+')();self.onmessage=function(ev){const {state,options,id}=ev.data;try{const result=E.search(state,options,info=>self.postMessage({kind:"info",info,id}));self.postMessage({kind:"done",info:result,id});}catch(error){self.postMessage({kind:"error",message:String(error.stack||error),id});}};';const blob=new Blob([source],{type:'application/javascript'});const url=URL.createObjectURL(blob);const w=new Worker(url);URL.revokeObjectURL(url);return w;}
+function schedule(){if(state.result||paused||worker||humansTurn())return;startSearch(false);}
+function startSearch(hint){if(state.result||worker)return;hintMode=hint;const id=++generation,searchSide=state.player;
+ $('thinking').textContent='Searching…';$('state-badge').textContent='Searching…';$('status-detail').textContent='The engine is exploring Shavari continuations.';
+ const options={ms:+$('think').value,maxDepth:+$('depth').value};
+ try{worker=createWorker();worker.onmessage=ev=>{if(id!==generation||!worker)return;
+   const d=ev.data;if(d.kind==='info'){showStats(d.info,searchSide);return;}const w=worker;worker=null;w.terminate();
+   if(d.kind==='error'){log('Search failed: '+d.message);render();return;}showStats(d.info,searchSide);if(d.info.move){if(hint){const mv=d.info.move;selected=mv.from;mode=mv.count===state.board[mv.from].length?'all':mv.count===1?'top':'pair';log('Suggested: '+S.sqname(mv.from)+' → '+S.sqname(mv.to)+' ('+S.KIND[mv.kind]+', '+mv.count+' carried).');render();}
+   else makeMove(d.info.move);}else render();};worker.onerror=e=>{if(id!==generation)return;kill();log('Web Worker failed. Check browser permissions: '+e.message);render();};worker.postMessage({state,options,id});}
+ catch(e){worker=null;log('Web Workers are unavailable. Trying a short main-thread search.');setTimeout(()=>{const out=S.search(state,{ms:Math.min(250,options.ms),maxDepth:options.maxDepth});showStats(out,searchSide);if(out.move){if(!hint)makeMove(out.move);else log('Suggested '+S.sqname(out.move.from)+' → '+S.sqname(out.move.to));}},0);}
+}
+$('new-game').onclick=setupGame;
+$('undo').onclick=()=>{if(snapshots.length<2)return;kill();if(humanSide()!==0&&snapshots.length>2&&state.history.at(-1)?.player!==humanSide())snapshots.pop();state=snapshots.at(-2);snapshots.pop();selected=-1;log('Move(s) taken back.');render();};
+$('flip').onclick=()=>{flipped=!flipped;render();};
+$('hint-button').onclick=()=>{if(!worker&&!state.result)startSearch(true);};
+$('human').onchange=setupGame;$('think').onchange=()=>{log('Time setting updated; applies to the next search.');};
+$('pause').onclick=()=>{paused=!paused;if(paused)kill();$('pause').textContent=paused?'Resume bot':'Pause bot';render();if(!paused)schedule();};
+for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{mode=b.dataset.mode;render();};
+$('copy').onclick=async()=>{const data=JSON.stringify({format:'shavari-ai-v1',state});try{await navigator.clipboard.writeText(data);log('Position copied as JSON.');}catch{const t=document.createElement('textarea');t.value=data;document.body.append(t);t.select();document.execCommand('copy');t.remove();log('Copied JSON where clipboard access is available.');}};
+$('import').onclick=()=>{
+ const raw=prompt('Paste either a Shavari AI position JSON or the original website Shavari move journal JSON.');if(!raw)return;
+ try{const doc=JSON.parse(raw),s=doc.state;
+  if(doc.format==='shavari-ai-v1'&&s){
+   if(!Array.isArray(s.board)||s.board.length!==81||![1,2].includes(s.player)||!s.board.every(st=>Array.isArray(st)&&st.length<=3&&st.every(p=>Number.isInteger(p)&&p>=4&&p<=11)))throw Error('Invalid position');
+   kill();state=s;state.noCapturePlies=S.noCaptureClock(s);state.repetitions=state.repetitions||{[S.keyHash(S.hashBoard(s.board,s.player))]:1};snapshots=[s];
+  }else{
+   const journal=Array.isArray(doc)?doc:doc.journal||doc.nativeJournal||doc.record?.journal;
+   const cursor=Number.isInteger(doc.cursor)?doc.cursor:journal?.length;
+   if(!Array.isArray(journal)||journal.length>4000||cursor<0||cursor>journal.length)throw Error('No supported journal found');
+   let next=S.initial(),steps=[next];
+   for(let i=0;i<cursor;i++){
+    const a=journal[i],from=a.from?.y*9+a.from?.x,to=a.to?.y*9+a.to?.x;
+    if(!Number.isInteger(from)||!Number.isInteger(to)||!Number.isInteger(a.from?.x)||!Number.isInteger(a.from?.y)||!Number.isInteger(a.to?.x)||!Number.isInteger(a.to?.y)||a.from.x<0||a.from.x>8||a.from.y<0||a.from.y>8||a.to.x<0||a.to.x>8||a.to.y<0||a.to.y>8)throw Error('Bad coordinates at ply '+(i+1));
+    const h=next.board[from].length,qty=a.mode==='all'?h:a.mode==='top'?1:a.mode==='pair'?2:-1;
+    const m=S.generate(next.board,next.player).find(m=>m.from===from&&m.to===to&&m.count===qty&&(a.kind?S.KIND[m.kind]===a.kind:m.kind!==3));
+    if(!m||!(next=S.apply(next,m)))throw Error('Illegal recorded action at ply '+(i+1));steps.push(next);
+   }
+   kill();state=next;snapshots=steps;
+  }
+  selected=-1;render();schedule();log('Shavari position / game record imported successfully.');
+ }catch(e){log('Import rejected: '+e.message);}
+};
+$('save').onclick=()=>{const nativeJournal=state.history.map(r=>({from:{x:r.from%9,y:Math.floor(r.from/9)},to:{x:r.to%9,y:Math.floor(r.to/9)},mode:r.mode,kind:r.kind}));const obj={format:'shavari-ai-v1',savedAt:new Date().toISOString(),nativeJournal,state};const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='shavari-match-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
+$('reset-analysis').onclick=()=>{$('m-depth').textContent=$('m-nodes').textContent=$('m-speed').textContent='—';$('pv').textContent='No analysis yet.';$('thinking').textContent='Engine idle';$('eval-bar').style.width='50%';};
+render();})();
+</script>
+</body></html>
