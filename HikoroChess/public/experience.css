@@ -7,3 +7,5 @@ button:disabled{cursor:default}.experience-open{white-space:nowrap;font-size:12p
 
 .review-banner{margin:0;padding:10px 16px;background:#f4e8c5;color:#392e1e;text-align:center;font:600 12px/1.5 sans-serif;letter-spacing:.04em}.player-appbar nav{flex-wrap:wrap}
 body[data-audio-theme=go] .lesson-dock button{background:linear-gradient(#f0eadbcc,#d2cbbacc),url('assets/collection/materials/stone.webp') center/240px;color:#26332a}body[data-audio-theme=shavari] .lesson-dock button{background:linear-gradient(#266b62dd,#1e4844ee);color:#f4e8c8;border-color:#c3a267}body[data-audio-theme=hikoruka] .lesson-dock button{background:linear-gradient(#593d2ecc,#2d2015ee),url('assets/collection/materials/timber.webp') center/240px;color:#f4e8c8}
+
+.lesson-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.lesson-choices button{white-space:normal;text-align:left;min-height:48px}.lesson-feedback{min-height:1.6em}.lesson-choices button[aria-pressed=true]{outline:3px solid #18758a;outline-offset:2px}.lesson-choices button:disabled{opacity:.85}@media(max-width:560px){.lesson-choices{grid-template-columns:1fr}}

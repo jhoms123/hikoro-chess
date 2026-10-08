@@ -29,6 +29,6 @@ Existing username/password (no email) and GitHub accounts remain available. Publ
 
 ## Validation
 
-Run `npm test` inside HikoroChess. Restart tests replace the actual server for all six engines, then restore a private seat and accepted journal. Storage-failure tests verify rollback before acceptance. Guided introduction tests require an accepted board action rather than a pass/resignation. Replay and identity tests retain original assets, private account ownership and score validation.
+Run `npm test` inside HikoroChess. Restart tests replace the actual server for all six engines, then restore a private seat and accepted journal. Storage-failure tests verify rollback before acceptance. Guided introduction tests require an accepted board action rather than a pass/resignation, followed by three gated checks covering captures, special rules and winning conditions. Incorrect answers show rule-specific feedback; milestones wait for all four objectives. Hikorüka lessons use the current Sovereign, Castellan, Archer, Cavalier and Squire names. Replay and identity tests retain original assets, private account ownership and score validation.
 
 The two SQL migrations were executed with Postgres/PGlite; owner isolation, room grants, transactional rollback, anonymous exact-token access and share revocation were verified. Production migrations have not been applied during preview review.
