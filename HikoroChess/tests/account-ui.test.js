@@ -33,7 +33,7 @@ function setup(type, pending, conflict = false) {
         }; return query;
     } };
     w.supabase = { createClient: () => client };
-    w.eval(source('accounts.js'));
+    w.eval(source('player-identity.js'));w.eval(source('accounts.js'));
     if (type === 'academy') w.eval(fs.readFileSync(path.join(__dirname, '../gamelogic.js'), 'utf8'));
     w.eval(source(type === 'go' ? 'go-engine.js' : type + '-engine.js'));
     if (type === 'academy') w.eval(source('hikoro-artwork.js'));

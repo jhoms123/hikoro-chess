@@ -12,6 +12,7 @@ const Go = require('./public/go-engine');
 const Academy = require('./public/academy-engine');
 const { installAccounts } = require('./accounts');
 const MatchRecord = require('./public/match-record');
+const Identity = require('./public/player-identity');
 
 function createServer({ accountOptions } = {}) {
     const app = express();
@@ -40,6 +41,7 @@ function createServer({ accountOptions } = {}) {
         const engine = sessions.get(game.id)?.engine;
         if (!engine) return;
         const { positions, ...publicEngine } = engine;
+        publicEngine.playerProfiles=game.playerProfiles;
         publicEngine.recordJournal = sessions.get(game.id).journal || [];
         game.players.forEach((id, playerIndex) => {
             if (!onlySocket || id === onlySocket.id) io.to(id).emit(`${game.gameType}State`, { gameId: game.id, state: publicEngine, playerIndex });
@@ -67,7 +69,7 @@ function createServer({ accountOptions } = {}) {
             : session.engine?.result?.winner ?? (game.winner === 'draw' ? 0 : Number(game.winner));
         const result={winner,reason:game.reason||session.engine?.result?.reason||session.engine?.message};
         const payload={journal:game.gameType==='hikoro'?game.actionJournal:game.gameType==='shodansho'?game.sdsActions:session.journal,size:game.boardSize,playerCount:game.maxPlayers,mode:'match',lesson:'pawn'};
-        let record;try{record=MatchRecord.create(game.gameType,payload,result,{id:game.id,players:Array.from({length:game.maxPlayers},(_,i)=>'Player '+(i+1))});}catch{console.error('Match replay record could not be constructed.');}
+        let record;try{record=MatchRecord.create(game.gameType,payload,result,{id:game.id,players:Array.from({length:game.maxPlayers},(_,i)=>game.playerProfiles?.[i]?.display_name||'Player '+(i+1))});}catch{console.error('Match replay record could not be constructed.');}
         void accounts.recordResult(game, session.accountIds, result, record);
     }
     function options(data) {
@@ -86,7 +88,9 @@ function createServer({ accountOptions } = {}) {
     }
     function newGame(socket, config, single, announceSeat = true) {
         const id = `${single ? 'sp' : 'game'}_${crypto.randomBytes(8).toString('hex')}`;
-        const game = { id, ...config, players: config.gameType === 'hikoro' ? { white: socket.id, black: single ? socket.id : null } : [socket.id],
+        const identity=socket.data.playerIdentity||Identity.publicIdentity({display_name:config.name});
+        config.name=identity.display_name;
+        const game = { id, ...config, playerProfiles:[identity], players: config.gameType === 'hikoro' ? { white: socket.id, black: single ? socket.id : null } : [socket.id],
             boardState: hikoroLogic.getInitialBoard(), isWhiteTurn: true, turnCount: 0, gameOver: false,
             whiteTimeLeft: config.timeControl.main, blackTimeLeft: config.timeControl.main,
             lastMoveTimestamp: single ? Date.now() : null, lastActivity: Date.now(), isSinglePlayer: single, started: single,
@@ -128,7 +132,7 @@ function createServer({ accountOptions } = {}) {
             if (!config) return err(socket, 'Invalid game settings.');
             if (!canCreate()) return;
             const game = newGame(socket, config, false);
-            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: config.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, boardSize: game.boardSize });
+            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, boardSize: game.boardSize });
             socket.emit('gameCreated', { gameId: game.id, color: game.gameType === 'hikoro' ? 'white' : 'waiting' }); emitLobby();
         });
         socket.on('createSinglePlayerGame', data => {
@@ -166,6 +170,7 @@ function createServer({ accountOptions } = {}) {
             } else { if (game.players.black) return err(socket, 'This room is full.'); game.players.black = socket.id; index = 1; }
             const token = ticket(); sessions.get(id).tokens[index] = token;
             sessions.get(id).accountIds[index] = socket.data.accountId || null;
+            game.playerProfiles[index]=socket.data.playerIdentity||Identity.publicIdentity(null,'Guest '+(index+1));
             socket.emit('seatAssigned', { gameId: id, token, playerIndex: index }); socket.join(id);
             game.lastActivity = Date.now();
             const count = game.gameType === 'hikoro' ? 2 : game.players.length;
@@ -190,14 +195,25 @@ function createServer({ accountOptions } = {}) {
             if (oldId !== socket.id && io.sockets.sockets.has(oldId)) io.sockets.sockets.get(oldId).leave(game.id);
             if (arraySeats) game.players[index] = socket.id;
             else { game.players[index === 0 ? 'white' : 'black'] = socket.id; if (game.isSinglePlayer) game.players.black = socket.id; }
+            game.playerProfiles[index]=socket.data.playerIdentity||game.playerProfiles[index];
             socket.join(game.id); game.lastActivity = Date.now();
+            io.to(game.id).emit('playerIdentities',{gameId:game.id,players:game.playerProfiles});
             if (['shavari','hikoruka','go','academy'].includes(type)) {
                 if (!game.started) return socket.emit('gameCreated', { gameId: game.id, color: 'waiting' });
                 sendVariant(game, socket);
-            } else if (type === 'shodansho') socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers });
+            } else if (type === 'shodansho') socket.emit('sdsSync', { actions: game.sdsActions, playerIndex: index, playerCount: game.maxPlayers, playerProfiles:game.playerProfiles });
             else if (!game.started) socket.emit('gameCreated', { gameId: game.id, color: index === 0 ? 'white' : 'black' });
             else socket.emit('gameStart', state(game));
         }
+        socket.on('refreshPlayerIdentity',async data=>{
+            const now=Date.now();if(now-(socket.data.identityRefreshAt||0)<1000)return;socket.data.identityRefreshAt=now;
+            try{await accounts.refreshIdentity(socket,data?.token);for(const game of games.values()){
+                const index=seat(game,socket);if(index<0||!socket.data.accountId)continue;
+                game.playerProfiles[index]=socket.data.playerIdentity;
+                if(lobby.has(game.id)&&index===0){game.name=socket.data.playerIdentity.display_name;lobby.get(game.id).creatorName=game.name;}
+                io.to(game.id).emit('playerIdentities',{gameId:game.id,players:game.playerProfiles});
+            }emitLobby();}catch{err(socket,'Your profile could not refresh. Try again.');}
+        });
         socket.on('resumeGame', data => resume(data, 'hikoro'));
         socket.on('joinSdsRoom', data => resume(data, 'shodansho'));
         socket.on('joinShavariRoom', data => resume(data, 'shavari'));

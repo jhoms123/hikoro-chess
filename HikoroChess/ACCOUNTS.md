@@ -11,7 +11,7 @@ player first and uses a revision condition to reject concurrent overwrites.
 
 ## Deployment
 
-1. Apply both migrations in `supabase/migrations/` in timestamp order. The existing
+1. Apply all migrations in `supabase/migrations/` in timestamp order. The existing
    GitHub integration uses repository root `.` and production branch `main`, so
    review the migration before merging. No schema change has been applied during
    development. Database preview branches require a paid Supabase plan and are not used.
@@ -91,3 +91,42 @@ chains and lessons. Imported endings are descriptive and never affect scores.
 The rules version is pinned to this release; incompatible records are rejected
 instead of being silently interpreted under different rules. Imports have a
 2 MB / 10,000-action limit. Existing Hikoro text Kifu export remains available.
+
+## Player Hall
+
+Accounts are in the top navigation on every game, history, and replay page.
+`/player.html` offers Overview, Profile, Saved Tables, and Settings. `/leaderboard.html`
+ranks opted-in players by all-time verified wins, across all games or by game;
+equal totals share a rank, and pages contain 50 players. Private account totals
+also include every recorded result rather than only the most recent 1,000.
+
+Apply `20261008070000_player_hall.sql` after the earlier migrations. It adds
+profile portrait and visibility fields, aggregate-only leaderboard RPCs, a
+private all-time totals RPC, and an owner-controlled avatar bucket. Existing
+profiles start hidden from public standings. Opt-in exposes only the chosen
+name, portrait and aggregate scores; preferences, saves and individual private
+records remain private. Profiles are read on sockets with the verified user's
+Bearer token, and incoming display names cannot override signed-in identities.
+The same identities travel with seats, reconnects, lobby listings and match
+records. Updating a profile refreshes active tables.
+
+Portraits can use the six already credited game emblems, or a player's own JPG,
+PNG or WebP (maximum input 5 MB / 40 million pixels). Uploads crop centrally to
+256 × 256 WebP and have a 256 KB server bucket limit. Portrait paths belong to
+the uploader; SVG/HTML uploads and arbitrary external image URLs are excluded.
+Portrait images are public so opponents can see them; the UI says this before
+upload. Replacements delete the previous file after the profile save succeeds.
+No AI artwork is created.
+
+Password reset uses Supabase email delivery. Add the exact production
+`/player.html?reset=1` URL to Auth redirect URLs and configure SMTP if offering
+email recovery/signup publicly. OAuth users sign in with their configured
+provider. Neither this migration nor the UI configures OAuth/SMTP/server keys.
+
+Validation includes DOM profile editing, upload validation and central cropping,
+all six authenticated seat identities, token-scoped profile reads, filter and
+pagination behavior. The migrations were also executed in a local PostgreSQL
+runtime with test Auth/Storage schemas: public ranking/ties, profile privacy,
+client score-write denial, own-avatar paths/uploads, and own all-time totals
+passed. Production Supabase integration and browser layout still require live
+verification.

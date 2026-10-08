@@ -6,7 +6,7 @@
     <title>Hikoro · Six games of strategy</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="site-polish.css">
-<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><link rel="stylesheet" href="hikoro-artwork.css"><script src="hikoro-artwork.js"></script><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/accounts.js"></script></head>
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><link rel="stylesheet" href="hikoro-artwork.css"><script src="hikoro-artwork.js"></script><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/player-identity.js"></script><script src="/accounts.js"></script></head>
 <body data-audio-theme="lobby" class="hikoro-site">
     <a class="skip-link" href="#game-setup">Skip to game setup</a>
     <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/collection/icons/compass.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
@@ -90,7 +90,7 @@
 	
 
     <div id="hikoro-game-wrapper" style="display: none;">
-        <div class="captured-area" id="black-captured-area">
+        <div class="captured-area" id="black-captured-area"><div class="table-player" data-player-seat="2" data-army="Black ocean army"></div>
             <h3><span class="hand-label">Opponent's Hand</span> (<span id="black-time-hikoro">--:--</span>)</h3>
             <div class="captured-pieces-box" id="black-captured"></div>
         </div>
@@ -108,7 +108,7 @@
             <div id="move-history"></div>
         </div>
 
-        <div class="captured-area" id="white-captured-area">
+        <div class="captured-area" id="white-captured-area"><div class="table-player" data-player-seat="1" data-army="White ocean army"></div>
             <h3><span class="hand-label">Your Hand</span> (<span id="white-time-hikoro">--:--</span>)</h3>
             <div class="captured-pieces-box" id="white-captured"></div>
         </div>
