@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 21107)
-Total output lines: 1685
-
 document.addEventListener('DOMContentLoaded', () => {
 
     const socket = window.SiteAccounts.socket();
@@ -84,13 +81,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const whitePalace = { minY: 0, maxY: 1, minX: 3, maxX: 6 };
     const blackPalace = { minY: 14, maxY: 15, minX: 3, maxX: 6 };
+    const sdsPlayerCountSelect = document.getElementById('sds-player-count');
+    const sdsBotCountSelect = document.getElementById('sds-bot-count');
+    function updateSdsBotOptions() {
+        if (!sdsPlayerCountSelect || !sdsBotCountSelect) return;
+        const players = Math.max(2, Math.min(4, Number(sdsPlayerCountSelect.value) || 2));
+        const maxBots = players - 1;
+        for (const option of sdsBotCountSelect.options) option.disabled = Number(option.value) > maxBots;
+        if (Number(sdsBotCountSelect.value) > maxBots) sdsBotCountSelect.value = String(maxBots);
+        const bots = Number(sdsBotCountSelect.value || 0), humans = players - bots;
+        const hint = document.getElementById('sds-bot-hint');
+        if (hint) hint.textContent = 'Bots use Adaptive Gumbel Guide v13.5.1 and fill the remaining seats.';
+        const setupHint = document.getElementById('setup-hint');
+        if (setupHint && gameTypeSelect?.value === 'shodansho') setupHint.textContent = humans === 1 ? 'Your table starts right away; the other seats use v13.5.1 bots.' : 'The table starts when its human seats are filled. Bot seats are automatic.';
+    }
+    sdsPlayerCountSelect?.addEventListener('change', updateSdsBotOptions);
+    sdsBotCountSelect?.addEventListener('change', updateSdsBotOptions);
 
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
             singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','academy'].includes(gameType);
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
-            
+            const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
+
             if (gameType !== 'hikoro') {
                 if (startReplayBtn) {
                     startReplayBtn.disabled = true;
@@ -98,6 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (kifuPasteArea) kifuPasteArea.disabled = true;
                 if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = gameType === 'shodansho' ? 'flex' : 'none';
+                if (sdsBotCountContainer) sdsBotCountContainer.style.display = gameType === 'shodansho' ? 'flex' : 'none';
+                if (gameType === 'shodansho') updateSdsBotOptions();
             } else {
                 if (startReplayBtn) {
                     startReplayBtn.disabled = false;
@@ -105,9 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (kifuPasteArea) kifuPasteArea.disabled = false;
                 if (sdsPlayerCountContainer) sdsPlayerCountContainer.style.display = 'none';
+                if (sdsBotCountContainer) sdsBotCountContainer.style.display = 'none';
             }
         });
-        
+
         // Trigger right away to set correct default state on page load
         setTimeout(() => gameTypeSelect.dispatchEvent(new Event('change')), 10);
     }
@@ -117,9 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        
+
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
+        const sdsBotCount = gameType === 'shodansho' && sdsBotCountSelect ? parseInt(sdsBotCountSelect.value, 10) : 0;
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
         const timeControl = {
@@ -128,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
         };
 
-        const dataToSend = { playerName, timeControl, gameType, sdsPlayerCount, boardSize: Number(document.getElementById('go-board-size').value) };
+        const dataToSend = { playerName, timeControl, gameType, sdsPlayerCount, sdsBotCount, boardSize: Number(document.getElementById('go-board-size').value) };
         socket.emit('createGame', dataToSend);
     });
 
@@ -146,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('gameStart', onGameStart);
     socket.on('gameStateUpdate', updateLocalState);
     socket.on('timeUpdate', updateTimerDisplay);
-    socket.on('validMoves', drawHikoroHighlights); 
+    socket.on('validMoves', drawHikoroHighlights);
     socket.on('errorMsg', message => {
         if (message.includes('could not be restored')) { sessionStorage.removeItem('hikoro-active-room'); gameId = null; }
         announce(message);
@@ -181,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.location.reload();
     });
-    
+
     if (resignButton) {
         resignButton.addEventListener('click', () => {
             if (gameState.gameOver || isReplayMode || !gameId) return;
@@ -249,33 +267,33 @@ document.addEventListener('DOMContentLoaded', () => {
             isDroppingPiece = null;
             clearHikoroHighlights();
 
-            replayGameTree = buildReplayTree(kifuText); 
+            replayGameTree = buildReplayTree(kifuText);
             if (!replayGameTree) {
                  alert("Failed to build replay tree from Kifu.");
-                 return; 
+                 return;
             }
 
-            currentReplayNode = replayGameTree; 
+            currentReplayNode = replayGameTree;
             isReplayMode = true;
-            isSinglePlayer = false; 
+            isSinglePlayer = false;
 
             lobbyElement.style.display = 'none';
             hikoroGameWrapper.style.display = 'flex';
             turnIndicatorContainer.style.display = 'block';
 
-            gameControls.style.display = 'flex'; 
-            replayControls.style.display = 'flex'; 
-            postGameControls.style.display = 'none'; 
+            gameControls.style.display = 'flex';
+            replayControls.style.display = 'flex';
+            postGameControls.style.display = 'none';
 
-            myColor = 'white'; 
+            myColor = 'white';
             renderHikoroNotationMarkers();
-            displayReplayState(currentReplayNode); 
+            displayReplayState(currentReplayNode);
         });
     }
 
     replayFirstBtn.addEventListener('click', () => {
         if (!isReplayMode || !replayGameTree) return;
-        displayReplayState(replayGameTree); 
+        displayReplayState(replayGameTree);
     });
 
     replayPrevBtn.addEventListener('click', () => {
@@ -392,12 +410,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('site-notice').hidden = true;
         gameId = initialGameState.id;
         sessionStorage.setItem('hikoro-active-room', gameId);
-        gameState = initialGameState; 
+        gameState = initialGameState;
         isReplayMode = false;
         isSinglePlayer = initialGameState.isSinglePlayer;
 
         if (isSinglePlayer) {
-            myColor = 'white'; 
+            myColor = 'white';
         } else {
             myColor = initialGameState.players.white === socket.id ? 'white' : 'black';
         }
@@ -409,8 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
         postGameControls.style.display = 'none';
 
         hikoroGameWrapper.style.display = 'flex';
-        renderHikoroNotationMarkers(); 
-        updateLocalState(initialGameState); 
+        renderHikoroNotationMarkers();
+        updateLocalState(initialGameState);
     }
 
     function updateLocalState(newGameState) {
@@ -440,12 +458,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMoveHistory(gameState.moveList);
 
         if (newGameState.gameOver) {
-            hikoroBoardElement.style.pointerEvents = 'none'; 
+            hikoroBoardElement.style.pointerEvents = 'none';
         } else {
-            hikoroBoardElement.style.pointerEvents = 'auto'; 
+            hikoroBoardElement.style.pointerEvents = 'auto';
         }
 
-        updateTurnIndicator(); 
+        updateTurnIndicator();
     }
 
     function renderHikoroNotationMarkers() {
@@ -490,12 +508,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMoveHistory(moves) {
         if (isReplayMode) {
-            renderReplayMoveHistory(); 
+            renderReplayMoveHistory();
             return;
         }
 
         if (!moveHistoryElement) return;
-        moveHistoryElement.innerHTML = ''; 
+        moveHistoryElement.innerHTML = '';
         if (!moves) return;
 
         moves.forEach(moveString => {
@@ -508,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHikoroBoard() {
         const focused=document.activeElement?.closest('#game-board .square');const focusPoint=focused?{x:focused.dataset.logicalX,y:focused.dataset.logicalY}:null;
-        hikoroBoardElement.innerHTML = ''; 
+        hikoroBoardElement.innerHTML = '';
         if (!gameState || !Array.isArray(gameState.boardState) || gameState.boardState.length === 0) {
             return;
         }
@@ -525,10 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     displayX = HIKORO_BOARD_WIDTH - 1 - x;
                 }
 
-                square.dataset.logicalX = x; 
+                square.dataset.logicalX = x;
                 square.dataset.logicalY = y;
-                square.style.gridRowStart = displayY + 1;    
-                square.style.gridColumnStart = displayX + 1; 
+                square.style.gridRowStart = displayY + 1;
+                square.style.gridColumnStart = displayX + 1;
 
                 if (gameState.lastMove) {
                     if (gameState.lastMove.from && x === gameState.lastMove.from.x && y === gameState.lastMove.from.y) {
@@ -549,10 +567,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     square.classList.add('palace-square');
                 }
 
-                const isBoardValid = typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x, y) : true; 
+                const isBoardValid = typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x, y) : true;
 
                 if (!isBoardValid) {
-                    square.classList.add('invalid'); 
+                    square.classList.add('invalid');
                 } else {
                     square.setAttribute('role','button');square.tabIndex=focusPoint?Number(focusPoint.x)==x&&Number(focusPoint.y)==y?0:-1:x===3&&y===0?0:-1;
                     const occupant=gameState.boardState[y]?.[x];square.setAttribute('aria-label',String.fromCharCode(65+x)+(y+1)+': '+(occupant?occupant.color+' '+occupant.type:'empty'));
@@ -566,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const clickedSquare = event.currentTarget;
                         const logicalX = parseInt(clickedSquare.dataset.logicalX);
                         const logicalY = parseInt(clickedSquare.dataset.logicalY);
-                        onSquareClick(logicalX, logicalY); 
+                        onSquareClick(logicalX, logicalY);
                     });
                 }
 
@@ -581,11 +599,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     spriteImg.alt = `${piece.color} ${piece.type}`;
                     HikoroArtwork.orient(spriteImg,piece.color,bottomOwner());
 
-                    // Hikoro uses shogi-style orientation to show ownership; the shared artwork needs no numeric badge.
+                    // Hikoro uses shogi-style orientation to show ownership; no numeric badge is needed.
                     pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
                 }
-                hikoroBoardElement.appendChild(square); 
+                hikoroBoardElement.appendChild(square);
             }
         }
         hikoroBoardElement.append(handRoots.white,handRoots.black);if(focusPoint)hikoroBoardElement.querySelector('.square[tabindex="0"]')?.focus({preventScroll:true});
@@ -593,9 +611,9 @@ document.addEventListener('DOMContentLoaded', () => {
              const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
              if (bonusPiece) {
                  const validBonusMoves = gameLogic.getValidMovesForPiece(bonusPiece, selectedSquare.x, selectedSquare.y, gameState.boardState, true).filter(m => !m.isAttack);
-                 drawHikoroHighlights(validBonusMoves); 
+                 drawHikoroHighlights(validBonusMoves);
                  const selSquareEl = document.querySelector(`#game-board .square[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`);
-                if(selSquareEl) selSquareEl.classList.add('selected'); 
+                if(selSquareEl) selSquareEl.classList.add('selected');
              }
          } else if (selectedSquare || isDroppingPiece) {
               if (selectedSquare) {
@@ -642,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!turnIndicator || !winnerText) return;
 
         if (gameState.gameOver && !isReplayMode) {
-            turnIndicator.textContent = ''; 
+            turnIndicator.textContent = '';
             if (gameState.winner) {
                 const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
                 winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
@@ -651,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            winnerText.textContent = ''; 
+            winnerText.textContent = '';
             if (isReplayMode) {
                 turnIndicator.textContent = currentReplayNode?.gameState?.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else if (isSinglePlayer) {
@@ -683,10 +701,298 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
         HikoroArtwork.orient(clone.firstElementChild,owner,bottomOwner());
 
-        clone.style.position = 'absolute'; 
+        clone.style.position = 'absolute';
         clone.style.top = `${fromTop}px`;
         clone.style.left = `${fromLeft}px`;
-        clone.style.width = `${fromRect.width}px…3107 tokens truncated…      if (wasDrop) return `${pieceAbbr}*${coord}`;
+        clone.style.width = `${fromRect.width}px`;
+        clone.style.height = `${fromRect.height}px`;
+        clone.style.zIndex = '100';
+        clone.style.transition = `top ${ANIMATION_DURATION}ms ease-out, left ${ANIMATION_DURATION}ms ease-out`;
+
+        hikoroBoardElement.appendChild(clone);
+        void clone.offsetWidth;
+
+        clone.style.top = `${toTop}px`;
+        clone.style.left = `${toLeft}px`;
+
+        setTimeout(() => {
+             if (clone.parentNode === hikoroBoardElement) {
+                clone.remove();
+             }
+        }, ANIMATION_DURATION);
+    }
+
+    function animateHikoroDrop(to, pieceImgSrc, owner) {
+        const toSquareEl = document.querySelector(`#game-board .square[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
+        if (!toSquareEl || !hikoroBoardElement) return;
+
+        const boardRect = hikoroBoardElement.getBoundingClientRect();
+        const toRect = toSquareEl.getBoundingClientRect();
+
+        const toTop = toRect.top - boardRect.top;
+        const toLeft = toRect.left - boardRect.left;
+
+        const clone = document.createElement('div');
+        clone.className = 'piece flying-piece drop';
+        clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
+        HikoroArtwork.orient(clone.firstElementChild,owner,bottomOwner());
+
+        clone.style.position = 'absolute';
+        clone.style.top = `${toTop - toRect.height}px`;
+        clone.style.left = `${toLeft}px`;
+        clone.style.width = `${toRect.width}px`;
+        clone.style.height = `${toRect.height}px`;
+        clone.style.zIndex = '100';
+        clone.style.opacity = '0';
+        clone.style.transition = `top ${ANIMATION_DURATION}ms ease-in, opacity ${ANIMATION_DURATION}ms ease-in`;
+
+        hikoroBoardElement.appendChild(clone);
+        void clone.offsetWidth;
+
+        clone.style.top = `${toTop}px`;
+        clone.style.opacity = '1';
+
+        setTimeout(() => {
+             if (clone.parentNode === hikoroBoardElement) {
+                clone.remove();
+            }
+        }, ANIMATION_DURATION);
+    }
+
+    function clearHikoroHighlights() {
+        document.querySelectorAll('#game-board .square.selected, #game-board .square.preview-selected').forEach(s => {
+            s.classList.remove('selected', 'preview-selected');
+        });
+        document.querySelectorAll('#game-board .move-plate').forEach(p => p.remove());
+         document.querySelectorAll('.captured-piece.selected-drop').forEach(p => p.classList.remove('selected-drop'));
+    }
+
+    function drawHikoroHighlights(moves) {
+        clearHikoroHighlights();
+
+        const elementToHighlight = selectedSquare
+            ? document.querySelector(`#game-board .square[data-logical-x='${selectedSquare.x}'][data-logical-y='${selectedSquare.y}']`)
+            : document.querySelector('.captured-piece.selected-drop');
+
+        if (!selectedSquare && !isDroppingPiece) return;
+
+        const isPlayerTurn = (isReplayMode) ||
+                             (isSinglePlayer) ||
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+
+         if (selectedSquare && elementToHighlight) {
+             elementToHighlight.classList.add(isPlayerTurn ? 'selected' : 'preview-selected');
+         }
+
+         const bonusInfo = isReplayMode ? currentReplayNode?.gameState?.bonusMoveInfo : gameState.bonusMoveInfo;
+         let movesToDraw = moves;
+         if (bonusInfo && selectedSquare && (selectedSquare.x === bonusInfo.pieceX && selectedSquare.y === bonusInfo.pieceY)) {
+             movesToDraw = moves.filter(move => !move.isAttack);
+         } else if (bonusInfo && (!selectedSquare || selectedSquare.x !== bonusInfo.pieceX || selectedSquare.y !== bonusInfo.pieceY)) {
+              movesToDraw = [];
+         }
+
+        movesToDraw.forEach(move => {
+            const moveSquare = document.querySelector(`#game-board .square[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
+            if (moveSquare) {
+                const plate = document.createElement('div');
+                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',(window.I18n?.original(moveSquare,'aria-label')||moveSquare.getAttribute('aria-label'))+'; legal '+(move.isAttack?'capture':'move'));
+                if (!isPlayerTurn) plate.classList.add('preview');
+                if (move.isAttack) plate.classList.add('attack');
+                if (isDroppingPiece) plate.classList.add('drop');
+
+                moveSquare.appendChild(plate);
+            }
+        });
+    }
+
+    function highlightHikoroDropSquares() {
+        document.querySelectorAll('#game-board .square.selected, #game-board .square.preview-selected').forEach(s => {
+            s.classList.remove('selected', 'preview-selected');
+        });
+        document.querySelectorAll('#game-board .move-plate').forEach(p => p.remove());
+
+        const isPlayerTurn = (isReplayMode) ||
+                             (isSinglePlayer) ||
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+
+        for (let y = 0; y < HIKORO_BOARD_HEIGHT; y++) {
+            for (let x = 0; x < HIKORO_BOARD_WIDTH; x++) {
+
+                const isBoardValid = typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x, y) : true;
+
+                if (gameState.boardState && gameState.boardState[y]?.[x] === null && isBoardValid) {
+
+                    const square = document.querySelector(`#game-board .square[data-logical-x='${x}'][data-logical-y='${y}']`);
+                    if (square) {
+                        const plate = document.createElement('div');
+                        plate.classList.add('move-plate', 'drop');
+                        if (!isPlayerTurn) plate.classList.add('preview');
+                        square.appendChild(plate);
+                    }
+                }
+            }
+        }
+    }
+
+    function handleHikoroClick(x, y) {
+        if (isReplayMode) {
+            handleReplaySquareClick(x, y);
+            return;
+        }
+        if (gameState.gameOver || !gameState.boardState) return;
+
+        const isPlayerTurn = (isSinglePlayer) ||
+                             (!isSinglePlayer && ((myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn)));
+
+        if (!isPlayerTurn) return;
+
+        if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
+            const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
+            if (piece) {
+                const spriteType = piece.type;
+                const pieceImgSrc = HikoroArtwork.sprite(spriteType);
+
+                const isBonusActive = !!gameState.bonusMoveInfo && gameState.bonusMoveInfo.pieceX === selectedSquare.x && gameState.bonusMoveInfo.pieceY === selectedSquare.y;
+                const validMoves = typeof gameLogic !== 'undefined' ? gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, isBonusActive) : [];
+                const isValidTarget = validMoves.some(m => m.x === x && m.y === y);
+
+                if (isValidTarget) {
+                    animateHikoroMove(selectedSquare, { x, y }, pieceImgSrc, piece.color);
+                    socket.emit('makeGameMove', {
+                        gameId,
+                        move: { type: 'board', from: selectedSquare, to: { x, y } }
+                    });
+                }
+            }
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHikoroHighlights();
+            return;
+        }
+
+        if (isDroppingPiece) {
+             if (isDroppingPiece.type === 'lupa' || isDroppingPiece.type === 'prince') {
+                 isDroppingPiece = null;
+                 clearHikoroHighlights();
+                 return;
+             }
+
+             if (gameState.boardState[y]?.[x] === null && (typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x,y) : true) ) {
+                const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
+                const spriteType = isDroppingPiece.type;
+                const pieceImgSrc = HikoroArtwork.sprite(spriteType);
+                animateHikoroDrop({ x, y }, pieceImgSrc, dropColor);
+
+                socket.emit('makeGameMove', {
+                    gameId,
+                    move: { type: 'drop', piece: isDroppingPiece, to: { x, y } }
+                });
+             }
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHikoroHighlights();
+            return;
+        }
+
+        const piece = gameState.boardState[y]?.[x];
+        if (piece) {
+            let canSelectPiece = isSinglePlayer ? true : piece.color === myColor;
+
+             if (gameState.bonusMoveInfo &&
+                 (piece.color !== (gameState.isWhiteTurn ? 'white' : 'black') ||
+                  x !== gameState.bonusMoveInfo.pieceX || y !== gameState.bonusMoveInfo.pieceY)) {
+                  canSelectPiece = false;
+             }
+
+            if (canSelectPiece) {
+                if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
+                    selectedSquare = null;
+                    isDroppingPiece = null;
+                    clearHikoroHighlights();
+                } else {
+                    selectedSquare = { x, y };
+                    isDroppingPiece = null;
+                    socket.emit('getValidMoves', {
+                        gameId,
+                        data: { square: { x, y } }
+                    });
+                }
+            } else if (piece.color !== (gameState.isWhiteTurn ? 'white' : 'black')) {
+                 selectedSquare = null; isDroppingPiece = null; clearHikoroHighlights();
+            }
+        } else {
+            selectedSquare = null;
+            isDroppingPiece = null;
+            clearHikoroHighlights();
+        }
+    }
+
+    function handleHikoroCapturedClick(pieceData, handColor, clickedElement) {
+        if (isReplayMode) {
+            handleReplayCapturedClick(pieceData, handColor, clickedElement);
+            return;
+        }
+        if (gameState.gameOver || gameState.bonusMoveInfo) return;
+
+        const activeColor = gameState.isWhiteTurn ? 'white' : 'black';
+        if (handColor !== activeColor) return;
+
+        const isPlayerAllowedToMove = (isSinglePlayer) || (!isSinglePlayer && myColor === activeColor);
+        if (!isPlayerAllowedToMove) return;
+
+        if (pieceData.type === 'lupa' || pieceData.type === 'prince') return;
+
+        if (isDroppingPiece && isDroppingPiece.type === pieceData.type) {
+            isDroppingPiece = null;
+            selectedSquare = null;
+            clearHikoroHighlights();
+            clickedElement.classList.remove('selected-drop');
+            return;
+        }
+
+        selectedSquare = null;
+        isDroppingPiece = { type: pieceData.type };
+        clearHikoroHighlights();
+        document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        clickedElement.classList.add('selected-drop');
+        highlightHikoroDropSquares();
+    }
+
+    onSquareClick = handleHikoroClick;
+    onCapturedClick = handleHikoroCapturedClick;
+
+    let replayGameTree = null;
+    let currentReplayNode = null;
+    let flatMoveList = [];
+    let currentMoveIndex = -1;
+    let awaitingBonusMove = null;
+
+    function toAlgebraic(x, y) {
+         const file = String.fromCharCode('a'.charCodeAt(0) + x);
+         const rank = y + 1;
+         return `${file}${rank}`;
+     }
+
+    function fromAlgebraic(alg) {
+        if (!alg || alg.length < 2) return null;
+        const file = alg.charAt(0);
+        const rank = parseInt(alg.slice(1), 10);
+        if (isNaN(rank) || file < 'a' || file > 'j' || rank < 1 || rank > 16) {
+             console.warn("Invalid algebraic notation:", alg);
+             return null;
+        }
+        const x = file.charCodeAt(0) - 'a'.charCodeAt(0);
+        const y = rank - 1;
+        return { x, y };
+    }
+
+    function generateServerNotation(piece, to, wasCapture, wasDrop) {
+        if (typeof gameLogic === 'undefined' || !gameLogic.pieceNotation) return "?";
+        const pieceAbbr = gameLogic.pieceNotation[piece.type] || '?';
+        const coord = toAlgebraic(to.x, to.y);
+
+        if (wasDrop) return `${pieceAbbr}*${coord}`;
         if (wasCapture) return `${pieceAbbr}x${coord}`;
         return `${pieceAbbr}${coord}`;
     }
@@ -697,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const line of lines) {
             const lineMatch = line.trim().match(/^(\d+)\.(?:\.\.)?\s*(.*)$/);
             if (lineMatch && lineMatch[2]) {
-                const moveParts = lineMatch[2].trim().split(/\s+/); 
+                const moveParts = lineMatch[2].trim().split(/\s+/);
                 moves.push(...moveParts.filter(part => part.length > 0));
             }
         }
@@ -722,14 +1028,14 @@ document.addEventListener('DOMContentLoaded', () => {
         match = notation.match(/^([A-Z][A-Za-z]*)(x?)([a-j](?:[1-9]|1[0-6]))$/);
         if (match) {
             const pieceAbbr = match[1];
-            const isCaptureNotation = match[2] === 'x'; 
+            const isCaptureNotation = match[2] === 'x';
             const algTo = match[3];
             const pieceType = gameLogic.notationToPieceType[pieceAbbr];
             const to = fromAlgebraic(algTo);
 
             if (!pieceType || !to) return null;
 
-            let possibleMoves = []; 
+            let possibleMoves = [];
 
             for (let y = 0; y < gameLogic.BOARD_HEIGHT; y++) {
                 for (let x = 0; x < gameLogic.BOARD_WIDTH; x++) {
@@ -739,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, boardState, false);
                             const matchingMove = validMoves.find(m => m.x === to.x && m.y === to.y);
                             if (matchingMove) {
-                                possibleMoves.push({ type: 'board', from: { x, y }, to: to, isAttack: matchingMove.isAttack }); 
+                                possibleMoves.push({ type: 'board', from: { x, y }, to: to, isAttack: matchingMove.isAttack });
                             }
                         } catch (e) {
                             console.error(`Error checking valid moves for ${piece.type} at ${toAlgebraic(x,y)}:`, e);
@@ -748,8 +1054,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (possibleMoves.length === 1) return possibleMoves[0]; 
-            else if (possibleMoves.length > 1) return possibleMoves[0]; 
+            if (possibleMoves.length === 1) return possibleMoves[0];
+            else if (possibleMoves.length > 1) return possibleMoves[0];
             else {
                 const promotingTypes = [];
                 if (pieceType === 'chair') promotingTypes.push('sult', 'pawn');
@@ -789,7 +1095,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (possibleMoves.length === 1) return possibleMoves[0];
                 else if (possibleMoves.length > 1) return possibleMoves[0];
-                else return null; 
+                else return null;
             }
         }
         return null;
@@ -797,40 +1103,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
      function applyMoveToState(oldGameState, moveObj) {
          if (!moveObj) return oldGameState;
-         
+
          let newGameState = typeof structuredClone === 'function'
              ? structuredClone(oldGameState)
              : JSON.parse(JSON.stringify(oldGameState));
 
          let { boardState, whiteCaptured, blackCaptured, isWhiteTurn } = newGameState;
          const color = isWhiteTurn ? 'white' : 'black';
-         let pieceMovedOriginal = null; 
-         let wasCapture = false; 
+         let pieceMovedOriginal = null;
+         let wasCapture = false;
 
          if (moveObj.type === 'drop') {
-             const { piece, to } = moveObj; 
-             const droppedPiece = { type: piece.type, color: color }; 
+             const { piece, to } = moveObj;
+             const droppedPiece = { type: piece.type, color: color };
 
-             boardState[to.y][to.x] = droppedPiece; 
+             boardState[to.y][to.x] = droppedPiece;
 
              const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
              const pieceIndex = hand.findIndex(p => p.type === piece.type);
              if (pieceIndex > -1) hand.splice(pieceIndex, 1);
-             pieceMovedOriginal = droppedPiece; 
-             newGameState.lastMove = { from: null, to: moveObj.to }; 
+             pieceMovedOriginal = droppedPiece;
+             newGameState.lastMove = { from: null, to: moveObj.to };
 
          } else if (moveObj.type === 'board') {
              const { from, to } = moveObj;
              const piece = boardState[from.y]?.[from.x];
 
-             pieceMovedOriginal = {...piece}; 
+             pieceMovedOriginal = {...piece};
              const targetPiece = boardState[to.y]?.[to.x];
              wasCapture = targetPiece !== null;
 
              if (piece.type === 'jotu') {
                  const dx = Math.sign(to.x - from.x);
                  const dy = Math.sign(to.y - from.y);
-                 if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) { 
+                 if (Math.abs(to.x - from.x) > 1 || Math.abs(to.y - from.y) > 1) {
                      let cx = from.x + dx, cy = from.y + dy;
                      while (cx !== to.x || cy !== to.y) {
                          if (cy >= 0 && cy < HIKORO_BOARD_HEIGHT && cx >= 0 && cx < HIKORO_BOARD_WIDTH) {
@@ -838,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (iPiece && iPiece.color === color && iPiece.type !== 'greathorsegeneral' && iPiece.type !== 'cthulhu') {
                                 const hand = isWhiteTurn ? whiteCaptured : blackCaptured;
                                 if (hand.length < 6) hand.push({ type: iPiece.type });
-                                boardState[cy][cx] = null; 
+                                boardState[cy][cx] = null;
                             }
                          }
                          cx += dx; cy += dy;
@@ -849,10 +1155,10 @@ document.addEventListener('DOMContentLoaded', () => {
              if (targetPiece) {
                  if (targetPiece.type === 'prince') {
                      if (targetPiece.color === 'white') newGameState.whitePrinceOnBoard = false; else newGameState.blackPrinceOnBoard = false;
-                 } else if (targetPiece.type !== 'lupa') { 
+                 } else if (targetPiece.type !== 'lupa') {
                      const indestructible = ['greathorsegeneral', 'cthulhu', 'mermaid'];
                      let handPieceType = targetPiece.type;
-                     let targetHand = isWhiteTurn ? whiteCaptured : blackCaptured; 
+                     let targetHand = isWhiteTurn ? whiteCaptured : blackCaptured;
 
                      if (targetPiece.type === 'neptune') {
                          handPieceType = 'mermaid';
@@ -865,10 +1171,10 @@ document.addEventListener('DOMContentLoaded', () => {
                  }
              }
 
-             const movingPieceObject = boardState[from.y][from.x]; 
+             const movingPieceObject = boardState[from.y][from.x];
              boardState[to.y][to.x] = movingPieceObject;
              boardState[from.y][from.x] = null;
-             newGameState.lastMove = { from: moveObj.from, to: moveObj.to }; 
+             newGameState.lastMove = { from: moveObj.from, to: moveObj.to };
 
               const pieceNowAtTarget = boardState[to.y]?.[to.x];
               if (pieceNowAtTarget) {
@@ -891,13 +1197,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
          }
 
-         const isBonusContinuation = !!oldGameState.bonusMoveInfo; 
+         const isBonusContinuation = !!oldGameState.bonusMoveInfo;
 
          let triggersBonus = false;
          if (pieceMovedOriginal && !isBonusContinuation && moveObj.type === 'board') {
              const isCopeBonusTrigger = pieceMovedOriginal.type === 'cope' && wasCapture;
              const isGHGBonusTrigger = (pieceMovedOriginal.type === 'greathorsegeneral') && !wasCapture;
-             const pieceAtTarget = boardState[moveObj.to.y]?.[moveObj.to.x]; 
+             const pieceAtTarget = boardState[moveObj.to.y]?.[moveObj.to.x];
              const isCthulhuBonusTrigger = (pieceAtTarget?.type === 'cthulhu') && !wasCapture;
 
              triggersBonus = isCopeBonusTrigger || isGHGBonusTrigger || isCthulhuBonusTrigger;
@@ -905,10 +1211,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
          if (triggersBonus) {
              newGameState.bonusMoveInfo = { pieceX: moveObj.to.x, pieceY: moveObj.to.y };
-             newGameState.isWhiteTurn = oldGameState.isWhiteTurn; 
-         } else { 
-             newGameState.bonusMoveInfo = null; 
-             newGameState.isWhiteTurn = !oldGameState.isWhiteTurn; 
+             newGameState.isWhiteTurn = oldGameState.isWhiteTurn;
+         } else {
+             newGameState.bonusMoveInfo = null;
+             newGameState.isWhiteTurn = !oldGameState.isWhiteTurn;
              newGameState.turnCount++;
          }
 
@@ -941,12 +1247,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
          for (let i = 0; i < moveNotations.length; i++) {
              const notation = moveNotations[i];
-             const currentGameState = currentNode.gameState; 
+             const currentGameState = currentNode.gameState;
              const moveObj = parseNotation(notation, currentGameState.boardState, currentGameState.isWhiteTurn);
 
              if (!moveObj) {
                  alert(`Error parsing move "${notation}". Replay might be incomplete.`);
-                 break; 
+                 break;
              }
 
              const newGameState = applyMoveToState(currentGameState, moveObj);
@@ -957,14 +1263,14 @@ document.addEventListener('DOMContentLoaded', () => {
                  isBonusSecondMove: !!currentGameState.bonusMoveInfo && !newGameState.bonusMoveInfo
              };
 
-             currentNode.children.push(newNode); 
-             currentNode = newNode; 
+             currentNode.children.push(newNode);
+             currentNode = newNode;
          }
 
          flatMoveList = [rootNode];
          let node = rootNode;
          while(node.children.length > 0) {
-              node = node.children[0]; 
+              node = node.children[0];
               flatMoveList.push(node);
          }
 
@@ -973,7 +1279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderReplayMoveHistory() {
         if (!moveHistoryElement) return;
-        moveHistoryElement.innerHTML = ''; 
+        moveHistoryElement.innerHTML = '';
 
         function renderNodeRecursive(node, parentDOMElement, depth) {
             if (!node || node === replayGameTree) {
@@ -983,33 +1289,33 @@ document.addEventListener('DOMContentLoaded', () => {
                      parentDOMElement.appendChild(mainLineContainer);
 
                      node.children.forEach((child) => {
-                         renderNodeRecursive(child, mainLineContainer, 0); 
+                         renderNodeRecursive(child, mainLineContainer, 0);
                      });
                  }
                 return;
             }
 
-            const moveWrapper = document.createElement('div'); 
+            const moveWrapper = document.createElement('div');
             moveWrapper.classList.add('move-wrapper');
             moveWrapper.style.marginLeft = `${depth * 15}px`;
 
-            const moveEl = document.createElement('span'); 
+            const moveEl = document.createElement('span');
             moveEl.classList.add('move-node');
 
             let moveText = node.moveNotation;
-            const stateBefore = node.parent.gameState; 
+            const stateBefore = node.parent.gameState;
             const turnNum = Math.floor(stateBefore.turnCount / 2) + 1;
             const wasWhiteMove = stateBefore.isWhiteTurn;
 
              if (wasWhiteMove) moveText = `${turnNum}. ${moveText}`;
-             else moveText = `... ${moveText}`; 
+             else moveText = `... ${moveText}`;
 
              if (node.isBonusSecondMove) moveText = `> ${node.moveNotation}`;
 
             const isBranchStartNode = node.parent && node.parent.children.length > 1 && node.parent.children[0] !== node;
-            if (isBranchStartNode && !node.isBonusSecondMove) moveText = `( ${moveText}`; 
+            if (isBranchStartNode && !node.isBonusSecondMove) moveText = `( ${moveText}`;
 
-            moveEl.textContent = moveText + " "; 
+            moveEl.textContent = moveText + " ";
 
             if (node === currentReplayNode) {
                 moveEl.classList.add('active-move');
@@ -1017,33 +1323,33 @@ document.addEventListener('DOMContentLoaded', () => {
                      if (node === currentReplayNode) {
                          moveWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                      }
-                 }, 50); 
+                 }, 50);
             }
 
             moveEl.addEventListener('click', () => displayReplayState(node));
-            moveWrapper.appendChild(moveEl); 
-            parentDOMElement.appendChild(moveWrapper); 
+            moveWrapper.appendChild(moveEl);
+            parentDOMElement.appendChild(moveWrapper);
 
             if (node.children.length > 0) {
-                 let containerForChildren = moveWrapper; 
+                 let containerForChildren = moveWrapper;
                  if (node.children.length > 1) {
                      containerForChildren = document.createElement('div');
                      containerForChildren.classList.add('move-line-continuation');
                      moveWrapper.appendChild(containerForChildren);
                  }
 
-                 renderNodeRecursive(node.children[0], containerForChildren, depth); 
+                 renderNodeRecursive(node.children[0], containerForChildren, depth);
                  for (let i = 1; i < node.children.length; i++) {
-                     renderNodeRecursive(node.children[i], containerForChildren, depth + 1); 
+                     renderNodeRecursive(node.children[i], containerForChildren, depth + 1);
                  }
             }
         }
 
-        renderNodeRecursive(replayGameTree, moveHistoryElement, 0); 
+        renderNodeRecursive(replayGameTree, moveHistoryElement, 0);
     }
 
     function handleReplaySquareClick(x, y) {
-        if (!currentReplayNode) return; 
+        if (!currentReplayNode) return;
         const currentGameState = currentReplayNode.gameState;
 
         if (currentGameState.bonusMoveInfo) {
@@ -1052,18 +1358,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const piece = currentGameState.boardState[bonusPieceY]?.[bonusPieceX];
 
             if (!piece) {
-                clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null; 
-                 currentReplayNode.gameState.bonusMoveInfo = null; 
-                 updateTurnIndicator(); 
+                clearHikoroHighlights(); selectedSquare = null; awaitingBonusMove = null;
+                 currentReplayNode.gameState.bonusMoveInfo = null;
+                 updateTurnIndicator();
                 return;
             }
             if (!selectedSquare || selectedSquare.x !== bonusPieceX || selectedSquare.y !== bonusPieceY) {
-                 selectedSquare = { x: bonusPieceX, y: bonusPieceY }; 
+                 selectedSquare = { x: bonusPieceX, y: bonusPieceY };
                  isDroppingPiece = null;
                  const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true).filter(m => !m.isAttack);
                  clearHikoroHighlights();
                  drawHikoroHighlights(validBonusMoves);
-                 return; 
+                 return;
             }
 
             const validBonusMoves = gameLogic.getValidMovesForPiece(piece, bonusPieceX, bonusPieceY, currentGameState.boardState, true).filter(m => !m.isAttack);
@@ -1078,7 +1384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     child.moveObj?.type === 'board' &&
                     child.moveObj.from.x === moveObj.from.x && child.moveObj.from.y === moveObj.from.y &&
                     child.moveObj.to.x === moveObj.to.x && child.moveObj.to.y === moveObj.to.y &&
-                    child.isBonusSecondMove 
+                    child.isBonusSecondMove
                 );
 
                 if (!existingNode) {
@@ -1086,19 +1392,19 @@ document.addEventListener('DOMContentLoaded', () => {
                          moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
                          parent: currentReplayNode, children: [], isBonusSecondMove: true
                      };
-                     currentReplayNode.children.push(existingNode); 
-                } 
+                     currentReplayNode.children.push(existingNode);
+                }
 
-                awaitingBonusMove = null; 
+                awaitingBonusMove = null;
                 selectedSquare = null;
                 isDroppingPiece = null;
                 clearHikoroHighlights();
-                displayReplayState(existingNode); 
+                displayReplayState(existingNode);
             } else {
                 clearHikoroHighlights();
                 drawHikoroHighlights(validBonusMoves);
             }
-            return; 
+            return;
         }
 
         if (selectedSquare && (selectedSquare.x !== x || selectedSquare.y !== y)) {
@@ -1121,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      child.moveObj?.type === 'board' &&
                      child.moveObj.from.x === moveObj.from.x && child.moveObj.from.y === moveObj.from.y &&
                      child.moveObj.to.x === moveObj.to.x && child.moveObj.to.y === moveObj.to.y &&
-                     !child.isBonusSecondMove 
+                     !child.isBonusSecondMove
                  );
 
                  if (!existingNode) {
@@ -1129,25 +1435,25 @@ document.addEventListener('DOMContentLoaded', () => {
                          moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
                          parent: currentReplayNode, children: [], isBonusSecondMove: false
                      };
-                     currentReplayNode.children.push(existingNode); 
-                 } 
+                     currentReplayNode.children.push(existingNode);
+                 }
 
                 if (nextGameState.bonusMoveInfo) {
-                    awaitingBonusMove = { from: to, pieceType: piece.type }; 
-                    selectedSquare = { x: to.x, y: to.y }; 
-                    displayReplayState(existingNode); 
+                    awaitingBonusMove = { from: to, pieceType: piece.type };
+                    selectedSquare = { x: to.x, y: to.y };
+                    displayReplayState(existingNode);
                 } else {
                     awaitingBonusMove = null;
                     selectedSquare = null;
                     isDroppingPiece = null;
                     clearHikoroHighlights();
-                    displayReplayState(existingNode); 
+                    displayReplayState(existingNode);
                 }
             } else {
                 clearHikoroHighlights();
                 selectedSquare = null;
             }
-            return; 
+            return;
         }
 
         if (isDroppingPiece) {
@@ -1172,20 +1478,20 @@ document.addEventListener('DOMContentLoaded', () => {
                          moveNotation: notationString, moveObj: moveObj, gameState: nextGameState,
                          parent: currentReplayNode, children: [], isBonusSecondMove: false
                      };
-                     currentReplayNode.children.push(existingNode); 
+                     currentReplayNode.children.push(existingNode);
                  }
 
                 awaitingBonusMove = null;
                 selectedSquare = null;
                 isDroppingPiece = null;
                 clearHikoroHighlights();
-                displayReplayState(existingNode); 
+                displayReplayState(existingNode);
 
             } else {
                 clearHikoroHighlights();
                 isDroppingPiece = null;
             }
-            return; 
+            return;
         }
 
         const piece = currentGameState.boardState[y]?.[x];
@@ -1193,29 +1499,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const canSelectPiece = piece.color === (currentGameState.isWhiteTurn ? 'white' : 'black');
             if (canSelectPiece) {
                 if (selectedSquare && selectedSquare.x === x && selectedSquare.y === y) {
-                    selectedSquare = null; 
+                    selectedSquare = null;
                     clearHikoroHighlights();
                 } else {
                     selectedSquare = { x, y };
-                    isDroppingPiece = null; 
+                    isDroppingPiece = null;
                     const validMoves = gameLogic.getValidMovesForPiece(piece, x, y, currentGameState.boardState, false);
                     clearHikoroHighlights();
                     drawHikoroHighlights(validMoves);
                     const selSquareEl = document.querySelector(`#game-board .square[data-logical-x='${x}'][data-logical-y='${y}']`);
                     if(selSquareEl) selSquareEl.classList.add('selected');
                 }
-            } else { 
+            } else {
                  selectedSquare = null; isDroppingPiece = null; clearHikoroHighlights();
             }
-        } else { 
+        } else {
             selectedSquare = null;
             isDroppingPiece = null;
             clearHikoroHighlights();
         }
     }
 
-    function handleReplayCapturedClick(pieceData, handColor, clickedElement) { 
-        if (!currentReplayNode) return; 
+    function handleReplayCapturedClick(pieceData, handColor, clickedElement) {
+        if (!currentReplayNode) return;
         const currentGameState = currentReplayNode.gameState;
 
         if (currentGameState.bonusMoveInfo) return;
@@ -1227,47 +1533,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isDroppingPiece && isDroppingPiece.type === pieceData.type) {
             isDroppingPiece = null;
-            selectedSquare = null; 
-            clearHikoroHighlights(); 
-            clickedElement.classList.remove('selected-drop'); 
+            selectedSquare = null;
+            clearHikoroHighlights();
+            clickedElement.classList.remove('selected-drop');
             return;
         }
 
-        selectedSquare = null; 
-        isDroppingPiece = { type: pieceData.type }; 
-        clearHikoroHighlights(); 
+        selectedSquare = null;
+        isDroppingPiece = { type: pieceData.type };
+        clearHikoroHighlights();
         document.querySelectorAll('.captured-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
-        clickedElement.classList.add('selected-drop'); 
-        highlightHikoroDropSquares(); 
+        clickedElement.classList.add('selected-drop');
+        highlightHikoroDropSquares();
     }
 
     function displayReplayState(node) {
         window.SiteAudio?.setTheme('hikoro');
         if (!node) return;
-        currentReplayNode = node; 
+        currentReplayNode = node;
 
         let displayMoveNum = 0;
         let tempNode = node;
-        let pathNodes = []; 
+        let pathNodes = [];
         while (tempNode && tempNode.parent) {
-            pathNodes.unshift(tempNode); 
+            pathNodes.unshift(tempNode);
             tempNode = tempNode.parent;
         }
         pathNodes.forEach(n => { if (!n.isBonusSecondMove) displayMoveNum++; });
 
-        gameState = node.gameState; 
+        gameState = node.gameState;
 
-        renderHikoroBoard(); 
+        renderHikoroBoard();
         renderHikoroCaptured();
-        updateTurnIndicator(); 
-        renderReplayMoveHistory(); 
+        updateTurnIndicator();
+        renderReplayMoveHistory();
 
          let displayTotal = 0;
          flatMoveList.forEach(n => { if (n !== replayGameTree && !n.isBonusSecondMove) displayTotal++; });
         replayMoveNumber.textContent = `${displayMoveNum} / ${displayTotal}`;
 
-        replayFirstBtn.disabled = (node === replayGameTree); 
-        replayPrevBtn.disabled = (!node.parent); 
+        replayFirstBtn.disabled = (node === replayGameTree);
+        replayPrevBtn.disabled = (!node.parent);
         replayNextBtn.disabled = node.children.length === 0 && !gameState.bonusMoveInfo;
         replayLastBtn.disabled = (flatMoveList.length <= 1 || node === flatMoveList[flatMoveList.length - 1]);
 
@@ -1277,7 +1583,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
          if (gameState.bonusMoveInfo) {
              selectedSquare = { x: gameState.bonusMoveInfo.pieceX, y: gameState.bonusMoveInfo.pieceY };
-             isDroppingPiece = null; 
+             isDroppingPiece = null;
              const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
              if (bonusPiece) {
                  const validBonusMoves = gameLogic.getValidMovesForPiece(bonusPiece, selectedSquare.x, selectedSquare.y, gameState.boardState, true).filter(m => !m.isAttack);

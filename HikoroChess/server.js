@@ -14,8 +14,9 @@ const { installAccounts } = require('./accounts');
 const MatchRecord = require('./public/match-record');
 const Identity = require('./public/player-identity');
 const { createRoomStore } = require('./room-store');
+const { createSdsBotRunner } = require('./sds-bot-runner');
 
-function createServer({ accountOptions, roomStore = accountOptions?.clientFactory ? null : createRoomStore(accountOptions?.env || process.env) } = {}) {
+function createServer({ accountOptions, roomStore = accountOptions?.clientFactory ? null : createRoomStore(accountOptions?.env || process.env), sdsBotBudgetMs = 900, sdsBotWidth = 10 } = {}) {
     const app = express();
     const server = http.createServer(app);
     const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || 'https://hikorochess.org,https://www.hikorochess.org,http://localhost:3000').split(',').map(value=>value.trim()).filter(Boolean));
@@ -38,6 +39,8 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     const lobby = new Map();
     const sessions = new Map();
     const resultRetries = new Map();
+    const sdsBotJobs = new Set();
+    const sdsBotRunner = createSdsBotRunner();
     let effects = null, queue = Promise.resolve(), storageReady = !roomStore;
     const defer = action => effects ? effects.push(action) : action();
     const broadcast = (id, event, data) => { const copy = structuredClone(data); defer(() => io.to(id).emit(event, copy)); };
@@ -48,13 +51,18 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function restore(saved) {
         if(saved?.version !== 1 || !saved.game || !saved.session || !/^((game)|(sp))_[a-f0-9]{16}$/.test(saved.game.id)) throw Error('Invalid stored room');
         const game = structuredClone(saved.game), data = structuredClone(saved.session);
+        if (game.gameType === 'shodansho') {
+            game.botCount = Number.isInteger(game.botCount) ? game.botCount : 0;
+            if (game.botCount < 0 || game.botCount >= game.maxPlayers) throw Error('Invalid stored Sho Dan Sho bot seats');
+            game.humanCapacity = game.maxPlayers - game.botCount;
+        }
         const rules = {shavari:Shavari, hikoruka:Hikoruka, go:Go, academy:Academy}[game.gameType];
         let engine = rules ? (game.gameType==='go' ? rules.initial(game.boardSize) : rules.initial()) : game.gameType==='shodansho'&&!game.isSinglePlayer ? createSdsValidator(game.maxPlayers) : null;
         if(rules) for(const action of data.journal){ engine=rules.apply(engine,action); if(!engine)throw Error('Invalid stored action'); }
         if(game.gameType==='shodansho'&&engine)for(const action of game.sdsActions)if(!applySdsAction(engine,action))throw Error('Invalid stored garden action');
         if(game.gameOver&&rules&&!engine.result)engine.result={winner:game.winner==='draw'?0:Number(game.winner),reason:game.reason};
         games.set(game.id,game); sessions.set(game.id,{...data,engine});
-        if(!game.started&&!game.gameOver)lobby.set(game.id,{id:game.id,gameType:game.gameType,creatorName:game.name,timeControl:game.timeControl,currentPlayers:data.tokens.length,maxPlayers:game.maxPlayers,boardSize:game.boardSize});
+        if(!game.started&&!game.gameOver)lobby.set(game.id,{id:game.id,gameType:game.gameType,creatorName:game.name,timeControl:game.timeControl,currentPlayers:data.tokens.filter(Boolean).length,maxPlayers:game.maxPlayers,humanCapacity:game.humanCapacity||game.maxPlayers,botCount:game.botCount||0,boardSize:game.boardSize});
     }
     const ready = roomStore ? roomStore.load().then(rows=>{ for(const saved of rows){try{if(Date.now()-saved.game.lastActivity<=ttl(saved.game))restore(saved);}catch{console.error('A stored room could not be restored.');}} storageReady=true; }).catch(error=>{console.error('Online room storage could not load.');throw error;}) : Promise.resolve();
     ready.then(()=>{for(const game of games.values())if(game.gameOver)persistResult(game);}).catch(()=>{});
@@ -68,11 +76,13 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
                 const removed=[...before.keys()].filter(id=>!games.has(id));
                 if(roomStore&&(rows.length||removed.length))await roomStore.commit(rows,removed);
                 const committed=effects;effects=null;for(const effect of committed)effect();
+                return true;
             }catch{
                 effects=null;games.clear();sessions.clear();lobby.clear();for(const value of before.values())restore(JSON.parse(value));
                 for(const live of io.sockets.sockets.values()){for(const id of live.rooms)if(/^(game|sp)_/.test(id))live.leave(id);for(const game of games.values())if(member(game,live))live.join(game.id);}
                 if(socket)reply(socket,'errorMsg','Your action was not saved. The table is unchanged; please try again.');
                 else console.error('Online room update could not be saved.');
+                return false;
             }
         });queue=task.catch(()=>{});return task;
     }
@@ -95,7 +105,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function roster(game) {
         const ids=game.gameType==='hikoro'?[game.players.white,game.players.black]:game.players;
         broadcast(game.id,'tableStatus',{gameId:game.id,gameType:game.gameType,started:game.started,finished:game.gameOver,
-            durable:Boolean(roomStore),local:Boolean(game.isSinglePlayer),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>({name:profile.display_name,connected:Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))}))});
+            durable:Boolean(roomStore),local:Boolean(game.isSinglePlayer),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>{const bot=game.gameType==='shodansho'&&i>=(game.humanCapacity||game.maxPlayers);return{name:profile.display_name,bot,connected:bot||Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))};})});
     }
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
@@ -129,14 +139,15 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         const gameType = data.gameType || 'hikoro';
         if (!['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy'].includes(gameType)) return null;
         const maxPlayers = gameType === 'shodansho' ? Number(data.sdsPlayerCount || 2) : 2;
-        if (![2, 3, 4].includes(maxPlayers)) return null;
+        const botCount = gameType === 'shodansho' ? Number(data.sdsBotCount ?? 0) : 0;
+        if (![2, 3, 4].includes(maxPlayers) || !Number.isInteger(botCount) || botCount < 0 || botCount >= maxPlayers) return null;
         const tc = data.timeControl || { main: 300, byoyomiTime: 30 };
         if (![-1, 0, 300, 900, 1800, 3600].includes(tc.main) || ![0, 15, 30, 60].includes(tc.byoyomiTime)) return null;
         const timeControl = gameType !== 'hikoro' ? { main: -1, byoyomiTime: 0 }
             : { main: tc.main, byoyomiTime: tc.main === -1 ? 0 : tc.main === 0 && tc.byoyomiTime === 0 ? 15 : tc.byoyomiTime };
         const boardSize = Number(data.boardSize || 9);
         if (gameType === 'go' && ![9,13].includes(boardSize)) return null;
-        return { gameType, maxPlayers, timeControl, ...(gameType === 'go' ? {boardSize} : {}), name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
+        return { gameType, maxPlayers, botCount, humanCapacity:maxPlayers-botCount, timeControl, ...(gameType === 'go' ? {boardSize} : {}), name: String(data.playerName || 'Anonymous').trim().slice(0, 15) || 'Anonymous' };
     }
     function newGame(socket, config, single, announceSeat = true) {
         const id = `${single ? 'sp' : 'game'}_${crypto.randomBytes(8).toString('hex')}`;
@@ -155,6 +166,81 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         roster(game);
         return game;
     }
+    const SDS_BOT_ENGINE = 'Adaptive Gumbel Guide v13.5.1';
+    function addSdsBotSeats(game) {
+        if (game.gameType !== 'shodansho') return;
+        const session = sessions.get(game.id);
+        while (game.players.length < game.maxPlayers) {
+            const index = game.players.length;
+            if (index < game.humanCapacity) throw Error('Human seats are not full yet.');
+            game.players.push(null);
+            const identity = Identity.publicIdentity({display_name:`v13.5.1 Bot ${index-game.humanCapacity+1}`,avatar_icon:'shodansho'});
+            game.playerProfiles[index] = {...identity,isBot:true,botEngine:SDS_BOT_ENGINE};
+            session.tokens[index] = null;
+            session.accountIds[index] = null;
+        }
+    }
+    function sdsBotAction(action) {
+        if (action?.type === 'drop') return {type:'dropSelectedHand',kind:action.kind,key:action.dst};
+        if (action?.type === 'move') return {type:'applyMove',move:{pieceId:action.pieceId,dst:action.dst}};
+        if (action?.type === 'pickup') return {type:'pickupSelectedSun',pieceId:action.pieceId};
+        return null;
+    }
+    function fallbackSdsBotAction(engine) {
+        const player = engine.players[engine.currentPlayer];
+        for (const piece of engine.pieces.values()) {
+            if (piece.owner !== engine.currentPlayer || !piece.pos) continue;
+            const move = engine.generateMoves(piece)[0];
+            if (move) return {type:'applyMove',move:{pieceId:piece.id,dst:move.dst}};
+            if (piece.kind === 'sun') return {type:'pickupSelectedSun',pieceId:piece.id};
+        }
+        for (const [kind,count] of Object.entries(player.hand)) {
+            if (count <= 0) continue;
+            const drop = engine.generateDropMoves(kind)[0];
+            if (drop) return {type:'dropSelectedHand',kind,key:drop.dst};
+        }
+        return null;
+    }
+    function startSdsBotTurn(gameId) {
+        const game = games.get(gameId), engine = sessions.get(gameId)?.engine;
+        if (!game || !engine || !game.started || game.gameOver || !game.botCount || engine.phase === 'game_over' || engine.currentPlayer < game.humanCapacity || sdsBotJobs.has(gameId)) return;
+        sdsBotJobs.add(gameId);
+        const actionCount = game.sdsActions.length, playerIndex = engine.currentPlayer;
+        void (async () => {
+            let action = null, followUp = false, committed = false;
+            try {
+                try {
+                    const result = await sdsBotRunner.search(engine,{budgetMs:sdsBotBudgetMs,width:sdsBotWidth});
+                    action = sdsBotAction(result?.action);
+                } catch { /* use a legal rule-engine move if the worker cannot finish */ }
+                committed = await command(() => {
+                    const latestGame = games.get(gameId), latestEngine = sessions.get(gameId)?.engine;
+                    if (!latestGame || !latestEngine || !latestGame.started || latestGame.gameOver || latestGame.sdsActions.length !== actionCount || latestEngine.currentPlayer !== playerIndex || latestEngine.phase === 'game_over') return;
+                    let canonical = null;
+                    try { if (action) canonical = applySdsAction(latestEngine,action); } catch { /* use the legal fallback below */ }
+                    if (!canonical) {
+                        const fallback = fallbackSdsBotAction(latestEngine);
+                        try { if (fallback) canonical = applySdsAction(latestEngine,fallback); } catch { /* report an unavailable bot turn below */ }
+                    }
+                    if (!canonical) {
+                        broadcast(gameId,'errorMsg','The v13.5.1 bot could not find a legal move.');
+                        return;
+                    }
+                    latestGame.sdsActions.push(canonical);
+                    latestGame.lastActivity = Date.now();
+                    latestGame.gameOver = latestEngine.phase === 'game_over';
+                    if (latestGame.gameOver) { persistResult(latestGame); roster(latestGame); }
+                    broadcast(gameId,'sdsAction',canonical);
+                    followUp = !latestGame.gameOver && latestEngine.currentPlayer >= latestGame.humanCapacity;
+                });
+            } catch (error) {
+                console.error('Sho Dan Sho bot turn failed:',error.message);
+            } finally {
+                sdsBotJobs.delete(gameId);
+            }
+            if (committed && followUp) startSdsBotTurn(gameId);
+        })();
+    }
     function tick() {
         const now = Date.now();
         for (const game of games.values()) {
@@ -172,7 +258,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         }
     }
     const interval = setInterval(() => command(tick), 1000);
-    interval.unref(); server.on('close', () => clearInterval(interval));
+    interval.unref(); server.on('close', () => { clearInterval(interval); sdsBotRunner.close(); });
     io.on('connection', socket => {
         const on = (event, action) => socket.on(event, data => command(() => action(data),socket));
         reply(socket, 'lobbyUpdate', Object.fromEntries(lobby));
@@ -187,8 +273,16 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (!config) return err(socket, 'Invalid game settings.');
             if (!canCreate()) return;
             const game = newGame(socket, config, false);
-            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, boardSize: game.boardSize });
-            reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: game.gameType === 'hikoro' ? 'white' : 'waiting' }); roster(game); emitLobby();
+            if (game.gameType === 'shodansho' && game.botCount && game.humanCapacity === 1) {
+                addSdsBotSeats(game);
+                game.started = true;
+                game.lastMoveTimestamp = Date.now();
+                reply(socket, 'gameStart', state(game));
+            } else {
+                lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, humanCapacity:game.humanCapacity||game.maxPlayers, botCount:game.botCount||0, boardSize: game.boardSize });
+                reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: game.gameType === 'hikoro' ? 'white' : 'waiting' });
+            }
+            roster(game); emitLobby();
         });
         on('createSinglePlayerGame', data => {
             const config = options({ ...data, timeControl: { main: -1, byoyomiTime: 0 } });
@@ -220,7 +314,8 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (member(game, socket)) return err(socket, 'You are already in this room.');
             let index;
             if (game.gameType !== 'hikoro') {
-                if (game.players.length >= game.maxPlayers) return err(socket, 'This room is full.');
+                const humanCapacity = game.humanCapacity || game.maxPlayers;
+                if (game.players.length >= humanCapacity) return err(socket, 'This room is full.');
                 index = game.players.push(socket.id) - 1;
             } else { if (game.players.black) return err(socket, 'This room is full.'); game.players.black = socket.id; index = 1; }
             const token = ticket(); sessions.get(id).tokens[index] = token;
@@ -229,7 +324,9 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             reply(socket, 'seatAssigned', { gameId: id, token, playerIndex: index }); socket.join(id);
             game.lastActivity = Date.now();
             const count = game.gameType === 'hikoro' ? 2 : game.players.length;
-            if (count === game.maxPlayers) {
+            const capacity = game.gameType === 'hikoro' ? game.maxPlayers : (game.humanCapacity || game.maxPlayers);
+            if (count === capacity) {
+                if (game.gameType === 'shodansho') addSdsBotSeats(game);
                 game.started = true; game.lastMoveTimestamp = Date.now(); lobby.delete(id);
                 broadcast(id, 'gameStart', state(game));
             } else {
@@ -277,12 +374,13 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if(data.accept===false)old.rematchVotes=old.rematchVotes.filter(i=>i!==index);
             else if(!old.rematchVotes.includes(index))old.rematchVotes.push(index);
             old.lastActivity=Date.now();roster(old);
-            if(old.rematchVotes.length!==old.maxPlayers)return;
-            const ids=old.gameType==='hikoro'?[old.players.white,old.players.black]:old.players;
+            const voteCapacity=old.gameType==='shodansho'?(old.humanCapacity||old.maxPlayers):old.maxPlayers;
+            if(old.rematchVotes.length!==voteCapacity)return;
+            const ids=old.gameType==='hikoro'?[old.players.white,old.players.black]:old.gameType==='shodansho'?old.players.slice(0,voteCapacity):old.players;
             const participants=ids.map(id=>io.sockets.sockets.get(id));
-            if(participants.some(s=>!s))return err(socket,'All players must reconnect before the rematch can begin.');
-            participants.push(participants.shift()); // Rotate first move fairly, including three/four player games.
-            const fresh=newGame(participants[0],{gameType:old.gameType,maxPlayers:old.maxPlayers,timeControl:{...old.timeControl},boardSize:old.boardSize,name:old.name},false);
+            if(participants.some(s=>!s))return err(socket,'All human players must reconnect before the rematch can begin.');
+            participants.push(participants.shift()); // Rotate the first human move fairly.
+            const fresh=newGame(participants[0],{gameType:old.gameType,maxPlayers:old.maxPlayers,botCount:old.botCount||0,humanCapacity:old.humanCapacity||old.maxPlayers,timeControl:{...old.timeControl},boardSize:old.boardSize,name:old.name},false);
             for(let i=1;i<participants.length;i++){
                 const next=participants[i],session=sessions.get(fresh.id);
                 if(fresh.gameType==='hikoro')fresh.players.black=next.id;else fresh.players.push(next.id);
@@ -290,6 +388,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
                 fresh.playerProfiles[i]=next.data.playerIdentity||old.playerProfiles[ids.indexOf(next.id)];
                 next.join(fresh.id);reply(next,'seatAssigned',{gameId:fresh.id,token:session.tokens[i],playerIndex:i});
             }
+            if(fresh.gameType==='shodansho')addSdsBotSeats(fresh);
             fresh.started=true;fresh.lastMoveTimestamp=Date.now();old.rematchVotes=[];
             broadcast(fresh.id,'rematchReady',{gameId:fresh.id,gameType:fresh.gameType,maxPlayers:fresh.maxPlayers});roster(fresh);roster(old);
         });
@@ -340,7 +439,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return;
             reply(socket, 'validMoves', hikoroLogic.getValidMoves(game, data.data));
         });
-        on('sdsAction', data => {
+        on('sdsAction', async data => {
             const game = games.get(data?.gameId); const engine = sessions.get(data?.gameId)?.engine;
             if (!game || !engine || !game.started || game.gameOver || seat(game, socket) !== engine.currentPlayer)
                 return err(socket, 'Not your turn or this seat is no longer active.');
@@ -351,6 +450,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             game.sdsActions.push(action); game.lastActivity = Date.now(); game.gameOver = engine.phase === 'game_over';
             if(game.gameOver){persistResult(game);roster(game);}
             broadcast(game.id, 'sdsAction', action);
+            defer(() => startSdsBotTurn(game.id));
         });
         on('leaveGame', id => {
             const game = games.get(id);

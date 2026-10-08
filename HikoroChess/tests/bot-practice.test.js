@@ -51,7 +51,7 @@ test('Sho Dan Sho practice offers two to four configurable Human/Bot seats', () 
     assert.ok(page.querySelector('#seatcontrols'));
     assert.match(html, /function renderSeatControls/);
     assert.match(html, /multiSeat:game\.playerCount>2/);
-    assert.match(html, /Three- and four-player games use a multi-seat conservative search/);
+    assert.match(html, /Three- and four-player games use the v13\.5\.1 multi-seat adaptation/);
     dom.window.close();
 });
 
@@ -78,7 +78,7 @@ test('Sho Dan Sho multi-seat worker advances three/four seats and returns legal 
                     seen.push(game.currentPlayer);
                     game = nextState(game, legal[0]);
                 }
-                const restored = restore(snapshot(game), board);
+                const restored = multiSeatRestore(snapshot(game), board);
                 if (restored.playerCount !== count) throw Error('restore lost player count');
                 const result = multiSeatSearch(restored, 250, 3, () => {});
                 if (!result.action) throw Error('multi-seat search returned no action');
@@ -95,7 +95,7 @@ test('Sho Dan Sho multi-seat worker advances three/four seats and returns legal 
         postMessage: () => {},
         performance: require('node:perf_hooks').performance
     };
-    const reports = vm.runInNewContext(workerSource + '\\n' + adapter + '\\n' + fixture, context, {timeout: 15000});
+    const reports = vm.runInNewContext(workerSource + '\n' + adapter + '\n' + fixture, context, {timeout: 15000});
     const plain = JSON.parse(JSON.stringify(reports));
     assert.deepEqual(plain.map(result => result.count), [3, 4]);
     for (const result of plain) {

@@ -1,7 +1,7 @@
-const test=require('node:test'),assert=require('node:assert/strict'),{io:connect}=require('socket.io-client'),{createServer}=require('../server'),logic=require('../gamelogic'),{createSdsValidator}=require('../sds-validator');
+const test=require('node:test'),assert=require('node:assert/strict'),{io:connect}=require('socket.io-client'),{createServer}=require('../server'),logic=require('../gamelogic'),{createSdsValidator,applySdsAction}=require('../sds-validator');
 const once=(s,e)=>new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Error('Timeout '+e)),4000);s.once(e,v=>{clearTimeout(t);resolve(v);});});
 function memory(){const rows=new Map();return {rows,fail:false,async load(){return structuredClone([...rows.values()]);},async commit(next,removed){if(this.fail)throw Error('storage unavailable');removed.forEach(id=>rows.delete(id));next.forEach(r=>rows.set(r.id,structuredClone(r.snapshot)));}};}
-async function launch(store){const app=createServer({roomStore:store});await app.ready;await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const sockets=[];return {...app,async client(){const s=connect('http://127.0.0.1:'+app.server.address().port,{transports:['websocket'],forceNew:true});sockets.push(s);await once(s,'connect');return s;},async close(){sockets.forEach(s=>s.disconnect());await new Promise(r=>app.io.close(r));await app.flush();}};}
+async function launch(store,options={}){const app=createServer({roomStore:store,...options});await app.ready;await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const sockets=[];return {...app,async client(){const s=connect('http://127.0.0.1:'+app.server.address().port,{transports:['websocket'],forceNew:true});sockets.push(s);await once(s,'connect');return s;},async close(){sockets.forEach(s=>s.disconnect());await new Promise(r=>app.io.close(r));await app.flush();}};}
 async function room(a,b,type){const assigned=once(a,'seatAssigned'),created=once(a,'gameCreated');a.emit('createGame',{gameType:type,timeControl:{main:-1,byoyomiTime:0}});const id=(await created).gameId,ta=await assigned;const start=once(a,'gameStart'),seat=once(b,'seatAssigned');b.emit('joinGame',id);return {id,ta,tb:await seat,state:await start};}
 for(const type of ['hikoro','shodansho','go','shavari','hikoruka','academy'])test(type+' restores accepted moves and private seat after an actual server replacement',async()=>{
  const store=memory();let app=await launch(store),a=await app.client(),b=await app.client();try{
@@ -21,3 +21,53 @@ for(const type of ['hikoro','shodansho','go','shavari','hikoruka','academy'])tes
 test('failed room storage rolls back a move and does not announce it as accepted',async()=>{const store=memory(),app=await launch(store);try{const a=await app.client(),b=await app.client(),r=await room(a,b,'go');store.fail=true;const rejected=once(a,'errorMsg');a.emit('goAction',{gameId:r.id,action:{type:'place',to:{x:0,y:0}}});assert.match(await rejected,/not saved/);assert.equal(store.rows.get(r.id).session.journal.length,0);store.fail=false;const accepted=once(a,'goState');a.emit('goAction',{gameId:r.id,action:{type:'place',to:{x:0,y:0}}});assert.equal((await accepted).state.recordJournal.length,1);}finally{await app.close();}});
 test('rematches require unanimous seated consent and rotate the first mover',async()=>{const app=await launch(memory());try{const a=await app.client(),b=await app.client(),outsider=await app.client(),r=await room(a,b,'go');const ended=once(a,'goState');a.emit('goResign',{gameId:r.id});await ended;const reject=once(outsider,'errorMsg');outsider.emit('rematch',{gameId:r.id});assert.match(await reject,/Finish/);const request=once(a,'tableStatus');a.emit('rematch',{gameId:r.id});assert.equal((await request).players.filter(p=>p.rematch).length,1);const ready=once(a,'rematchReady'),seat=once(a,'seatAssigned');b.emit('rematch',{gameId:r.id});const next=await ready,assigned=await seat;assert.notEqual(next.gameId,r.id);assert.equal(assigned.playerIndex,1);}finally{await app.close();}});
 test('waiting invitations retain their seat and lobby entry across disconnection and restart',async()=>{const store=memory();let app=await launch(store);try{const a=await app.client(),created=once(a,'gameCreated'),seat=once(a,'seatAssigned');a.emit('createGame',{gameType:'go'});const room=await created,ticket=await seat;a.disconnect();await app.close();app=await launch(store);const restored=await app.client(),waiting=once(restored,'gameCreated');restored.emit('joinGoRoom',{gameId:room.gameId,token:ticket.token});assert.equal((await waiting).gameId,room.gameId);const b=await app.client(),start=once(restored,'gameStart');b.emit('joinGame',room.gameId);assert.equal((await start).started,true);}finally{await app.close();}});
+
+async function until(predicate, timeout=6000){const deadline=Date.now()+timeout;while(Date.now()<deadline){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,20));}throw Error('Timed out waiting for room events');}
+function firstDrop(engine){const moves=engine.generateDropMoves('sun');assert.ok(moves.length,'seat has a legal opening drop');return {type:'dropSelectedHand',kind:'sun',key:moves[0].dst};}
+test('Sho Dan Sho creator-selected bots fill seats and play validated turns',async()=>{
+ const store=memory(),app=await launch(store,{sdsBotBudgetMs:140,sdsBotWidth:5});
+ try{
+  const a=await app.client(),b=await app.client(),solo=await app.client();
+  const created=once(a,'gameCreated'),creatorSeat=once(a,'seatAssigned');
+  a.emit('createGame',{gameType:'shodansho',sdsPlayerCount:4,sdsBotCount:2,timeControl:{main:-1,byoyomiTime:0}});
+  const invitation=await created,seatA=await creatorSeat;
+  assert.ok(seatA.token);
+  assert.equal(store.rows.get(invitation.gameId).game.humanCapacity,2);
+  assert.equal(store.rows.get(invitation.gameId).game.botCount,2);
+  const started=once(a,'gameStart'),seatB=once(b,'seatAssigned');
+  b.emit('joinGame',invitation.gameId);
+  const state=await started,assignedB=await seatB;
+  assert.equal(assignedB.playerIndex,1);
+  assert.equal(state.players.length,4);
+  assert.equal(state.botCount,2);
+  assert.deepEqual(state.playerProfiles.slice(2).map(profile=>profile.isBot),[true,true]);
+  assert.equal(state.playerProfiles[2].botEngine,'Adaptive Gumbel Guide v13.5.1');
+
+  const engine=createSdsValidator(4),actions=[];
+  const record=action=>actions.push(action);
+  a.on('sdsAction',record);
+  try{
+   const first=firstDrop(engine);assert.ok(applySdsAction(engine,first));
+   const firstAck=once(a,'sdsAction');a.emit('sdsAction',{gameId:invitation.gameId,action:first});await firstAck;
+   assert.equal(store.rows.get(invitation.gameId).game.sdsActions.length,1,'the second human gets a turn before bots');
+   const second=firstDrop(engine);assert.ok(applySdsAction(engine,second));
+   const bots=until(()=>actions.length>=4);
+   b.emit('sdsAction',{gameId:invitation.gameId,action:second});
+   await bots;await app.flush();
+   assert.equal(store.rows.get(invitation.gameId).game.sdsActions.length,4,'both bot seats answer in turn');
+  }finally{a.off('sdsAction',record);}
+
+  const fastStart=once(solo,'gameStart'),fastSeat=once(solo,'seatAssigned');
+  solo.emit('createGame',{gameType:'shodansho',sdsPlayerCount:3,sdsBotCount:2,timeControl:{main:-1,byoyomiTime:0}});
+  const instant=await fastStart,soloSeat=await fastSeat;
+  assert.ok(soloSeat.token);
+  assert.equal(instant.started,true);
+  assert.equal(instant.humanCapacity,1);
+  assert.equal(instant.players.length,3);
+  assert.deepEqual(instant.playerProfiles.slice(1).map(profile=>profile.isBot),[true,true]);
+
+  const invalid=once(solo,'errorMsg');
+  solo.emit('createGame',{gameType:'shodansho',sdsPlayerCount:3,sdsBotCount:3});
+  assert.match(await invalid,/Invalid game settings/);
+ }finally{await app.close();}
+});

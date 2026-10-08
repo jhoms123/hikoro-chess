@@ -51,6 +51,16 @@
                     <option value="4">4 Players</option>
                 </select>
             </div>
+            <div id="sds-bot-count-container" style="display: none; flex-direction: column; align-items: center; gap: 5px;">
+                <label for="sds-bot-count" style="font-weight: bold; color: #ffc107;">Bot seats (Sho Dan Sho):</label>
+                <select id="sds-bot-count" style="padding: 5px; background-color: #555; color: #eee; border: 1px solid #777; border-radius: 4px;">
+                    <option value="0" selected>0 bots</option>
+                    <option value="1">1 bot</option>
+                    <option value="2">2 bots</option>
+                    <option value="3">3 bots</option>
+                </select>
+                <small id="sds-bot-hint">Bots use Adaptive Gumbel Guide v13.5.1. The room starts when its human seats are filled.</small>
+            </div>
 
             <div> <label for="time-control">Main Time:</label>
                 <select id="time-control">
@@ -150,7 +160,7 @@
 
     <script src="/socket.io/socket.io.js?v=20261008-dashboard"></script>
     <script src="gamelogic.js?v=20261008-dashboard"></script>
-    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-dashboard"></script><script src="script.js?v=20261008-shogi-facing"></script>
+    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-bot-seats"></script><script src="script.js?v=20261008-bot-seats"></script>
     <script src="site-ui.js?v=20261008-dashboard"></script>
 
     <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="credits.html">Artists &amp; credits</a></footer>
