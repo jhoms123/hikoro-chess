@@ -46,7 +46,7 @@
         $('move-count').textContent=state.ply+' plies';const list=$('move-history'),atEnd=list.scrollHeight-list.scrollTop-list.clientHeight<35;list.replaceChildren();
         state.history.slice(-100).forEach((m,i)=>{const li=document.createElement('li'),n=document.createElement('span'),text=document.createElement('span');n.className='ply-no';n.textContent=Math.max(0,state.history.length-100)+i+1+'.';text.textContent=`${names[m.player]} ${Hikoruka.TYPES[m.type].name} · ${Hikoruka.coord(m.from)} ${m.captured?'×':'→'} ${Hikoruka.coord(m.to)}`;li.append(n,text);list.append(li);});
         if(!state.history.length){const li=document.createElement('li');li.className='empty-history';li.textContent='The first move is yours.';list.append(li);}if(atEnd)list.scrollTop=list.scrollHeight;
-        const frame=document.querySelector('.mini-board-frame');frame.before($(`strip-${flipped?1:2}`));frame.after($(`strip-${flipped?2:1}`));
+        const frame=document.querySelector('.mobile-board-viewport')||document.querySelector('.mini-board-frame');frame.before($(`strip-${flipped?1:2}`));frame.after($(`strip-${flipped?2:1}`));
     }
     function start(nextMode=mode){cancelBot();mode=nextMode;state=Hikoruka.initial();journal=[];cursor=0;selected=null;notice('');persist();render();}
     function confirm(title,message,label,action){cancelBot();confirmation=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('accept-confirm').textContent=label;$('confirm-dialog').showModal();$('cancel-confirm').focus();}

@@ -439,7 +439,7 @@ function selectHandPiece(kind) {
 function showPieceInfo(kind, owner = null) {
     const infoContent = document.getElementById('piece-info-content');
     if (!kind) {
-        infoContent.innerHTML = `Hover over a piece on the board or in hand to see its movement rules. Left-click enemy pieces to view range.`;
+        infoContent.textContent = matchMedia('(pointer:coarse)').matches ? 'Tap a board piece or choose a flower to see its movement.' : 'Hover over a piece on the board or in hand to see its movement rules. Left-click enemy pieces to view range.';
         infoContent.style.opacity = '0.5';
         return;
     }
@@ -830,7 +830,7 @@ canvas.addEventListener('mousemove', (e) => {
     }
 });
 
-canvas.addEventListener('mousedown', (e) => {
+canvas.addEventListener('click', (e) => {
     let rect = canvas.getBoundingClientRect();
     let scaleX = canvas.width / rect.width;
     let scaleY = canvas.height / rect.height;
@@ -860,6 +860,8 @@ canvas.addEventListener('mousedown', (e) => {
     }
     updateDOM();
 });
+
+canvas.addEventListener('contextmenu', e => { e.preventDefault(); cancelSelection(); });
 
 window.addEventListener('keydown', (e) => {
     const modal = document.getElementById('rules-modal');

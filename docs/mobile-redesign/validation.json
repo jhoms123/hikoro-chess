@@ -1,0 +1,110 @@
+[
+  {
+    "game": "hikoro",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "shodansho",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "shavari",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "hikoruka",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "go",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "academy",
+    "width": 390,
+    "height": 844,
+    "passed": true
+  },
+  {
+    "game": "hikoro",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "shodansho",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "shavari",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "hikoruka",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "go",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "academy",
+    "width": 320,
+    "height": 740,
+    "passed": true
+  },
+  {
+    "game": "hikoro",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  },
+  {
+    "game": "shodansho",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  },
+  {
+    "game": "shavari",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  },
+  {
+    "game": "hikoruka",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  },
+  {
+    "game": "go",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  },
+  {
+    "game": "academy",
+    "width": 740,
+    "height": 390,
+    "passed": true
+  }
+]

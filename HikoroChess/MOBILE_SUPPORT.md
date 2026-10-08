@@ -1,10 +1,24 @@
-# Mobile tables and readable material surfaces
+# Mobile game layouts
 
-All six games have a phone action tray, board-focused view, fit/zoom controls (100–300%), two-finger pinch zoom and drag panning when enlarged. Focus mode keeps game panels and reserves accessible below the board, and Options returns to the game settings/actions. Rules and required game actions are mirrored from the original controls; game validation remains in the existing engines. Zoom gestures suppress accidental board actions. Desktop boards, Hikoro artwork and Academy sprites remain unchanged.
+The mobile redesign replaces the fixed, duplicated action tray with the original game controls arranged for each game. There is no custom pinch recognizer, transformed board layer, absolute board-height bookkeeping, or board-focus mode. Browser page zoom remains enabled. Boards and piece assets are unchanged.
 
-Parchment panels, dialogs, Academy lesson copy, Sho Dan Sho rules and reserve labels now use dark text. Dark wooden/stone panels retain light text.
+| Game | Phone adaptation |
+| --- | --- |
+| Collection | Compact match-preview cards; selecting a game scrolls directly to setup; sound moved into a disclosure. |
+| Full Hikoro | Original 10×16 artwork resized through its square-size variables; compact clock/hand panels; nearby rules/menu; move history folded; optional larger board and safe view navigation. |
+| Academy | Original 8×8 pieces and board; lesson selector above the board; selected-piece explanation and lesson tip together; setup, history, captures and guides folded. |
+| Hikorüka | Naturally fitted 5×5 board with large squares; status above and piece detail below; setup, captures and history folded. No unnecessary zoom toolbar. |
+| Shavari | Original stack-mode controls moved above the board and kept sticky while scrolling; selected formation below; optional larger view. |
+| Shield Go | Shield/pass/deselect controls above the board and sticky while scrolling; 13×13 starts enlarged; scores/history/setup folded. Jump-chain shielding rules unchanged. |
+| Sho Dan Sho | Active flower hand above the garden as a horizontal reserve row; other hands can be revealed; real pick-up/cancel controls beside the table; touch descriptions; pointer activation occurs on completed click/tap rather than mousedown. |
 
-Validation: 57 engine/socket tests; 16 desktop/phone page checks without overflow, broken images, HTTP failures or JavaScript errors; 18 focused mobile checks across six games at 390×844, 320×740 and 740×390. The focused checks include zoom, pinch/pan, game control delegation, mandatory shield handling, and pale-text regression checks on paper panels and dialogs. Run `tools/mobile-table-check.cjs` with Playwright available through NODE_PATH and CHROMIUM_EXECUTABLE pointing to Chromium.
+Larger views scroll within the board viewport. **Move view** disables game input and uses native scrolling; **Tap to play** restores selection and movement. **Fit board** restores the overview. No global fixed bottom tray covers board cells. Secondary settings use native details elements and preserve all original controls/listeners. Desktop transitions restore source nodes to their original positions, including lesson controls, hands and audio. Academy/Hikorüka player-strip reorder operations use the viewport boundary so flipping cannot move player strips into the enlarged board.
+
+Controls aim for a 44px minimum height. Dense board locations retain precise geometry; the larger view offers larger targets. Parchment retains dark ink, jade/wood retain light text, and stone buttons have a lighter texture overlay for readable dark labels. Inputs use 16px text on phones.
+
+Validation: `npm test` checks the 57 existing engine/socket tests. `tools/mobile-table-check.cjs` exercises all six games at 390×844, 320×740 and 740×390 using real touch events, legal moves, Shield Go chains, 13×13 setup, stack modes, flower drops, lesson changes, board flipping, view navigation, resize restoration, rules access and horizontal-overflow checks. It writes screenshots and a results JSON to `docs/mobile-redesign`. Chromium/Playwright emulation is not a physical iOS/Android device test.
+
+Design references: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html · https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action
 
 ## Storage for future features
 
