@@ -46,7 +46,7 @@
   function save(){try{localStorage.setItem(KEY,JSON.stringify(preferences));apply();}catch{dialog.append(el('p','Preferences could not be saved on this device.'));}}
   const comfort=el('button','Display & access');comfort.className='experience-open';comfort.onclick=()=>dialog.showModal();(document.querySelector('.player-appbar')||document.body).append(comfort);
   let type=document.body.dataset.audioTheme==='lobby'?'hikoro':document.body.dataset.audioTheme;if(!lessons[type])return;
-  const bar=el('section');bar.className='lesson-dock';bar.setAttribute('aria-label','Guided introduction');const starter=el('button','Learn '+titles[type]);starter.onclick=start;bar.append(starter);(document.querySelector('main')||document.querySelector('#lobby')||document.body).prepend(bar);
+  const bar=el('section');bar.className='lesson-dock';bar.setAttribute('aria-label','Guided introduction');const starter=el('button','Learn '+titles[type]);starter.onclick=start;bar.append(starter);const lobby=document.querySelector('#lobby');if(lobby)lobby.before(bar);else(document.querySelector('main')||document.body).prepend(bar);
   let step=0,baseline=0,active=false,interval=null,highlight;const answered=new Set();
   function snapshot(){const data=window.SiteAccounts?.tableSnapshot?.();return data?.type===type?data.payload:null;}
   function length(){const p=snapshot(),journal=p?.journal||[];return journal.slice(0,p?.cursor??journal.length).filter(a=>!['pass','resign'].includes(a.type)).length;}
