@@ -1,8 +1,11 @@
-/* Supplied artwork; ownership changes orientation, never color. */
+/* Supplied artwork; ownership changes orientation, never color.
+   A shared display filter improves separation from the wood without editing assets. */
+:root{--hikoro-piece-filter:brightness(1.28) contrast(1.08) drop-shadow(.65px 0 0 #f4dfb4bb) drop-shadow(-.65px 0 0 #f4dfb4bb) drop-shadow(0 .65px 0 #f4dfb4bb) drop-shadow(0 -.65px 0 #f4dfb4bb) drop-shadow(0 1px 1px #24180c66)}
+.hikoro-site .piece-entry img,.hikoro-site .flying-piece img,.academy-table .guide-card img,.academy-table .selection-detail img,.academy-table .capture-list img{filter:var(--hikoro-piece-filter)}
 .hikoro-site #game-board{background:url('assets/hikoro-wood/board.webp') center/100% 100% no-repeat transparent}
 .hikoro-site #game-board .square{background:transparent!important;border:0}
 .hikoro-site #game-board .square.invalid{background:transparent!important;pointer-events:none}
-.hikoro-site #game-board .piece img,.academy-table .mini-piece img{image-rendering:auto;width:94%;height:94%;object-fit:contain;filter:drop-shadow(0 1px 1px #0007)}
+.hikoro-site #game-board .piece img,.academy-table .mini-piece img{image-rendering:auto;width:94%;height:94%;object-fit:contain;filter:var(--hikoro-piece-filter)}
 .hikoro-site #game-board>.corner-hand{position:absolute;inset:0;width:100%!important;height:100%;min-height:0!important;display:grid!important;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(16,1fr);background:none!important;border:0!important;padding:0!important;gap:0;overflow:visible!important;pointer-events:none;z-index:4}
 .hikoro-site #game-board .corner-hand .captured-piece{width:100%;height:100%;min-height:0;border:1px solid #b7935555;background:linear-gradient(#79592d33,#39260f33)!important;padding:0;pointer-events:auto;cursor:pointer;border-radius:3px;opacity:1;position:relative}
 .hikoro-site #game-board .corner-hand .captured-piece:disabled{cursor:default;opacity:1}
