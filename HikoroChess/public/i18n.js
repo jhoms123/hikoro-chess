@@ -7,7 +7,7 @@
  const normalize=s=>s.replace(/\s+/g,' ').trim();
  const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const phrases=new Map(Object.entries(catalog).map(([a,b])=>[normalize(a),normalize(b)]));
- const parts=[...phrases].filter(([a,b])=>a!==b&&a.length>1).sort((a,b)=>b[0].length-a[0].length);
+ const parts=[...phrases].filter(([a,b])=>a.length>1&&(a!==b||['Shield Go','Sho Dan Sho','Hikorüka','Chysalith'].includes(a))).sort((a,b)=>b[0].length-a[0].length);
  const fragment=new RegExp('(?<![\\p{L}\\p{N}_])(?:'+parts.map(([a])=>escape(a)).join('|')+')(?![\\p{L}\\p{N}_])','gu');
  const patterns=(window.HikoroSpanishPatterns||[]).map(([a,b])=>({regex:new RegExp('^'+a.split(/(\{(?:\d+|name)\})/).map(p=>/^\{/.test(p)?'(.+?)':escape(p)).join('')+'$'),keys:[...a.matchAll(/\{(\d+|name)\}/g)].map(m=>m[1]),target:b}));
  function spanish(value,depth=0){const s=normalize(value);if(phrases.has(s))return phrases.get(s);if(depth<3)for(const p of patterns){const m=s.match(p.regex);if(m)return p.target.replace(/\{(\d+|name)\}/g,(_,key)=>{const i=p.keys.indexOf(key),v=m[i+1];return key==='name'&&playerNames.has(v)?v:spanish(v,depth+1);});}return s.replace(fragment,k=>phrases.get(k));}

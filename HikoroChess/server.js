@@ -95,7 +95,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function roster(game) {
         const ids=game.gameType==='hikoro'?[game.players.white,game.players.black]:game.players;
         broadcast(game.id,'tableStatus',{gameId:game.id,gameType:game.gameType,started:game.started,finished:game.gameOver,
-            durable:Boolean(roomStore),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>({name:profile.display_name,connected:Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))}))});
+            durable:Boolean(roomStore),local:Boolean(game.isSinglePlayer),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>({name:profile.display_name,connected:Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))}))});
     }
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
