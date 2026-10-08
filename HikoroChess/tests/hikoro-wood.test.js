@@ -32,8 +32,8 @@ test('the game and learning table both load the atlas and renderer',()=>{
   assert.match(source,/hikoro-wood\.css/);
   assert.match(source,/hikoro-wood\.js/);
  }
- assert.match(read('script.js'),/renderHand\(topColor,'top'\)/);
- assert.match(read('script.js'),/renderHand\(bottomColor,'bottom'\)/);
+ assert.match(read('script.js'),/hand\(topColor,'top'\)/);
+ assert.match(read('script.js'),/hand\(bottomColor,'bottom'\)/);
  assert.match(read('script.js'),/HikoroWood\.make\(piece\.type,piece\.color\)/);
  assert.match(read('academy-ui.js'),/HikoroWood\.make/);
 });
