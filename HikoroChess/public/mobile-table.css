@@ -1,0 +1,46 @@
+/* Contrast follows each physical surface, including inherited dialog copy. */
+body[data-audio-theme] dialog{--ink:#30291d;--muted:#4d4230;--accent:#574522;--gold:#574522;color:#30291d;color-scheme:light}
+body[data-audio-theme] dialog :is(p,li,small,label,.fine-print,.eyebrow,#confirm-message){color:#3c3223}
+body[data-audio-theme=academy] :is(.panel,.guide-card){--ink:#302d21;--muted:#4d422e;--accent:#4e422b;--gold:#4e422b;color:#302d21;color-scheme:light}
+body[data-audio-theme=academy] :is(.panel,.guide-card) :is(label,.lesson-tip,#connection-status,#selection-detail,#move-history li,#move-history .ply-no,.empty-history,small){color:#443924!important}
+body[data-audio-theme=academy] :is(.panel,.guide-card) .turn-panel h2{color:#35432e}
+body.hikoro-site .modal-content{--ink:#30271b;--muted:#4c3c28;--accent:#58421e;color-scheme:light}
+body.hikoro-site .modal-content :is(p,li,small,.piece-description,.piece-entry,.piece-name){color:#3c2e1d}
+.sds-page .game-sidebar .bg-game-panel,.sds-page #rules-content{--ink:#302d21;--muted:#4d422e;--paper:#302d21;--accent:#4d422e;--brass:#594322;color-scheme:light}
+.sds-page :is(.game-sidebar .bg-game-panel,#rules-content) :is(p,li,small,label,h2,h3,h4,[class*="text-slate-"],[class*="text-white"],[class*="text-sky-"],[class*="text-cyan-"],[class*="text-amber-"]){color:#3c3525}
+.sds-page #rules-content :is(.bg-slate-800,.bg-slate-900){background:#f0e2c4;color:#3c3525}
+.sds-page .reserve-flower :is(span,small){color:#302d21!important}
+.hero-copy .resume-table a{color:#443722;background:#e8d5aa;border-color:#806843}
+body[data-audio-theme] .material-control[data-material=wood]{color:#fff3d5!important;text-shadow:0 1px 2px #160d05!important}
+body[data-audio-theme] .material-control:is([data-material=pearl],[data-material=parchment],[data-material=stone]){color:#202a22!important;text-shadow:none!important}
+body[data-audio-theme] .material-control:not(:disabled){opacity:1}
+.mobile-table-tray{display:none}
+.mobile-board-viewport,.mobile-board-space,.mobile-board-surface{display:contents}
+@media(max-width:760px){
+ body.mobile-table-active{padding-bottom:calc(156px + env(safe-area-inset-bottom))}
+ .mobile-board-viewport{display:block;position:relative;max-width:100%;width:100%;overflow:auto;max-height:70svh;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b59c69 #20271f;scroll-margin-top:12px;touch-action:pan-x pan-y pinch-zoom}
+ .mobile-board-viewport.is-zoomed{touch-action:none}
+ .mobile-board-space{display:block;position:relative;min-width:100%}
+ .mobile-board-surface{display:block;position:absolute;left:0;top:0;transform-origin:0 0}
+ .mobile-board-surface>:is(.mini-board-frame,.board-shell,#board-wrapper){width:100%;margin:0}
+ .hikoro-site #hikoro-game-wrapper>.mobile-board-viewport{order:2;width:calc(100% - 24px)}
+ .sds-page .game-layout>.mobile-board-viewport{grid-row:1}
+ .mobile-table-tray:not([hidden]){display:grid;gap:5px;position:fixed;z-index:100;bottom:0;left:0;right:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#18261ff7,#101d18fa),var(--wood) center/500px;border-top:2px solid #9d895b;box-shadow:0 -4px 20px #0005}
+ .mobile-turn-status{margin:0;font:14px/1.3 Georgia;text-align:center;color:#ffedca;min-height:18px}
+ .mobile-view-tools{display:grid;grid-template-columns:1.6fr .7fr 1fr .7fr 1.1fr;gap:5px}
+ .mobile-game-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+ .mobile-table-tray .material-control{min-height:44px;font-size:14px!important;padding:6px 8px!important;border-width:4px!important;margin:0;white-space:normal}
+ .mobile-view-tools .material-control::before,.mobile-view-tools .material-control::after{display:none!important}
+ .mobile-game-actions .material-control{flex:1}
+ .mobile-table-tray button[aria-pressed=true]{outline:2px solid #e7bd68;outline-offset:-3px}
+ .mobile-board-focus :is(.site-header,.collection-header,.collection-audio,.introduction,.garden-masthead,.piece-guide,footer,.artwork-attribution,.go-summary){display:none!important}
+ .mobile-board-focus main,.mobile-board-focus .game-layout{padding-top:10px}
+ .mobile-board-focus .mobile-board-viewport{max-height:calc(100svh - 200px)}
+ .mobile-board-focus #move-history-container{display:none}
+ .mobile-board-focus #hikoro-game-wrapper{padding-top:10px!important}
+ .mobile-board-focus .captured-area{padding:8px!important}
+ body[data-audio-theme] :is(dialog,.modal-content){max-height:calc(100svh - 30px);overflow:auto}
+ body[data-audio-theme] dialog{z-index:150}
+ .sds-page .game-sidebar{grid-template-columns:1fr!important}
+ .mobile-board-viewport:focus-visible{outline:2px solid #e8c67e;outline-offset:2px}
+}
