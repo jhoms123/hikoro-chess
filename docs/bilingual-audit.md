@@ -49,8 +49,8 @@ Anonymous requests to notes/share tables returned zero rows, and restricted save
 
 ## Review and rollout
 
-The isolated hosted review uses SITE_REVIEW_MODE=true and has no production database keys. Its account journal and standings are sample data; online games are guest practice. Review translated desktop and phone pages before merging this localization branch. Once approved, merge and deploy main to the existing production Render service; do not enable review mode in production. Check /health, a browser connection, both language choices, a local move and a resumed online seat after rollout.
+The isolated hosted review uses SITE_REVIEW_MODE=true and has no production database keys. Its account journal and standings are sample data; online games are guest practice. Pull request #26 was merged at a2fea564 and deployed to the existing production service (dep-db3ripmgekts73fts6fg). Production retains its real account configuration. Verified the live connection, both language choices, saved language across navigation, and a legal Academy move preserved when switching back to English. Server replacement and seat recovery are covered by the automated integration tests; production users were not used for testing.
 
-Validation: 132 automated tests pass, including all authored page text/accessibility coverage, generated rulebook/audio/credit translations, local-state preservation, cross-tab language changes and origin rejection. Hosted phone review also verified English restoration without clearing selection.
+Validation: 133 automated tests pass, including all authored page text/accessibility coverage, generated rulebook/audio/credit translations, local-state preservation, cross-tab language changes and origin rejection. Hosted phone review also verified English restoration without clearing selection.
 
 Final verification includes the garden’s generated keyboard controls, hand labels, and canvas error messages.
