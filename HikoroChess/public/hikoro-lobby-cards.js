@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const wood=active==='hikoro'||active==='academy';
   if(selected)selected.hidden=!wood;
   if(img)img.hidden=wood;
-  if(selected){selected.classList.toggle('wood-academy-scene',active==='academy');}
+  if(selected){selected.classList.toggle('wood-academy-scene',active==='academy');const layer=selected.querySelector('[data-wood-scene]');if(layer){layer.replaceChildren();const key=active==='academy'?'academy':'selected',cols=active==='academy'?8:10,rows=active==='academy'?8:16;for(const [type,x,y,color] of formations[key]){const holder=document.createElement('span');holder.className='wood-lobby-token';holder.style.left=((x+.5)/cols*100)+'%';holder.style.top=((y+.5)/rows*100)+'%';holder.style.width=(100/cols)+'%';holder.style.height=(100/rows)+'%';holder.append(HikoroWood.make(type,color));layer.append(holder);}}}
  }
  picker?.addEventListener('change',refresh);refresh();
 });
