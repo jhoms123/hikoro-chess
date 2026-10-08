@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    if(theme==='shodansho'){
     const gameLayout=document.querySelector('.game-layout'),statusBox=document.querySelector('.game-sidebar>div');statusBox.classList.add('mobile-garden-status');move(statusBox,gameLayout,gameLayout.firstChild);
     move(document.getElementById('hands-container'),gameLayout,viewport);
-    const actions=document.createElement('div');actions.className='mobile-garden-actions';document.querySelector('.inventory-sidebar>.bg-game-panel').append(actions);move(document.getElementById('pickup-btn'),actions);move(document.getElementById('cancel-selection-btn'),actions);
+    const actions=document.createElement('div');actions.className='mobile-garden-actions';move(document.getElementById('pickup-btn'),actions);move(document.getElementById('cancel-selection-btn'),actions);move(document.getElementById('main-menu-btn'),actions);gameLayout.insertBefore(actions,viewport);
     const handToggle=control('Other players’ hands',()=>{const on=body.classList.toggle('show-all-hands');handToggle.setAttribute('aria-expanded',String(on));handToggle.textContent=on?'Hide other hands':'Other players’ hands';},document.querySelector('.inventory-sidebar>.bg-game-panel'));handToggle.classList.add('mobile-hand-toggle');handToggle.setAttribute('aria-expanded','false');
     document.getElementById('piece-info-content').textContent='Tap a board piece or choose a flower to see its movement.';
     fold(document.querySelector('.game-sidebar>div'),'Garden options');

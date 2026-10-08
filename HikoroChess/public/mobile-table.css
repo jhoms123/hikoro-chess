@@ -41,10 +41,10 @@ body[data-audio-theme] .material-control:not(:disabled){opacity:1}
  .mobile-selection h2{font-size:18px;margin:0 0 6px}.mobile-selection .selection-detail,.mobile-selection .action-hint{min-height:0;margin:0;font-size:14px}
  .mobile-selection>.fine-print{display:none}
  .mobile-selection .match-actions{margin-top:10px;gap:6px}.mobile-selection .match-actions button{flex:1}
- .mobile-board-viewport{display:block;width:100%;overflow:auto;position:relative;scrollbar-width:thin;scroll-margin-top:8px}
+ .mobile-board-viewport{display:block;width:100%;overflow:auto;position:relative;scrollbar-width:thin;scroll-margin-top:8px;overscroll-behavior:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom}
  .mobile-board-surface{display:block;width:var(--mobile-board-width,100%);margin:auto}
  .mobile-board-surface>:is(.mini-board-frame,.board-shell,#board-wrapper){width:100%;margin:8px 0;max-width:none}
- .mobile-board-viewport.is-detailed{max-height:65svh;overscroll-behavior:contain;border:1px solid #ab915f;margin:8px 0}
+ .mobile-board-viewport.is-detailed{max-height:65svh;overscroll-behavior:auto;border:1px solid #ab915f;margin:8px 0}
  .mobile-board-viewport.is-navigating{touch-action:pan-x pan-y pinch-zoom}
  .mobile-board-viewport.is-navigating .mobile-board-surface{pointer-events:none}
  .mobile-board-tools{display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:wrap}
@@ -152,8 +152,9 @@ body[data-audio-theme] .material-control:not(:disabled){opacity:1}
 }
 
 @media(max-width:760px){
- .mobile-garden-actions{display:flex;gap:6px;width:100%}
- .mobile-garden-actions button{flex:1;min-width:0}
+ .sds-page .game-layout>.mobile-garden-actions{display:flex;position:sticky;top:env(safe-area-inset-top);z-index:30;align-items:center;gap:6px;width:100%;padding:6px 0;background:#21170ff0;box-shadow:0 4px 10px #0004}
+ .mobile-garden-actions button{flex:1;min-width:0;min-height:48px;padding:6px 4px!important;font-size:12px!important;line-height:1.2}
+ .sds-page .mobile-garden-actions #main-menu-btn{background:#873a2d;color:#fff4de;border:1px solid #633126;text-shadow:none}
  .sds-page .mobile-garden-actions kbd{display:none}
  .sds-page .site-footer #cancel-selection-btn{display:none}
 }
