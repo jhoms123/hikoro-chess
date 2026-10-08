@@ -162,5 +162,21 @@
   [
     "{0}, {1} available, player {2}",
     "{0}, {1} disponibles, jugador {2}"
+  ],
+  [
+    "{0} tables available",
+    "{0} mesas disponibles"
+  ],
+  [
+    "{0} / 6 introductions completed",
+    "{0} / 6 introducciones completadas"
+  ],
+  [
+    "Pieces captured: {0}",
+    "Piezas capturadas: {0}"
+  ],
+  [
+    "Player {0} to move",
+    "Turno del jugador {0}"
   ]
 ]

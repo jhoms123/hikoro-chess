@@ -350,33 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateLobby(games) {
-        gameListElement.innerHTML = '';
-        if (!Object.keys(games).length) {
-            const empty = document.createElement('p'); empty.className = 'empty-rooms';
-            empty.textContent = 'No open tables yet. Create a room and invite someone to join.';
-            gameListElement.appendChild(empty);
-        }
-        for (const id in games) {
-            const game = games[id];
-            const gameItem = document.createElement('div');
-            gameItem.classList.add('game-item');
-            const infoSpan = document.createElement('span');
-            const creatorName = game.creatorName || 'Player 1';if(game.creatorName)window.I18n?.registerNames([game.creatorName]);
-            const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
-            const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : game.gameType === 'hikoruka' ? "Hikorüka chess" : game.gameType === 'go' ? `Shield Go (${game.boardSize || 9} × ${game.boardSize || 9})` : game.gameType === 'academy' ? "Hikoro Academy" : "Hikoro Chess";
-
-            infoSpan.textContent = `${creatorName}'s Game [${gameTypeStr}] [${timeString}]`; 
-            gameItem.appendChild(infoSpan);
-
-            const joinBtn = document.createElement('button');
-            joinBtn.textContent = 'Join';
-            joinBtn.classList.add('join-btn');
-            joinBtn.addEventListener('click', () => socket.emit('joinGame', id));
-            gameItem.appendChild(joinBtn);
-            gameListElement.appendChild(gameItem);
-        }
-    }
+    const discovery = window.RoomDiscovery.mount(gameListElement,{join:id=>socket.emit('joinGame',id),formatTime:time=>time?formatTimeControl(time):'Unknown Time'});
+    socket.on('connect',()=>discovery.connection(true));
+    socket.on('disconnect',()=>discovery.connection(false));
+    socket.on('errorMsg',()=>discovery.connection(socket.connected));
+    function updateLobby(games) { discovery.update(games); }
 
     function onGameCreated(data) {
         document.getElementById('site-notice').hidden = true;
