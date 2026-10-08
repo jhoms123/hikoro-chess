@@ -1559,5 +1559,11 @@
   "Capture the opposing Sovereign to win. Squires capture diagonally forward and never promote.": "Captura al Soberano rival para ganar. Los Escuderos capturan en diagonal hacia delante y nunca se promocionan.",
   "Both opposing royals must be captured, or a royal must reach a sanctuary. The Kraken can leave its palace after its Prince is captured.": "Debes capturar a ambas piezas reales rivales o llegar a un santuario con una pieza real. El Kraken puede salir de su palacio después de que capturen a su Príncipe.",
   "Whole formation": "Formación completa",
-  "Top pair": "Par superior"
+  "Top pair": "Par superior",
+  "matches": "partidas",
+  "1 match": "1 partida",
+  "1 action": "1 acción",
+  "No record selected": "No hay un registro seleccionado",
+  "Stone": "Piedra",
+  "Shine": "Brillo"
 }
