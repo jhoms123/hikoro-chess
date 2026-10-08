@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const gameItem = document.createElement('div');
             gameItem.classList.add('game-item');
             const infoSpan = document.createElement('span');
-            const creatorName = game.creatorName || 'Player 1';
+            const creatorName = game.creatorName || 'Player 1';if(game.creatorName)window.I18n?.registerNames([game.creatorName]);
             const timeString = game.timeControl ? formatTimeControl(game.timeControl) : 'Unknown Time';
             const gameTypeStr = game.gameType === 'shodansho' ? `Sho Dan Sho (${game.currentPlayers || 1}/${game.maxPlayers || 2})` : game.gameType === 'shavari' ? "Shavari chess" : game.gameType === 'hikoruka' ? "Hikorüka chess" : game.gameType === 'go' ? `Shield Go (${game.boardSize || 9} × ${game.boardSize || 9})` : game.gameType === 'academy' ? "Hikoro Academy" : "Hikoro Chess";
 
@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   }
               } else if (isDroppingPiece) {
                   highlightHikoroDropSquares();
-                  const dropEl = document.querySelector(`.captured-piece .piece img[alt$="${isDroppingPiece.type}"]`)?.closest('.captured-piece');
+                  const dropEl = document.querySelector(`.captured-piece[data-type="${isDroppingPiece.type}"]`);
                   if(dropEl) dropEl.classList.add('selected-drop');
               }
          }
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (gameState.gameOver && !isReplayMode) {
             turnIndicator.textContent = ''; 
-            if (!winnerText.textContent || winnerText.textContent.includes("Turn")) {
+            if (gameState.winner) {
                 const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
                 winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
                 if (gameState.reason) {
@@ -796,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const moveSquare = document.querySelector(`#game-board .square[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
             if (moveSquare) {
                 const plate = document.createElement('div');
-                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',moveSquare.getAttribute('aria-label')+'; legal '+(move.isAttack?'capture':'move'));
+                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',(window.I18n?.original(moveSquare,'aria-label')||moveSquare.getAttribute('aria-label'))+'; legal '+(move.isAttack?'capture':'move'));
                 if (!isPlayerTurn) plate.classList.add('preview');
                 if (move.isAttack) plate.classList.add('attack');
                 if (isDroppingPiece) plate.classList.add('drop');

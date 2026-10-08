@@ -18,10 +18,14 @@ const { createRoomStore } = require('./room-store');
 function createServer({ accountOptions, roomStore = accountOptions?.clientFactory ? null : createRoomStore(accountOptions?.env || process.env) } = {}) {
     const app = express();
     const server = http.createServer(app);
+    const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || 'https://hikorochess.org,https://www.hikorochess.org,http://localhost:3000').split(',').map(value=>value.trim()).filter(Boolean));
+    if(process.env.RENDER_EXTERNAL_URL)allowedOrigins.add(process.env.RENDER_EXTERNAL_URL.replace(/\/$/,''));
     const io = socketIo(server, { maxHttpBufferSize: 32768,
-        cors: { origin: (process.env.ALLOWED_ORIGINS || 'https://hikorochess.org,https://www.hikorochess.org,http://localhost:3000').split(','), methods: ['GET', 'POST'] },
+        allowRequest: (req,done)=>done(null,!req.headers.origin||allowedOrigins.has(req.headers.origin)),
+        cors: { origin: [...allowedOrigins], methods: ['GET', 'POST'] },
         pingInterval: 25000, pingTimeout: 20000 });
     app.disable('x-powered-by');
+    app.use((_req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"base-uri 'self'; object-src 'none'; frame-ancestors 'self'"});next();});
     app.set('trust proxy', 1); // Render's single reverse proxy; do not trust arbitrary forwarding hops.
     const accounts = installAccounts(app, io, accountOptions);
     if(process.env.SITE_REVIEW_MODE==='true')app.get('/api/review-data',(_req,res)=>res.json(require('./review-data').reviewData()));

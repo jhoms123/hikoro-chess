@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="/i18n-catalog.js"></script>
+    <script src="/i18n.js"></script>
+    <link rel="stylesheet" href="/i18n.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sho Dan Sho - Online</title>
@@ -606,10 +609,10 @@ function drawBoard(timestamp) {
             ctx.font = "bold 32px Inter, Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
+            ctx.fillText(window.I18n?.t("⚠️ Image Not Found ⚠️") || "⚠️ Image Not Found ⚠️", canvas.width/2, canvas.height/2 - 20);
             ctx.fillStyle = "#ffffff";
             ctx.font = "20px Inter, Arial";
-            ctx.fillText(`The garden board could not load. Please refresh.`, canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText(window.I18n?.t("The garden board could not load. Please refresh.") || "The garden board could not load. Please refresh.", canvas.width/2, canvas.height/2 + 20);
             ctx.restore();
         }
     }
@@ -875,7 +878,7 @@ document.querySelector('.inventory-sidebar .bg-game-panel').append(gardenKeys);
 const gardenSource=gardenKeys.querySelector('#garden-source'),gardenDestination=gardenKeys.querySelector('#garden-destination');
 let gardenSignature='';function refreshGardenKeys(){const signature=JSON.stringify([[...game.pieces.values()].map(p=>[p.id,p.pos,p.owner]),game.legalMoves?.map(m=>m.dst),game.selectedPieceId,game.selectedHandKind]);if(signature===gardenSignature)return;gardenSignature=signature;gardenSource.replaceChildren(new Option('Choose a piece',''));for(const p of game.pieces.values())if(p.pos)gardenSource.add(new Option('Player '+(p.owner+1)+' · '+p.kind+' · '+p.pos,p.pos));const selected=game.pieces.get(game.selectedPieceId);gardenSource.value=selected?.pos||'';gardenDestination.replaceChildren(new Option('Choose a legal gate',''));for(const move of game.legalMoves||[])gardenDestination.add(new Option(move.dst+(move.captureId?' · capture':''),move.dst));gardenKeys.querySelector('#garden-confirm').disabled=!game.legalMoves?.length;}
 gardenSource.onchange=()=>{if(gardenSource.value){game.clickVertex(gardenSource.value);updateDOM();refreshGardenKeys();}};gardenKeys.querySelector('#garden-confirm').onclick=()=>{if(gardenDestination.value){game.clickVertex(gardenDestination.value);updateDOM();refreshGardenKeys();}};
-setInterval(refreshGardenKeys,500);refreshGardenKeys();window.addEventListener('accessibility-changed',()=>requestAnimationFrame(drawBoard));
+setInterval(refreshGardenKeys,500);refreshGardenKeys();window.addEventListener('accessibility-changed',()=>requestAnimationFrame(drawBoard));window.addEventListener('language-changed',()=>requestAnimationFrame(drawBoard));
 
 
 window.addEventListener('keydown', (e) => {
