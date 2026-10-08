@@ -1,6 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const socket = io();
+    const socket = window.SiteAccounts.socket();
+    window.SiteAccounts.register('hikoro',()=>gameState.isSinglePlayer&&Array.isArray(gameState.actionJournal)?{version:1,journal:gameState.actionJournal}:null, async saved=>{
+        if(saved?.version!==1||!Array.isArray(saved.journal)||saved.journal.length>10000)throw Error('Invalid save');
+        if(new TextEncoder().encode(JSON.stringify({journal:saved.journal})).length>30000)throw Error('Save exceeds restore limit');
+        sessionStorage.removeItem('hikoro-active-room');
+        await window.SiteAccounts.ready;
+        const restore=()=>socket.emit('restoreHikoroSave',{journal:saved.journal});
+        if(socket.connected)restore();else socket.once('connect',restore);
+    });
+
     const announce = message => {
         const notice = document.getElementById('site-notice');
         notice.textContent = message; notice.hidden = false;

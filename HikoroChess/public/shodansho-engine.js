@@ -411,6 +411,7 @@ class Game {
     }
 
     reset(playerCount) {
+        this.actionJournal = [];
         this.playerCount = Math.max(2, Math.min(4, playerCount));
         this.players = [];
         this.pieces = new Map();
@@ -689,6 +690,7 @@ class Game {
         }
         if (isOnline && isRemote) waitingForServer = false;
 
+        this.actionJournal.push({type:'applyMove',move:JSON.parse(JSON.stringify(move))});
         let piece = this.pieces.get(move.pieceId);
         if (move.captureId !== null) this.capturePiece(this.pieces.get(move.captureId));
         
@@ -735,6 +737,7 @@ class Game {
         let [ok, why] = this.canDrop(kind, key);
         if (!ok) { this.message = why; return; }
 
+        this.actionJournal.push({type:'dropSelectedHand',key,kind});
         let pid = this.nextPieceId++;
         let homeField = null;
         if (kind === "water") {
@@ -851,6 +854,7 @@ class Game {
         let p = this.pieces.get(pid);
         if (!p || p.kind !== "sun" || p.owner !== this.currentPlayer || !p.pos) { this.message = "Only your selected Sun Flower can be picked up."; updateDOM(); return; }
         
+        this.actionJournal.push({type:'pickupSelectedSun',pieceId:pid});
         p.pos = null;
         this.players[p.owner].hand["sun"]++;
         this.updateHarmonyCache();

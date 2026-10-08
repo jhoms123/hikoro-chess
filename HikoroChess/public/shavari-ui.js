@@ -167,7 +167,7 @@
     }
     if(online){
         $('play-mode').textContent='ONLINE TABLE';
-        socket=io();
+        socket=window.SiteAccounts.socket();
         socket.on('connect',()=>{
             connected=true;pending=false;hasSynced=false;
             let token;try{token=sessionStorage.getItem('hikoro-seat-' + gameId);}catch{}
@@ -184,4 +184,10 @@
     }
     render();
     if(params.get('showRules')==='1')$('rules-dialog').showModal();
+
+    window.SiteAccounts.register('shavari',()=>online?null:{version:3,journal,cursor,flipped},saved=>{
+        const restored=saved?.version===3&&Shavari.replay(saved.journal,saved.cursor);
+        if(online||!restored||!Shavari.replay(saved.journal))throw Error('Invalid save');
+        journal=saved.journal;cursor=saved.cursor;state=restored;flipped=Boolean(saved.flipped);selected=null;persist();render();
+    });
 })();
