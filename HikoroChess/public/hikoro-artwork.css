@@ -1,0 +1,36 @@
+/* Supplied artwork; ownership changes orientation, never color.
+   A shared display filter improves separation from the wood without editing assets. */
+:root{--hikoro-piece-filter:brightness(1.28) contrast(1.08) drop-shadow(.65px 0 0 #f4dfb4bb) drop-shadow(-.65px 0 0 #f4dfb4bb) drop-shadow(0 .65px 0 #f4dfb4bb) drop-shadow(0 -.65px 0 #f4dfb4bb) drop-shadow(0 1px 1px #24180c66)}
+.hikoro-site .piece-entry img,.hikoro-site .flying-piece img,.academy-table .guide-card img,.academy-table .selection-detail img,.academy-table .capture-list img{filter:var(--hikoro-piece-filter)}
+.hikoro-site #game-board{background:url('assets/hikoro-wood/board.webp') center/100% 100% no-repeat transparent}
+.hikoro-site #game-board .square{background:transparent!important;border:0}
+.hikoro-site #game-board .square.invalid{background:transparent!important;pointer-events:none}
+.hikoro-site #game-board .piece img,.academy-table .mini-piece img{image-rendering:auto;width:94%;height:94%;object-fit:contain;filter:var(--hikoro-piece-filter)}
+.hikoro-site #game-board>.corner-hand{position:absolute;inset:0;width:100%!important;height:100%;min-height:0!important;display:grid!important;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(16,1fr);background:none!important;border:0!important;padding:0!important;gap:0;overflow:visible!important;pointer-events:none;z-index:4}
+.hikoro-site #game-board .corner-hand .captured-piece{width:100%;height:100%;min-height:0;border:1px solid #b7935555;background:linear-gradient(#79592d33,#39260f33)!important;padding:0;pointer-events:auto;cursor:pointer;border-radius:3px;opacity:1;position:relative}
+.hikoro-site #game-board .corner-hand .captured-piece:disabled{cursor:default;opacity:1}
+.hikoro-site #game-board .corner-hand .captured-piece .piece{width:100%;height:100%}
+.hikoro-site #game-board .corner-hand .empty-hand-slot{margin:2px;border:1px dashed #b7935544;border-radius:3px;background:#3b291644;pointer-events:none}
+.hikoro-site #game-board .corner-hand .selected-drop{outline:2px solid #f4dc87;outline-offset:-2px;background:#af893d77!important}
+.hikoro-site #game-board .corner-hand .piece-count{font:700 max(10px,calc(var(--square-size)*.22))/1.3 Arial;padding:1px 3px;z-index:2;background:#f0ddae;color:#302313;pointer-events:none}
+.hikoro-site #game-board .corner-hand .captured-piece:focus-visible{outline:2px solid #f4dc87;outline-offset:-2px}
+.hand-pager{display:flex;align-items:center;justify-content:center;gap:6px}.hand-pager[hidden]{display:none}.hand-pager .quiet-button{min-height:44px}
+.hikoro-site .captured-area{width:180px!important;min-height:0!important}
+.hikoro-site .piece-entry img{image-rendering:auto}
+.academy-table #board .mini-cell{background:url('assets/hikoro-wood/board.webp');background-size:1000% 1600%;background-position:calc(var(--wood-column)/9*100%) calc(var(--wood-row)/15*100%)}
+.academy-table #board .mini-cell.sanctuary{background:linear-gradient(135deg,#ffdf6b,#d4a332)}
+.academy-table #board .mini-cell.palace-locked{outline:1px solid #e6ce83;outline-offset:-1px}
+.academy-table .cell-coordinate,.academy-table #board .mini-cell.dark .cell-coordinate{color:#f4e5bd;text-shadow:0 1px 2px #27190e}
+.academy-table #board .mini-cell.sanctuary .cell-coordinate{color:#493415;text-shadow:none}
+.academy-table .mini-piece{width:96%;height:96%}.academy-table .piece-owner{display:none}
+.academy-table .guide-card img,.academy-table .selection-detail img,.academy-table .capture-list img{image-rendering:auto;object-fit:contain}
+@media(max-width:760px){
+ .hikoro-site #game-board>.corner-hand{overflow:visible!important;flex-wrap:nowrap!important}
+ .hikoro-site #hikoro-game-wrapper .captured-area{width:100%!important}
+ .hikoro-site .hand-pager .quiet-button{min-height:44px}
+ .academy-table .mini-piece{width:96%;height:96%}
+}
+
+.hikoro-site #game-board .square.last-move-from{box-shadow:inset 0 0 0 2px #e6c55a99}
+.hikoro-site #game-board .square.last-move-to{box-shadow:inset 0 0 0 3px #ffe384}
+.hikoro-site #game-board .square.preview-selected{box-shadow:inset 0 0 0 2px #d9e7e6}

@@ -1,8 +1,8 @@
 /* Capture real, engine-validated match positions; does not create artwork. */
 const {chromium}=require('playwright'),fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..'),OUT=ROOT+'/HikoroChess/public/assets/collection/matches';
-(async()=>{fs.mkdirSync(OUT,{recursive:true});const {server,io}=require(ROOT+'/HikoroChess/server').createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'],headless:true});const context=await browser.newContext({viewport:{width:1440,height:1140},deviceScaleFactor:1,reducedMotion:'reduce'});await context.addInitScript(()=>localStorage.setItem('hikoro-audio-v1',JSON.stringify({muted:true})));const page=await context.newPage();const records={};
-for(const name of ['hikoro','shodansho','shavari','hikoruka','go','academy']){
+(async()=>{fs.mkdirSync(OUT,{recursive:true});const {server,io}=require(ROOT+'/HikoroChess/server').createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'],headless:true});const context=await browser.newContext({viewport:{width:1440,height:1140},deviceScaleFactor:1,reducedMotion:'reduce'});await context.addInitScript(()=>localStorage.setItem('hikoro-audio-v1',JSON.stringify({muted:true})));const page=await context.newPage();const records=fs.existsSync(OUT+'/positions.json')?JSON.parse(fs.readFileSync(OUT+'/positions.json')).positions:{};
+for(const name of (process.env.MATCH_GAMES||'hikoro,shodansho,shavari,hikoruka,go,academy').split(',')){
  await page.goto(base+(name==='hikoro'?'/':'/'+name+'.html'),{waitUntil:'networkidle'});let selector;
  if(name==='hikoro'){
   await page.locator('#single-player-btn').click();await page.locator('#hikoro-game-wrapper').waitFor({state:'visible'});

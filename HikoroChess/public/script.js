@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Game Wrappers ---
     const hikoroGameWrapper = document.getElementById('hikoro-game-wrapper');
     const hikoroBoardElement = document.getElementById('game-board');
+    const handRoots = {white:document.getElementById('white-captured'),black:document.getElementById('black-captured')};
+    const handPages = {white:0,black:0};
+    const bottomOwner = () => isSinglePlayer || isReplayMode || myColor !== 'black' ? 'white' : 'black';
 
     // --- Shared UI Elements ---
     const turnIndicatorContainer = document.getElementById('turn-indicator-container');
@@ -571,8 +574,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const spriteImg = document.createElement('img');
                     const spriteType = piece.type;
-                    spriteImg.src = `sprites/${spriteType}_${piece.color}.png`;
+                    spriteImg.src = HikoroArtwork.sprite(spriteType);
                     spriteImg.alt = `${piece.color} ${piece.type}`;
+                    HikoroArtwork.orient(spriteImg,piece.color,bottomOwner());
 
                     pieceElement.appendChild(spriteImg);
                     square.appendChild(pieceElement);
@@ -580,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hikoroBoardElement.appendChild(square); 
             }
         }
+        hikoroBoardElement.append(handRoots.white,handRoots.black);
          if (isReplayMode && currentReplayNode?.gameState?.bonusMoveInfo && selectedSquare) {
              const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
              if (bonusPiece) {
@@ -605,94 +610,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderHikoroCaptured() {
-        if (!gameState || !gameState.whiteCaptured || !gameState.blackCaptured) {
-            return;
-        }
-
-        const isBottomHandWhite = (isSinglePlayer || isReplayMode || myColor === 'white');
-
-        const bottomHandPieces = isBottomHandWhite ? gameState.whiteCaptured : gameState.blackCaptured;
-        const topHandPieces = isBottomHandWhite ? gameState.blackCaptured : gameState.whiteCaptured;
-
-        const bottomHandEl = document.querySelector(isBottomHandWhite ? '#white-captured' : '#black-captured');
-        const topHandEl = document.querySelector(isBottomHandWhite ? '#black-captured' : '#white-captured');
-        const bottomLabelEl = document.querySelector(isBottomHandWhite ? '#white-captured-area .hand-label' : '#black-captured-area .hand-label');
-        const topLabelEl = document.querySelector(isBottomHandWhite ? '#black-captured-area .hand-label' : '#white-captured-area .hand-label');
-
-        if (!bottomHandEl || !topHandEl || !bottomLabelEl || !topLabelEl) return;
-
-        if (isSinglePlayer || isReplayMode) {
-             bottomLabelEl.textContent = "White's Hand";
-             topLabelEl.textContent = "Black's Hand";
-        } else {
-             bottomLabelEl.textContent = "Your Hand";
-             topLabelEl.textContent = "Opponent's Hand";
-        }
-
-        bottomHandEl.innerHTML = '';
-        topHandEl.innerHTML = '';
-
-        const createCapturedPieceElement = (pieceData, handColor, isClickable) => {
-            const el = document.createElement('div');
-            el.classList.add('captured-piece', handColor);
-
-            const pieceElement = document.createElement('div');
-            pieceElement.classList.add('piece');
-
-            const spriteImg = document.createElement('img');
-            const spriteType = pieceData.type;
-            spriteImg.src = `sprites/${spriteType}_${handColor}.png`;
-            spriteImg.alt = `${handColor} ${spriteType}`;
-
-            pieceElement.appendChild(spriteImg);
-            el.appendChild(pieceElement);
-
-            if (isClickable) {
-                el.addEventListener('click', (event) => onCapturedClick(pieceData, handColor, event.currentTarget));
+        if (!gameState?.whiteCaptured || !gameState?.blackCaptured) return;
+        for (const color of ['white','black']) {
+            const root=handRoots[color],bottom=color===bottomOwner(),pieces=gameState[color+'Captured'];
+            root.className='captured-pieces-box corner-hand';root.setAttribute('role','group');root.setAttribute('aria-label',color+' hand in board corners');root.replaceChildren();
+            const counts=new Map();for(const p of pieces)counts.set(p.type,(counts.get(p.type)||0)+1);
+            const groups=[...counts].sort(([a],[b])=>a.localeCompare(b)),pages=Math.max(1,Math.ceil(groups.length/12));handPages[color]=Math.min(handPages[color],pages-1);
+            const visible=groups.slice(handPages[color]*12,(handPages[color]+1)*12);
+            const clickable=!isReplayMode&&!gameState.gameOver&&!gameState.bonusMoveInfo&&(gameState.isWhiteTurn===(color==='white'))&&(isSinglePlayer||myColor===color);
+            for(let i=0;i<12;i++) {
+                const [type,count]=visible[i]||[],slot=document.createElement(type?'button':'span');
+                slot.className=type?'captured-piece '+color:'empty-hand-slot';slot.style.gridColumn=String((i<6?i%2:8+i%2)+1);slot.style.gridRow=String((bottom?13:0)+Math.floor((i%6)/2)+1);
+                if(type){slot.type='button';slot.disabled=!clickable||type==='lupa'||type==='prince';slot.dataset.type=type;slot.dataset.owner=color;slot.setAttribute('aria-label',color+' hand: '+type+', '+count+' available');
+                    const piece=document.createElement('span'),img=document.createElement('img');piece.className='piece';img.src=HikoroArtwork.sprite(type);img.alt=color+' '+type;HikoroArtwork.orient(img,color,bottomOwner());piece.append(img);slot.append(piece);
+                    if(count>1){const badge=document.createElement('span');badge.className='piece-count';badge.textContent=count;slot.append(badge);}
+                    if(isDroppingPiece?.type===type&&clickable)slot.classList.add('selected-drop');
+                    slot.addEventListener('click',event=>onCapturedClick({type},color,event.currentTarget));
+                }else slot.setAttribute('aria-hidden','true');root.append(slot);
             }
-            return el;
-        };
-
-        const bottomHandColor = isBottomHandWhite ? 'white' : 'black';
-        const topHandColor = isBottomHandWhite ? 'black' : 'white';
-
-        const isBottomHandClickable = (!isReplayMode && 
-                                      ((isSinglePlayer && gameState.isWhiteTurn === isBottomHandWhite) || 
-                                       (!isSinglePlayer && myColor === bottomHandColor && gameState.isWhiteTurn === (myColor === 'white')))); 
-
-        const isTopHandClickable = (!isReplayMode && 
-                                    ((isSinglePlayer && gameState.isWhiteTurn !== isBottomHandWhite) || 
-                                    (!isSinglePlayer && myColor === topHandColor && gameState.isWhiteTurn === (myColor === 'white')))); 
-
-          const groupPieces = (pieces) => {
-               const counts = {};
-               pieces.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1; });
-               return Object.entries(counts).sort(([typeA], [typeB]) => typeA.localeCompare(typeB));
-           };
-
-           groupPieces(bottomHandPieces).forEach(([type, count]) => {
-               const pieceData = { type }; 
-               const pieceEl = createCapturedPieceElement(pieceData, bottomHandColor, isBottomHandClickable);
-               if (count > 1) { 
-                    const countBadge = document.createElement('span');
-                    countBadge.classList.add('piece-count');
-                    countBadge.textContent = count;
-                    pieceEl.appendChild(countBadge);
-               }
-               bottomHandEl.appendChild(pieceEl);
-           });
-
-           groupPieces(topHandPieces).forEach(([type, count]) => {
-               const pieceData = { type };
-               const pieceEl = createCapturedPieceElement(pieceData, topHandColor, isTopHandClickable);
-                if (count > 1) {
-                    const countBadge = document.createElement('span');
-                    countBadge.classList.add('piece-count');
-                    countBadge.textContent = count;
-                    pieceEl.appendChild(countBadge);
-               }
-               topHandEl.appendChild(pieceEl);
-           });
+            const area=document.getElementById(color+'-captured-area'),label=area.querySelector('.hand-label');area.style.order=bottom?'3':'1';label.textContent=isSinglePlayer||isReplayMode?color.charAt(0).toUpperCase()+color.slice(1)+"'s corner hand":color===myColor?'Your corner hand':'Opponent’s corner hand';
+            let pager=area.querySelector('.hand-pager');if(!pager){pager=document.createElement('div');pager.className='hand-pager';area.append(pager);}pager.replaceChildren();pager.hidden=pages===1;
+            if(pages>1){for(const [text,delta]of [['←',-1],['→',1]]){const button=document.createElement('button');button.type='button';button.textContent=text;button.className='quiet-button';button.setAttribute('aria-label',(delta<0?'Previous':'Next')+' '+color+' hand page');button.disabled=delta<0?handPages[color]===0:handPages[color]===pages-1;button.addEventListener('click',()=>{handPages[color]+=delta;renderHikoroCaptured();});pager.append(button);}const number=document.createElement('span');number.textContent=(handPages[color]+1)+' / '+pages;pager.insertBefore(number,pager.lastChild);}
+        }
     }
 
     function updateTurnIndicator() {
@@ -720,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function animateHikoroMove(from, to, pieceImgSrc) {
+    function animateHikoroMove(from, to, pieceImgSrc, owner) {
         const fromSquareEl = document.querySelector(`#game-board .square[data-logical-x='${from.x}'][data-logical-y='${from.y}']`);
         const toSquareEl = document.querySelector(`#game-board .square[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
 
@@ -738,6 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clone = document.createElement('div');
         clone.className = 'piece flying-piece';
         clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
+        HikoroArtwork.orient(clone.firstElementChild,owner,bottomOwner());
 
         clone.style.position = 'absolute'; 
         clone.style.top = `${fromTop}px`;
@@ -760,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, ANIMATION_DURATION);
     }
 
-    function animateHikoroDrop(to, pieceImgSrc) {
+    function animateHikoroDrop(to, pieceImgSrc, owner) {
         const toSquareEl = document.querySelector(`#game-board .square[data-logical-x='${to.x}'][data-logical-y='${to.y}']`);
         if (!toSquareEl || !hikoroBoardElement) return;
 
@@ -773,6 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clone = document.createElement('div');
         clone.className = 'piece flying-piece drop'; 
         clone.innerHTML = `<img src="${pieceImgSrc}" alt="animating piece">`;
+        HikoroArtwork.orient(clone.firstElementChild,owner,bottomOwner());
 
         clone.style.position = 'absolute';
         clone.style.top = `${toTop - toRect.height}px`; 
@@ -888,14 +829,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const piece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
             if (piece) {
                 const spriteType = piece.type;
-                const pieceImgSrc = `sprites/${spriteType}_${piece.color}.png`;
+                const pieceImgSrc = HikoroArtwork.sprite(spriteType);
 
                 const isBonusActive = !!gameState.bonusMoveInfo && gameState.bonusMoveInfo.pieceX === selectedSquare.x && gameState.bonusMoveInfo.pieceY === selectedSquare.y;
                 const validMoves = typeof gameLogic !== 'undefined' ? gameLogic.getValidMovesForPiece(piece, selectedSquare.x, selectedSquare.y, gameState.boardState, isBonusActive) : [];
                 const isValidTarget = validMoves.some(m => m.x === x && m.y === y);
 
                 if (isValidTarget) {
-                    animateHikoroMove(selectedSquare, { x, y }, pieceImgSrc); 
+                    animateHikoroMove(selectedSquare, { x, y }, pieceImgSrc, piece.color);
                     socket.emit('makeGameMove', {
                         gameId,
                         move: { type: 'board', from: selectedSquare, to: { x, y } }
@@ -918,8 +859,8 @@ document.addEventListener('DOMContentLoaded', () => {
              if (gameState.boardState[y]?.[x] === null && (typeof gameLogic !== 'undefined' ? gameLogic.isPositionValid(x,y) : true) ) {
                 const dropColor = isSinglePlayer ? (gameState.isWhiteTurn ? 'white' : 'black') : myColor;
                 const spriteType = isDroppingPiece.type;
-                const pieceImgSrc = `sprites/${spriteType}_${dropColor}.png`;
-                animateHikoroDrop({ x, y }, pieceImgSrc); 
+                const pieceImgSrc = HikoroArtwork.sprite(spriteType);
+                animateHikoroDrop({ x, y }, pieceImgSrc, dropColor);
 
                 socket.emit('makeGameMove', {
                     gameId,
@@ -1667,7 +1608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function populateHikoroRules() {
         rulesBody.innerHTML = `
-            <h2>Winning the Game</h2>
+            <h2>Reading your wooden pieces</h2><p>Both sides use the same artwork. Pieces point toward the opposing side, like shogi. Your hand is stored in the two empty corners nearest you; select a hand piece, then a highlighted empty square to drop it.</p><h2>Winning the Game</h2>
             <ul>
                 <li><strong>Royalty Capture:</strong> Capture **both** the opponent's King Kraken and Kraken Prince.</li>
                 <li><strong>Sanctuary Victory:</strong> Move your King Kraken OR Kraken Prince onto one of the eight golden "Sanctuary" squares.</li>
@@ -1709,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const notation = p.notation || '?';
             entry.innerHTML = `
                 <div class="piece-header">
-                    <img src="sprites/${p.type}_white.png" alt="${p.name}">
+                    <img src="${HikoroArtwork.sprite(p.type)}" alt="${p.name}">
                   - <span>${p.name} (${notation})</span>
                 </div>
                 <p>${p.desc}</p>

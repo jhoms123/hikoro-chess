@@ -1,0 +1,226 @@
+{
+  "provenance": "User supplied attachments on 2026-10-07; original artist and licensing details were not supplied. Do not infer authorship or an open license.",
+  "modifications": "Lossless WebP encoding; RGBA pixels verified identical. Ownership displayed by CSS rotation, using one shared image per type.",
+  "assets": [
+    {
+      "type": "lupa",
+      "source_file": "kingkraken_white_wood.png",
+      "source_sha256": "95164e12df5c7466d4810525d6e61fe7e0360dc815ee11aeafa47a1a752c446b",
+      "delivery": "lupa.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "prince",
+      "source_file": "krakenprince_white_wood.png",
+      "source_sha256": "3dd200bcc12aea91dff922aaa15c23d9730f73588d1299fdbb6d9f592c08afd4",
+      "delivery": "prince.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "zur",
+      "source_file": "dolphin_white_wood.png",
+      "source_sha256": "5591aa4bea63b1a7fad58c83229996b0d711569a72d6dc6af623323fc7861aa2",
+      "delivery": "zur.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "kota",
+      "source_file": "hermitcrab_white_wood.png",
+      "source_sha256": "626f47777b0b4e4c7d543a682bc523a9089c9b269c6d0dbc14fccc83aed1ea54",
+      "delivery": "kota.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "fin",
+      "source_file": "onepincercrab_white_wod.png",
+      "source_sha256": "90558b6e250bc848a919f56b7a9d234452e4c6f1b1300893c9ffd783013c8e7f",
+      "delivery": "fin.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "yoli",
+      "source_file": "bigeyesquid_white_wood.png",
+      "source_sha256": "dac2e117eafb3b78bc2e8335dd4b0996367e8332e04871ad093a4b1d8ce59fd8",
+      "delivery": "yoli.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "pilut",
+      "source_file": "squid_white_wood.png",
+      "source_sha256": "ab94591fbc45cac9471fa752c4ea5d5d64a6c98e5d4f95f3edfca95e35ce67e3",
+      "delivery": "pilut.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "sult",
+      "source_file": "crayfish_white_wood.png",
+      "source_sha256": "f3085a9164d1b1dbd22179c0612b7e870135586af09c4344c93fc8403fb3ec5c",
+      "delivery": "sult.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "pawn",
+      "source_file": "fish_white_wood.png",
+      "source_sha256": "425bc38513394f5ebd4a6f63bff10bad1b6a71df42ece80e36aa64d19883452b",
+      "delivery": "pawn.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "cope",
+      "source_file": "narwhal_white_wood.png",
+      "source_sha256": "faeee6224daaf8dfdb8de6558bf60af4c0898baff562d2393f1a7f278574b2e4",
+      "delivery": "cope.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "chair",
+      "source_file": "dumbooctopus_white_wood.png",
+      "source_sha256": "17d9df6fd7398ceccabfacced37127dcbdf7cfe83dbfbd598b762bf9e2612ce8",
+      "delivery": "chair.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "jotu",
+      "source_file": "hammerhead_white_wood.png",
+      "source_sha256": "6ebc116239c818f8a3e7839408b1e509783b9f60d6e8526d12280899e99b3d1b",
+      "delivery": "jotu.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "kor",
+      "source_file": "jellyfish_white_wood.png",
+      "source_sha256": "3a1b2123fa503055e736b83bc1c9474fed849f04c1ee82b246ae3d46b3385253",
+      "delivery": "kor.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "finor",
+      "source_file": "twopincercrab_white_wood.png",
+      "source_sha256": "e59e510ab63715c5d5e0c37b08a348cf12f1aa12a840559d92ea06bc5ea009cc",
+      "delivery": "finor.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "greatshield",
+      "source_file": "shieldsquid_white_wood.png",
+      "source_sha256": "489b2c2eca3b899d864921b14646db74e3e634a9aa8d1af32c63aa2b1b14cc1a",
+      "delivery": "greatshield.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "greathorsegeneral",
+      "source_file": "ancientcreature_white_wood.png",
+      "source_sha256": "346f2b29d6bbcef32008a796947c613344207f91882be3d30118f06226b8237e",
+      "delivery": "greathorsegeneral.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "neptune",
+      "source_file": "neptune_white_wood.png",
+      "source_sha256": "4bc726bb1114d1ade31da9f4244abcc1769dbde1976d13b407af9c5f31d5cc48",
+      "delivery": "neptune.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "mermaid",
+      "source_file": "mermaid_white_wood.png",
+      "source_sha256": "ca2efdbb1babf82e0c076a72ba089c116f841c63da0e4875a99aae89a19c9cf5",
+      "delivery": "mermaid.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "cthulhu",
+      "source_file": "cthulu_white_wood.png",
+      "source_sha256": "4953d1803653175647c2cf7ca1c67c7a294bbc154badf818dac973584535cf84",
+      "delivery": "cthulhu.webp",
+      "dimensions": [
+        551,
+        714
+      ],
+      "lossless_pixel_match": true
+    },
+    {
+      "type": "board",
+      "source_file": "1A2CCC3BE6A9AE65D14840ECA148CA5D8FE6524E_Board.png",
+      "source_sha256": "ab74326c17c932432144315eb870eda86066be41c43904bc32428d3880ec7bd6",
+      "delivery": "board.webp",
+      "dimensions": [
+        1283,
+        2048
+      ],
+      "lossless_pixel_match": true
+    }
+  ]
+}

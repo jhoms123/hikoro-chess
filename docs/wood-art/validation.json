@@ -1,0 +1,20 @@
+[
+  {
+    "mobile": false,
+    "cornerDrop": true,
+    "groupCounts": true,
+    "paging": true,
+    "blackSeatOrientation": true,
+    "academyFlip": true,
+    "errors": []
+  },
+  {
+    "mobile": true,
+    "cornerDrop": true,
+    "groupCounts": true,
+    "paging": true,
+    "blackSeatOrientation": true,
+    "academyFlip": true,
+    "errors": []
+  }
+]
