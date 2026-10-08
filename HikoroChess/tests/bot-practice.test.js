@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
+const vm = require('node:vm');
 
 const publicDir = path.join(__dirname, '../public');
 const read = file => fs.readFileSync(path.join(publicDir, file), 'utf8');
@@ -38,6 +39,70 @@ test('Sho Dan Sho practice starts with the established v13.5.1 bot', () => {
     assert.equal(page.querySelector('#validation-record'), null);
     assert.ok(fs.statSync(path.join(publicDir, 'shodansho-bot.html')).size < 1_100_000);
     dom.window.close();
+});
+
+
+test('Sho Dan Sho practice offers two to four configurable Human/Bot seats', () => {
+    const html = read('shodansho-bot.html');
+    const dom = new JSDOM(html);
+    const page = dom.window.document;
+    const count = page.querySelector('#playercount');
+    assert.deepEqual([...count.options].map(option => option.value), ['2', '3', '4']);
+    assert.ok(page.querySelector('#seatcontrols'));
+    assert.match(html, /function renderSeatControls/);
+    assert.match(html, /multiSeat:game\.playerCount>2/);
+    assert.match(html, /Three- and four-player games use a multi-seat conservative search/);
+    dom.window.close();
+});
+
+test('Sho Dan Sho multi-seat worker advances three/four seats and returns legal moves', () => {
+    const html = read('shodansho-bot.html');
+    const workerStart = html.indexOf('let workerSource=') + 'let workerSource='.length;
+    const workerEnd = html.indexOf('";\n\nlet watchPlaying', workerStart);
+    assert.ok(workerStart > 0 && workerEnd > workerStart, 'bundled worker source is present');
+    const workerSource = JSON.parse(html.slice(workerStart, workerEnd + 1));
+    const tailMatch = html.match(/const MULTI_SEAT_WORKER_TAIL=("(?:\\.|[^"\\])*");/);
+    assert.ok(tailMatch, 'multiplayer adapter is appended to bot workers');
+    const adapter = JSON.parse(tailMatch[1]);
+    const fixture = `
+        (function () {
+            const reports = [];
+            for (const count of [3, 4]) {
+                const board = new BoardData();
+                let game = new Game(board, count);
+                game.updateHarmonyCache();
+                const seen = [];
+                for (let ply = 0; ply < count * 2; ply++) {
+                    const legal = actions(game);
+                    if (!legal.length) throw Error('no legal opening action');
+                    seen.push(game.currentPlayer);
+                    game = nextState(game, legal[0]);
+                }
+                const restored = restore(snapshot(game), board);
+                if (restored.playerCount !== count) throw Error('restore lost player count');
+                const result = multiSeatSearch(restored, 250, 3, () => {});
+                if (!result.action) throw Error('multi-seat search returned no action');
+                if (!actions(restored).some(a => actionKey(a) === actionKey(result.action))) {
+                    throw Error('multi-seat search returned an illegal action');
+                }
+                reports.push({count, seen, next: restored.currentPlayer, legal: actions(restored).length});
+            }
+            return reports;
+        })()
+    `;
+    const context = {
+        onmessage: () => {},
+        postMessage: () => {},
+        performance: require('node:perf_hooks').performance
+    };
+    const reports = vm.runInNewContext(workerSource + '\\n' + adapter + '\\n' + fixture, context, {timeout: 15000});
+    const plain = JSON.parse(JSON.stringify(reports));
+    assert.deepEqual(plain.map(result => result.count), [3, 4]);
+    for (const result of plain) {
+        assert.deepEqual(result.seen.slice(0, result.count), Array.from({length: result.count}, (_, i) => i));
+        assert.ok(result.legal > 0);
+        assert.ok(result.next >= 0 && result.next < result.count);
+    }
 });
 
 test('Shavari bot search returns a move accepted by its bundled rules engine', () => {
