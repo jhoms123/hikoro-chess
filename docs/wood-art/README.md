@@ -1,6 +1,6 @@
 # Supplied wooden Hikoro artwork
 
-Updates the full Hikoro game and Academy to use the nineteen supplied piece images. Pieces use a shared 28% brightness boost, slight contrast increase, and fine cream edge through CSS; the supplied image pixels remain unchanged. Both armies share one asset per type, with ownership shown by rotation relative to the viewer. The full game uses the supplied 10 × 16 board; captured hands occupy the twelve unused corner cells at each end. Duplicate types display a count. Academy retains its 8 × 8 geometry and uses the supplied wood texture.
+Updates the full Hikoro game and Academy to use the nineteen supplied piece images. Pieces use a shared 28% brightness boost, slight contrast increase, and fine cream edge through CSS; the supplied image pixels remain unchanged. Both armies share one asset per type, with ownership shown by rotation relative to the viewer. The full game uses the supplied 10 × 16 board; captured hands occupy the twelve unused corner cells at each end. Duplicate types display a count. Academy uses a dedicated 8 × 8 maple board SVG with an uninterrupted credited photographic wood texture, aligned grid, and walnut frame.
 
 ## Previews
 

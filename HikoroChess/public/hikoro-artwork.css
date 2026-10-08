@@ -17,12 +17,14 @@
 .hand-pager{display:flex;align-items:center;justify-content:center;gap:6px}.hand-pager[hidden]{display:none}.hand-pager .quiet-button{min-height:44px}
 .hikoro-site .captured-area{width:180px!important;min-height:0!important}
 .hikoro-site .piece-entry img{image-rendering:auto}
-.academy-table #board .mini-cell{background:url('assets/hikoro-wood/board.webp');background-size:1000% 1600%;background-position:calc(var(--wood-column)/9*100%) calc(var(--wood-row)/15*100%)}
-.academy-table #board .mini-cell.sanctuary{background:linear-gradient(135deg,#ffdf6b,#d4a332)}
-.academy-table #board .mini-cell.palace-locked{outline:1px solid #e6ce83;outline-offset:-1px}
-.academy-table .cell-coordinate,.academy-table #board .mini-cell.dark .cell-coordinate{color:#f4e5bd;text-shadow:0 1px 2px #27190e}
-.academy-table #board .mini-cell.sanctuary .cell-coordinate{color:#493415;text-shadow:none}
-.academy-table .mini-piece{width:96%;height:96%}.academy-table .piece-owner{display:none}
+/* A dedicated square board: one uninterrupted wood surface and an exact 8 × 8 grid. */
+.academy-table #board{aspect-ratio:1;grid-template-rows:repeat(8,minmax(0,1fr));background:url('assets/hikoro-wood/academy-board.svg') center/100% 100% no-repeat;gap:0;padding:0;border:1px solid #62452b;border-radius:0;box-shadow:none}
+.academy-table #board .mini-cell,.academy-table #board .mini-cell.dark{background:transparent;border-radius:0;min-height:0;height:100%;aspect-ratio:auto}
+.academy-table #board .mini-cell.sanctuary{background:#eec54b70}
+.academy-table #board .mini-cell.palace-locked{background-image:none;outline:1px dashed #85613977;outline-offset:-3px}
+.academy-table .cell-coordinate,.academy-table #board .mini-cell.dark .cell-coordinate,.academy-table #board .mini-cell.sanctuary .cell-coordinate{color:#503820;text-shadow:0 1px #fff6}
+.academy-table .mini-board-frame{background:linear-gradient(#55371b44,#29190b66),var(--wood) center/cover;border:1px solid #c7a46c;padding:18px;border-radius:3px;box-shadow:0 12px 30px #0005,inset 0 0 0 5px #543a23,inset 0 0 0 7px #c7a46c}
+.academy-table .mini-piece{display:flex;align-items:center;justify-content:center;position:absolute;inset:2%;width:96%;height:96%;min-width:0;min-height:0}.academy-table .piece-owner{display:none}
 .academy-table .guide-card img,.academy-table .selection-detail img,.academy-table .capture-list img{image-rendering:auto;object-fit:contain}
 @media(max-width:760px){
  .hikoro-site #game-board>.corner-hand{overflow:visible!important;flex-wrap:nowrap!important}
