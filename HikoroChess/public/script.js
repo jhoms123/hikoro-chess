@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await window.SiteAccounts.ready;
         const restore=()=>socket.emit('restoreHikoroSave',{journal:saved.journal});
         if(socket.connected)restore();else socket.once('connect',restore);
-    });
+    },recordPayload);
+    function recordPayload(){return Array.isArray(gameState.actionJournal)?{journal:gameState.actionJournal,result:gameState.gameOver?{winner:gameState.winner==='white'?1:gameState.winner==='black'?2:0,reason:gameState.reason}:null,gameId:gameState.isSinglePlayer?null:gameState.id,recordId:gameState.id}:null;}
 
     const announce = message => {
         const notice = document.getElementById('site-notice');
@@ -434,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLocalState(newGameState) {
         if (!isReplayMode) window.SiteAudio?.transition('hikoro',gameState,newGameState);
         gameState = newGameState;
+        if(!isReplayMode&&recordPayload())window.SiteRecords?.completed('hikoro',recordPayload(),recordPayload().result,recordPayload().gameId);
         updateTimerDisplay({ whiteTime: gameState.timeControl?.main === -1 ? -1 : gameState.whiteTimeLeft || gameState.timeControl?.byoyomiTime || 0, blackTime: gameState.timeControl?.main === -1 ? -1 : gameState.blackTimeLeft || gameState.timeControl?.byoyomiTime || 0, isInByoyomiWhite: gameState.whiteTimeLeft === 0, isInByoyomiBlack: gameState.blackTimeLeft === 0 });
 
         if (newGameState.gameOver && newGameState.winner) {

@@ -32,16 +32,22 @@ function installAccounts(app, io, { env = process.env, clientFactory = createCli
         } catch { next(new Error('Account verification is temporarily unavailable.')); }
     });
     const recorded = new Set();
-    async function recordResult(game, accountIds, result) {
+    async function recordResult(game, accountIds, result, record) {
         if (!writer || !game.started || game.isSinglePlayer || !game.gameOver || recorded.has(game.id) || !GAME_TYPES.includes(game.gameType)) return;
-        // Count only matches between distinct verified accounts. Guests and local practice are unranked.
-        if (accountIds.length !== game.maxPlayers || accountIds.some(id => !id) || new Set(accountIds).size !== accountIds.length) return;
+        // Archive signed-in players' matches, including guest opponents. Only distinct signed-in opponents count for scores.
+        const ranked = accountIds.length === game.maxPlayers && accountIds.every(Boolean) && new Set(accountIds).size === accountIds.length;
         if (!Number.isInteger(result.winner) || result.winner < 0 || result.winner > accountIds.length) return;
+        if(!ranked&&!record)return;
         recorded.add(game.id);
         const rows = accountIds.map((user_id, index) => ({ user_id, game_id: game.id, game_type: game.gameType,
             outcome: result.winner === 0 ? 'draw' : result.winner === index + 1 ? 'win' : 'loss',
             reason: String(result.reason || 'Match completed').slice(0, 160) }));
         try {
+            if(record){
+                const history=[...new Set(accountIds.filter(Boolean))].map(user_id=>({user_id,match_id:game.id,game_type:game.gameType,record,verified:true}));
+                if(history.length){const {error}=await writer.from('hikoro_matches').upsert(history,{onConflict:'user_id,match_id'});if(error)throw error;}
+            }
+            if(!ranked)return;
             // Composite PK makes retries idempotent; no client request can supply these results.
             const { error } = await writer.from('hikoro_results').upsert(rows, { onConflict: 'user_id,game_id', ignoreDuplicates: true });
             if (error) throw error;

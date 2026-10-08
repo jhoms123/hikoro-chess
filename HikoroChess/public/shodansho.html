@@ -401,7 +401,7 @@ let hasSpun = false;
 
 // Setup new board size
 </script>
-<script src="shodansho-engine.js"></script>
+<script src="shodansho-engine.js"></script><script src="match-record.js"></script><script src="record-library.js"></script>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -456,7 +456,9 @@ function showPieceInfo(kind, owner = null) {
     `;
 }
 
+function recordPayload(){return {journal:game.actionJournal,playerCount:game.playerCount,gameId:isOnline?gameId:null,result:game.phase==='game_over'?{winner:game.winner===null?0:game.winner+1,reason:game.message}:null};}
 function updateDOM() {
+ window.SiteRecords?.completed('shodansho',recordPayload(),recordPayload().result,isOnline?gameId:null);
     const turnIndicator = document.getElementById('turn-indicator');
     const gameMessage = document.getElementById('game-message');
 
@@ -878,9 +880,9 @@ window.addEventListener('keydown', (e) => {
         game.selectHand(kinds[e.key - '1']);
     }
     else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
-    else if (!isOnline && e.key === 'F1') { e.preventDefault(); game.reset(2); }
-    else if (!isOnline && e.key === 'F2') { e.preventDefault(); game.reset(3); }
-    else if (!isOnline && e.key === 'F3') { e.preventDefault(); game.reset(4); }
+    else if (!isOnline && e.key === 'F1') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(2); }
+    else if (!isOnline && e.key === 'F2') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(3); }
+    else if (!isOnline && e.key === 'F3') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(4); }
     updateDOM();
 });
 
@@ -900,7 +902,7 @@ if (isOnline) {
         const actions = sync.actions;
         myPlayerIndex = sync.playerIndex; onlinePlayerCount = sync.playerCount;
         targetRotationAngle = myPlayerIndex === 1 ? Math.PI : myPlayerIndex === 2 ? Math.PI / 2 : myPlayerIndex === 3 ? -Math.PI / 2 : 0;
-        game.reset(onlinePlayerCount);
+        window.SiteRecords?.newTable('shodansho'); game.reset(onlinePlayerCount);
         if (actions) {
             const restore=()=>actions.forEach(act => applyRemoteAction(act));
             if(window.SiteAudio)window.SiteAudio.silence(restore);else restore();
@@ -914,7 +916,7 @@ if (isOnline) {
         updateDOM();
     });
 } else {
-    game.reset(onlinePlayerCount); 
+    window.SiteRecords?.newTable('shodansho'); game.reset(onlinePlayerCount);
     updateDOM();
 }
 
@@ -937,7 +939,7 @@ window.SiteAccounts.register('shodansho',()=>isOnline?null:{version:1,playerCoun
   }else throw Error('Invalid action');
  }
  Object.assign(game,restored);onlinePlayerCount=saved.playerCount;updateDOM();
-});
+},recordPayload);
 if (urlParams.get('showRules') === '1') toggleRulesModal();
 
 function applyRemoteAction(act) {

@@ -11,6 +11,7 @@ const Hikoruka = require('./public/hikoruka-engine');
 const Go = require('./public/go-engine');
 const Academy = require('./public/academy-engine');
 const { installAccounts } = require('./accounts');
+const MatchRecord = require('./public/match-record');
 
 function createServer({ accountOptions } = {}) {
     const app = express();
@@ -39,6 +40,7 @@ function createServer({ accountOptions } = {}) {
         const engine = sessions.get(game.id)?.engine;
         if (!engine) return;
         const { positions, ...publicEngine } = engine;
+        publicEngine.recordJournal = sessions.get(game.id).journal || [];
         game.players.forEach((id, playerIndex) => {
             if (!onlySocket || id === onlySocket.id) io.to(id).emit(`${game.gameType}State`, { gameId: game.id, state: publicEngine, playerIndex });
         });
@@ -61,9 +63,12 @@ function createServer({ accountOptions } = {}) {
         const session = sessions.get(game.id);
         if (!session) return;
         const winner = game.gameType === 'hikoro' ? game.winner === 'draw' ? 0 : game.winner === 'white' ? 1 : game.winner === 'black' ? 2 : -1
-            : game.gameType === 'shodansho' ? game.winner === 'draw' ? 0 : Number.isInteger(session.engine?.winner) ? session.engine.winner + 1 : -1
+            : game.gameType === 'shodansho' ? game.winner === 'draw' ? 0 : Number.isInteger(session.engine?.winner) ? session.engine.winner + 1 : Number(game.winner)
             : session.engine?.result?.winner ?? (game.winner === 'draw' ? 0 : Number(game.winner));
-        void accounts.recordResult(game, session.accountIds, { winner, reason: game.reason || session.engine?.result?.reason });
+        const result={winner,reason:game.reason||session.engine?.result?.reason||session.engine?.message};
+        const payload={journal:game.gameType==='hikoro'?game.actionJournal:game.gameType==='shodansho'?game.sdsActions:session.journal,size:game.boardSize,playerCount:game.maxPlayers,mode:'match',lesson:'pawn'};
+        let record;try{record=MatchRecord.create(game.gameType,payload,result,{id:game.id,players:Array.from({length:game.maxPlayers},(_,i)=>'Player '+(i+1))});}catch{console.error('Match replay record could not be constructed.');}
+        void accounts.recordResult(game, session.accountIds, result, record);
     }
     function options(data) {
         if (!data || typeof data !== 'object') return null;
@@ -88,7 +93,7 @@ function createServer({ accountOptions } = {}) {
             moveList: [], actionJournal: [], whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true, sdsActions: [] };
         games.set(id, game);
         const tokens = [ticket()];
-        sessions.set(id, { tokens, accountIds: [socket.data.accountId || null], engine: config.gameType === 'academy' ? Academy.initial() : config.gameType === 'go' ? Go.initial(config.boardSize) : config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
+        sessions.set(id, { tokens, journal: [], accountIds: [socket.data.accountId || null], engine: config.gameType === 'academy' ? Academy.initial() : config.gameType === 'go' ? Go.initial(config.boardSize) : config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
         socket.join(id);
         if (announceSeat) socket.emit('seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
         return game;
@@ -206,7 +211,7 @@ function createServer({ accountOptions } = {}) {
                     return err(socket,'Not your turn or this seat is no longer active.');
                 const next = rules.apply(engine,data?.action);
                 if (!next) return err(socket,'That move is not legal.');
-                sessions.get(game.id).engine=next;game.lastActivity=Date.now();game.gameOver=Boolean(next.result);sendVariant(game);if(game.gameOver)persistResult(game);
+                sessions.get(game.id).engine=next;sessions.get(game.id).journal.push(JSON.parse(JSON.stringify(data.action)));game.lastActivity=Date.now();game.gameOver=Boolean(next.result);sendVariant(game);if(game.gameOver)persistResult(game);
             });
             socket.on(`${type}Resign`, data => {
                 const game=games.get(data?.gameId);

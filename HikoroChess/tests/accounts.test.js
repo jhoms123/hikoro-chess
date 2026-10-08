@@ -72,5 +72,5 @@ test('online resignation writes verified account outcomes and another account ca
     const denied=event(b,'errorMsg');b.emit('joinGoRoom',{gameId,token:assigned.token});assert.match(await denied,/account that opened/);
     const closed=event(a,'roomClosed');a.emit('goResign',{gameId});await closed;
     for(let i=0;i<20&&!writes.length;i++)await new Promise(resolve=>setTimeout(resolve,5));
-    assert.equal(writes.length,1);assert.deepEqual(writes[0].map(r=>[r.user_id,r.outcome]),[['account-a','loss'],['account-b','win']]);
+    assert.equal(writes.length,2);assert.equal(writes[0][0].record.format,'hikoro-record');assert.deepEqual(writes[1].map(r=>[r.user_id,r.outcome]),[['account-a','loss'],['account-b','win']]);
 });

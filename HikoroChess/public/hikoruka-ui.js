@@ -23,6 +23,7 @@
         });cells.push(cell);$('board').appendChild(cell);
     }
     function render(){
+window.SiteRecords?.completed('hikoruka',recordPayload(),state.result,online?gameId:null);
         const legal=selected&&humanTurn()?Hikoruka.legalMoves(state,selected):[];
         for(const cell of cells){const r=Number(cell.dataset.r),c=Number(cell.dataset.c),piece=state.board[r][c],valid=legal.some(m=>m.r===r&&m.c===c),isSelected=selected?.r===r&&selected?.c===c;
             cell.style.order=(flipped?4-r:r)*5+(flipped?4-c:c);cell.className='mini-cell'+((r+c)%2?' dark':'')+(isSelected?' selected':'')+(valid?' legal'+(piece?' capture':''):'');
@@ -48,7 +49,7 @@
         if(!state.history.length){const li=document.createElement('li');li.className='empty-history';li.textContent='The first move is yours.';list.append(li);}if(atEnd)list.scrollTop=list.scrollHeight;
         const frame=document.querySelector('.mobile-board-viewport')||document.querySelector('.mini-board-frame');frame.before($(`strip-${flipped?1:2}`));frame.after($(`strip-${flipped?2:1}`));
     }
-    function start(nextMode=mode){cancelBot();mode=nextMode;state=Hikoruka.initial();journal=[];cursor=0;selected=null;notice('');persist();render();}
+    function start(nextMode=mode){window.SiteRecords?.newTable('hikoruka');cancelBot();mode=nextMode;state=Hikoruka.initial();journal=[];cursor=0;selected=null;notice('');persist();render();}
     function confirm(title,message,label,action){cancelBot();confirmation=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('accept-confirm').textContent=label;$('confirm-dialog').showModal();$('cancel-confirm').focus();}
     $('new-button').addEventListener('click',()=>{if(cursor||journal.length)confirm('Start a new match?','Save a record first if you want to keep this match. Your current position will be replaced.','Start new match',()=>start());else start();});
     $('opponent-select').addEventListener('change',()=>{const next=$('opponent-select').value;$('opponent-select').value=mode;if(next===mode)return;if(cursor||journal.length)confirm('Switch opponent?','Switching modes starts a fresh match. Save a record first if needed.','Switch mode',()=>start(next));else start(next);});
@@ -59,14 +60,15 @@
     $('rules-button').addEventListener('click',()=>{cancelBot();$('rules-dialog').showModal();});$('close-rules').addEventListener('click',()=>$('rules-dialog').close());$('rules-dialog').addEventListener('close',()=>scheduleBot());
     $('resign-button').addEventListener('click',()=>confirm('Resign this match?','The other court will win. The final position and move record remain available.','Resign',()=>{if(connected&&synced)socket.emit('hikorukaResign',{gameId});}));
     $('lobby-link').addEventListener('click',e=>{if(online&&!state.result&&!closed){e.preventDefault();confirm('Leave this table?','Leaving ends the match. Refreshing preserves your seat.','Leave table',()=>{socket.emit('leaveGame',gameId);location.href='/';});}});
-    $('save-button').addEventListener('click',()=>{const text=['HIKORÜKA CHESS','5 × 5 · capture the Sovereign',...state.history.map((m,i)=>`${i+1}. ${names[m.player]} ${Hikoruka.TYPES[m.type].name} ${Hikoruka.coord(m.from)} ${m.captured?'×':'→'} ${Hikoruka.coord(m.to)}`),state.result?`${state.result.winner?names[state.result.winner]+' wins':'Draw'}: ${state.result.reason}`:`${names[state.player]} to move`].join('\n');const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='hikoruka-match.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Match record downloaded.');});
+    $('save-button').addEventListener('click',()=>{try{SiteRecords.save('hikoruka',recordPayload());notice('Replay record downloaded and added to history.');}catch(e){notice(e.message);}});
     for(const [type,info]of Object.entries(Hikoruka.TYPES)){const card=document.createElement('article');card.className='guide-card';const img=document.createElement('img'),h=document.createElement('h3'),p=document.createElement('p'),small=document.createElement('small');img.src=sprite(type,1);img.alt='';h.textContent=info.name;p.textContent=info.description;small.textContent=`${type} · ${['S','I','V'].includes(type)?'two':'one'} per court`;card.append(img,h,p,small);$('guide-cards').append(card);}
     if(online){socket=window.SiteAccounts.socket();socket.on('connect',()=>{connected=true;synced=false;pending=false;let token;try{token=sessionStorage.getItem('hikoro-seat-'+gameId);}catch{}if(!token){closed=true;notice('No saved seat. Join a Hikorüka table through the collection.');render();return;}socket.emit('joinHikorukaRoom',{gameId,token});render();});socket.on('disconnect',()=>{connected=false;pending=false;selected=null;render();});socket.on('hikorukaState',data=>{if(data.gameId!==gameId)return;if(synced)window.SiteAudio?.transition('hikoruka',state,data.state);state=data.state;mySeat=data.playerIndex+1;synced=true;pending=false;selected=null;notice('');render();});socket.on('errorMsg',message=>{pending=false;if(String(message).includes('could not be restored'))closed=true;notice(String(message));render();});socket.on('roomClosed',message=>{closed=true;pending=false;notice(String(message));render();});}
     render();if(params.get('showRules')==='1')$('rules-dialog').showModal();scheduleBot();
 
-    window.SiteAccounts.register('hikoruka',()=>online?null:{version:1,journal,cursor,mode,flipped},saved=>{
+    function recordPayload(){return {journal:online?(state.recordJournal||[]):journal,cursor:online?(state.recordJournal||[]).length:cursor,result:state.result,gameId:online?gameId:null};}
+window.SiteAccounts.register('hikoruka',()=>online?null:{version:1,journal,cursor,mode,flipped},saved=>{
         const restored=saved?.version===1&&Hikoruka.replay(saved.journal,saved.cursor);
         if(online||!restored||!['local','bot'].includes(saved.mode)||!Hikoruka.replay(saved.journal))throw Error('Invalid save');
         cancelBot();journal=saved.journal;cursor=saved.cursor;mode=saved.mode;state=restored;flipped=Boolean(saved.flipped);selected=null;persist();render();scheduleBot();
-    });
+    },recordPayload);
 })();

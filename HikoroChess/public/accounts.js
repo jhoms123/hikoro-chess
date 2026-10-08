@@ -19,6 +19,7 @@
                 session = next;
                 if (changed) {
                     profile = null;
+                    queueMicrotask(()=>window.dispatchEvent(new Event('account-changed')));
                     for (const socket of sockets) { socket.disconnect(); socket.connect(); }
                 }
                 queueMicrotask(() => { refreshButton(); if (panel?.open) renderAccount(); });
@@ -40,6 +41,19 @@
         finally { busy = false; panel.removeAttribute('aria-busy'); }
     }
     function check(result) { if (result.error) throw result.error; return result.data; }
+    async function archiveRecord(record){await ready;if(!client||!session)return false;check(await client.from('hikoro_matches').upsert({user_id:session.user.id,match_id:record.id,game_type:record.game,record,verified:false},{onConflict:'user_id,match_id',ignoreDuplicates:true}));return true;}
+    async function listRecords(offset=0,game=''){await ready;if(!client||!session)return null;let query=client.from('hikoro_matches').select('*').eq('user_id',session.user.id).order('recorded_at',{ascending:false}).order('match_id',{ascending:false});if(game)query=query.eq('game_type',game);return check(await query.range(offset,offset+49));}
+    function recordTools(body){
+        const link=element('a','Match history & replay records');link.href='/history.html';body.append(link);
+        if(!adapter)return;
+        body.append(button('Save replay record',async()=>{
+            const payload=adapter.recordCapture();if(!payload)throw Error('Open a table first.');
+            const record=MatchRecord.create(adapter.type,payload,payload.result||null,{id:payload.recordId||payload.gameId||SiteRecords.id(adapter.type)});
+            SiteRecords.remember(record);SiteRecords.download(record);
+            if(!payload.gameId)await archiveRecord(record);
+            message('Replay record saved and downloaded. Open Match history to replay it.');
+        }));
+    }
     async function readProfile() {
         const userId = session?.user?.id;
         if (!userId) throw new Error('Please sign in to open your journal.');
@@ -56,8 +70,9 @@
         await ready;
         const body = document.getElementById('account-body'); body.replaceChildren();
         refreshButton();
-        if (!client) { body.append(element('p', 'Player accounts are being prepared. You can keep playing as a guest.')); return; }
+        if (!client) { body.append(element('p', 'Player accounts are being prepared. You can keep playing as a guest.'));recordTools(body); return; }
         if (!session) {
+            recordTools(body);
             body.append(element('p', 'Keep your player name, saved tables, and learning progress across devices. Guest play stays available.'));
             for (const provider of config.providers) body.append(button('Continue with ' + (provider === 'github' ? 'GitHub' : 'Google'), async () => {
                 check(await client.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + '/?account=1' } }));
@@ -88,6 +103,7 @@
             const results = check(await client.from('hikoro_results').select('game_type,outcome,reason,completed_at').eq('user_id', userId).order('completed_at', { ascending: false }).limit(1000));
             if (!session || session.user.id !== userId) return;
             body.replaceChildren();
+            recordTools(body);
             const form = element('form'), label = element('label', 'Player name'), input = element('input');
             input.value = profile.display_name; input.required = true; input.maxLength = 30; label.append(input);
             const submit = element('button', 'Save player name'); submit.type = 'submit'; form.append(label, submit);
@@ -161,8 +177,8 @@
         }
         await renderAccount(); message('Table saved to your account.');
     }
-    function register(type, capture, restore) {
-        adapter = { type, capture };
+    function register(type, capture, restore, recordCapture=capture) {
+        adapter = { type, capture, recordCapture };
         try {
             const raw = sessionStorage.getItem('hikoro-cloud-restore');
             const pending = raw && JSON.parse(raw);
@@ -172,7 +188,7 @@
             }
         } catch { window.alert('The saved table could not be restored.'); }
     }
-    window.SiteAccounts = { ready, register, socket: () => {
+    window.SiteAccounts = { ready, register, archiveRecord, listRecords, socket: () => {
         const socket = io({ auth: callback => {
             ready.then(async () => { const current = client && await client.auth.getSession(); callback({ token: current?.data?.session?.access_token || null }); }).catch(() => callback({}));
         } });
