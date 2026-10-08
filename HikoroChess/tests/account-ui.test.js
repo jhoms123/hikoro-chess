@@ -10,7 +10,7 @@ async function until(predicate) {
 }
 function setup(type, pending, conflict = false) {
     const dom = new JSDOM(source(type + '.html'), { url: 'http://localhost/' + type + '.html', runScripts: 'outside-only', pretendToBeVisual: true });
-    const w = dom.window, rows = { hikoro_profiles: [{ user_id: 'test-player', display_name: 'Test player', preferences: {}, academy_progress: {} }], hikoro_saves: [], hikoro_results: [] };
+    const w = dom.window, rows = { hikoro_profiles: [{ user_id: 'test-player', display_name: 'Test player', preferences: {}, academy_progress: {} }], hikoro_saves: [], hikoro_results: [], hikoro_matches: [] };
     let writes = 0;
     if (conflict) rows.hikoro_saves.push({ user_id: 'test-player', game_type: type, revision: 1, updated_at: new Date().toISOString(), payload: {} });
     w.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -20,7 +20,7 @@ function setup(type, pending, conflict = false) {
     w.fetch = async () => ({ ok: true, json: async () => ({ enabled: true, url: 'https://example.supabase.co', key: 'sb_publishable_test', providers: [], verifiedResults: true }) });
     const client = { auth: { getSession: async () => ({ data: { session: { user: { id: 'test-player' } } } }), onAuthStateChange: () => {} }, from(table) {
         let filters = [], action, value;
-        const query = { select: () => query, eq: (key, val) => { filters.push([key, val]); return query; }, order: () => query, limit: () => query,
+        const query = { select: () => query, eq: (key, val) => { filters.push([key, val]); return query; }, order: () => query, limit: () => query, range: () => query,
             update: data => { action = 'update'; value = data; return query; }, insert: data => { action = 'insert'; value = data; return query; },
             maybeSingle: async () => ({ data: rows[table].find(row => filters.every(([k, v]) => row[k] === v)) || null }),
             single: async () => ({ data: rows[table].find(row => filters.every(([k, v]) => row[k] === v)) }),

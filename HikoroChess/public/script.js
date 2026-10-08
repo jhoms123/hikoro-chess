@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const notice = document.getElementById('site-notice');
         notice.textContent = message; notice.hidden = false;
     };
-    let seatToken = null;
+    let seatToken = null, roomType = 'hikoro';
     socket.on('seatAssigned', data => {
         seatToken = data.token;
         sessionStorage.setItem('hikoro-seat-' + data.gameId, data.token);
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
         }
-        if (gameId && !isReplayMode && seatToken) socket.emit('resumeGame', { gameId, token: seatToken });
+        if (gameId && !isReplayMode && seatToken) socket.emit(({hikoro:'resumeGame',shodansho:'joinSdsRoom',go:'joinGoRoom',shavari:'joinShavariRoom',hikoruka:'joinHikorukaRoom',academy:'joinAcademyRoom'})[roomType], { gameId, token: seatToken });
     });
     socket.on('disconnect', () => {
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onGameCreated(data) {
         document.getElementById('site-notice').hidden = true;
-        gameId = data.gameId;
+        gameId = data.gameId;roomType=data.gameType||'hikoro';
         myColor = data.color;
         if (data.color !== 'waiting') sessionStorage.setItem('hikoro-active-room', gameId);
         isSinglePlayer = false;
@@ -526,6 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderHikoroBoard() {
+        const focused=document.activeElement?.closest('#game-board .square');const focusPoint=focused?{x:focused.dataset.logicalX,y:focused.dataset.logicalY}:null;
         hikoroBoardElement.innerHTML = ''; 
         if (!gameState || !Array.isArray(gameState.boardState) || gameState.boardState.length === 0) {
             return;
@@ -572,6 +573,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!isBoardValid) {
                     square.classList.add('invalid'); 
                 } else {
+                    square.setAttribute('role','button');square.tabIndex=focusPoint?Number(focusPoint.x)==x&&Number(focusPoint.y)==y?0:-1:x===3&&y===0?0:-1;
+                    const occupant=gameState.boardState[y]?.[x];square.setAttribute('aria-label',String.fromCharCode(65+x)+(y+1)+': '+(occupant?occupant.color+' '+occupant.type:'empty'));
+                    square.addEventListener('keydown',event=>{
+                        const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+                        if(directions[event.key]){event.preventDefault();const [dx,dy]=directions[event.key];const row=Number(square.style.gridRowStart),column=Number(square.style.gridColumnStart),target=[...hikoroBoardElement.querySelectorAll('.square:not(.invalid)')].find(n=>Number(n.style.gridRowStart)===row+dy&&Number(n.style.gridColumnStart)===column+dx);if(target){hikoroBoardElement.querySelectorAll('.square').forEach(n=>n.tabIndex=-1);target.tabIndex=0;target.focus();}}
+                        else if(event.key==='Enter'||event.key===' '){event.preventDefault();onSquareClick(x,y);}
+                        else if(event.key==='Escape'){event.preventDefault();selectedSquare=null;isDroppingPiece=null;renderHikoroBoard();}
+                    });
                     square.addEventListener('click', (event) => {
                         const clickedSquare = event.currentTarget;
                         const logicalX = parseInt(clickedSquare.dataset.logicalX);
@@ -591,13 +600,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     spriteImg.alt = `${piece.color} ${piece.type}`;
                     HikoroArtwork.orient(spriteImg,piece.color,bottomOwner());
 
-                    pieceElement.appendChild(spriteImg);
+                    pieceElement.appendChild(spriteImg);const army=document.createElement('span');army.className='piece-army-label';army.textContent=piece.color==='white'?'1':'2';army.setAttribute('aria-hidden','true');pieceElement.append(army);
                     square.appendChild(pieceElement);
                 }
                 hikoroBoardElement.appendChild(square); 
             }
         }
-        hikoroBoardElement.append(handRoots.white,handRoots.black);
+        hikoroBoardElement.append(handRoots.white,handRoots.black);if(focusPoint)hikoroBoardElement.querySelector('.square[tabindex="0"]')?.focus({preventScroll:true});
          if (isReplayMode && currentReplayNode?.gameState?.bonusMoveInfo && selectedSquare) {
              const bonusPiece = gameState.boardState[selectedSquare.y]?.[selectedSquare.x];
              if (bonusPiece) {
@@ -787,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const moveSquare = document.querySelector(`#game-board .square[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
             if (moveSquare) {
                 const plate = document.createElement('div');
-                plate.classList.add('move-plate');
+                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',moveSquare.getAttribute('aria-label')+'; legal '+(move.isAttack?'capture':'move'));
                 if (!isPlayerTurn) plate.classList.add('preview');
                 if (move.isAttack) plate.classList.add('attack');
                 if (isDroppingPiece) plate.classList.add('drop');

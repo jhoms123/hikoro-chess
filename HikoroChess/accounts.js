@@ -18,11 +18,12 @@ function accountConfig(env = process.env) {
         usernameSignup: Boolean(enabled && env.SUPABASE_SECRET_KEY && env.ACCOUNT_USERNAME_SIGNUP === 'true') };
 }
 function installAccounts(app, io, { env = process.env, clientFactory = createClient } = {}) {
+    if(env.SITE_REVIEW_MODE==='true')env={...env,SUPABASE_URL:'',SUPABASE_PUBLISHABLE_KEY:'',SUPABASE_SECRET_KEY:''};
     const config = accountConfig(env);
     const client = config.enabled ? clientFactory(config.url, config.key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
     const writer = config.enabled && env.SUPABASE_SECRET_KEY ? clientFactory(config.url, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
     installUsernameAuth(app, { config, writer, clientFactory, env });
-    app.get('/api/account-config', (_req, res) => res.json({ ...config, verifiedResults: Boolean(writer) }));
+    app.get('/api/account-config', (_req, res) => res.json({ ...config, verifiedResults: Boolean(writer), review:env.SITE_REVIEW_MODE==='true' }));
     app.get('/vendor/supabase.js', (_req, res) => res.sendFile(path.join(path.dirname(require.resolve('@supabase/supabase-js/package.json')), 'dist/umd/supabase.js')));
     const profileReaders=new WeakMap();
     io.use(async (socket, next) => {

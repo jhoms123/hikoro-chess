@@ -98,7 +98,7 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
     <link rel="stylesheet" href="shodansho-medieval.css">
-<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/player-identity.js"></script><script src="/accounts.js"></script></head>
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/player-identity.js"></script><script src="/review-client.js"></script><script src="/accounts.js"></script><link rel="stylesheet" href="experience.css"><script src="table-companion.js"></script><script src="experience.js" defer></script></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
@@ -570,6 +570,7 @@ function drawDottedLine(ctx, x1, y1, x2, y2, color) {
 }
 
 function drawBoard(timestamp) {
+    if(document.documentElement.dataset.reduceMotion==='true'){isAnimatingBoard=false;currentRotationAngle=targetRotationAngle;}
     let needsNextFrame = false;
     if (!timestamp) timestamp = performance.now();
 
@@ -737,7 +738,7 @@ function drawBoard(timestamp) {
             ctx.save();
             
             let elapsed = piece.animStart ? timestamp - piece.animStart : Infinity;
-            let duration = 300; 
+            let duration = document.documentElement.dataset.reduceMotion==='true'?0:300;
             let scale = 1;
             let alpha = 1;
 
@@ -784,6 +785,7 @@ function drawBoard(timestamp) {
                 ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
+            if(document.documentElement.dataset.ownerLabels!=='false'){ctx.save();ctx.fillStyle='#f6e8c4';ctx.strokeStyle='#403320';ctx.lineWidth=2;ctx.beginPath();ctx.arc(PIECE_RADIUS*.65,PIECE_RADIUS*.65,10,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#302819';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(piece.owner+1),PIECE_RADIUS*.65,PIECE_RADIUS*.65);ctx.restore();}
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = `rgba(239, 68, 68, ${0.9 * alpha})`; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.stroke();
@@ -801,7 +803,7 @@ function drawBoard(timestamp) {
 function startBoardAnimation() {
     if (hasSpun) return;
     hasSpun = true;
-    isAnimatingBoard = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    isAnimatingBoard = document.documentElement.dataset.reduceMotion!=='true';
     if (!isAnimatingBoard) currentRotationAngle = targetRotationAngle;
     requestAnimationFrame(drawBoard);
 }
@@ -867,6 +869,14 @@ canvas.addEventListener('click', (e) => {
 });
 
 canvas.addEventListener('contextmenu', e => { e.preventDefault(); cancelSelection(); });
+// Text controls use the same vertex selection and legal destinations as the canvas.
+const gardenKeys=document.createElement('details');gardenKeys.className='garden-keyboard';gardenKeys.innerHTML='<summary>Garden keyboard navigation</summary><p>Choose a flower from your hand, or choose a piece below; then choose a legal gate. Army numbers identify owners without relying on flower color.</p><label>Board piece<select id="garden-source"><option value="">Choose a piece</option></select></label><label>Legal destination<select id="garden-destination"><option value="">Choose a gate</option></select></label><button id="garden-confirm">Select destination</button>';
+document.querySelector('.inventory-sidebar .bg-game-panel').append(gardenKeys);
+const gardenSource=gardenKeys.querySelector('#garden-source'),gardenDestination=gardenKeys.querySelector('#garden-destination');
+let gardenSignature='';function refreshGardenKeys(){const signature=JSON.stringify([[...game.pieces.values()].map(p=>[p.id,p.pos,p.owner]),game.legalMoves?.map(m=>m.dst),game.selectedPieceId,game.selectedHandKind]);if(signature===gardenSignature)return;gardenSignature=signature;gardenSource.replaceChildren(new Option('Choose a piece',''));for(const p of game.pieces.values())if(p.pos)gardenSource.add(new Option('Player '+(p.owner+1)+' · '+p.kind+' · '+p.pos,p.pos));const selected=game.pieces.get(game.selectedPieceId);gardenSource.value=selected?.pos||'';gardenDestination.replaceChildren(new Option('Choose a legal gate',''));for(const move of game.legalMoves||[])gardenDestination.add(new Option(move.dst+(move.captureId?' · capture':''),move.dst));gardenKeys.querySelector('#garden-confirm').disabled=!game.legalMoves?.length;}
+gardenSource.onchange=()=>{if(gardenSource.value){game.clickVertex(gardenSource.value);updateDOM();refreshGardenKeys();}};gardenKeys.querySelector('#garden-confirm').onclick=()=>{if(gardenDestination.value){game.clickVertex(gardenDestination.value);updateDOM();refreshGardenKeys();}};
+setInterval(refreshGardenKeys,500);refreshGardenKeys();window.addEventListener('accessibility-changed',()=>requestAnimationFrame(drawBoard));
+
 
 window.addEventListener('keydown', (e) => {
     const modal = document.getElementById('rules-modal');
