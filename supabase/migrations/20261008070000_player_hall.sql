@@ -18,7 +18,7 @@ language sql stable security definer set search_path = '' as $$
  group by p.user_id,p.display_name,p.avatar_icon,p.avatar_path
  ), ranked as (select *,dense_rank() over(order by wins desc) as place from totals)
  select place,display_name,avatar_icon,avatar_path,wins,losses,draws,matches from ranked
- order by wins desc,display_name,user_id limit 50 offset greatest(0,least(page_offset,10000));
+ order by wins desc,display_name,user_id limit 50 offset greatest(0,page_offset);
 $$;
 revoke all on function public.hikoro_leaderboard(text,integer) from public;
 grant execute on function public.hikoro_leaderboard(text,integer) to anon,authenticated,service_role;
