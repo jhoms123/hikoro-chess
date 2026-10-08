@@ -21,6 +21,7 @@ function createServer({ accountOptions } = {}) {
         cors: { origin: (process.env.ALLOWED_ORIGINS || 'https://hikorochess.org,https://www.hikorochess.org,http://localhost:3000').split(','), methods: ['GET', 'POST'] },
         pingInterval: 25000, pingTimeout: 20000 });
     app.disable('x-powered-by');
+    app.set('trust proxy', 1); // Render's single reverse proxy; do not trust arbitrary forwarding hops.
     const accounts = installAccounts(app, io, accountOptions);
     app.use(express.static(path.join(__dirname, 'public')));
     app.get('/gamelogic.js', (req, res) => res.sendFile(path.join(__dirname, 'gamelogic.js')));
