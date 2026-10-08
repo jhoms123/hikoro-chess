@@ -1,64 +1,72 @@
-/* Mobile view controls only: the existing engines still handle every game action. */
+/* Layout adapters preserve the original controls, listeners, artwork and engines. */
 document.addEventListener('DOMContentLoaded',()=>{
  const body=document.body,media=matchMedia('(max-width:760px)'),theme=body.dataset.audioTheme;
  const board=document.querySelector('#board-container,.mini-board-frame,.board-shell,#board-wrapper');
- if(!board)return;
- const originalParent=board.parentElement,viewport=document.createElement('div'),space=document.createElement('div'),surface=document.createElement('div');
- viewport.className='mobile-board-viewport';viewport.tabIndex=0;viewport.setAttribute('aria-label','Game board viewport. Zoom controls enlarge the board; drag to pan when enlarged.');
- space.className='mobile-board-space';surface.className='mobile-board-surface';
- board.before(viewport);viewport.append(space);space.append(surface);surface.append(board);
- const tray=document.createElement('nav');tray.className='mobile-table-tray';tray.setAttribute('aria-label','Mobile game controls');
- const status=document.createElement('p');status.className='mobile-turn-status';status.setAttribute('aria-live','polite');
- const tools=document.createElement('div');tools.className='mobile-view-tools';
- function button(label,action){const b=document.createElement('button');b.type='button';b.textContent=label;b.className='material-control';b.dataset.material='pearl';b.addEventListener('click',action);tools.append(b);return b;}
- let scale=1,baseWidth=0,baseHeight=0,ready=false,frame=0,lastGesture=0,gesture=null,lastActive=null;
- const focus=button('Focus board',()=>{const on=body.classList.toggle('mobile-board-focus');focus.textContent=on?'Full page':'Focus board';focus.setAttribute('aria-pressed',String(on));viewport.scrollIntoView({block:'start'});});focus.setAttribute('aria-pressed','false');
- const minus=button('−',()=>zoom(scale-.25));minus.setAttribute('aria-label','Zoom out');
- const fit=button('100%',()=>zoom(1));fit.setAttribute('aria-label','Fit board');
- const plus=button('+',()=>zoom(scale+.25));plus.setAttribute('aria-label','Zoom in');
- button('Options',()=>{body.classList.remove('mobile-board-focus');focus.textContent='Focus board';focus.setAttribute('aria-pressed','false');document.querySelector('.match-panel,.game-sidebar,#turn-indicator-container')?.scrollIntoView({block:'start'});});
- const actions=document.createElement('div');actions.className='mobile-game-actions';
- const links=[];
- function mirror(source,label,persistent=false){if(!source)return;const b=document.createElement('button');b.type='button';b.className='material-control';b.dataset.material=theme==='go'?'stone':theme==='shavari'?'jade':'parchment';b.textContent=label;b.addEventListener('click',()=>{source.click();sync();});actions.append(b);links.push({source,b,label,persistent});}
- if(theme==='go'){mirror(document.getElementById('shield-button'),'Make shield');mirror(document.getElementById('pass-button'),'Pass');}
- if(theme==='shavari')for(const [mode,label]of [['all','Whole stack'],['top','Top piece'],['pair','Top two']])mirror(document.querySelector(`.mobile-mode [data-mode="${mode}"]`)||document.querySelector(`[data-mode="${mode}"]`),label);
- if(theme==='shodansho'){mirror(document.getElementById('pickup-btn'),'Pick up Sun');mirror(document.getElementById('cancel-selection-btn'),'Cancel');}
- mirror(document.querySelector('#rules-btn-ingame,#rules-button,.header-rules'),'Rules',true);
- tray.append(status,tools,actions);body.append(tray);
- function zoom(value,point){if(!ready)return;const next=Math.max(1,Math.min(3,value)),r=viewport.getBoundingClientRect();const x=point?point.x-r.left:viewport.clientWidth/2,y=point?point.y-r.top:viewport.clientHeight/2;
-  const bx=(viewport.scrollLeft+x)/scale,by=(viewport.scrollTop+y)/scale;scale=next;
-  surface.style.transform=`scale(${scale})`;space.style.width=baseWidth*scale+'px';space.style.height=baseHeight*scale+'px';
-  viewport.scrollLeft=bx*scale-x;viewport.scrollTop=by*scale-y;viewport.classList.toggle('is-zoomed',scale>1);
-  fit.textContent=Math.round(scale*100)+'%';minus.disabled=scale<=1;plus.disabled=scale>=3;
- }
- function layout(){if(!media.matches||!board.getClientRects().length){ready=false;viewport.removeAttribute('style');space.removeAttribute('style');surface.removeAttribute('style');viewport.classList.remove('is-zoomed');return;}
-  const width=originalParent.clientWidth; if(!width)return;
-  baseWidth=theme==='lobby'?Math.min(width,board.offsetWidth||width):width;
-  // Account for the play area's padding rather than inflating its board.
-  const parentStyle=getComputedStyle(originalParent);if(theme!=='lobby')baseWidth-=parseFloat(parentStyle.paddingLeft)+parseFloat(parentStyle.paddingRight);
-  surface.style.width=baseWidth+'px';baseHeight=board.offsetHeight;
-  if(!baseHeight)return;ready=true;zoom(scale);
- }
- function sync(){const active=theme!=='lobby'||body.classList.contains('game-active');if(active!==lastActive){lastActive=active;layout();if(!active){body.classList.remove('mobile-board-focus');focus.textContent='Focus board';focus.setAttribute('aria-pressed','false');scale=1;}}const hidden=!media.matches||!active;if(tray.hidden!==hidden)tray.hidden=hidden;const enabled=media.matches&&active;if(body.classList.contains('mobile-table-active')!==enabled)body.classList.toggle('mobile-table-active',enabled);
-  const text=document.querySelector('#turn-status,#turn-indicator')?.textContent.trim()||'';if(status.textContent!==text)status.textContent=text;
-  for(const {source,b,label,persistent}of links){if(b.disabled!==source.disabled)b.disabled=source.disabled;const pressed=source.getAttribute('aria-pressed');if(pressed!==null&&b.getAttribute('aria-pressed')!==pressed)b.setAttribute('aria-pressed',pressed);
-   const visible=persistent||source.getClientRects().length>0&&!source.hidden;if(b.hidden===visible)b.hidden=!visible;
-   const next=source.id==='shield-button'&&source.textContent.includes('finish')?'Shield · finish turn':label;if(b.textContent!==next)b.textContent=next;
+ const relocations=[],disclosures=[];
+ let mobile=false,detailed=false,navigating=false,goSize=null;
+ function move(element,parent,before=null){if(!element||!parent)return;const marker=document.createComment('desktop position');element.before(marker);relocations.push({element,marker});parent.insertBefore(element,before);}
+ function fold(element,label){if(!element)return;const box=document.createElement('details'),summary=document.createElement('summary');box.className='mobile-disclosure';summary.textContent=label;element.before(box);box.append(summary,element);disclosures.push(box);return box;}
+ function control(label,fn,parent){const b=document.createElement('button');b.type='button';b.className='material-control';b.dataset.material=theme==='go'?'stone':theme==='shavari'?'jade':'parchment';b.textContent=label;b.addEventListener('click',fn);parent.append(b);return b;}
+ let viewport,surface,tools,fit,detail,pan,hint,status;
+ if(board){
+  viewport=document.createElement('div');viewport.className='mobile-board-viewport';viewport.tabIndex=0;viewport.setAttribute('aria-label','Game board');surface=document.createElement('div');surface.className='mobile-board-surface';board.before(viewport);viewport.append(surface);surface.append(board);
+  if(['lobby','shodansho','go','shavari','academy'].includes(theme)){
+   tools=document.createElement('div');tools.className='mobile-board-tools';viewport.after(tools);
+   fit=control('Fit board',()=>setView(false,false),tools);detail=control('Larger board',()=>setView(true,false),tools);pan=control('Move view',()=>setView(detailed,!navigating),tools);pan.setAttribute('aria-pressed','false');
+   hint=document.createElement('p');hint.className='mobile-board-hint';tools.append(hint);
   }
-  if(!ready&&active)layout();
+  // Navigation is an explicit mode. Neither dragging nor tapping in that mode sends a game action.
+  for(const type of ['pointerdown','mousedown','click','dblclick','contextmenu'])viewport.addEventListener(type,e=>{if(mobile&&navigating){e.preventDefault();e.stopImmediatePropagation();}},true);
  }
- function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;sync();});}
- new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled','hidden','aria-pressed','style']});
- media.addEventListener('change',()=>{scale=1;layout();if(!media.matches){body.classList.remove('mobile-board-focus');focus.textContent='Focus board';focus.setAttribute('aria-pressed','false');}sync();});
- window.addEventListener('resize',()=>{layout();schedule();});
- // Touch gestures are consumed only while panning a zoomed board or pinching.
- const distance=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
- const midpoint=t=>({x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2});
- viewport.addEventListener('touchstart',e=>{if(!media.matches)return;if(e.touches.length===2){gesture={pinch:distance(e.touches),scale};lastGesture=Date.now();e.preventDefault();}else if(scale>1&&e.touches.length===1)gesture={x:e.touches[0].clientX,y:e.touches[0].clientY,left:viewport.scrollLeft,top:viewport.scrollTop,moved:false};},{passive:false});
- viewport.addEventListener('touchmove',e=>{if(!gesture)return;if(e.touches.length===2&&gesture.pinch){e.preventDefault();zoom(gesture.scale*distance(e.touches)/gesture.pinch,midpoint(e.touches));lastGesture=Date.now();}else if(e.touches.length===1&&gesture.x!==undefined){const dx=e.touches[0].clientX-gesture.x,dy=e.touches[0].clientY-gesture.y;if(Math.hypot(dx,dy)>6)gesture.moved=true;if(gesture.moved){e.preventDefault();viewport.scrollLeft=gesture.left-dx;viewport.scrollTop=gesture.top-dy;lastGesture=Date.now();}}},{passive:false});
- for(const event of ['click','mousedown','keydown'])viewport.addEventListener(event,()=>sync());
- viewport.addEventListener('touchend',()=>{gesture=null;});viewport.addEventListener('touchcancel',()=>{gesture=null;});
- for(const event of ['click','mousedown'])viewport.addEventListener(event,e=>{if(Date.now()-lastGesture<450){e.preventDefault();e.stopImmediatePropagation();}},true);
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&body.classList.contains('mobile-board-focus')){body.classList.remove('mobile-board-focus');focus.textContent='Focus board';focus.setAttribute('aria-pressed','false');}});
- sync();
+ function layout(){if(!board||!mobile)return;const available=viewport.clientWidth;if(!available)return;const minimum=theme==='lobby'?530:theme==='shodansho'?720:theme==='go'?640:theme==='shavari'?520:440;const width=detailed?Math.max(available*1.5,minimum):available;
+  surface.style.setProperty('--mobile-board-width',width+'px');viewport.classList.toggle('is-detailed',detailed);viewport.classList.toggle('is-navigating',navigating);
+  if(tools){detail.setAttribute('aria-pressed',String(detailed));fit.setAttribute('aria-pressed',String(!detailed));pan.hidden=!detailed;pan.setAttribute('aria-pressed',String(navigating));pan.textContent=navigating?'Tap to play':'Move view';hint.textContent=detailed?(navigating?'Drag to explore the board. Choose Tap to play before making a move.':'Tap pieces and destinations. Choose Move view to drag the board safely.'):theme==='lobby'?'Tap a piece, then its destination. Enlarge for smaller targets.':theme==='shodansho'?'Choose a flower below, then tap a gate. Enlarge for precise placement.':'';hint.hidden=!hint.textContent;}
+ }
+ function setView(large,nav){detailed=large;navigating=nav;layout();if(!large&&viewport){viewport.scrollTop=0;viewport.scrollLeft=0;}}
+ function adapt(on){if(on===mobile)return;mobile=on;
+  if(on){
+   const play=document.querySelector('.play-area'),panel=document.querySelector('.match-panel');
+   if(play&&panel){
+    move(panel.querySelector('.turn-panel'),play,play.firstChild);
+    const selection=document.getElementById('selection-detail')?.closest('.panel');if(selection){selection.classList.add('mobile-selection');move(selection,play,document.querySelector('.board-tools'));}
+    if(theme==='go'){const actions=selection?.querySelector('.match-actions');if(actions){actions.classList.add('mobile-go-actions');move(actions,play,viewport);}}
+    if(theme==='shavari'){const stack=document.querySelector('.mobile-mode');if(stack){stack.classList.add('mobile-stack-tools');move(stack,play,viewport);}}
+    if(theme==='academy'){
+     const picker=document.createElement('div');picker.className='mobile-lesson-picker';viewport.before(picker);
+     move(document.querySelector('label[for=lesson-select]'),picker);move(document.getElementById('lesson-select'),picker);
+     move(document.getElementById('lesson-tip'),selection);
+    }
+    for(const item of [...panel.children]){if(item.matches('.chronicle'))fold(item,'Move history & save');else if(item.matches('#local-settings'))fold(item,'Game setup');else if(item.matches('#lesson-panel'))fold(item,'Lesson guidance');else if(item.matches('.panel'))fold(item,'Score details');else fold(item,'Match options');}
+    fold(document.querySelector('.captures'),'Captured pieces');fold(document.querySelector('.piece-guide'),'Piece guide');fold(document.querySelector('.go-summary'),'Strategy & scoring');
+   }
+   if(theme==='shodansho'){
+    const gameLayout=document.querySelector('.game-layout'),statusBox=document.querySelector('.game-sidebar>div');statusBox.classList.add('mobile-garden-status');move(statusBox,gameLayout,gameLayout.firstChild);
+    move(document.getElementById('hands-container'),gameLayout,viewport);
+    const actions=document.createElement('div');actions.className='mobile-garden-actions';document.querySelector('.inventory-sidebar>.bg-game-panel').append(actions);move(document.getElementById('pickup-btn'),actions);move(document.getElementById('cancel-selection-btn'),actions);
+    const handToggle=control('Other players’ hands',()=>{const on=body.classList.toggle('show-all-hands');handToggle.setAttribute('aria-expanded',String(on));handToggle.textContent=on?'Hide other hands':'Other players’ hands';},document.querySelector('.inventory-sidebar>.bg-game-panel'));handToggle.classList.add('mobile-hand-toggle');handToggle.setAttribute('aria-expanded','false');
+    document.getElementById('piece-info-content').textContent='Tap a board piece or choose a flower to see its movement.';
+    fold(document.querySelector('.game-sidebar>div'),'Garden options');
+   }
+   if(theme==='lobby'){
+    const shortcuts=document.createElement('div');shortcuts.className='mobile-hikoro-actions';document.getElementById('hikoro-game-wrapper').prepend(shortcuts);move(document.getElementById('rules-btn-ingame'),shortcuts);move(document.getElementById('main-menu-btn'),shortcuts);
+    status=document.createElement('p');status.className='mobile-hikoro-status';status.setAttribute('aria-live','polite');document.getElementById('hikoro-game-wrapper').prepend(status);
+    fold(document.getElementById('move-history-container'),'Move history');
+   }
+   const audio=document.querySelector('.collection-audio');if(audio)move(audio,document.querySelector('main')||body);
+   for(const box of disclosures)box.open=false;
+   if(theme==='go'){goSize=document.querySelectorAll('.intersection').length;detailed=goSize===169;}layout();
+  }else{
+   // Restore exact source nodes and their original order; no duplicate game controls.
+   for(const {element,marker} of relocations.reverse()){marker.replaceWith(element);}relocations.length=0;
+   for(const box of disclosures){const child=box.children[1];if(child)box.replaceWith(child);else box.remove();}disclosures.length=0;
+   document.querySelectorAll('.mobile-lesson-picker,.mobile-hand-toggle,.mobile-hikoro-status,.mobile-garden-actions,.mobile-hikoro-actions').forEach(e=>e.remove());body.classList.remove('show-all-hands');status=null;detailed=false;navigating=false;
+   surface?.removeAttribute('style');viewport?.classList.remove('is-detailed','is-navigating');
+  }
+ }
+ // Listen to state changes without rebuilding a toolbar or mirroring buttons.
+ let pending=false;
+ const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;if(status){const text=document.getElementById('turn-indicator')?.textContent||'';if(status.textContent!==text)status.textContent=text;}if(mobile&&theme==='go'){const size=document.querySelectorAll('.intersection').length;if(size!==goSize){goSize=size;setView(size===169,false);}}if(mobile&&board&&surface.style.getPropertyValue('--mobile-board-width')==='')layout();});});observer.observe(body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ media.addEventListener('change',()=>adapt(media.matches));window.addEventListener('resize',layout);if(viewport)new ResizeObserver(layout).observe(viewport);
+ document.querySelectorAll('.game-choice').forEach(card=>card.addEventListener('click',()=>{if(media.matches)document.getElementById('game-setup')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth',block:'start'});}));
+ adapt(media.matches);
 });
