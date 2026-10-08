@@ -22,14 +22,16 @@
                     queueMicrotask(()=>window.dispatchEvent(new Event('account-changed')));
                     for (const socket of sockets) { socket.disconnect(); socket.connect(); }
                 }
-                queueMicrotask(() => { refreshButton(); if (panel?.open) renderAccount(); });
+                queueMicrotask(async () => { if(session)try{await readProfile();}catch{}refreshButton(); if (panel?.open) renderAccount(); });
             });
         } catch { config = { enabled: false }; }
     })();
     function message(text) { document.getElementById('account-message').textContent = text; }
     function refreshButton() {
         const button = document.getElementById('account-open');
-        if (button) button.textContent = session ? 'My player journal' : 'Player account';
+        if(button){button.replaceChildren();const image=element('img'),text=element('span',session?profile?.display_name||'My player journal':'Player account');image.src=PlayerIdentity.portrait(profile||{},config?.url);image.alt='';button.append(image,text);button.setAttribute('aria-label',session?'Open player journal for '+(profile?.display_name||'your account'):'Sign in or open player account');}
+        const name=document.getElementById('player-name');if(name&&session&&profile){name.value=profile.display_name;name.readOnly=true;name.title='Change your player name in your profile.';}else if(name){name.readOnly=false;}
+        paintSeats();
     }
     function element(tag, text, cls) { const el = document.createElement(tag); if (text) el.textContent = text; if (cls) el.className = cls; return el; }
     function button(text, action) { const el = element('button', text); el.type = 'button'; el.addEventListener('click', () => run(action)); return el; }
@@ -85,6 +87,7 @@
                 form.reset(); await renderAccount();
             }); });
             body.append(form);
+            body.append(button('Forgot password?',async()=>{const email=form.elements.email;if(!email.value||!email.checkValidity())throw Error('Enter your email address first.');check(await client.auth.resetPasswordForEmail(email.value,{redirectTo:location.origin+'/player.html?reset=1'}));message('If an account exists, check your email for the reset link.');}));
             if (config.emailSignup) body.append(button('Create an email account', async () => {
                 if (!form.reportValidity()) return;
                 const data = new FormData(form);
@@ -102,59 +105,49 @@
             const saves = check(await client.from('hikoro_saves').select('game_type,revision,updated_at').eq('user_id', userId));
             const results = check(await client.from('hikoro_results').select('game_type,outcome,reason,completed_at').eq('user_id', userId).order('completed_at', { ascending: false }).limit(1000));
             if (!session || session.user.id !== userId) return;
-            body.replaceChildren();
-            recordTools(body);
-            const form = element('form'), label = element('label', 'Player name'), input = element('input');
-            input.value = profile.display_name; input.required = true; input.maxLength = 30; label.append(input);
-            const submit = element('button', 'Save player name'); submit.type = 'submit'; form.append(label, submit);
-            form.addEventListener('submit', event => { event.preventDefault(); run(async () => {
-                const name = input.value.trim(); if (!name) throw new Error('Choose a player name.');
-                check(await client.from('hikoro_profiles').update({ display_name: name }).eq('user_id', session.user.id));
-                profile.display_name = name; message('Player name saved.');
-            }); }); body.append(form);
-            const actions = element('div', '', 'account-actions');
-            if (adapter) actions.append(button('Save this table to my account', saveCurrent));
-            actions.append(button('Save device preferences', async () => {
-                const preferences = {};
-                for (const key of ['hikoro-preferences', 'hikoro-audio-v1']) {
-                    try { const value = JSON.parse(localStorage.getItem(key) || 'null'); if (value && typeof value === 'object') preferences[key] = value; } catch {}
-                }
-                check(await client.from('hikoro_profiles').update({ preferences }).eq('user_id', session.user.id));
-                message('Device preferences saved to your account.');
-            }));
-            actions.append(button('Use saved preferences on this device', async () => {
-                await readProfile();
-                if (!window.confirm('Replace this device’s game and audio preferences with your account preferences?')) return;
-                for (const key of ['hikoro-preferences', 'hikoro-audio-v1']) if (profile.preferences[key]) localStorage.setItem(key, JSON.stringify(profile.preferences[key]));
-                message('Preferences restored. They take effect on your next page visit.');
-            })); body.append(actions);
-            body.append(element('h3', 'Saved tables'));
-            if (!saves.length) body.append(element('p', 'No cloud saves yet. Open a local game, then save it through your player journal.'));
-            for (const save of saves) {
-                const row = element('div', '', 'account-save');
-                row.append(element('span', titles[save.game_type] + ' · ' + new Date(save.updated_at).toLocaleDateString()));
-                row.append(button('Resume', async () => {
-                    const record = check(await client.from('hikoro_saves').select('payload').eq('user_id', session.user.id).eq('game_type', save.game_type).single());
-                    if (!window.confirm('Open this saved table? It replaces the current local table for this game.')) return;
-                    sessionStorage.setItem('hikoro-cloud-restore', JSON.stringify({ game_type: save.game_type, payload: record.payload }));
-                    location.href = paths[save.game_type];
-                })); body.append(row);
-            }
-            body.append(element('h3', 'Verified online results'));
-            const wins = results.filter(r => r.outcome === 'win').length, losses = results.filter(r => r.outcome === 'loss').length, draws = results.filter(r => r.outcome === 'draw').length;
-            body.append(element('p', `${wins} wins · ${losses} losses · ${draws} draws${results.length === 1000 ? ' · most recent 1,000 matches' : ''}`));
-            body.append(element('small', 'Only server-confirmed matches between distinct signed-in players count. Guest games, local games, and bots are practice.'));
-            if (!config.verifiedResults) body.append(element('p', 'Online result recording is awaiting server configuration.'));
-            for (const result of results.slice(0, 5)) body.append(element('p', `${titles[result.game_type]} · ${result.outcome} · ${result.reason}`));
-            body.append(element('h3', 'Academy practice'));
-            const lessons = Object.entries(profile.academy_progress || {});
-            body.append(element('p', lessons.length ? lessons.map(([lesson, count]) => `${lesson}: ${count} practice moves`).join(' · ') : 'Save an Academy practice table to record your learning progress.'));
-            body.append(button('Sign out', async () => {
-                check(await client.auth.signOut()); profile = null; await renderAccount();
-                message('Signed out. Online seats linked to your account require the same account to reconnect.');
-            }));
+            const totals=client.rpc?check(await client.rpc('hikoro_my_totals')):null;
+            if(session?.user?.id!==userId)return;
+            drawDashboard(body,saves,results,totals);
         } catch (error) { body.replaceChildren(element('p', 'Your player journal could not load.')); message(error.message); }
     }
+    function link(text,href){const a=element('a',text);a.href=href;return a;}
+    function card(parent,title){const box=element('section','','journal-card');box.append(element('h3',title));parent.append(box);return box;}
+    function drawDashboard(body,saves,results,totals){
+        body.replaceChildren();refreshButton();
+        const hero=element('div','','profile-hero'),photo=element('img'),copy=element('div');photo.src=PlayerIdentity.portrait(profile,config.url);photo.alt='Your player portrait';copy.append(element('small','YOUR PLACE IN THE STRATEGY HALL'),element('h3',profile.display_name),element('p',profile.leaderboard_visible?'Public standings enabled':'Your journal is private · standings hidden'));hero.append(photo,copy);body.append(hero);
+        const tabbar=element('nav','','journal-tabs');tabbar.setAttribute('aria-label','Player journal sections');body.append(tabbar);const panels={};
+        for(const [key,title]of [['overview','Overview'],['profile','Profile'],['tables','Saved tables'],['settings','Settings']]){
+            const section=element('div','','journal-panel');section.id='journal-'+key;section.hidden=key!=='overview';panels[key]=section;
+            const tab=element('button',title);tab.type='button';tab.setAttribute('aria-controls',section.id);tab.setAttribute('aria-pressed',String(key==='overview'));tab.onclick=()=>{for(const [name,area]of Object.entries(panels))area.hidden=name!==key;for(const b of tabbar.children)b.setAttribute('aria-pressed',String(b===tab));};tabbar.append(tab);body.append(section);
+        }
+        const stats=element('div','','journal-stats');const values=totals?['wins','losses','draws'].map(key=>totals.reduce((n,r)=>n+Number(r[key]),0)):['win','loss','draw'].map(outcome=>results.filter(r=>r.outcome===outcome).length);
+        values.forEach((n,i)=>{const box=element('div');box.append(element('strong',String(n)),element('span',['Wins','Losses','Draws'][i]));stats.append(box);});panels.overview.append(stats);
+        const next=card(panels.overview,'Your next match');next.append(link('Choose a table →','/'),link('Match history & replay records →','/history.html'),link('The wins leaderboard →','/leaderboard.html'));recordTools(next);
+        const recent=card(panels.overview,'Recent online results');recent.append(element('small','Only server-confirmed games between distinct signed-in players count toward standings.'));
+        if(!results.length)recent.append(element('p','Your first verified match will start your story here.'));
+        for(const result of results.slice(0,5)){const row=element('div','','account-save');row.append(element('span',titles[result.game_type]),element('strong',result.outcome.toUpperCase()));recent.append(row);}
+        if(!config.verifiedResults)recent.append(element('p','Online scores will start recording when server configuration is complete.'));
+        if(!totals&&results.length===1000)recent.append(element('small','Totals currently show the most recent 1,000 results. Apply the Player Hall migration for all-time totals.'));
+        const profileBox=card(panels.profile,'Your table identity'),form=element('form'),label=element('label','Player name'),input=element('input');input.name='display_name';input.value=profile.display_name;input.required=true;input.maxLength=30;input.autocomplete='nickname';label.append(input);
+        const visible=element('label','','visibility-choice'),checkbox=element('input');checkbox.type='checkbox';checkbox.name='leaderboard_visible';checkbox.checked=Boolean(profile.leaderboard_visible);visible.append(checkbox,document.createTextNode(' Show my name and portrait on the public leaderboard'));
+        const submit=element('button','Save profile');submit.type='submit';form.append(label,visible,element('small','Your chosen name and portrait appear to players at your online table. Standings reveal only your chosen identity and verified totals.'),submit);form.onsubmit=e=>{e.preventDefault();run(async()=>{const name=PlayerIdentity.cleanName(input.value,'');if(!name)throw Error('Choose a player name.');check(await client.from('hikoro_profiles').update({display_name:name,leaderboard_visible:checkbox.checked}).eq('user_id',session.user.id));profile.display_name=name;profile.leaderboard_visible=checkbox.checked;identityChanged();hero.querySelector('h3').textContent=name;hero.querySelector('p').textContent=checkbox.checked?'Public standings enabled':'Your journal is private · standings hidden';message('Profile saved. Your table identity has been updated.');});};profileBox.append(form);
+        const portraits=card(panels.profile,'Choose your portrait');const grid=element('div','','avatar-picker');
+        for(const icon of PlayerIdentity.icons){const choose=button(titles[icon],async()=>{await changePortrait(icon,null);await renderAccount();message('Collection portrait selected.');}),image=element('img');image.src='/assets/collection/icons/'+icon+'.svg';image.alt='';choose.prepend(image);choose.setAttribute('aria-pressed',String(!profile.avatar_path&&profile.avatar_icon===icon));grid.append(choose);}portraits.append(grid);
+        const uploadLabel=element('label','Or upload a profile picture'),upload=element('input');upload.type='file';upload.accept='image/jpeg,image/png,image/webp';upload.id='avatar-upload';uploadLabel.append(upload);portraits.append(uploadLabel,element('small','Choose a JPG, PNG or WebP up to 5 MB. It is cropped to a square portrait. Uploaded portraits are public images; use a picture you are comfortable sharing.'),link('Collection artwork & artist credits','/credits.html'));
+        upload.onchange=()=>{const file=upload.files[0];if(file)run(async()=>{await uploadPortrait(file);await renderAccount();message('Profile picture saved.');});};if(profile.avatar_path)portraits.append(button('Remove uploaded picture',async()=>{await changePortrait(profile.avatar_icon,null);await renderAccount();message('Uploaded picture removed.');}));
+        const tables=card(panels.tables,'Continue a saved table');if(adapter)tables.append(button('Save this table to my account',saveCurrent));if(!saves.length)tables.append(element('p','Open a local game and save it to continue here on any device.'));
+        for(const save of saves){const row=element('div','','account-save');row.append(element('span',titles[save.game_type]+' · '+new Date(save.updated_at).toLocaleDateString()),button('Resume',async()=>{const data=check(await client.from('hikoro_saves').select('payload').eq('user_id',session.user.id).eq('game_type',save.game_type).single());if(!window.confirm('Open this saved table? It replaces the current local table for this game.'))return;sessionStorage.setItem('hikoro-cloud-restore',JSON.stringify({game_type:save.game_type,payload:data.payload}));location.href=paths[save.game_type];}));tables.append(row);}tables.append(link('Browse completed matches →','/history.html'));
+        const practice=card(panels.tables,'Academy progress');const lessons=Object.entries(profile.academy_progress||{});practice.append(element('p',lessons.length?lessons.map(([lesson,count])=>lesson+': '+count+' practice moves').join(' · '):'Save an Academy lesson to record your progress.'),link('Return to the learning table →','/academy.html'));
+        const prefs=card(panels.settings,'Your device preferences');prefs.append(button('Save device preferences',async()=>{const preferences={};for(const key of ['hikoro-preferences','hikoro-audio-v1'])try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value&&typeof value==='object')preferences[key]=value;}catch{}check(await client.from('hikoro_profiles').update({preferences}).eq('user_id',session.user.id));message('Device preferences saved to your account.');}),button('Use saved preferences on this device',async()=>{await readProfile();if(!window.confirm('Replace this device’s game and audio preferences with your account preferences?'))return;for(const key of ['hikoro-preferences','hikoro-audio-v1'])if(profile.preferences[key])localStorage.setItem(key,JSON.stringify(profile.preferences[key]));message('Preferences restored. They take effect on your next page visit.');}));
+        const auth=card(panels.settings,'Account access');auth.append(element('p','Passwords and sign-in are managed by Supabase. Your match journals remain attached to your account.'),button('Sign out',async()=>{check(await client.auth.signOut());session=null;profile=null;refreshButton();await renderAccount();message('Signed out. Account-bound online seats require the same account to reconnect.');}));
+        if(new URLSearchParams(location.search).get('reset')==='1'){const reset=card(panels.settings,'Set a new password'),f=element('form');f.innerHTML='<label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label><label>Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit">Update password</button>';f.onsubmit=e=>{e.preventDefault();run(async()=>{const data=new FormData(f);if(data.get('password')!==data.get('confirm'))throw Error('The passwords do not match.');check(await client.auth.updateUser({password:data.get('password')}));f.reset();history.replaceState(null,'','/player.html');message('Password updated.');});};reset.append(f);[...tabbar.children].find(b=>b.textContent==='Settings').click();}
+    }
+    function identityChanged(){refreshButton();for(const socket of sockets)if(socket.connected)socket.emit('refreshPlayerIdentity',{token:session?.access_token});window.dispatchEvent(new Event('account-changed'));}
+    async function changePortrait(icon,path){const userId=session?.user?.id;if(!userId)throw Error('Sign in first.');const previous=profile.avatar_path;check(await client.from('hikoro_profiles').update({avatar_icon:icon,avatar_path:path}).eq('user_id',userId));if(session?.user?.id!==userId)throw Error('Your account changed.');profile.avatar_icon=icon;profile.avatar_path=path;identityChanged();if(previous&&previous!==path)try{await client.storage.from('hikoro-avatars').remove([previous]);}catch{}}
+    async function uploadPortrait(file){if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)throw Error('Choose a JPG, PNG or WebP no larger than 5 MB.');const userId=session?.user?.id;if(!userId)throw Error('Sign in to upload a portrait.');const bitmap=await createImageBitmap(file);try{if(!bitmap.width||!bitmap.height||bitmap.width*bitmap.height>40000000)throw Error('This picture is too large. Choose a smaller image.');const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d'),size=Math.min(bitmap.width,bitmap.height);ctx.drawImage(bitmap,(bitmap.width-size)/2,(bitmap.height-size)/2,size,size,0,0,256,256);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.86));if(!blob||blob.type!=='image/webp'||blob.size>262144)throw Error('This browser could not prepare your portrait. Try a smaller picture.');if(session?.user?.id!==userId)throw Error('Your account changed.');const path=userId+'/'+crypto.randomUUID()+'.webp';check(await client.storage.from('hikoro-avatars').upload(path,blob,{contentType:'image/webp',upsert:false}));try{if(session?.user?.id!==userId)throw Error('Your account changed.');await changePortrait(profile.avatar_icon,path);}catch(error){await client.storage.from('hikoro-avatars').remove([path]);throw error;}}finally{bitmap.close();}}
+    let seats=[],activeGameId=null,localTable=false;
+    function paintSeats(){for(let i=0;i<seats.length;i++){const area=document.querySelector('[data-player-seat="'+(i+1)+'"]');if(!area)continue;const identity=localTable&&i===0&&session&&profile?profile:seats[i]||{},image=element('img'),copy=element('div');image.src=PlayerIdentity.portrait(identity,config?.url);image.alt='';copy.append(element('strong',PlayerIdentity.cleanName(identity.display_name,'Player '+(i+1))),element('small',area.dataset.army||'Player '+(i+1)));area.replaceChildren(image,copy);}}
+    function tablePlayers(players,localLabels=[],gameId=null){activeGameId=gameId;localTable=!Array.isArray(players)||!players.length;seats=Array.isArray(players)&&players.length?[...players,...localLabels.slice(players.length).map((name,i)=>({display_name:name,avatar_icon:adapter?.type||'hikoro'}))]:localLabels.map((name,i)=>i===0&&session&&profile?profile:{display_name:name,avatar_icon:adapter?.type||'hikoro'});paintSeats();}
     async function saveCurrent() {
         const payload = adapter.capture();
         if (!payload) throw new Error('Open a local table first. Online games are recorded by the server when they finish.');
@@ -188,18 +181,19 @@
             }
         } catch { window.alert('The saved table could not be restored.'); }
     }
-    window.SiteAccounts = { ready, register, archiveRecord, listRecords, socket: () => {
+    window.SiteAccounts = { ready, tablePlayers, playerName:(seat,fallback)=>PlayerIdentity.cleanName(localTable&&seat===1&&session&&profile?profile.display_name:seats[seat-1]?.display_name,fallback), leaderboard:async(offset=0,game='')=>{await ready;if(!client)return null;return check(await client.rpc('hikoro_leaderboard',{game_filter:game||null,page_offset:offset}));}, portrait:identity=>PlayerIdentity.portrait(identity,config?.url), register, archiveRecord, listRecords, socket: () => {
         const socket = io({ auth: callback => {
             ready.then(async () => { const current = client && await client.auth.getSession(); callback({ token: current?.data?.session?.access_token || null }); }).catch(() => callback({}));
         } });
-        sockets.add(socket); return socket;
+        socket.on('playerIdentities',data=>{if(data.gameId===activeGameId)tablePlayers(data.players,[],data.gameId);});sockets.add(socket); return socket;
     } };
     document.addEventListener('DOMContentLoaded', async () => {
-        const open = button('Player account', async () => { panel.showModal(); await renderAccount(); }); open.id = 'account-open'; open.className = 'account-open';
-        panel = element('dialog', '', 'account-journal'); panel.id = 'account-dialog'; panel.setAttribute('aria-labelledby', 'account-title');
-        panel.innerHTML = '<div class="account-heading"><h2 id="account-title">Your player journal</h2><button type="button" id="account-close" aria-label="Close player journal">Close</button></div><p id="account-message" role="status" aria-live="polite"></p><div id="account-body"></div>';
-        document.body.append(open, panel); document.getElementById('account-close').addEventListener('click', () => panel.close());
-        await ready; refreshButton();
+        const hub=document.getElementById('account-dialog');
+        const open=button('Player account',async()=>{panel.showModal();await renderAccount();});open.id='account-open';open.className='account-open';
+        const header=element('header','','player-appbar'),brand=link('HIKORO','/');brand.className='player-brand';const seal=element('img');seal.src='/assets/collection/icons/compass.svg';seal.alt='';brand.prepend(seal);const nav=element('nav');nav.setAttribute('aria-label','Main navigation');for(const [title,url]of [['Tables','/'],['My journal','/player.html'],['History','/history.html'],['Standings','/leaderboard.html']]){const a=link(title,url);if(location.pathname===url)a.setAttribute('aria-current','page');nav.append(a);}header.append(brand,nav,open);document.body.prepend(header);
+        if(hub){panel=hub;panel.open=true;panel.showModal=()=>{panel.scrollIntoView?.({block:'start'});};panel.close=()=>{};}
+        else{panel=element('dialog','','account-journal');panel.id='account-dialog';panel.setAttribute('aria-labelledby','account-title');panel.innerHTML='<div class="account-heading"><div><small>THE PLAYER HALL</small><h2 id="account-title">Your player journal</h2></div><button type="button" id="account-close" aria-label="Close player journal">Close</button></div><p id="account-message" role="status" aria-live="polite"></p><div id="account-body"></div>';document.body.append(panel);document.getElementById('account-close').onclick=()=>panel.close();}
+        await ready;if(session)try{await readProfile();}catch{}refreshButton();if(hub)await renderAccount();
         if (new URLSearchParams(location.search).get('account') === '1') { panel.showModal(); await renderAccount(); }
     });
 })();

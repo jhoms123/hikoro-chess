@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
+const Identity = require('./public/player-identity');
 
 const GAME_TYPES = ['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy'];
 function accountConfig(env = process.env) {
@@ -20,6 +21,7 @@ function installAccounts(app, io, { env = process.env, clientFactory = createCli
     const writer = config.enabled && env.SUPABASE_SECRET_KEY ? clientFactory(config.url, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
     app.get('/api/account-config', (_req, res) => res.json({ ...config, verifiedResults: Boolean(writer) }));
     app.get('/vendor/supabase.js', (_req, res) => res.sendFile(path.join(path.dirname(require.resolve('@supabase/supabase-js/package.json')), 'dist/umd/supabase.js')));
+    const profileReaders=new WeakMap();
     io.use(async (socket, next) => {
         const token = socket.handshake.auth?.token;
         if (!token) return next(); // Guest play stays available.
@@ -28,6 +30,11 @@ function installAccounts(app, io, { env = process.env, clientFactory = createCli
             const { data, error } = await client.auth.getUser(token);
             if (error || !data?.user || data.user.is_anonymous) return next(new Error('Please sign in again before opening a table.'));
             socket.data.accountId = data.user.id;
+            if(client.from)try{
+                const reader=clientFactory(config.url,config.key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:'Bearer '+token}}});profileReaders.set(socket,reader);
+                const {data:row}=await reader.from('hikoro_profiles').select('display_name,avatar_icon,avatar_path').eq('user_id',data.user.id).maybeSingle();
+                socket.data.playerIdentity=Identity.publicIdentity(row,'Player');
+            }catch{socket.data.playerIdentity=Identity.publicIdentity(null,'Player');}
             next();
         } catch { next(new Error('Account verification is temporarily unavailable.')); }
     });
@@ -56,6 +63,16 @@ function installAccounts(app, io, { env = process.env, clientFactory = createCli
             console.error('Verified match record could not be saved.');
         }
     }
-    return { recordResult, forget: id => recorded.delete(id) };
+    async function refreshIdentity(socket,token){
+        if(!socket.data.accountId||!profileReaders.has(socket))return socket.data.playerIdentity;
+        if(token){
+            if(typeof token!=='string'||token.length>8192)throw Error('Invalid token');
+            const {data,error}=await client.auth.getUser(token);if(error||data?.user?.id!==socket.data.accountId)throw Error('Account changed');
+            profileReaders.set(socket,clientFactory(config.url,config.key,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:'Bearer '+token}}}));
+        }
+        const {data,error}=await profileReaders.get(socket).from('hikoro_profiles').select('display_name,avatar_icon,avatar_path').eq('user_id',socket.data.accountId).maybeSingle();
+        if(error)throw error;socket.data.playerIdentity=Identity.publicIdentity(data,'Player');return socket.data.playerIdentity;
+    }
+    return { recordResult, refreshIdentity, forget: id => recorded.delete(id) };
 }
 module.exports = { accountConfig, installAccounts };

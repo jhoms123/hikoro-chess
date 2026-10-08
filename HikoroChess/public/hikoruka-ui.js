@@ -23,6 +23,7 @@
         });cells.push(cell);$('board').appendChild(cell);
     }
     function render(){
+window.SiteAccounts.tablePlayers?.(online?state.playerProfiles:null,['Player 1','Player 2'],online?gameId:null);
 window.SiteRecords?.completed('hikoruka',recordPayload(),state.result,online?gameId:null);
         const legal=selected&&humanTurn()?Hikoruka.legalMoves(state,selected):[];
         for(const cell of cells){const r=Number(cell.dataset.r),c=Number(cell.dataset.c),piece=state.board[r][c],valid=legal.some(m=>m.r===r&&m.c===c),isSelected=selected?.r===r&&selected?.c===c;
@@ -34,7 +35,7 @@ window.SiteRecords?.completed('hikoruka',recordPayload(),state.result,online?gam
         }
         if(!cells.some(b=>b.tabIndex===0))cells[22].tabIndex=0;
         $('play-mode').textContent=online?'ONLINE TABLE':mode==='bot'?'EMBER VS BOT':'SHARED DEVICE';
-        $('turn-status').textContent=state.result?state.result.winner?`${names[state.result.winner]} wins`:'Draw':closed?'Table closed':`${names[state.player]} to move`;
+        $('turn-status').textContent=state.result?state.result.winner?`${window.SiteAccounts.playerName?.(state.result.winner,names[state.result.winner])||names[state.result.winner]} wins`:'Draw':closed?'Table closed':`${window.SiteAccounts.playerName?.(state.player,names[state.player])||names[state.player]} to move`;
         $('connection-status').textContent=state.result?state.result.reason:online?closed?'Return to the collection to start another match.':!connected?'Reconnecting… Moves are paused.':!synced?'Restoring your seat…':pending?'Confirming your move…':mySeat===state.player?'Your court’s turn.':'Waiting for the other court.':mode==='bot'&&state.player===2?'The bot is considering its reply…':selected?`${legal.length} legal destinations`:'Select a piece to see its moves.';
         const detail=$('selection-detail');detail.replaceChildren();if(selected){const p=state.board[selected.r][selected.c],img=document.createElement('img'),text=document.createElement('div'),title=document.createElement('strong'),desc=document.createElement('small');img.src=sprite(p.type,p.owner);img.alt='';title.textContent=`${Hikoruka.coord(selected)} · ${Hikoruka.TYPES[p.type].name}`;desc.textContent=Hikoruka.TYPES[p.type].description;text.append(title,desc);detail.append(img,text);}else detail.textContent='Choose a piece from the active court.';
         for(const player of [1,2]){

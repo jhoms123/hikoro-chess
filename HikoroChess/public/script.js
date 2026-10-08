@@ -435,13 +435,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLocalState(newGameState) {
         if (!isReplayMode) window.SiteAudio?.transition('hikoro',gameState,newGameState);
         gameState = newGameState;
+        window.SiteAccounts.tablePlayers(gameState.playerProfiles,['White','Black'],gameState.id);
         if(!isReplayMode&&recordPayload())window.SiteRecords?.completed('hikoro',recordPayload(),recordPayload().result,recordPayload().gameId);
         updateTimerDisplay({ whiteTime: gameState.timeControl?.main === -1 ? -1 : gameState.whiteTimeLeft || gameState.timeControl?.byoyomiTime || 0, blackTime: gameState.timeControl?.main === -1 ? -1 : gameState.blackTimeLeft || gameState.timeControl?.byoyomiTime || 0, isInByoyomiWhite: gameState.whiteTimeLeft === 0, isInByoyomiBlack: gameState.blackTimeLeft === 0 });
 
         if (newGameState.gameOver && newGameState.winner) {
             const winnerTextEl = document.getElementById('winnerText');
             if (winnerTextEl) {
-                const winnerName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+                const armyName = newGameState.winner === 'draw' ? 'Draw' : newGameState.winner.charAt(0).toUpperCase() + newGameState.winner.slice(1);
+                const winnerName=window.SiteAccounts.playerName(newGameState.winner==='white'?1:2,armyName);
                 winnerTextEl.textContent = newGameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
                 if (newGameState.reason) {
                     winnerTextEl.textContent += ` (${newGameState.reason})`;
@@ -665,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
                 const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
-                turnIndicator.textContent = isMyTurn ? "Your Turn" : "Opponent's Turn";
+                turnIndicator.textContent = window.SiteAccounts.playerName(gameState.isWhiteTurn?1:2,gameState.isWhiteTurn?'White':'Black')+(isMyTurn?' · Your turn':' · To move');
             }
         }
     }

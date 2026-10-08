@@ -76,6 +76,7 @@
         }
     }
     function render() {
+window.SiteAccounts.tablePlayers?.(online?state.playerProfiles:null,['Player 1','Player 2'],online?gameId:null);
 window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?gameId:null);
         const moves = selected && canPlay() ? Shavari.legalMoves(state, selected, mode) : [];
         const focus = document.activeElement;
@@ -100,7 +101,7 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
         if (!nodes.some(n=>n.tabIndex===0)) nodes[76].tabIndex=0;
         if (nodes.includes(focus)) focus.focus();
         drawCoordinates();
-        $('turn-status').textContent=state.result ? (state.result.winner ? `${courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : `${courts[state.player]} to move`;
+        $('turn-status').textContent=state.result ? (state.result.winner ? `${window.SiteAccounts.playerName?.(state.result.winner,courts[state.result.winner])||courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : `${window.SiteAccounts.playerName?.(state.player,courts[state.player])||courts[state.player]} to move`;
         if (state.result) $('connection-status').textContent=state.result.reason;
         else if (!online) $('connection-status').textContent=selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
         else $('connection-status').textContent=roomClosed ? 'Return to the collection to open another room.' : !connected ? 'Reconnecting… Moves are paused.' : !hasSynced ? 'Restoring your seat…' : pending ? 'Confirming your move…' : mySeat===state.player ? 'Your court’s turn.' : 'Waiting for the other court.';

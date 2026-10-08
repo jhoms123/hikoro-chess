@@ -98,7 +98,7 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
     <link rel="stylesheet" href="shodansho-medieval.css">
-<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/accounts.js"></script></head>
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/player-identity.js"></script><script src="/accounts.js"></script></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
@@ -172,7 +172,7 @@
     </aside>
 
     <div id="board-wrapper" class="flex-grow flex items-center justify-center z-10 shrink-0">
-        <canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
+        <div class="table-roster"><div class="table-player" data-player-seat="1" data-army="Garden 1"></div><div class="table-player" data-player-seat="2" data-army="Garden 2"></div><div class="table-player" data-player-seat="3" data-army="Garden 3"></div><div class="table-player" data-player-seat="4" data-army="Garden 4"></div></div><canvas id="gameCanvas" width="900" height="900" oncontextmenu="return false;"></canvas>
     </div>
 
     <aside aria-label="Player inventories" class="inventory-sidebar flex flex-col gap-4 w-80 shrink-0 z-10 h-full overflow-y-auto pl-2 pb-4">
@@ -457,19 +457,22 @@ function showPieceInfo(kind, owner = null) {
 }
 
 function recordPayload(){return {journal:game.actionJournal,playerCount:game.playerCount,gameId:isOnline?gameId:null,result:game.phase==='game_over'?{winner:game.winner===null?0:game.winner+1,reason:game.message}:null};}
+let tableProfiles=null;
 function updateDOM() {
+ window.SiteAccounts.tablePlayers(tableProfiles,Array.from({length:game.playerCount},(_,i)=>'Player '+(i+1)),isOnline?gameId:null);
+ document.querySelectorAll('.table-roster [data-player-seat]').forEach(n=>n.hidden=Number(n.dataset.playerSeat)>game.playerCount);
  window.SiteRecords?.completed('shodansho',recordPayload(),recordPayload().result,isOnline?gameId:null);
     const turnIndicator = document.getElementById('turn-indicator');
     const gameMessage = document.getElementById('game-message');
 
     if (game.phase === "game_over") {
-        turnIndicator.textContent = `Winner: Player ${game.winner + 1}`;
+        turnIndicator.textContent = `Winner: ${window.SiteAccounts.playerName(game.winner+1,'Player '+(game.winner+1))}`;
         turnIndicator.style.backgroundColor = PLAYER_COLORS[game.winner];
         turnIndicator.style.color = PLAYER_TEXT[game.winner];
     } else {
         const isMyTurn = isOnline && (game.currentPlayer === myPlayerIndex);
         const turnPrefix = isMyTurn ? "(You) " : "";
-        turnIndicator.textContent = `Turn ${game.turnNumber} | ${turnPrefix}P${game.currentPlayer + 1}`;
+        turnIndicator.textContent = `Turn ${game.turnNumber} | ${turnPrefix}${window.SiteAccounts.playerName(game.currentPlayer+1,'Player '+(game.currentPlayer+1))}`;
         turnIndicator.style.backgroundColor = PLAYER_COLORS[game.currentPlayer];
         turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
     }
@@ -898,7 +901,9 @@ if (isOnline) {
     socket.on('errorMsg', message => { waitingForServer = false; game.message = message; updateDOM(); });
     socket.on('roomClosed', message => { waitingForServer = true; game.message = message + ' Return to the lobby.'; updateDOM(); });
 
+    socket.on('playerIdentities',data=>{if(data.gameId===gameId){tableProfiles=data.players;updateDOM();}});
     socket.on('sdsSync', (sync) => {
+        tableProfiles=sync.playerProfiles;
         const actions = sync.actions;
         myPlayerIndex = sync.playerIndex; onlinePlayerCount = sync.playerCount;
         targetRotationAngle = myPlayerIndex === 1 ? Math.PI : myPlayerIndex === 2 ? Math.PI / 2 : myPlayerIndex === 3 ? -Math.PI / 2 : 0;
