@@ -154,5 +154,13 @@
   [
     "{0} {1} hand page",
     "{0} página de la mano de {1}"
+  ],
+  [
+    "Player {0}'s",
+    "Del jugador {0}"
+  ],
+  [
+    "{0}, {1} available, player {2}",
+    "{0}, {1} disponibles, jugador {2}"
   ]
 ]
