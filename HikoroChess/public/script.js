@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   }
               } else if (isDroppingPiece) {
                   highlightHikoroDropSquares();
-                  const dropEl = document.querySelector(`.captured-piece .piece img[alt$="${isDroppingPiece.type}"]`)?.closest('.captured-piece');
+                  const dropEl = document.querySelector(`.captured-piece[data-type="${isDroppingPiece.type}"]`);
                   if(dropEl) dropEl.classList.add('selected-drop');
               }
          }
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (gameState.gameOver && !isReplayMode) {
             turnIndicator.textContent = ''; 
-            if (!winnerText.textContent || winnerText.textContent.includes("Turn")) {
+            if (gameState.winner) {
                 const winnerName = gameState.winner === 'draw' ? 'Draw' : gameState.winner.charAt(0).toUpperCase() + gameState.winner.slice(1);
                 winnerText.textContent = gameState.winner === 'draw' ? 'Draw!' : `${winnerName} Wins!`;
                 if (gameState.reason) {
@@ -796,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const moveSquare = document.querySelector(`#game-board .square[data-logical-x='${move.x}'][data-logical-y='${move.y}']`);
             if (moveSquare) {
                 const plate = document.createElement('div');
-                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',moveSquare.getAttribute('aria-label')+'; legal '+(move.isAttack?'capture':'move'));
+                plate.classList.add('move-plate');moveSquare.setAttribute('aria-label',(window.I18n?.original(moveSquare,'aria-label')||moveSquare.getAttribute('aria-label'))+'; legal '+(move.isAttack?'capture':'move'));
                 if (!isPlayerTurn) plate.classList.add('preview');
                 if (move.isAttack) plate.classList.add('attack');
                 if (isDroppingPiece) plate.classList.add('drop');

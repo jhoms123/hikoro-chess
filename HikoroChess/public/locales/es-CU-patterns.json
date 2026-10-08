@@ -1,0 +1,146 @@
+[
+  [
+    "{name} wins",
+    "Gana {name}"
+  ],
+  [
+    "{name} Wins!",
+    "¡Gana {name}!"
+  ],
+  [
+    "{name} to move",
+    "Turno de {name}"
+  ],
+  [
+    "{name}'s Game [{0}] [{1}]",
+    "Partida de {name} [{0}] [{1}]"
+  ],
+  [
+    "{0} wins · {1} losses · {2} draws",
+    "{0} victorias · {1} derrotas · {2} tablas"
+  ],
+  [
+    "{0} by {1} Go intersections. Arrow keys navigate; Enter selects or places.",
+    "Tablero de Go de {0} × {1} intersecciones. Navega con las flechas; Enter selecciona o coloca."
+  ],
+  [
+    "{0} legal destinations · {1}",
+    "{0} destinos legales · {1}"
+  ],
+  [
+    "{0} legal destinations",
+    "{0} destinos legales"
+  ],
+  [
+    "{0} · {1} per court",
+    "{0} · {1} por corte"
+  ],
+  [
+    "Drop {0} at {1}",
+    "Colocar {0} en {1}"
+  ],
+  [
+    "Drop {0} {1}",
+    "Colocar {0} {1}"
+  ],
+  [
+    "Pick up Sun #{0}",
+    "Recoger Sol #{0}"
+  ],
+  [
+    "Flower #{0} → {1}",
+    "Flor #{0} → {1}"
+  ],
+  [
+    "Player {0}'s {1} is frozen by a Sun Flower.",
+    "Un Sol inmoviliza la pieza {1} del jugador {0}."
+  ],
+  [
+    "Player {0}'s {1} is frozen by a Shining Flower.",
+    "Un Brillo inmoviliza la pieza {1} del jugador {0}."
+  ],
+  [
+    "Player {0}'s {1} is trapped in a Harmony.",
+    "La pieza {1} del jugador {0} está atrapada en una armonía."
+  ],
+  [
+    "Viewing valid moves for Player {0}'s {1}.",
+    "Viendo movimientos legales de la pieza {1} del jugador {0}."
+  ],
+  [
+    "Selected {0}. Valid moves: {1}.",
+    "Seleccionaste {0}. Movimientos legales: {1}."
+  ],
+  [
+    "Selected {0} from hand to drop. Valid drops: {1}.",
+    "Seleccionaste {0} de tu mano para plantar. Destinos legales: {1}."
+  ],
+  [
+    "No {0} left.",
+    "No queda {0}."
+  ],
+  [
+    "Dropped {0}.",
+    "Plantaste {0}."
+  ],
+  [
+    "Player {0} wins! {1}",
+    "¡Gana el jugador {0}! {1}"
+  ],
+  [
+    "Learn {0}",
+    "Aprender {0}"
+  ],
+  [
+    "Open {0} introduction",
+    "Abrir la introducción de {0}"
+  ],
+  [
+    "Open {0} lesson →",
+    "Abrir la lección de {0} →"
+  ],
+  [
+    "{0} · Step {1} of {2}",
+    "{0} · Paso {1} de {2}"
+  ],
+  [
+    "✓ {0} introduction completed",
+    "✓ Introducción de {0} completada"
+  ],
+  [
+    "Create username account",
+    "Crear cuenta con nombre de usuario"
+  ],
+  [
+    "Create email account",
+    "Crear cuenta con correo"
+  ],
+  [
+    "Start a {0} match?",
+    "¿Comenzar una partida de {0}?"
+  ],
+  [
+    "{name} · Your turn",
+    "{name} · Te toca jugar"
+  ],
+  [
+    "{name} · To move",
+    "{name} · Le toca mover"
+  ],
+  [
+    "{name} Wins! ({0})",
+    "¡Gana {name}! ({0})"
+  ],
+  [
+    "Open player journal for {name}",
+    "Abrir el diario de {name}"
+  ],
+  [
+    "{name}'s corner hand",
+    "Mano de la esquina de {name}"
+  ],
+  [
+    "Local play is available at {0}.",
+    "Puedes jugar aquí en {0}."
+  ]
+]
