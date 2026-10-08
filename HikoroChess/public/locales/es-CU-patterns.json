@@ -37,7 +37,7 @@
   ],
   [
     "Drop {0} at {1}",
-    "Colocar {0} en {1}"
+    "Coloca {0} en {1}"
   ],
   [
     "Drop {0} {1}",
@@ -178,5 +178,69 @@
   [
     "Player {0} to move",
     "Turno del jugador {0}"
+  ],
+  [
+    "Current board occurrence: {0}/3 · No-capture clock: {1}/100 · Backtracks in recent 28 plies: {2}",
+    "Repetición de la posición: {0}/3 · Contador sin capturas: {1}/100 · Retrocesos en las últimas 28 medias jugadas: {2}"
+  ],
+  [
+    "Import rejected: {0}",
+    "No se pudo importar: {0}"
+  ],
+  [
+    "Search failed: {0}",
+    "Falló el análisis: {0}"
+  ],
+  [
+    "Cannot load save: {0}",
+    "No se pudo cargar la partida guardada: {0}"
+  ],
+  [
+    "Suggested: {0} → {1} ({2}, {3} carried).",
+    "Sugerencia: {0} → {1} ({2}, se mueven {3})."
+  ],
+  [
+    "Suggested: {0}",
+    "Sugerencia: {0}"
+  ],
+  [
+    "Center garden controlled. {0}",
+    "Jardín central controlado. {0}"
+  ],
+  [
+    "Bot error: {0}",
+    "Error del bot: {0}"
+  ],
+  [
+    "Bot hand: {0}",
+    "Piezas del bot: {0}"
+  ],
+  [
+    "Your turn · Round {0}",
+    "Te toca jugar · Ronda {0}"
+  ],
+  [
+    "Bot’s turn · Round {0}",
+    "Le toca jugar al bot · Ronda {0}"
+  ],
+  [
+    "Tap a green dot to drop {0}.",
+    "Toca un punto verde para colocar {0}."
+  ],
+  [
+    "No legal drops for {0}.",
+    "No hay lugares legales para colocar {0}."
+  ],
+  [
+    "Carnelian {0}",
+    "Cornalina {0}"
+  ],
+  [
+    "Turquoise {0}",
+    "Turquesa {0}"
+  ],
+  [
+    "Depth {0} complete",
+    "Profundidad {0} completada"
   ]
 ]
