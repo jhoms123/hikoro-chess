@@ -95,7 +95,7 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
                     const ribbon=document.createElement('span');ribbon.className='stack-ribbon';
                     stack.forEach(p=>{const mini=document.createElement('img');mini.src=`assets/shavari/${Shavari.TYPES[p.type].icon}.svg`;mini.alt='';mini.className=`p${p.owner}`;ribbon.appendChild(mini);});token.appendChild(ribbon);
                     const badge=document.createElement('span'); badge.className='height-badge';badge.textContent=stack.length;token.appendChild(badge); }
-                node.appendChild(token);
+                const army=document.createElement('span');army.className='piece-army-label';army.textContent=top.owner;army.setAttribute('aria-hidden','true');token.append(army);node.appendChild(token);
             }
         });
         if (!nodes.some(n=>n.tabIndex===0)) nodes[76].tabIndex=0;
