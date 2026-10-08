@@ -1,0 +1,1 @@
+The final user-supplied wooden artwork is embedded in `hikoro-wood-assets.css` as a self-contained WebP atlas and board image. Both players use the same artwork with orientation differentiation.
