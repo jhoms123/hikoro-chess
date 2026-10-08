@@ -1,6 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const socket = io();
+    const socket = window.SiteAccounts.socket();
+    window.SiteAccounts.register('hikoro',()=>gameState.isSinglePlayer&&Array.isArray(gameState.actionJournal)?{version:1,journal:gameState.actionJournal}:null, async saved=>{
+        if(saved?.version!==1||!Array.isArray(saved.journal)||saved.journal.length>10000)throw Error('Invalid save');
+        if(new TextEncoder().encode(JSON.stringify({journal:saved.journal})).length>30000)throw Error('Save exceeds restore limit');
+        sessionStorage.removeItem('hikoro-active-room');
+        await window.SiteAccounts.ready;
+        const restore=()=>socket.emit('restoreHikoroSave',{journal:saved.journal});
+        if(socket.connected)restore();else socket.once('connect',restore);
+    },recordPayload);
+    function recordPayload(){return Array.isArray(gameState.actionJournal)?{journal:gameState.actionJournal,result:gameState.gameOver?{winner:gameState.winner==='white'?1:gameState.winner==='black'?2:0,reason:gameState.reason}:null,gameId:gameState.isSinglePlayer?null:gameState.id,recordId:gameState.id}:null;}
+
     const announce = message => {
         const notice = document.getElementById('site-notice');
         notice.textContent = message; notice.hidden = false;
@@ -425,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLocalState(newGameState) {
         if (!isReplayMode) window.SiteAudio?.transition('hikoro',gameState,newGameState);
         gameState = newGameState;
+        if(!isReplayMode&&recordPayload())window.SiteRecords?.completed('hikoro',recordPayload(),recordPayload().result,recordPayload().gameId);
         updateTimerDisplay({ whiteTime: gameState.timeControl?.main === -1 ? -1 : gameState.whiteTimeLeft || gameState.timeControl?.byoyomiTime || 0, blackTime: gameState.timeControl?.main === -1 ? -1 : gameState.blackTimeLeft || gameState.timeControl?.byoyomiTime || 0, isInByoyomiWhite: gameState.whiteTimeLeft === 0, isInByoyomiBlack: gameState.blackTimeLeft === 0 });
 
         if (newGameState.gameOver && newGameState.winner) {

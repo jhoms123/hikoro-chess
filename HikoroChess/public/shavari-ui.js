@@ -76,6 +76,7 @@
         }
     }
     function render() {
+window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?gameId:null);
         const moves = selected && canPlay() ? Shavari.legalMoves(state, selected, mode) : [];
         const focus = document.activeElement;
         nodes.forEach((node,i) => {
@@ -145,7 +146,7 @@
     $('redo-button').addEventListener('click',()=>{if(online||cursor>=journal.length)return;state=Shavari.replay(journal,++cursor);selected=null;notice('');persist();render();});
     function confirm(title,message,label,action){$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('accept-confirm').textContent=label;confirmation=action;$('confirm-dialog').showModal();$('cancel-confirm').focus();}
     $('new-button').addEventListener('click',()=>{
-        const start=()=>{state=Shavari.initial();journal=[];cursor=0;selected=null;mode='all';notice('');persist();render();};
+        const start=()=>{window.SiteRecords?.newTable('shavari');state=Shavari.initial();journal=[];cursor=0;selected=null;mode='all';notice('');persist();render();};
         if(cursor||journal.length)confirm('Start a new match?','Your current position will be replaced. Save a record first if you want to keep it.','Start new match',start);else start();
     });
     $('cancel-confirm').addEventListener('click',()=>$('confirm-dialog').close());
@@ -155,10 +156,7 @@
         if(online&&!state.result&&!roomClosed){e.preventDefault();confirm('Leave this table?','Leaving ends the match for both courts. Refreshing this page preserves your seat.','Leave table',()=>{socket.emit('leaveGame',gameId);location.href='/';});}
     });
     $('rules-button').addEventListener('click',()=>$('rules-dialog').showModal());$('close-rules').addEventListener('click',()=>$('rules-dialog').close());
-    $('save-button').addEventListener('click',()=>{
-        const lines=['SHAVARI CHESS','9 × 9 · combined movement · height-based jumping and covering · maximum stack height 3','',...state.history.map((m,i)=>`${i+1}. ${courts[m.player]} ${m.types.join('+')} ${Shavari.coord(m.from)} ${m.kind==='cover'?'cover':m.captured.length?'x':'-'} ${Shavari.coord(m.to)} (${m.mode})${m.captured.length?' captured '+m.captured.join('+'):''}`), '',state.result?`${state.result.winner?courts[state.result.winner]+' wins':'Draw'}: ${state.result.reason}`:`${courts[state.player]} to move`];
-        const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='shavari-match.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('Match record downloaded.');
-    });
+    $('save-button').addEventListener('click',()=>{try{SiteRecords.save('shavari',recordPayload());notice('Replay record downloaded and added to history.');}catch(e){notice(e.message);}});
     for(const [type,info] of Object.entries(Shavari.TYPES)){
         const card=document.createElement('article');card.className='guide-card';
         const img=document.createElement('img');img.src=`assets/shavari/${info.icon}.svg`;img.alt='';
@@ -167,7 +165,7 @@
     }
     if(online){
         $('play-mode').textContent='ONLINE TABLE';
-        socket=io();
+        socket=window.SiteAccounts.socket();
         socket.on('connect',()=>{
             connected=true;pending=false;hasSynced=false;
             let token;try{token=sessionStorage.getItem('hikoro-seat-' + gameId);}catch{}
@@ -184,4 +182,11 @@
     }
     render();
     if(params.get('showRules')==='1')$('rules-dialog').showModal();
+
+    function recordPayload(){return {journal:online?(state.recordJournal||[]):journal,cursor:online?(state.recordJournal||[]).length:cursor,result:state.result,gameId:online?gameId:null};}
+window.SiteAccounts.register('shavari',()=>online?null:{version:3,journal,cursor,flipped},saved=>{
+        const restored=saved?.version===3&&Shavari.replay(saved.journal,saved.cursor);
+        if(online||!restored||!Shavari.replay(saved.journal))throw Error('Invalid save');
+        journal=saved.journal;cursor=saved.cursor;state=restored;flipped=Boolean(saved.flipped);selected=null;persist();render();
+    },recordPayload);
 })();

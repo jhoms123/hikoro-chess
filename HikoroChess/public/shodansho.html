@@ -98,7 +98,7 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css">
     <link rel="stylesheet" href="shodansho-medieval.css">
-<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script></head>
+<link rel="stylesheet" href="site-audio.css"><script src="site-audio.js" defer></script><link rel="stylesheet" href="collection-theme.css"><script src="collection-theme.js" defer></script><link rel="stylesheet" href="mobile-table.css"><script src="mobile-table.js" defer></script><link rel="stylesheet" href="/accounts.css"><script src="/vendor/supabase.js"></script><script src="/accounts.js"></script></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
@@ -401,7 +401,7 @@ let hasSpun = false;
 
 // Setup new board size
 </script>
-<script src="shodansho-engine.js"></script>
+<script src="shodansho-engine.js"></script><script src="match-record.js"></script><script src="record-library.js"></script>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -456,7 +456,9 @@ function showPieceInfo(kind, owner = null) {
     `;
 }
 
+function recordPayload(){return {journal:game.actionJournal,playerCount:game.playerCount,gameId:isOnline?gameId:null,result:game.phase==='game_over'?{winner:game.winner===null?0:game.winner+1,reason:game.message}:null};}
 function updateDOM() {
+ window.SiteRecords?.completed('shodansho',recordPayload(),recordPayload().result,isOnline?gameId:null);
     const turnIndicator = document.getElementById('turn-indicator');
     const gameMessage = document.getElementById('game-message');
 
@@ -878,14 +880,14 @@ window.addEventListener('keydown', (e) => {
         game.selectHand(kinds[e.key - '1']);
     }
     else if (e.key.toLowerCase() === 'p') game.pickupSelectedSun();
-    else if (!isOnline && e.key === 'F1') { e.preventDefault(); game.reset(2); }
-    else if (!isOnline && e.key === 'F2') { e.preventDefault(); game.reset(3); }
-    else if (!isOnline && e.key === 'F3') { e.preventDefault(); game.reset(4); }
+    else if (!isOnline && e.key === 'F1') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(2); }
+    else if (!isOnline && e.key === 'F2') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(3); }
+    else if (!isOnline && e.key === 'F3') { e.preventDefault(); window.SiteRecords?.newTable('shodansho'); game.reset(4); }
     updateDOM();
 });
 
 if (isOnline) {
-    socket = io();
+    socket = window.SiteAccounts.socket();
     const seatToken = sessionStorage.getItem('hikoro-seat-' + gameId);
     waitingForServer = true;
     socket.on('connect', () => {
@@ -900,7 +902,7 @@ if (isOnline) {
         const actions = sync.actions;
         myPlayerIndex = sync.playerIndex; onlinePlayerCount = sync.playerCount;
         targetRotationAngle = myPlayerIndex === 1 ? Math.PI : myPlayerIndex === 2 ? Math.PI / 2 : myPlayerIndex === 3 ? -Math.PI / 2 : 0;
-        game.reset(onlinePlayerCount);
+        window.SiteRecords?.newTable('shodansho'); game.reset(onlinePlayerCount);
         if (actions) {
             const restore=()=>actions.forEach(act => applyRemoteAction(act));
             if(window.SiteAudio)window.SiteAudio.silence(restore);else restore();
@@ -914,10 +916,30 @@ if (isOnline) {
         updateDOM();
     });
 } else {
-    game.reset(onlinePlayerCount); 
+    window.SiteRecords?.newTable('shodansho'); game.reset(onlinePlayerCount);
     updateDOM();
 }
 
+
+window.SiteAccounts.register('shodansho',()=>isOnline?null:{version:1,playerCount:game.playerCount,journal:game.actionJournal},saved=>{
+ if(isOnline||saved?.version!==1||![2,3,4].includes(saved.playerCount)||!Array.isArray(saved.journal)||saved.journal.length>1000)throw Error('Invalid save');
+ const restored=new Game(board,saved.playerCount);
+ for(const act of saved.journal){
+  if(restored.phase==='game_over')throw Error('Invalid save');
+  if(act.type==='applyMove'){
+   const piece=restored.pieces.get(act.move?.pieceId);
+   const legal=piece&&piece.owner===restored.currentPlayer&&restored.generateMoves(piece).find(m=>m.dst===act.move.dst);
+   if(!legal)throw Error('Invalid move');restored.applyMove(legal,true);
+  }else if(act.type==='dropSelectedHand'){
+   if(!board.vertices.has(act.key)||!Object.hasOwn(restored.players[restored.currentPlayer].hand,act.kind)||restored.players[restored.currentPlayer].hand[act.kind]<=0||restored.occupied().has(act.key)||!restored.canDrop(act.kind,act.key)[0])throw Error('Invalid drop');
+   restored.dropSelectedHand(act.key,act.kind,true);
+  }else if(act.type==='pickupSelectedSun'){
+   const piece=restored.pieces.get(act.pieceId);if(!piece||piece.kind!=='sun'||!piece.pos||piece.owner!==restored.currentPlayer)throw Error('Invalid pickup');
+   restored.pickupSelectedSun(act.pieceId,true);
+  }else throw Error('Invalid action');
+ }
+ Object.assign(game,restored);onlinePlayerCount=saved.playerCount;updateDOM();
+},recordPayload);
 if (urlParams.get('showRules') === '1') toggleRulesModal();
 
 function applyRemoteAction(act) {
