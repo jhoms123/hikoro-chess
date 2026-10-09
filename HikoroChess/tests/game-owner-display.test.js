@@ -21,6 +21,7 @@ test('all game pieces show ownership through color or orientation, without numer
 test('local Shield Go as White labels the bot Black and reports the winner by color',async t=>{
   const html=fs.readFileSync(path.join(root,'go.html'),'utf8');
   const ui=fs.readFileSync(path.join(root,'go-ui.js'),'utf8');
+  assert.ok(html.includes('go-ui.js?v=20261009-local-color-labels-v2'),'the Go UI cache version must change with player-label fixes');
   const dom=new JSDOM(html,{url:'https://hikorochess.test/go.html',runScripts:'outside-only',pretendToBeVisual:true});
   t.after(()=>dom.window.close());
   const w=dom.window;
