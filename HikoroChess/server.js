@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const socketIo = require('socket.io');
 const hikoroLogic = require('./gamelogic');
+const HikoroBot = require('./hikoro-bot');
 const { remainingTime, commitClock } = require('./clock');
 const { createSdsValidator, applySdsAction } = require('./sds-validator');
 const Shavari = require('./public/shavari-engine');
@@ -40,6 +41,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     const sessions = new Map();
     const resultRetries = new Map();
     const sdsBotJobs = new Set();
+    const hikoroBotJobs = new Set();
     const sdsBotRunner = createSdsBotRunner();
     let effects = null, queue = Promise.resolve(), storageReady = !roomStore;
     const defer = action => effects ? effects.push(action) : action();
@@ -65,7 +67,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         if(!game.started&&!game.gameOver)lobby.set(game.id,{id:game.id,gameType:game.gameType,creatorName:game.name,timeControl:game.timeControl,currentPlayers:data.tokens.filter(Boolean).length,maxPlayers:game.maxPlayers,humanCapacity:game.humanCapacity||game.maxPlayers,botCount:game.botCount||0,boardSize:game.boardSize});
     }
     const ready = roomStore ? roomStore.load().then(rows=>{ for(const saved of rows){try{if(Date.now()-saved.game.lastActivity<=ttl(saved.game))restore(saved);}catch{console.error('A stored room could not be restored.');}} storageReady=true; }).catch(error=>{console.error('Online room storage could not load.');throw error;}) : Promise.resolve();
-    ready.then(()=>{for(const game of games.values())if(game.gameOver)persistResult(game);}).catch(()=>{});
+    ready.then(()=>{for(const game of games.values())if(game.gameOver)persistResult(game);else if(game.hikoroBot) setTimeout(()=>startHikoroBotTurn(game.id),400);}).catch(()=>{});
     io.use(async (_socket,next)=>{try{await ready;next();}catch{next(Error('Online tables are temporarily unavailable. Please try again.'));}});
     function command(action,socket) {
         const task=queue.then(async()=>{
@@ -105,7 +107,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function roster(game) {
         const ids=game.gameType==='hikoro'?[game.players.white,game.players.black]:game.players;
         broadcast(game.id,'tableStatus',{gameId:game.id,gameType:game.gameType,started:game.started,finished:game.gameOver,
-            durable:Boolean(roomStore),local:Boolean(game.isSinglePlayer),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>{const bot=game.gameType==='shodansho'&&i>=(game.humanCapacity||game.maxPlayers);return{name:profile.display_name,bot,connected:bot||Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))};})});
+            durable:Boolean(roomStore),local:Boolean(game.isSinglePlayer),maxPlayers:game.maxPlayers,players:game.playerProfiles.map((profile,i)=>{const bot=(game.gameType==='shodansho'&&i>=(game.humanCapacity||game.maxPlayers))||(game.gameType==='hikoro'&&game.hikoroBot&&i===1);return{name:profile.display_name,bot,connected:bot||Boolean(ids[i]&&io.sockets.sockets.has(ids[i])),rematch:Boolean(game.rematchVotes?.includes(i))};})});
     }
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
@@ -165,6 +167,28 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         if (announceSeat) reply(socket, 'seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
         roster(game);
         return game;
+    }
+    function startHikoroBotTurn(gameId) {
+        const game=games.get(gameId);
+        if (!game?.hikoroBot || game.gameOver || game.isWhiteTurn || hikoroBotJobs.has(gameId)) return;
+        hikoroBotJobs.add(gameId);
+        setTimeout(()=>{
+            void command(()=>{
+                const latest=games.get(gameId);
+                if (!latest?.hikoroBot || latest.gameOver || latest.isWhiteTurn) return;
+                const move=HikoroBot.chooseMove(latest);
+                const result=move&&hikoroLogic.makeMove(latest,move,'black');
+                if (!result?.success) {latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not find a legal move.');return;}
+                const next=result.updatedGame;
+                next.actionJournal=[...(latest.actionJournal||[]),move];
+                next.lastActivity=Date.now();games.set(gameId,next);
+                if (next.gameOver) {persistResult(next);roster(next);}
+                broadcast(gameId,'gameStateUpdate',state(next));
+            }).finally(()=>{
+                hikoroBotJobs.delete(gameId);
+                if (games.get(gameId)?.hikoroBot && !games.get(gameId).hikoroBotStalled && !games.get(gameId).isWhiteTurn && !games.get(gameId).gameOver) startHikoroBotTurn(gameId);
+            });
+        },250);
     }
     const SDS_BOT_ENGINE = 'Adaptive Gumbel Guide v13.5.1';
     function addSdsBotSeats(game) {
@@ -283,7 +307,13 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (!config) return err(socket, 'Invalid game settings.');
             if (['shavari','hikoruka','go','academy'].includes(config.gameType)) return err(socket, `Local play is available at /${config.gameType}.html.`);
             if (!canCreate()) return;
-            reply(socket, 'gameStart', state(newGame(socket, config, true)));
+            const game=newGame(socket, config, true);
+            if (config.gameType==='hikoro' && data?.hikoroBot===true) {
+                game.hikoroBot=true;
+                game.playerProfiles[1]={...Identity.publicIdentity({display_name:'Hikoro Bot'}),isBot:true,botEngine:'HikoroChess/Bot.cs'};
+                roster(game);
+            }
+            reply(socket, 'gameStart', state(game));
         });
         on('restoreHikoroSave', data => {
             if (!Array.isArray(data?.journal) || data.journal.length > 10000 || !canCreate()) return err(socket, 'This saved match cannot be restored.');
@@ -412,6 +442,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return err(socket, 'You do not hold a seat in this game.');
             if (!game.started || game.gameOver) return err(socket, 'This game is not accepting moves.');
             if (!move || typeof move !== 'object') return err(socket, 'Invalid move.');
+            if (game.hikoroBot && !game.isWhiteTurn) return err(socket, 'The bot is thinking. Wait for your turn.');
             const color = game.isSinglePlayer ? (game.isWhiteTurn ? 'white' : 'black') : seat(game, socket) === 0 ? 'white' : 'black';
             if (move.type !== 'resign' && (color === 'white') !== game.isWhiteTurn) return err(socket, 'Not your turn.');
             const now = Date.now();
@@ -427,10 +458,12 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             next.lastActivity = now; games.set(game.id, next);
             if(next.gameOver){persistResult(next);roster(next);}
             broadcast(game.id, 'gameStateUpdate', state(next));
+            if (next.hikoroBot && !next.gameOver) defer(()=>startHikoroBotTurn(game.id));
         });
         on('getValidMoves', data => {
             const game = games.get(data?.gameId);
             if (!game || game.gameType !== 'hikoro' || !member(game, socket)) return;
+            if (game.hikoroBot && !game.isWhiteTurn) return reply(socket,'validMoves',[]);
             reply(socket, 'validMoves', hikoroLogic.getValidMoves(game, data.data));
         });
         on('sdsAction', async data => {

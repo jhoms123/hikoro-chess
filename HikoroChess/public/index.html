@@ -83,9 +83,10 @@
             </div>
         </div>
         
+        <label id="hikoro-bot-option" for="hikoro-bot-checkbox"><input id="hikoro-bot-checkbox" type="checkbox" checked> Play Hikoro against the bot (uncheck for two people on this device)</label>
         <div class="lobby-actions"><button id="create-game-btn">Create online room</button>
         <button id="single-player-btn">Play locally</button>
-        <button id="rules-btn">Read the rules</button></div><p class="setup-hint" id="setup-hint">Online rooms need a second player. Local play shares this device.</p></div></section>
+        <button id="rules-btn">Read the rules</button></div><p class="setup-hint" id="setup-hint">Online rooms need a second player. Local Hikoro can play against the bot or share this device.</p></div></section>
 
         <div id="replay-section" style="margin-top: 20px; border-top: 1px solid #777; padding-top: 15px; width: 90%; margin-left: auto; margin-right: auto;">
             <details><summary>Review a Hikoro game</summary><p>Paste saved Kifu notation to step through a previous match.</p><label for="kifu-paste-area">Game notation</label>
@@ -160,7 +161,7 @@
 
     <script src="/socket.io/socket.io.js?v=20261008-dashboard"></script>
     <script src="gamelogic.js?v=20261008-dashboard"></script>
-    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-bot-seats"></script><script src="script.js?v=20261009-local-bots"></script>
+    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-bot-seats"></script><script src="script.js?v=20261009-hikoro-bot"></script>
     <script src="site-ui.js?v=20261008-dashboard"></script>
 
     <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="credits.html">Artists &amp; credits</a></footer>

@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
+            document.getElementById('hikoro-bot-option').hidden = gameType !== 'hikoro';
             singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','academy','shodansho'].includes(gameType);
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
@@ -164,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
-        socket.emit('createSinglePlayerGame', { gameType, sdsPlayerCount });
+        socket.emit('createSinglePlayerGame', { gameType, sdsPlayerCount, hikoroBot: gameType === 'hikoro' && document.getElementById('hikoro-bot-checkbox')?.checked === true });
     });
 
     socket.on('lobbyUpdate', updateLobby);
@@ -469,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderHikoroCaptured();
         renderMoveHistory(gameState.moveList);
 
-        if (newGameState.gameOver) {
+        if (newGameState.gameOver || (isSinglePlayer && gameState.hikoroBot && !gameState.isWhiteTurn)) {
             hikoroBoardElement.style.pointerEvents = 'none';
         } else {
             hikoroBoardElement.style.pointerEvents = 'auto';
@@ -685,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isReplayMode) {
                 turnIndicator.textContent = currentReplayNode?.gameState?.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else if (isSinglePlayer) {
-                 turnIndicator.textContent = gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
+                 turnIndicator.textContent = gameState.hikoroBot ? (gameState.isWhiteTurn ? 'Your turn (White)' : 'Hikoro Bot is thinking…') : gameState.isWhiteTurn ? "White's Turn" : "Black's Turn";
             } else {
                 const isMyTurn = (myColor === 'white' && gameState.isWhiteTurn) || (myColor === 'black' && !gameState.isWhiteTurn);
                 turnIndicator.textContent = window.SiteAccounts.playerName(gameState.isWhiteTurn?1:2,gameState.isWhiteTurn?'White':'Black')+(isMyTurn?' · Your turn':' · To move');
