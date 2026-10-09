@@ -1,8 +1,10 @@
 /* Shield Go bot: variant-aware search built against GoVariant's shared rules engine.
- * Search design is independently implemented, drawing on score-aware MCTS research in KataGo.
+ * It combines score-aware MCTS with a local tactical reader for jump captures, atari captures,
+ * and atari saves, adapting Go life-and-death search ideas to this variant's legal actions.
  * No KataGo source or standard-Go model is bundled: the stock model is not trained for
  * Shield Go's jump captures or mandatory shield chains, and its move format lacks those actions.
- * Research references: github.com/lightvector/KataGo and its Analysis_Engine.md / KataGoMethods.md.
+ * Research references: github.com/lightvector/KataGo, KataGoMethods.md, and tactical search
+ * work such as Cazenave's "Combining tactical search and deep learning in Go".
  *
  * Browser: load go-engine.js first, then go-bot.js. Call GoVariantBot.chooseAction(state, options)
  * or analyze(state, options) for action plus search statistics. The local-match UI runs this
@@ -323,7 +325,64 @@
     return rows;
   }
 
-  function quickPolicyScore(state,row,engine){
+  function inspectGroup(state,start,engine){
+    const side=playerOf(engine,state.board[start.y][start.x]);
+    const queue=[start],seen=new Set(),stones=[],liberties=new Map();
+    for(let i=0;i<queue.length;i++){
+      const p=queue[i],key=coordKey(p.x,p.y);
+      if(seen.has(key)) continue;
+      seen.add(key);stones.push(p);
+      for(const[dx,dy]of DIRS){
+        const x=p.x+dx,y=p.y+dy;
+        if(!inBounds(state.size,x,y)) continue;
+        const value=state.board[y][x],nextKey=coordKey(x,y);
+        if(!value) liberties.set(nextKey,{x,y});
+        else if(playerOf(engine,value)===side&&!seen.has(nextKey)) queue.push({x,y});
+      }
+    }
+    return {side,stones,liberties};
+  }
+
+  function findAtariGroups(state,engine,side){
+    const seen=new Set(),groups=[];
+    for(let y=0;y<state.size;y++) for(let x=0;x<state.size;x++){
+      const value=state.board[y][x],key=coordKey(x,y);
+      if(!value||seen.has(key)) continue;
+      const group=inspectGroup(state,{x,y},engine);
+      for(const stone of group.stones) seen.add(coordKey(stone.x,stone.y));
+      if(group.side===side&&group.liberties.size===1){
+        groups.push({stones:group.stones,liberty:group.liberties.values().next().value});
+      }
+    }
+    return groups;
+  }
+
+  function atariRescueBonus(state,row,engine,atariGroups){
+    if(!atariGroups.length) return 0;
+    const side=state.player,movedFrom=row.action.type==="move"?coordKey(row.action.from.x,row.action.from.y):null;
+    let bonus=0;
+    for(const group of atariGroups){
+      const survivors=[];
+      for(const stone of group.stones){
+        const point=movedFrom===coordKey(stone.x,stone.y)?row.action.to:stone;
+        if(playerOf(engine,row.next.board[point.y][point.x])===side) survivors.push(point);
+      }
+      if(survivors.length!==group.stones.length) continue;
+      const checked=new Set();
+      let safe=true;
+      for(const point of survivors){
+        const key=coordKey(point.x,point.y);
+        if(checked.has(key)) continue;
+        const nextGroup=inspectGroup(row.next,point,engine);
+        if(nextGroup.liberties.size<=1){safe=false;break;}
+        for(const stone of nextGroup.stones) checked.add(coordKey(stone.x,stone.y));
+      }
+      if(safe) bonus+=1.8+Math.min(0.5,group.stones.length*0.08);
+    }
+    return Math.min(2.8,bonus);
+  }
+
+  function quickPolicyScore(state,row,engine,atariGroups){
     const mover=state.player;
     const captured=(row.next.lost&&row.next.lost[3-mover]||0)-(state.lost&&state.lost[3-mover]||0);
     let value=captured*2.2;
@@ -335,6 +394,7 @@
       const p=row.action.to;
       value+=placementQuality(state,p.x,p.y)*0.9;
     }
+    value+=atariRescueBonus(state,row,engine,atariGroups||[]);
     if (row.next.result){
       value+=row.next.result.winner===0?0:row.next.result.winner===mover?12:-12;
     }
@@ -368,8 +428,42 @@
     return false;
   }
 
-  function hasTacticalJump(state,engine){
-    return hasLegalJump(state,state.player,engine)||hasLegalJump(state,3-state.player,engine);
+  function hasLegalAtariCapture(state,attacker,engine){
+    if(!state||state.result||state.chain) return false;
+    const defender=3-attacker,groups=findAtariGroups(state,engine,defender);
+    if(!groups.length) return false;
+    const probe=attacker===state.player?state:{...state,player:attacker,chain:null};
+    const before=state.lost&&state.lost[defender]||0;
+    const captures=(action)=>{
+      const next=applyForSearch(engine,probe,action);
+      return Boolean(next&&(next.lost&&next.lost[defender]||0)>before);
+    };
+    const targets=new Map(groups.map(group=>[coordKey(group.liberty.x,group.liberty.y),group.liberty]));
+    if(probe.remaining&&probe.remaining[attacker]){
+      for(const target of targets.values()){
+        if(captures({type:"place",to:target})) return true;
+      }
+    }
+    const checked=new Set();
+    for(const target of targets.values()) for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const from={x:target.x+dx,y:target.y+dy};
+      if(!inBounds(state.size,from.x,from.y)) continue;
+      const key=coordKey(from.x,from.y),value=state.board[from.y][from.x];
+      if(checked.has(key)||!value||value<=2||playerOf(engine,value)!==attacker) continue;
+      checked.add(key);
+      for(const move of engine.legalMoves(probe,from)){
+        if(move.to.x===target.x&&move.to.y===target.y&&captures({type:"move",from,to:move.to})) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasTacticalThreat(state,engine){
+    for(const side of [state.player,3-state.player]){
+      if(hasLegalJump(state,side,engine)||hasLegalAtariCapture(state,side,engine)) return true;
+    }
+    return false;
   }
 
   function rollout(startState,rootPlayer,engine,options,rng){
@@ -377,22 +471,24 @@
     const depth=options.rolloutDepth;
     const actionLimit=options.rolloutPlacementLimit;
     const tacticalLimit=Math.max(0,options.tacticalExtension|0);
-    // Resolve forced chains fully, then spend a small extension budget on jump tactics.
-    // This avoids scoring a leaf while a capture or its immediate reply is still available.
+    // Resolve forced chains fully, then extend through immediate jump and atari tactics.
+    // This avoids scoring a leaf while a capture or a save is still available.
     const maxPly=depth+tacticalLimit+state.size*state.size;
     let tacticalUsed=0,tacticalExtensionPlies=0;
+    const finish=()=>({value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies});
     for (let ply=0;ply<maxPly;ply++){
-      if (state.result) return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
+      if (state.result) return finish();
       let tacticalStep=false;
       if (ply>=depth&&!state.chain){
-        if (tacticalUsed>=tacticalLimit||!hasTacticalJump(state,engine)) break;
+        if (tacticalUsed>=tacticalLimit||!hasTacticalThreat(state,engine)) break;
         tacticalUsed++;
         tacticalStep=true;
       }
       if (ply>=depth&&!state.chain&&!tacticalStep) break;
       const rows=legalActions(state,{engine,placementLimit:actionLimit,rng});
-      if (!rows.length) return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
-      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine)}));
+      if (!rows.length) return finish();
+      const atariGroups=tacticalStep?findAtariGroups(state,engine,state.player):[];
+      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine,atariGroups)}));
       scored.sort((a,b)=>b.score-a.score);
       const shortlist=scored.slice(0,Math.min(scored.length,10));
       const temp=1.35;
@@ -401,7 +497,7 @@
       state=chosen.next;
       if (tacticalStep) tacticalExtensionPlies++;
     }
-    return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
+    return finish();
   }
 
   function now(){

@@ -114,6 +114,47 @@ test('rollouts extend through immediate jump tactics after normal depth', () => 
   assert.ok(Engine.apply(state, result.action), 'tactical search returned an illegal move');
 });
 
+test('rollouts extend through a one-liberty capture even when no jump is available', () => {
+  const state = Engine.initial(9);
+  state.board[4][4] = 2;
+  state.board[4][3] = 3;
+  state.board[3][4] = 3;
+  state.board[4][5] = 3;
+  assert.equal(Engine.legalMoves(state, { x: 3, y: 4 }).some(move => move.type === 'jump'), false);
+  const capture = Engine.apply(state, { type: 'place', to: { x: 4, y: 5 } });
+  assert.equal(capture?.lost[2], 1, 'placing on the last liberty should capture the group');
+  assert.deepEqual(Bot.rankActions(state, { seed: 117 })[0].action,
+    { type: 'place', to: { x: 4, y: 5 } }, 'the one-liberty capture should lead tactical move ordering');
+  const result = Bot.analyze(state, {
+    maxIterations: 24,
+    timeMs: 10000,
+    rolloutDepth: 0,
+    tacticalExtension: 2,
+    rootPlacementLimit: 12,
+    rolloutPlacementLimit: 8,
+    seed: 117
+  });
+  assert.ok(result.stats.tacticalExtensionPlies > 0, JSON.stringify(result.stats));
+  assert.ok(Engine.apply(state, result.action), 'atari search returned an illegal move');
+});
+
+test('bot saves its one-liberty group against a legal capture threat', () => {
+  const state = Engine.initial(9);
+  state.player = 2;
+  state.board[4][4] = 2;
+  state.board[4][3] = 3;
+  state.board[3][4] = 3;
+  state.board[4][5] = 3;
+  const result = Bot.analyze(state, {
+    maxIterations: 40,
+    timeMs: 10000,
+    rolloutDepth: 3,
+    seed: 117
+  });
+  assert.deepEqual(result.action, { type: 'place', to: { x: 4, y: 5 } });
+  assert.ok(Engine.apply(state, result.action));
+});
+
 test('root search widens enough to examine more than the top handful of legal actions', () => {
   const state = Engine.initial(9);
   const result = Bot.analyze(state, {
