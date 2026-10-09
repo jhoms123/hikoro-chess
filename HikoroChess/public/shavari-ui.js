@@ -85,10 +85,10 @@
     function scheduleBot() {
         if (online || !isBotTurn() || state.result || roomClosed || botThinking || botErrorPly === state.ply) return;
         const ticket = ++botGeneration; botThinking = true;
-        $('turn-status').textContent = 'Shavari v1.3.2 bot to move';
+        $('turn-status').textContent = 'Shavari v1.3.3 bot to move';
         $('connection-status').textContent = 'Shavari bot is thinking…';
         try {
-            botWorker = new Worker('shavari-bot-worker.js?v=20261009-v132');
+            botWorker = new Worker('shavari-bot-worker.js?v=20261009-v133');
             const worker = botWorker;
             worker.onmessage = event => {
                 if (ticket !== botGeneration) return;
@@ -135,7 +135,7 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
         if (!nodes.some(n=>n.tabIndex===0)) nodes[76].tabIndex=0;
         if (nodes.includes(focus)) focus.focus();
         drawCoordinates();
-        $('turn-status').textContent=state.result ? (state.result.winner ? `${window.SiteAccounts.playerName?.(state.result.winner,courts[state.result.winner])||courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : isBotTurn() ? 'Shavari v1.3.2 bot to move' : `${window.SiteAccounts.playerName?.(state.player,courts[state.player])||courts[state.player]} to move`;
+        $('turn-status').textContent=state.result ? (state.result.winner ? `${window.SiteAccounts.playerName?.(state.result.winner,courts[state.result.winner])||courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : isBotTurn() ? 'Shavari v1.3.3 bot to move' : `${window.SiteAccounts.playerName?.(state.player,courts[state.player])||courts[state.player]} to move`;
         if (state.result) $('connection-status').textContent=state.result.reason;
         else if (!online) $('connection-status').textContent=isBotTurn() ? (botErrorPly === state.ply ? 'Bot unavailable · change the local opponent to retry.' : 'Shavari bot is thinking…') : selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
         else $('connection-status').textContent=roomClosed ? 'Return to the collection to open another room.' : !connected ? 'Reconnecting… Moves are paused.' : !hasSynced ? 'Restoring your seat…' : pending ? 'Confirming your move…' : mySeat===state.player ? 'Your court’s turn.' : 'Waiting for the other court.';

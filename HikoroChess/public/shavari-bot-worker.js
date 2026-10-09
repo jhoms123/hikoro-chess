@@ -50,18 +50,19 @@ for(let sq=0;sq<81;sq++){
  }
 }
 let stamp=1;const seen=new Uint32Array(81*4);
-// A General may share a stack with only one other piece.
+// A General never shares a stack; it is moved alone.
 function mayStackWith(source,count,target){
- let containsGeneral=false;
- for(let i=source.length-count;i<source.length;i++)if(type(source[i])===0){containsGeneral=true;break;}
- if(!containsGeneral)for(let i=0;i<target.length;i++)if(type(target[i])===0){containsGeneral=true;break;}
- return count+target.length<=(containsGeneral?2:3);
+ for(let i=source.length-count;i<source.length;i++)if(type(source[i])===0)return false;
+ for(let i=0;i<target.length;i++)if(type(target[i])===0)return false;
+ return count+target.length<=3;
 }
 function generate(board,side,capturesOnly=false,onlyWinning=false){
  const result=[];
  for(let from=0;from<81;from++){
   const st=board[from],height=st.length;if(!height||owner(st[height-1])!==side)continue;
   for(let count=1;count<=height;count++){
+   let carriesGeneral=false;for(let j=height-count;j<height;j++)if(type(st[j])===0){carriesGeneral=true;break;}
+   if(carriesGeneral&&count>1)continue;
    ++stamp;if(stamp===0xffffffff){seen.fill(0);stamp=1;}
    for(let layer=height-count;layer<height;layer++){
     const token=st[layer],t=type(token),minimum=t===1?2:1;
@@ -86,6 +87,28 @@ function generate(board,side,capturesOnly=false,onlyWinning=false){
   }
  }
  return result;
+}
+function hasLegalMove(board,side){
+ for(let from=0;from<81;from++){
+  const st=board[from],height=st.length;if(!height||owner(st[height-1])!==side)continue;
+  for(let count=1;count<=height;count++){
+   let carriesGeneral=false;for(let j=height-count;j<height;j++)if(type(st[j])===0){carriesGeneral=true;break;}
+   if(carriesGeneral&&count>1)continue;
+   for(let layer=height-count;layer<height;layer++){
+    const token=st[layer],t=type(token),minimum=t===1?2:1;
+    for(const ray of PATHS[owner(token)][t][from]){
+     for(let i=0;i<ray.length;i++){
+      const to=ray[i],target=board[to],th=target.length;
+      if(i+1>=minimum){
+       if(!th||owner(target[th-1])!==side||mayStackWith(st,count,target))return true;
+      }
+      if(th&&count<=th)break;
+     }
+    }
+   }
+  }
+ }
+ return false;
 }
 function captureWinner(target){let ones=false,twos=false;for(const p of target){if(type(p)===0){if(owner(p)===1)ones=true;else twos=true;}}
  if(ones&&twos)return 0;if(ones)return 2;if(twos)return 1;return null;
@@ -208,7 +231,7 @@ function apply(state,m){if(state.result)return null;const legal=generate(state.b
  const h=hashBoard(board,3-who),hk=keyHash(h),repetitions={...state.repetitions};repetitions[hk]=(repetitions[hk]||0)+1;
  let result=winner!==null?{winner,reason:winner===0?'Both generals captured':'General captured'}:null;
  if(!result&&repetitions[hk]>=3)result={winner:0,reason:'Threefold repetition'};
- if(!result&&generate(board,3-who).length===0)result={winner:0,reason:'No legal moves'};
+ if(!result&&generate(board,3-who).length===0)result={winner:who,reason:'No legal moves'};
  if(!result&&noCapturePlies>=NO_CAPTURE_LIMIT)result={winner:0,reason:'100 plies without a capture'};
  if(!result&&state.ply+1>=MAXPLY)result={winner:0,reason:'Move limit reached'};
  const rec={from:legal.from,to:legal.to,count:legal.count,mode:legal.count===state.board[legal.from].length?'all':legal.count===1?'top':'pair',kind:KIND[legal.kind],player:who,moved:moving.map(p=>TYPES[type(p)]).join('+'),movedKey:moving.join('.'),captured:legal.kind===2?b.map(p=>TYPES[type(p)]).join('+'):'',height:board[legal.to].length};
@@ -325,9 +348,10 @@ function search(state,options={},update=()=>{}){
   return raw*(1-0.72*urgency);
  }
  function qsearch(alpha,beta,ply,remaining){tick(ply);ctx.qnodes++;
-  if(ctx.ply+ply>=MAXPLY||ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return 0;
-  const side=ctx.side;
-  // Immediate General capture beats speculative positional evaluation (including buried Generals).
+  if(ctx.ply+ply>=MAXPLY)return 0;
+  const side=ctx.side;if(!hasLegalMove(ctx.board,side))return -MATE+ply;
+  if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return 0;
+  // Immediate General capture beats speculative positional evaluation.
   if(hasWinningCapture(ctx.board,side))return MATE-ply-1;
   const danger=hasWinningCapture(ctx.board,3-side);
   const stand=evaluateAtClock(ctx.board,side);
@@ -348,7 +372,8 @@ function search(state,options={},update=()=>{}){
    try{
     val=terminalChild(m,u.prev,who,ply);
     if(val===null){
-     if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+     if(ctx.rep.get(u.k)>=3)val=0;
+     else if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)val=hasLegalMove(ctx.board,ctx.side)?0:MATE-ply-1;
      else if(danger && hasWinningCapture(ctx.board,ctx.side)){
       // The candidate fails to evade an immediate opposing winning capture.
       val=-MATE+ply+2;
@@ -368,18 +393,21 @@ function search(state,options={},update=()=>{}){
   return best;
  }
  function negamax(depth,alpha,beta,ply,pv){tick(ply);
-  if(ctx.ply+ply>=MAXPLY||ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return 0;
+  if(ctx.ply+ply>=MAXPLY)return 0;
   const k=key(),ttk=ttKey(),reps=ctx.rep.get(k)||0;if(reps>=3)return 0;
+  const side=ctx.side;
   if(depth<=0)return qsearch(alpha,beta,ply,3);
+  if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)return hasLegalMove(ctx.board,side)?0:-MATE+ply;
   const alphaStart=alpha, entry=ctx.tt.get(ttk),ttid=entry?.move??-1;
   if(entry&&entry.depth>=depth&&reps<2&&!pv){const value=mateFromTT(entry.value,ply);ctx.ttHits++;if(entry.flag===0)return value;if(entry.flag===1&&value>=beta)return value;if(entry.flag===-1&&value<=alpha)return value;}
-  const side=ctx.side,moves=generate(ctx.board,side);if(!moves.length)return 0;
+  const moves=generate(ctx.board,side);if(!moves.length)return -MATE+ply;
   orderMoves(ctx,moves,ttid,ply,ply<=2&&depth>=2);
   let best=-MATE*2,bestId=-1;
   for(let i=0;i<moves.length;i++){
    const m=moves[i],who=ctx.side,u=step(m);let val;
    try{val=terminalChild(m,u.prev,who,ply);
-    if(val===null){if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+    if(val===null){if(ctx.rep.get(u.k)>=3)val=0;
+     else if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)val=hasLegalMove(ctx.board,ctx.side)?0:MATE-ply-1;
      else{
       const tactical=m.kind>=1||(m.count<u.prev[0].length&&owner(u.prev[0][u.prev[0].length-m.count-1])!==who);
       let reduction=!pv&&!tactical&&depth>=4&&i>=5&&ply>0?Math.min(2,1+(i>13?1:0)):0;
@@ -405,7 +433,8 @@ function search(state,options={},update=()=>{}){
   for(let i=0;i<moves.length;i++){
    const m=moves[i],who=ctx.side,penalty=hasWinningCapture(ctx.board,3-who)?0:backtrackPenalty(ctx.gameHistory,ctx.board,who,m),u=step(m);let val;
    try{val=terminalChild(m,u.prev,who,0);
-    if(val===null){if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT||ctx.rep.get(u.k)>=3)val=0;
+    if(val===null){if(ctx.rep.get(u.k)>=3)val=0;
+     else if(ctx.noCapturePlies>=NO_CAPTURE_LIMIT)val=hasLegalMove(ctx.board,ctx.side)?0:MATE-1;
      else if(i===0)val=-negamax(depth-1,-beta,-alpha,1,true);
      else{val=-negamax(depth-1,-alpha-1,-alpha,1,false);if(val>alpha&&val<beta)val=-negamax(depth-1,-beta,-alpha,1,true);}
     }
@@ -437,7 +466,7 @@ function search(state,options={},update=()=>{}){
  }
  return stats||{move:best,score:evaluateAtClock(ctx.board,ctx.side),depth:0,nodes:ctx.nodes,ms:Math.round(performance.now()-ctx.start),pv:[]};
 }
-return {VERSION:'1.3.2 Experimental Clock-Aware Exchange Guardian',TYPES,NAMES,GLYPHS,KIND,MATE,NO_CAPTURE_LIMIT,initial,owner,type,index,sqname,hashBoard,keyHash,signature,generate,apply,search,evaluate,generalPressure,backtrackPenalty,noCaptureClock,captureWinner,hasWinningCapture,captureCandidates,seeMove,stackGain};
+return {VERSION:'1.3.3 Non-Stackable General',TYPES,NAMES,GLYPHS,KIND,MATE,NO_CAPTURE_LIMIT,initial,owner,type,index,sqname,hashBoard,keyHash,signature,generate,apply,search,evaluate,generalPressure,backtrackPenalty,noCaptureClock,captureWinner,hasWinningCapture,captureCandidates,seeMove,stackGain};
 }
 const ShavariLab=shavariFactory();
 globalThis.ShavariLab=ShavariLab;globalThis.ShavariFactory=shavariFactory;
@@ -450,7 +479,7 @@ self.onmessage = event => {
       const from = action.from.y * 9 + action.from.x, to = action.to.y * 9 + action.to.x;
       const stack = state.board[from] || [], count = action.mode === 'top' ? 1 : action.mode === 'pair' ? 2 : stack.length, kind = S.KIND.indexOf(action.kind);
       const move = S.generate(state.board, state.player).find(m => m.from === from && m.to === to && m.count === count && m.kind === kind);
-      if (!move) throw Error('Saved Shavari actions do not match the v1.3.2 rules.');
+      if (!move) throw Error('Saved Shavari actions do not match the v1.3.3 rules.');
       state = S.apply(state, move); if (!state) throw Error('The bot could not replay the current Shavari position.');
     }
     if (state.result) throw Error('The Shavari match is already finished.');

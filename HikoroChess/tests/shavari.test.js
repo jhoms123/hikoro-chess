@@ -12,23 +12,25 @@ test('Shavari combines carried ranges, preserves initial armies and applies heig
     const s=Shavari.initial();assert.equal(Object.values(s.board).flat().length,20);
     assert.deepEqual(Shavari.legalMoves(s,{x:0,y:8}).map(m=>[m.x,m.y,m.kind]),[[2,6,'move']]);
     assert.equal(Shavari.legalMoves(s,{x:0,y:0}).length,0);
-    const custom=Shavari.initial();custom.board={'4,4':[{type:'C',owner:1},{type:'G',owner:1}], '4,6':[{type:'P',owner:2}]};
+    const custom=Shavari.initial();custom.board={'4,4':[{type:'C',owner:1},{type:'P',owner:1}], '4,6':[{type:'P',owner:2}]};
     assert.ok(Shavari.legalMoves(custom,{x:4,y:4}).length>4); // buried cannon contributes its range
-    assert.equal(Shavari.legalMoves(custom,{x:4,y:4},'top').length,6);
+    assert.equal(Shavari.legalMoves(custom,{x:4,y:4},'top').length,4);
     custom.board['4,4'].reverse(); // cannon on top: long range, blocked by opponent
     const ray=Shavari.legalMoves(custom,{x:4,y:4});assert.ok(ray.some(m=>m.x===4&&m.y===6&&m.kind==='capture'));assert.ok(ray.some(m=>m.x===4&&m.y===7));
 });
 test('friendly formations cap at three and top detachment preserves the base and piece order',()=>{
-    const s=Shavari.initial();s.board={'4,4':[{type:'G',owner:1},{type:'C',owner:1}], '5,4':[{type:'P',owner:1},{type:'C',owner:1}], '0,0':[{type:'G',owner:2}]};
+    const s=Shavari.initial();s.board={'4,4':[{type:'C',owner:1},{type:'P',owner:1}], '5,4':[{type:'P',owner:1},{type:'C',owner:1}], '0,0':[{type:'G',owner:2}]};
     assert.equal(Shavari.apply(s,move([4,4],[5,4])),null);
     const next=Shavari.apply(s,move([4,4],[5,4],'top'));assert.ok(next);
-    assert.deepEqual(next.board['4,4'],[{type:'G',owner:1}]);assert.deepEqual(next.board['5,4'].map(p=>p.type),['P','C','C']);
+    assert.deepEqual(next.board['4,4'],[{type:'C',owner:1}]);assert.deepEqual(next.board['5,4'].map(p=>p.type),['P','C','P']);
     assert.equal(next.player,2);assert.equal(s.board['4,4'].length,2); // immutable input
 });
-test('capture removes the entire enemy formation and a buried general ends the game',()=>{
-    const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1}],'4,4':[{type:'G',owner:2},{type:'P',owner:2}],'0,8':[{type:'G',owner:1}]};
-    const next=Shavari.apply(s,move([0,4],[4,4]));assert.equal(next.result.winner,1);assert.deepEqual(next.history[0].captured,['G','P']);
-    assert.equal(Shavari.apply(next,move([4,4],[5,4])),null);
+test('capture removes an enemy formation; capturing the opposing General wins',()=>{
+    const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1}],'4,4':[{type:'P',owner:2},{type:'C',owner:2}],'0,8':[{type:'G',owner:1}],'8,0':[{type:'G',owner:2}]};
+    const next=Shavari.apply(s,{...move([0,4],[4,4]),kind:'capture'});assert.equal(next.result,null);assert.deepEqual(next.history[0].captured,['P','C']);
+    const royal=Shavari.initial();royal.board={'0,4':[{type:'C',owner:1}],'4,4':[{type:'G',owner:2}],'0,8':[{type:'G',owner:1}]};
+    const won=Shavari.apply(royal,{...move([0,4],[4,4]),kind:'capture'});assert.deepEqual(won.result,{winner:1,reason:'General captured'});
+    assert.equal(Shavari.apply(won,move([4,4],[5,4])),null);
 });
 test('malformed actions, wrong owners and non-orthogonal moves are rejected',()=>{
     const s=Shavari.initial();for(const action of [null,{},move([0.5,7],[0,6]),move([0,7],[9,7]),move([0,7],[1,6]),move([0,1],[0,2]),move([0,7],[0,6],'fake')])assert.equal(Shavari.apply(s,action),null);
@@ -42,17 +44,16 @@ test('replay reconstructs stacks and splitting; third repeated position is a dra
     const cycle=[move([0,7],[0,6]),move([0,1],[0,2]),move([0,6],[0,7]),move([0,2],[0,1])];
     assert.deepEqual(Shavari.replay([...cycle,...cycle]).result,{winner:0,reason:'Threefold repetition'});
 });
-test('General formations use a two-piece cap while other formations may reach three',()=>{
-    const s=Shavari.initial();
-    s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}], '1,4':[{type:'G',owner:1}], '8,0':[{type:'G',owner:2}]};
+test('Generals always move alone and cannot be stacked or covered',()=>{
+    const s=Shavari.initial();s.board={'0,4':[{type:'G',owner:1}],'1,4':[{type:'P',owner:1}],'8,0':[{type:'G',owner:2}]};
     assert.equal(Shavari.legalMoves(s,{x:0,y:4}).some(m=>m.x===1&&m.y===4&&m.kind==='stack'),false);
-    assert.ok(Shavari.legalMoves(s,{x:0,y:4},'top').some(m=>m.x===1&&m.y===4&&m.kind==='stack'));
-    s.board={'0,4':[{type:'C',owner:1},{type:'G',owner:1},{type:'P',owner:1}]};
-    assert.deepEqual(Shavari.legalMoves(s,{x:0,y:4}),[]);
-    assert.ok(Shavari.legalMoves(s,{x:0,y:4},'top').length);
-    const cover=Shavari.initial();cover.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}],'3,4':[{type:'G',owner:2}],'8,8':[{type:'G',owner:1}]};
-    assert.equal(Shavari.apply(cover,{...move([0,4],[3,4]),kind:'cover'}),null);
-    assert.ok(Shavari.apply(cover,{...move([0,4],[3,4]),kind:'capture'}));
+    assert.equal(Shavari.apply(s,{...move([0,4],[1,4]),kind:'stack'}),null);
+    s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}],'3,4':[{type:'G',owner:2}],'0,8':[{type:'G',owner:1}]};
+    assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
+    assert.deepEqual(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result,{winner:1,reason:'General captured'});
+    s.board={'4,4':[{type:'G',owner:1},{type:'C',owner:1}]};
+    assert.deepEqual(Shavari.legalMoves(s,{x:4,y:4}),[]); // legacy mixed stacks cannot move together
+    assert.ok(Shavari.legalMoves(s,{x:4,y:4},'top').length); // the non-General can detach
 });
 test('the no-capture clock draws on ply 100 and a capture resets it',()=>{
     const quiet=Shavari.initial();quiet.noCapturePlies=99;
@@ -63,13 +64,20 @@ test('the no-capture clock draws on ply 100 and a capture resets it',()=>{
     const next=Shavari.apply(capture,{...move([0,4],[3,4]),kind:'capture'});
     assert.ok(next);assert.equal(next.noCapturePlies,0);assert.equal(next.result,null);
 });
+test('a player with no legal move loses to the player who moved last',()=>{
+    const s=Shavari.initial();s.player=2;s.board={};
+    for(let y=0;y<9;y++)for(let x=0;x<9;x++)s.board[`${x},${y}`]=[{type:'L',owner:1},{type:'L',owner:1},{type:'L',owner:1}];
+    s.board['0,1']=[{type:'L',owner:1},{type:'L',owner:1},{type:'P',owner:2}];
+    const next=Shavari.apply(s,{...move([0,1],[0,0],'top'),kind:'capture'});
+    assert.ok(next);assert.deepEqual(next.result,{winner:2,reason:'No legal moves'});
+});
 test('500 randomized legal plies preserve piece ownership, height and general termination',()=>{
     let s=Shavari.initial(),seed=12;
     for(let i=0;i<500;i++){
         if(s.result)s=Shavari.initial();const choices=[];
         for(const k of Object.keys(s.board)){const [x,y]=k.split(',').map(Number);for(const mode of ['all','top'])for(const to of Shavari.legalMoves(s,{x,y},mode))choices.push({from:{x,y},to,mode,kind:to.kind});}
         if(!choices.length)break;seed=(seed*1664525+1013904223)>>>0;s=Shavari.apply(s,choices[seed%choices.length]);assert.ok(s);
-        for(const stack of Object.values(s.board)){assert.ok(stack.length>=1&&stack.length<=3);if(stack.some(p=>p.type==='G'))assert.ok(stack.length<=2);assert.ok(stack.every(p=>[1,2].includes(p.owner)));}
+        for(const stack of Object.values(s.board)){assert.ok(stack.length>=1&&stack.length<=3);if(stack.some(p=>p.type==='G'))assert.equal(stack.length,1);assert.ok(stack.every(p=>[1,2].includes(p.owner)));}
         const generals=Object.values(s.board).flat().filter(p=>p.type==='G');assert.ok(generals.length<=2);if(!s.result)assert.equal(generals.length,2);
     }
 });
@@ -105,18 +113,18 @@ test('cover retains enemy movement and ownership; detaching the top restores ene
     const split=Shavari.apply(covered,{...move([3,4],[4,4],'pair'),kind:'move'});assert.equal(split.board['3,4'].at(-1).owner,2);assert.ok(Shavari.legalMoves(split,{x:3,y:4}).length);
 });
 test('top-two split can cover one enemy while retaining a base; cap and explicit choices are enforced',()=>{
-    const s=Shavari.initial();s.board={'0,4':[{type:'G',owner:1},{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'P',owner:2}], '8,0':[{type:'G',owner:2}]};
+    const s=Shavari.initial();s.board={'0,4':[{type:'L',owner:1},{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'P',owner:2}], '8,0':[{type:'G',owner:2}]};
     assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
-    const next=Shavari.apply(s,{...move([0,4],[3,4],'pair'),kind:'cover'});assert.ok(next);assert.equal(next.board['0,4'][0].type,'G');assert.equal(next.board['3,4'].length,3);
+    const next=Shavari.apply(s,{...move([0,4],[3,4],'pair'),kind:'cover'});assert.ok(next);assert.equal(next.board['0,4'][0].type,'L');assert.equal(next.board['3,4'].length,3);
     const capture=Shavari.apply(s,{...move([0,4],[3,4],'pair'),kind:'capture'});assert.equal(capture.board['3,4'].length,2);assert.deepEqual(capture.lastMove.captured,['P']);
     s.board['0,4']=[{type:'C',owner:1}];assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
 });
-test('Generals cannot be covered; capturing your own buried general loses and both generals draws',()=>{
-    const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'G',owner:2}], '0,8':[{type:'G',owner:1}], '8,0':[{type:'P',owner:2}]};
+test('a General cannot be buried; capturing it ends the game',()=>{
+    const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'G',owner:2}], '0,8':[{type:'G',owner:1}]};
     assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
-    assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result.winner,1);
-    s.board['3,4']=[{type:'G',owner:1},{type:'P',owner:2}];assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result.winner,2);
-    s.board['3,4']=[{type:'G',owner:1},{type:'G',owner:2},{type:'P',owner:2}];assert.deepEqual(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result,{winner:0,reason:'Both generals captured'});
+    const win=Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'});
+    assert.deepEqual(win.result,{winner:1,reason:'General captured'});
+    assert.equal(win.board['3,4'].length,2);assert.equal(win.board['3,4'][0].type,'C');
 });
 
 test('camel moves exactly two diagonally, with elevation blocking at the intermediate intersection',()=>{

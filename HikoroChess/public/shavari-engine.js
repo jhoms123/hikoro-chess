@@ -34,13 +34,13 @@
         if (mode === 'pair' && stack.length >= 2) return stack.slice(-2);
         return [];
     }
-    function stackLimit(pieces) { return pieces.some(piece => piece.type === 'G') ? 2 : 3; }
+    function stackLimit(pieces) { return pieces.some(piece => piece.type === 'G') ? 1 : 3; }
     function legalMoves(s, from, mode = 'all') {
         if (!s || s.result || !validPoint(from)) return [];
         const stack = s.board[key(from)];
         if (!stack?.length || stack.at(-1).owner !== s.player) return [];
         const moving = movingPieces(stack, mode);
-        if (!moving.length || (moving.some(piece => piece.type === 'G') && moving.length > 2)) return [];
+        if (!moving.length || (moving.some(piece => piece.type === 'G') && moving.length > 1)) return [];
         // Generate each carried piece's pattern independently, then union destinations.
         const orthogonal = [[0,-1],[0,1],[-1,0],[1,0]];
         const moves = [], seen = new Set();
@@ -101,7 +101,7 @@
         next.noCapturePlies = legal.kind === 'capture' ? 0 : (s.noCapturePlies || 0) + 1;
         const sig = signature(next); next.positions[sig] = (next.positions[sig] || 0) + 1;
         if (!next.result && next.positions[sig] >= 3) next.result = { winner: 0, reason: 'Threefold repetition' };
-        if (!next.result && !hasMove(next)) next.result = { winner: 0, reason: 'No legal moves' };
+        if (!next.result && !hasMove(next)) next.result = { winner: s.player, reason: 'No legal moves' };
         if (!next.result && next.noCapturePlies >= 100) next.result = { winner: 0, reason: '100 plies without a capture' };
         if (!next.result && next.ply >= 4000) next.result = { winner: 0, reason: 'Move limit reached' };
         return next;
