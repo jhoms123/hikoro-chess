@@ -592,13 +592,14 @@
   }
 
   function analyze(state,options){
+    const largeBoard=state&&state.size===13;
     const opts=Object.assign({
       timeMs:180,
       maxIterations:128,
       rolloutDepth:8,
       rolloutPlacementLimit:16,
       rootPlacementLimit:Infinity,
-      treePlacementLimit:72,
+      treePlacementLimit:largeBoard?56:72,
       cpuct:1.32,
       widening:1.55,
       rootWidening:1.9,
@@ -680,7 +681,7 @@
   }
 
   return {
-    version:"0.2.0-shield-go",
+    version:"0.3.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),

@@ -203,6 +203,13 @@ test('root search widens enough to examine more than the top handful of legal ac
   assert.ok(result.stats.rootExplored < result.stats.rootLegal);
 });
 
+test('13x13 root search retains all opening placements while keeping a legal action', () => {
+  const state = Engine.initial(13);
+  const result = Bot.analyze(state, { maxIterations: 8, timeMs: 1000, seed: 1313 });
+  assert.equal(result.stats.rootLegal, 170, 'the large-board root should retain all placements plus pass');
+  assert.ok(Engine.apply(state, result.action), 'the large-board search returned an illegal move');
+});
+
 test('worker wrapper returns an analyzed legal move with its request ticket', () => {
   let posted = null;
   let imports = '';
