@@ -1,6 +1,6 @@
 # Shield Go
 
-A browser port of the moving-stone Go variant in the owner's `jhoms123/goGameLocal` and `jhoms123/csharpgogame` repositories. The web version uses the shared movement/liberty rules and the C# version's reserve and final scoring rules. A standalone experimental bot module is available at `public/go-bot.js`; UI integration, worker wrapper, self-play trainer, and a learned Shield Go model are not included.
+A browser port of the moving-stone Go variant in the owner's `jhoms123/goGameLocal` and `jhoms123/csharpgogame` repositories. The web version uses the shared movement/liberty rules and the C# version's reserve and final scoring rules. The optional bot module at `public/go-bot.js` can play the bot's side in local shared-device matches. Its short search runs synchronously; a Worker wrapper, self-play trainer, and a learned Shield Go model are not included.
 
 ## Rules
 
@@ -32,4 +32,4 @@ Merge into `main` and use the existing Render service configuration: root `Hikor
 
 ## Experimental bot module
 
-`public/go-bot.js` is an optional standalone bot module. Load `public/go-engine.js` first, then the bot. `GoVariantBot.chooseAction(state, options)` returns a legal action; `GoVariantBot.analyze(state, options)` also returns search statistics. The bot uses the shared rules engine for legal actions and evaluates jump threats, shields, group liberties, and mandatory jump chains. Its search adapts score-aware Monte Carlo tree search ideas researched from KataGo, but it does not include KataGo code or its standard-Go model, which is not trained for Shield Go's custom actions. Search is synchronous, so a future UI integration should run it in a Web Worker.
+`public/go-bot.js` is loaded after `public/go-engine.js`. To play locally, choose **Opponent → Play as Black · bot plays White** or **Opponent → Play as White · bot plays Black** in Your table. Changing the opponent starts a new match; online matches remain human-versus-human. `GoVariantBot.chooseAction(state, options)` returns a legal action, and `GoVariantBot.analyze(state, options)` also returns search statistics. The bot uses the shared rules engine for legal actions and evaluates jump threats, shields, group liberties, and mandatory jump chains. Its search adapts score-aware Monte Carlo tree search ideas researched from KataGo, but it does not include KataGo code or its standard-Go model, which is not trained for Shield Go's custom actions. The UI runs a short synchronous search, so it pauses briefly while the bot thinks; a future Worker wrapper could remove that pause.
