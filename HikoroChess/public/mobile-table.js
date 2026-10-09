@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    if(theme==='lobby'){
     const shortcuts=document.createElement('div');shortcuts.className='mobile-hikoro-actions';document.getElementById('hikoro-game-wrapper').prepend(shortcuts);move(document.getElementById('rules-btn-ingame'),shortcuts);move(document.getElementById('main-menu-btn'),shortcuts);
     status=document.createElement('p');status.className='mobile-hikoro-status';status.setAttribute('aria-live','polite');document.getElementById('hikoro-game-wrapper').prepend(status);
+    move(document.getElementById('hikoro-local-settings'),document.getElementById('hikoro-game-wrapper'),viewport);
     fold(document.getElementById('move-history-container'),'Move history');
    }
    const audio=document.querySelector('.collection-audio');if(audio)move(audio,document.querySelector('main')||body);
@@ -70,3 +71,4 @@ document.addEventListener('DOMContentLoaded',()=>{
  document.querySelectorAll('.game-choice').forEach(card=>card.addEventListener('click',()=>{if(media.matches)document.getElementById('game-setup')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth',block:'start'});}));
  adapt(media.matches);
 });
+

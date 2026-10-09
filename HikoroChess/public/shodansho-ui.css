@@ -9,6 +9,8 @@
 .header-rules { border:1px solid #c5a66a55; border-radius:4px; background:transparent; padding:11px 18px; color:var(--paper); font-size:12px; }
 .header-rules span { color:var(--brass); margin-left:15px; }
 .game-layout { max-width:1680px; margin:auto; padding:32px; display:grid; grid-template-columns:248px minmax(0,1fr) 276px; align-items:start; gap:28px; }
+.sds-page .game-sidebar>.lesson-dock{width:100%;min-width:0;margin:0;padding:0;background:none;border:0;box-shadow:none}
+.sds-page .game-sidebar>.lesson-dock>button{width:100%;min-height:44px}
 .sds-page .game-sidebar,.sds-page .inventory-sidebar { width:auto; height:auto; overflow:visible; padding:0; gap:18px; }
 .sds-page .bg-game-panel { background:linear-gradient(140deg,#2d352bbb,#1e251fee); border:1px solid #c5a66a40; border-radius:5px; box-shadow:0 8px 24px #0003,inset 0 1px #ffffff04; backdrop-filter:none; -webkit-backdrop-filter:none; padding:20px; }
 .edition-label { font:9px/1.5 Arial,sans-serif; color:var(--brass); letter-spacing:2.6px; margin:2px 0 12px; }
@@ -65,3 +67,4 @@ kbd { font:10px/1.5 Arial,sans-serif; border:1px solid currentColor; border-radi
 .bot-practice-link span { color:var(--muted); font:10px/1.5 Arial,sans-serif; }
 .bot-practice-link:hover { background:#2b3528; border-color:#efcb83; }
 .bot-practice-link:focus-visible { outline:2px solid #efcb83; outline-offset:3px; }
+

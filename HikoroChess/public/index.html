@@ -9,7 +9,7 @@
     <title>Hikoro · Six games of strategy</title>
     <link rel="stylesheet" href="style.css?v=20261008-dashboard">
     <link rel="stylesheet" href="site-polish.css?v=20261008-dashboard">
-<link rel="stylesheet" href="site-audio.css?v=20261008-dashboard"><script src="site-audio.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="collection-theme.css?v=20261008-dashboard"><script src="collection-theme.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="mobile-table.css?v=20261009-mobile-scroll"><link rel="stylesheet" href="hikoro-artwork.css?v=20261008-dashboard"><script src="hikoro-artwork.js?v=20261008-dashboard"></script><script src="mobile-table.js?v=20261009-mobile-scroll" defer></script><link rel="stylesheet" href="/accounts.css?v=20261008-dashboard"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261008-dashboard"></script><link rel="stylesheet" href="experience.css?v=20261008-dashboard"><script src="table-companion.js?v=20261008-leave-fix"></script><script src="experience.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard"><link rel="stylesheet" href="/hikoro-table.css?v=20261009-table-final"></head>
+<link rel="stylesheet" href="site-audio.css?v=20261008-dashboard"><script src="site-audio.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="collection-theme.css?v=20261008-dashboard"><script src="collection-theme.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="mobile-table.css?v=20261009-mobile-scroll"><link rel="stylesheet" href="hikoro-artwork.css?v=20261008-dashboard"><script src="hikoro-artwork.js?v=20261008-dashboard"></script><script src="mobile-table.js?v=20261009-hikoro-controls" defer></script><link rel="stylesheet" href="/accounts.css?v=20261008-dashboard"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261008-dashboard"></script><link rel="stylesheet" href="experience.css?v=20261008-dashboard"><script src="table-companion.js?v=20261008-leave-fix"></script><script src="experience.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard"><link rel="stylesheet" href="/hikoro-table.css?v=20261009-wood-controls"></head>
 <body data-audio-theme="lobby" class="hikoro-site">
     <a class="skip-link" href="#game-setup">Skip to game setup</a>
     <header class="collection-header"><a href="/" class="collection-brand"><img src="assets/collection/icons/compass.svg" alt="" width="38" height="38"><span>HIKORO<small>THE GAME COLLECTION</small></span></a><span id="connection-status" role="status">Connecting…</span></header>
@@ -102,14 +102,7 @@
     </div>
 	
 
-    <section id="hikoro-local-setup" class="hikoro-local-setup" hidden aria-labelledby="hikoro-setup-title">
-        <div class="hikoro-setup-art"><img src="assets/collection/matches/hikoro.webp" alt="Hikoro Chess pieces on the ocean board"><span>THE OCEAN KINGDOM · LOCAL PLAY</span></div>
-        <div class="hikoro-setup-copy"><p class="eyebrow">HIKORO CHESS</p><h1 id="hikoro-setup-title">Choose your opponent.</h1><p>Command the white ocean army. Capture, promote, and reach the royal sanctuaries.</p>
-            <fieldset class="hikoro-opponent-picker"><legend>At this table</legend><label class="hikoro-opponent-choice"><input type="radio" name="hikoro-opponent" value="bot" checked><span><strong>Play the bot</strong><small>Hikoro Bot takes the black army and replies to your moves.</small></span></label><label class="hikoro-opponent-choice"><input type="radio" name="hikoro-opponent" value="human"><span><strong>Two people here</strong><small>Pass this device between white and black.</small></span></label></fieldset>
-            <div class="hikoro-setup-actions"><button id="hikoro-start-local" type="button">Start local match</button><a href="/">Back to all tables</a></div><p class="hikoro-setup-note">Want to invite someone? Create an online Hikoro room from the collection instead.</p>
-        </div>
-    </section>
-
+    <p id="hikoro-loading" role="status">Setting the Hikoro table…</p>
     <div id="hikoro-game-wrapper" style="display: none;">
         <div class="hikoro-match-heading"><p class="eyebrow">THE OCEAN KINGDOM · HIKORO CHESS</p><h1>At the table</h1><p>Capture both royals or bring yours to a sanctuary.</p></div>
         <div class="captured-area" id="black-captured-area"><div class="table-player" data-player-seat="2" data-army="Black ocean army"></div>
@@ -137,6 +130,7 @@
     <div id="turn-indicator-container" style="display: none;">
         <h2 id="turn-indicator"></h2>
         <p id="winnerText"></p>
+        <section id="hikoro-local-settings" hidden><label for="hikoro-opponent-select">LOCAL OPPONENT</label><select id="hikoro-opponent-select"><option value="bot">Hikoro Bot · black army</option><option value="human">Two people · share this device</option></select><button id="hikoro-new-match" type="button">Start a new match</button></section>
 
         <div id="post-game-controls" style="display: none; justify-content: center; gap: 15px; margin-top: 10px;">
            <button id="copy-kifu-btn">Copy Kifu (Notation)</button>
@@ -168,7 +162,7 @@
 
     <script src="/socket.io/socket.io.js?v=20261008-dashboard"></script>
     <script src="gamelogic.js?v=20261008-dashboard"></script>
-    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-bot-seats"></script><script src="script.js?v=20261009-hikoro-final"></script>
+    <script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script><script src="room-discovery.js?v=20261008-bot-seats"></script><script src="script.js?v=20261009-in-table"></script>
     <script src="site-ui.js?v=20261008-dashboard"></script>
 
     <footer class="collection-footer"><span>HIKORO · GAMES OF STRATEGY</span><a href="credits.html">Artists &amp; credits</a></footer>

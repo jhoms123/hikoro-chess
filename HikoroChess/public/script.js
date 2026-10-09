@@ -30,18 +30,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameListElement = document.getElementById('game-list');
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const hikoroPage = window.location.pathname === '/hikoro.html';
-    const hikoroSetup = document.getElementById('hikoro-local-setup');
-    const hikoroStartLocal = document.getElementById('hikoro-start-local');
-    if (hikoroPage && hikoroSetup) {
+    const hikoroLocalSettings = document.getElementById('hikoro-local-settings');
+    const hikoroOpponentSelect = document.getElementById('hikoro-opponent-select');
+    const hikoroNewMatch = document.getElementById('hikoro-new-match');
+    let localCreationPending = false, switchingLocalMatch = false;
+    if (hikoroPage) {
         document.title = 'Hikoro Chess · Play locally';
         document.body.classList.add('hikoro-dedicated');
-        hikoroSetup.hidden = false;
-        document.querySelector('.skip-link')?.setAttribute('href','#hikoro-local-setup');
+        document.querySelector('.skip-link')?.setAttribute('href','#hikoro-game-wrapper');
     }
-    hikoroStartLocal?.addEventListener('click', () => {
-        if (!socket.connected) return announce('Connecting to the Hikoro table. Try again in a moment.');
-        hikoroStartLocal.disabled = true;
-        socket.emit('createSinglePlayerGame', {gameType:'hikoro',hikoroBot:document.querySelector('input[name="hikoro-opponent"]:checked')?.value === 'bot'});
+    function startHikoroLocal() {
+        if (!socket.connected || localCreationPending) return;
+        localCreationPending = true;
+        if (gameId) {
+            switchingLocalMatch = true;
+            socket.emit('leaveGame',gameId);
+            sessionStorage.removeItem('hikoro-active-room');
+            gameId = null; seatToken = null;
+        }
+        socket.emit('createSinglePlayerGame',{gameType:'hikoro',hikoroBot:hikoroOpponentSelect?.value === 'bot'});
+    }
+    hikoroNewMatch?.addEventListener('click',()=>{
+        if (gameState.turnCount > 0 && !window.confirm('Start a new local match? This position will be replaced.')) return;
+        startHikoroLocal();
     });
     const gameTypeSelect = document.getElementById('game-type-select');
 
@@ -184,26 +195,26 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('timeUpdate', updateTimerDisplay);
     socket.on('validMoves', drawHikoroHighlights);
     socket.on('errorMsg', message => {
-        if (hikoroPage && hikoroStartLocal) hikoroStartLocal.disabled = false;
+        if (hikoroPage) localCreationPending = false;
         if (message.includes('could not be restored')) { sessionStorage.removeItem('hikoro-active-room'); gameId = null; }
         announce(message);
     });
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
-        if (hikoroStartLocal) hikoroStartLocal.disabled = false;
         document.getElementById('connection-status').title = '';
         createGameBtn.disabled = false; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
         }
         if (gameId && !isReplayMode && seatToken) socket.emit(({hikoro:'resumeGame',shodansho:'joinSdsRoom',go:'joinGoRoom',shavari:'joinShavariRoom',hikoruka:'joinHikorukaRoom',academy:'joinAcademyRoom'})[roomType], { gameId, token: seatToken });
+        else if (hikoroPage && !isReplayMode) startHikoroLocal();
     });
     socket.on('disconnect', () => {
-        if (hikoroStartLocal) hikoroStartLocal.disabled = true;
+        localCreationPending = false;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
         createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho'].includes(gameTypeSelect.value);
     });
-    socket.on('roomClosed', message => announce(message));
+    socket.on('roomClosed', message => { if (!switchingLocalMatch) announce(message); });
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         const status = document.getElementById('connection-status');
@@ -433,13 +444,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         document.getElementById('site-notice').hidden = true;
-        if (hikoroSetup) hikoroSetup.hidden = true;
-        if (hikoroPage) document.querySelector('.skip-link')?.setAttribute('href','#hikoro-game-wrapper');
+        localCreationPending = false; switchingLocalMatch = false;
         gameId = initialGameState.id;
         sessionStorage.setItem('hikoro-active-room', gameId);
         gameState = initialGameState;
         isReplayMode = false;
         isSinglePlayer = initialGameState.isSinglePlayer;
+        if (hikoroLocalSettings) hikoroLocalSettings.hidden = !(hikoroPage && isSinglePlayer);
+        if (hikoroOpponentSelect && isSinglePlayer) hikoroOpponentSelect.value = initialGameState.hikoroBot ? 'bot' : 'human';
+        if (resignButton) resignButton.hidden = isSinglePlayer;
 
         if (isSinglePlayer) {
             myColor = 'white';
