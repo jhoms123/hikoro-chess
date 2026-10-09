@@ -33,8 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const hikoroSetup = document.getElementById('hikoro-local-setup');
     const hikoroStartLocal = document.getElementById('hikoro-start-local');
     if (hikoroPage && hikoroSetup) {
+        document.title = 'Hikoro Chess · Play locally';
         document.body.classList.add('hikoro-dedicated');
         hikoroSetup.hidden = false;
+        document.querySelector('.skip-link')?.setAttribute('href','#hikoro-local-setup');
     }
     hikoroStartLocal?.addEventListener('click', () => {
         if (!socket.connected) return announce('Connecting to the Hikoro table. Try again in a moment.');
@@ -432,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('site-notice').hidden = true;
         if (hikoroSetup) hikoroSetup.hidden = true;
+        if (hikoroPage) document.querySelector('.skip-link')?.setAttribute('href','#hikoro-game-wrapper');
         gameId = initialGameState.id;
         sessionStorage.setItem('hikoro-active-room', gameId);
         gameState = initialGameState;

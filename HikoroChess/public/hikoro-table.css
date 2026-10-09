@@ -4,6 +4,7 @@
 .hikoro-site.hikoro-dedicated .lesson-dock{width:min(1040px,calc(100% - 36px));min-height:0;margin:20px auto 0;padding:0;border:0;background:transparent;box-shadow:none;text-align:right}
 .hikoro-site.hikoro-dedicated.game-active .lesson-dock{display:none}
 .hikoro-site.hikoro-dedicated .lesson-dock>button{min-height:40px;padding:7px 16px}
+.hikoro-site.hikoro-dedicated .lesson-dock{display:none}
 .hikoro-site.hikoro-dedicated.game-active .table-companion{width:min(1080px,calc(100% - 24px));margin:10px auto 0;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#18353a;color:#ead5a9;border:1px solid #b58c5366;box-shadow:none}
 .hikoro-site.hikoro-dedicated.game-active .table-companion :is(p,small){color:#cbd0c4;margin:0}
 .hikoro-local-setup[hidden]{display:none!important}
@@ -39,7 +40,7 @@
  .hikoro-site #move-history-container{grid-area:history}
  .hikoro-site #turn-indicator-container{grid-area:status}
  .hikoro-site #hikoro-game-wrapper .captured-area{width:auto!important;min-width:0}
- .hikoro-site #hikoro-game-wrapper #move-history-container{width:auto;height:220px;min-height:0;overflow:auto}
+ .hikoro-site #hikoro-game-wrapper #move-history-container{width:auto;height:160px;min-height:0;overflow:auto}
  .hikoro-site #hikoro-game-wrapper #turn-indicator-container{width:auto;max-width:none;margin:0;padding:18px}
  .hikoro-site #hikoro-game-wrapper #board-container{margin:auto}
 }
