@@ -449,6 +449,11 @@
     return Math.tanh(staticScore(state,perspective,engine)/11);
   }
 
+  function amafKey(action){
+    if(!action||action.type!=="place") return null;
+    return "place:"+action.to.x+","+action.to.y;
+  }
+
   function actionRaw(state,row,engine,beforeScore,occupied,moyoGains){
     const mover=state.player;
     const nextScore=staticScore(row.next,mover,engine);
@@ -708,7 +713,8 @@
     // This avoids scoring a leaf while a capture or a save is still available.
     const maxPly=depth+tacticalLimit+state.size*state.size;
     let tacticalUsed=0,tacticalExtensionPlies=0;
-    const finish=()=>({value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies});
+    const rolloutMoves=[];
+    const finish=()=>({value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies,rolloutMoves});
     for (let ply=0;ply<maxPly;ply++){
       if (state.result) return finish();
       let tacticalStep=false;
@@ -728,6 +734,7 @@
       const temp=1.35;
       const weights=shortlist.map(item=>Math.exp(clamp((item.score-shortlist[0].score)/temp,-7,0)));
       const chosen=weightedChoice(shortlist.map(item=>item.row),weights,rng);
+      rolloutMoves.push({player:state.player,action:chosen.action});
       state=chosen.next;
       if (tacticalStep) tacticalExtensionPlies++;
     }
@@ -744,14 +751,41 @@
     features.beforeScore=staticScore(node.state,node.state.player,engine,features);
     const rows=legalActions(node.state,{engine,placementLimit:limit,rng,atariGroups:features.atariGroups});
     node.actions=rankActions(node.state,rows,engine,features);
+    node.raveKeys=new Set(node.actions.map(row=>amafKey(row.action)).filter(Boolean));
   }
 
-  function selectChild(node,rootPlayer,cpuct){
+  function updateRave(path,rolloutMoves,value,stats){
+    for(let i=0;i<path.length;i++){
+      const node=path[i];
+      if(!node.raveKeys||!node.raveKeys.size) continue;
+      const seen=new Set();
+      const observe=(player,action)=>{
+        if(player!==node.state.player) return;
+        const key=amafKey(action);
+        if(!key||!node.raveKeys.has(key)||seen.has(key)) return;
+        seen.add(key);
+        let sample=node.raveStats.get(key);
+        if(!sample){sample={visits:0,valueSum:0};node.raveStats.set(key,sample);}
+        sample.visits++;
+        sample.valueSum+=value;
+        stats.raveUpdates++;
+      };
+      for(let j=i+1;j<path.length;j++) observe(path[j-1].state.player,path[j].action);
+      for(const move of rolloutMoves) observe(move.player,move.action);
+    }
+  }
+
+  function selectChild(node,rootPlayer,cpuct,raveBias){
     const scale=Math.sqrt(node.visits+1);
     const maximizing=node.state.player===rootPlayer;
     let best=null,bestValue=-Infinity;
     for (const child of node.children){
-      const q=child.visits?child.valueSum/child.visits:0;
+      let q=child.visits?child.valueSum/child.visits:0;
+      const key=amafKey(child.action),amaf=key&&node.raveStats&&node.raveStats.get(key);
+      if(amaf&&amaf.visits){
+        const beta=amaf.visits/(amaf.visits+child.visits+(amaf.visits*child.visits/raveBias));
+        q=q*(1-beta)+(amaf.valueSum/amaf.visits)*beta;
+      }
       const exploit=maximizing?q:-q;
       const explore=cpuct*child.prior*scale/(1+child.visits);
       const value=exploit+explore;
@@ -761,7 +795,7 @@
   }
 
   function makeNode(state,action,prior,parent,depth){
-    return {state,action,prior,parent,depth,actions:null,children:[],visits:0,valueSum:0};
+    return {state,action,prior,parent,depth,actions:null,children:[],visits:0,valueSum:0,raveStats:new Map()};
   }
 
   function analyze(state,options){
@@ -774,6 +808,7 @@
       rootPlacementLimit:Infinity,
       treePlacementLimit:largeBoard?56:72,
       cpuct:1.32,
+      raveBias:12,
       widening:1.55,
       rootWidening:1.9,
       tacticalExtension:2,
@@ -782,7 +817,7 @@
     const engine=engineFor(opts.engine);
     const start=now();
     const rootPlayer=state&&state.player;
-    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0,tacticalExtensionPlies:0};
+    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0,tacticalExtensionPlies:0,raveUpdates:0};
     if (!state||state.result||![1,2].includes(rootPlayer)){
       return {action:null,stats,values:[]};
     }
@@ -816,7 +851,7 @@
           depth=node.depth;
           break;
         }
-        const child=selectChild(node,rootPlayer,opts.cpuct);
+        const child=selectChild(node,rootPlayer,opts.cpuct,opts.raveBias);
         if (!child) break;
         node=child;
         path.push(node);
@@ -826,6 +861,7 @@
       const value=result.value;
       stats.tacticalExtensionPlies+=result.tacticalExtensionPlies;
       for (const visited of path){visited.visits++;visited.valueSum+=value;}
+      updateRave(path,result.rolloutMoves,value,stats);
       stats.iterations++;
       stats.maxDepth=Math.max(stats.maxDepth||0,depth);
     }
@@ -854,7 +890,7 @@
   }
 
   return {
-    version:"0.6.0-shield-go",
+    version:"0.7.0-shield-go-rave",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),
