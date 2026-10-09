@@ -28,14 +28,16 @@ test('local Shield Go as White labels the bot Black and reports the winner by co
   w.GoVariantBot={chooseAction:()=>({type:'pass'})};
   w.SiteAudio={transition(){}};
   w.SiteRecords={completed(){},newTable(){},save(){}};
+  let submittedNames=null;
   w.SiteAccounts={
-    tablePlayers(_players,labels){
+    tablePlayers(players,labels){
+      submittedNames=Array.isArray(players)?Array.from(players,p=>p.display_name):null;
       labels.forEach((label,i)=>{
         const area=w.document.querySelector('[data-player-seat="'+(i+1)+'"]');
         const details=w.document.createElement('span');
         const name=w.document.createElement('strong');
         const army=w.document.createElement('small');
-        name.textContent=i===0?'Signed-in Player':label;
+        name.textContent=Array.isArray(players)?players[i].display_name:i===0?'Signed-in Player':label;
         army.textContent=area.dataset.army;
         details.append(name,army);
         area.replaceChildren(w.document.createElement('img'),details);
@@ -51,6 +53,7 @@ test('local Shield Go as White labels the bot Black and reports the winner by co
   await new Promise(resolve=>setTimeout(resolve,100));
   const seatNames=[...w.document.querySelectorAll('.table-player strong')].map(n=>n.textContent);
   assert.deepEqual(seatNames,['You','Shield Go bot']);
+  assert.deepEqual(submittedNames,['Shield Go bot','You']);
   assert.equal(w.document.querySelector('#turn-status').textContent,'You · White to move');
   w.document.querySelector('#pass-button').click();
   assert.equal(w.document.querySelector('#turn-status').textContent,'You win as White');
