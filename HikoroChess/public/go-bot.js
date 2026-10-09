@@ -3,8 +3,9 @@
  * and atari saves, adapting Go life-and-death search ideas to this variant's legal actions.
  * No KataGo source or standard-Go model is bundled: the stock model is not trained for
  * Shield Go's jump captures or mandatory shield chains, and its move format lacks those actions.
- * Research references: github.com/lightvector/KataGo, KataGoMethods.md, and tactical search
- * work such as Cazenave's "Combining tactical search and deep learning in Go".
+ * Research references: KataGo's score/ownership evaluation, GNU Go's influence and moyo model
+ * (www.gnu.org/software/gnugo/gnugo_13.html), and tactical search work such as Cazenave's
+ * "Combining tactical search and deep learning in Go".
  *
  * Browser: load go-engine.js first, then go-bot.js. Call GoVariantBot.chooseAction(state, options)
  * or analyze(state, options) for action plus search statistics. The local-match UI runs this
@@ -196,6 +197,7 @@
     const seen = new Set();
     const safety = {1:0,2:0};
     const strength = {1:0,2:0};
+    const stability = {1:new Map(),2:new Map()};
     const threatened = {1:new Map(),2:new Map()};
     const atariGroups=includeAtariGroups?{1:[],2:[]}:null;
 
@@ -223,6 +225,8 @@
         }
       }
       const libCount=liberties.size, count=stones.length;
+      const influenceStability=libCount<=1?0.34:libCount===2?0.68:Math.min(1.12,0.88+libCount*0.025);
+      for(const stone of stones) stability[side].set(coordKey(stone.x,stone.y),influenceStability);
       if (libCount <= 1){
         safety[side] += 1.10 + Math.min(1.8,(count-1)*0.28);
         if(libCount===1&&atariGroups){
@@ -256,9 +260,94 @@
     }
     for (const side of [1,2]){
       // A legal jump removes the exposed stone and gives the capturer a point, a two-point swing.
-      for (const count of threatened[side].values()) safety[side] += 2.70 + Math.min(0.60,(count-1)*0.30);
+      for (const [key,count] of threatened[side]){
+        safety[side] += 2.70 + Math.min(0.60,(count-1)*0.30);
+        stability[side].set(key,(stability[side].get(key)||1)*0.78);
+      }
     }
-    return {safety,strength,threatened,atariGroups};
+    return {safety,strength,stability,threatened,atariGroups};
+  }
+
+  function influenceLead(state,engine,shape){
+    // Moyo is potential territory, not guaranteed score. Build a modest, decaying
+    // influence field from stable groups, then value only points outside settled
+    // one-colour territory. This keeps the field strategic without counting the same
+    // secure points twice in softScores().
+    const size=state.size,board=state.board,total=size*size;
+    const fields={1:new Float32Array(total),2:new Float32Array(total)};
+    const decay=[1,0.66,0.44,0.29,0.19,0.13,0.085];
+    const radius=size===9?5:6;
+    const seen=new Uint8Array(total),unsettledWeight=new Float32Array(total);
+
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const start=y*size+x;
+      if(board[y][x]||seen[start]) continue;
+      const queue=[start],borders=new Set(),boundary=new Set();
+      seen[start]=1;
+      for(let i=0;i<queue.length;i++){
+        const index=queue[i],px=index%size,py=(index/size)|0;
+        for(const[dx,dy]of DIRS){
+          const nx=px+dx,ny=py+dy;
+          if(!inBounds(size,nx,ny)) continue;
+          const next=ny*size+nx,value=board[ny][nx];
+          if(!value){if(!seen[next]){seen[next]=1;queue.push(next);}}
+          else {borders.add(playerOf(engine,value));boundary.add(next);}
+        }
+      }
+      const confidence=borders.size===1?clamp(boundary.size/(1+Math.sqrt(queue.length)),0,1):0;
+      const weight=1-confidence*confidence;
+      for(const index of queue) unsettledWeight[index]=weight;
+    }
+
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const value=board[y][x];
+      if(!value) continue;
+      const side=playerOf(engine,value),key=coordKey(x,y);
+      let force=shape.stability[side].get(key)||1;
+      // Shield stones hold influence more reliably because jump capture cannot remove them.
+      if(value>2) force*=1.04;
+      for(let dy=-radius;dy<=radius;dy++){
+        const ny=y+dy;
+        if(ny<0||ny>=size) continue;
+        for(let dx=-radius;dx<=radius;dx++){
+          const distance=Math.abs(dx)+Math.abs(dy);
+          if(distance===0||distance>radius) continue;
+          const nx=x+dx;
+          if(nx<0||nx>=size) continue;
+          const index=ny*size+nx;
+          if(!board[ny][nx]) fields[side][index]+=force*decay[distance];
+        }
+      }
+    }
+
+    // A legal jump contributes pressure at its landing point. Also look one jump
+    // deeper so the map recognizes the distinctive multi-capture chain rule.
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const value=board[y][x];
+      if(!value||value>2) continue;
+      const side=playerOf(engine,value);
+      if(!(state.remaining&&state.remaining[side])) continue;
+      if(state.chain&&(side!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
+      const probe=side===state.player?state:{...state,player:side,chain:null};
+      for(const move of engine.legalMoves(probe,{x,y}).filter(move=>move.type==="jump")){
+        const landing=move.to.y*size+move.to.x;
+        fields[side][landing]+=0.88;
+        const after=engine.applySearch(probe,{type:"move",from:{x,y},to:move.to});
+        if(!after||!after.chain) continue;
+        for(const continuation of engine.legalMoves(after,after.chain).filter(candidate=>candidate.type==="jump")){
+          fields[side][continuation.to.y*size+continuation.to.x]+=0.46;
+        }
+      }
+    }
+
+    let score=0;
+    for(let index=0;index<total;index++){
+      if(board[(index/size)|0][index%size]||!unsettledWeight[index]) continue;
+      const black=fields[1][index],white=fields[2][index];
+      const control=clamp((black-white)/(black+white+0.82),-0.62,0.62);
+      score+=control*unsettledWeight[index];
+    }
+    return score*0.14;
   }
 
   function softScores(state,engine){
@@ -310,6 +399,7 @@
     if(featureSink) featureSink.atariGroups=shape.atariGroups;
     const shapeLead=(shape.strength[perspective]-shape.safety[perspective])-
       (shape.strength[other]-shape.safety[other]);
+    const moyoLead=influenceLead(state,engine,shape)*(perspective===1?1:-1);
     const reserves=state.remaining||{1:0,2:0};
     const reserveLead=clamp((reserves[perspective]||0)-(reserves[other]||0),-40,40)*0.022;
     let chainBonus=0;
@@ -317,7 +407,7 @@
       const jumps=engine.legalMoves(state,state.chain).filter(m=>m.type==="jump").length;
       chainBonus=Math.min(0.52,jumps*0.16);
     }
-    return boardLead + shapeLead + reserveLead + chainBonus;
+    return boardLead + shapeLead + moyoLead + reserveLead + chainBonus;
   }
 
   function terminalValue(state,perspective,engine){
@@ -681,7 +771,7 @@
   }
 
   return {
-    version:"0.3.0-shield-go",
+    version:"0.4.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),

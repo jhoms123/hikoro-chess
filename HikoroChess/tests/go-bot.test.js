@@ -129,6 +129,26 @@ test('placement pruning keeps a move that blocks an immediate enemy jump', () =>
     'the jump landing point must remain available as a defensive placement');
 });
 
+test('board-wide moyo influence can favor a useful frontier over local overconcentration', () => {
+  const state = Engine.initial(9);
+  const rows = [
+    '..X......',
+    '......O..',
+    '.........',
+    '.OO.X....',
+    '.X....O..',
+    '.O.....O.',
+    '..O.O...X',
+    '..X...X..',
+    '..XXO...X'
+  ];
+  state.board = rows.map(row => Array.from(row, cell => ({ '.': 0, X: 1, O: 2 })[cell]));
+  const ranked = Bot.rankActions(state, { seed: 3 });
+  const score = (x, y) => ranked.find(row => row.action.type === 'place' &&
+    row.action.to.x === x && row.action.to.y === y)?.score;
+  assert.ok(score(3, 6) > score(4, 7), 'the influence field should recognize the broader frontier value');
+});
+
 test('rollouts extend through immediate jump tactics after normal depth', () => {
   const state = Engine.initial(9);
   state.board[4][0] = 2;
@@ -222,7 +242,7 @@ test('worker wrapper returns an analyzed legal move with its request ticket', ()
   vm.runInNewContext(source, context);
   const state = Engine.initial(9);
   context.self.onmessage({ data: { ticket: 42, state, options: { maxIterations: 8, timeMs: 1000, rolloutDepth: 1, seed: 3 } } });
-  assert.equal(imports, 'go-engine.js,go-bot.js');
+  assert.equal(imports, 'go-engine.js?v=shield-search-v6,go-bot.js?v=shield-search-v6');
   assert.equal(posted.ticket, 42);
   assert.ok(Engine.apply(state, posted.action), 'worker returned an illegal action');
   assert.ok(posted.stats.iterations > 0);
