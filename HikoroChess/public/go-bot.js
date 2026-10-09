@@ -355,17 +355,43 @@
     return rows[rows.length-1];
   }
 
+  function hasLegalJump(state,side,engine){
+    if (!state || state.result || !(state.remaining&&state.remaining[side])) return false;
+    if (state.chain && side!==state.player) return false;
+    const probe=side===state.player?state:{...state,player:side,chain:null};
+    for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++){
+      const value=state.board[y][x];
+      if (value>0 && value<=2 && playerOf(engine,value)===side){
+        if (engine.legalMoves(probe,{x,y}).some(move=>move.type==="jump")) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasTacticalJump(state,engine){
+    return hasLegalJump(state,state.player,engine)||hasLegalJump(state,3-state.player,engine);
+  }
+
   function rollout(startState,rootPlayer,engine,options,rng){
     let state=startState;
     const depth=options.rolloutDepth;
     const actionLimit=options.rolloutPlacementLimit;
-    // Never cut off a rollout in the middle of a forced chain. Otherwise the leaf is
-    // evaluated before the chain's extra captures or required shield have happened.
-    const maxPly=depth+state.size*state.size;
-    for (let ply=0;ply<maxPly&&(ply<depth||state.chain);ply++){
-      if (state.result) return terminalValue(state,rootPlayer,engine);
+    const tacticalLimit=Math.max(0,options.tacticalExtension|0);
+    // Resolve forced chains fully, then spend a small extension budget on jump tactics.
+    // This avoids scoring a leaf while a capture or its immediate reply is still available.
+    const maxPly=depth+tacticalLimit+state.size*state.size;
+    let tacticalUsed=0,tacticalExtensionPlies=0;
+    for (let ply=0;ply<maxPly;ply++){
+      if (state.result) return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
+      let tacticalStep=false;
+      if (ply>=depth&&!state.chain){
+        if (tacticalUsed>=tacticalLimit||!hasTacticalJump(state,engine)) break;
+        tacticalUsed++;
+        tacticalStep=true;
+      }
+      if (ply>=depth&&!state.chain&&!tacticalStep) break;
       const rows=legalActions(state,{engine,placementLimit:actionLimit,rng});
-      if (!rows.length) return terminalValue(state,rootPlayer,engine);
+      if (!rows.length) return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
       const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine)}));
       scored.sort((a,b)=>b.score-a.score);
       const shortlist=scored.slice(0,Math.min(scored.length,10));
@@ -373,8 +399,9 @@
       const weights=shortlist.map(item=>Math.exp(clamp((item.score-shortlist[0].score)/temp,-7,0)));
       const chosen=weightedChoice(shortlist.map(item=>item.row),weights,rng);
       state=chosen.next;
+      if (tacticalStep) tacticalExtensionPlies++;
     }
-    return terminalValue(state,rootPlayer,engine);
+    return {value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies};
   }
 
   function now(){
@@ -416,12 +443,13 @@
       cpuct:1.32,
       widening:1.55,
       rootWidening:1.9,
+      tacticalExtension:2,
       seed:(Date.now()^((state&&state.ply)||0)*2654435761)>>>0
     },options||{});
     const engine=engineFor(opts.engine);
     const start=now();
     const rootPlayer=state&&state.player;
-    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0};
+    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0,tacticalExtensionPlies:0};
     if (!state||state.result||![1,2].includes(rootPlayer)){
       return {action:null,stats,values:[]};
     }
@@ -461,7 +489,9 @@
         path.push(node);
         depth=node.depth;
       }
-      const value=rollout(node.state,rootPlayer,engine,opts,rng);
+      const result=rollout(node.state,rootPlayer,engine,opts,rng);
+      const value=result.value;
+      stats.tacticalExtensionPlies+=result.tacticalExtensionPlies;
       for (const visited of path){visited.visits++;visited.valueSum+=value;}
       stats.iterations++;
       stats.maxDepth=Math.max(stats.maxDepth||0,depth);

@@ -66,6 +66,20 @@ test('legal move checks do not mutate the supplied board state', () => {
   assert.equal(JSON.stringify(state), before);
 });
 
+test('capturing move legality checks leave the input board untouched', () => {
+  const state = Engine.initial(9);
+  state.board[4][4] = 2;
+  state.board[4][3] = 1;
+  state.board[3][4] = 1;
+  state.board[5][4] = 1;
+  state.board[3][5] = 3;
+  const before = JSON.stringify(state);
+  assert.ok(Engine.legalMoves(state, { x: 5, y: 3 }).some(move =>
+    move.to.x === 5 && move.to.y === 4
+  ));
+  assert.equal(JSON.stringify(state), before);
+});
+
 test('jump-threat evaluation ignores attackers that have no reserve stones', () => {
   const makePosition = whiteReserve => {
     const state = Engine.initial(9);
@@ -79,6 +93,25 @@ test('jump-threat evaluation ignores attackers that have no reserve stones', () 
   ).score;
   assert.ok(shieldScore(makePosition(100)) > shieldScore(makePosition(0)) + 1.5,
     'a shield should gain tactical value when the opposing jump is actually available');
+});
+
+test('rollouts extend through immediate jump tactics after normal depth', () => {
+  const state = Engine.initial(9);
+  state.board[4][0] = 2;
+  state.board[4][1] = 1;
+  state.board[4][6] = 1;
+  state.board[4][7] = 2;
+  const result = Bot.analyze(state, {
+    maxIterations: 24,
+    timeMs: 10000,
+    rolloutDepth: 1,
+    tacticalExtension: 2,
+    rootPlacementLimit: 12,
+    rolloutPlacementLimit: 8,
+    seed: 11
+  });
+  assert.ok(result.stats.tacticalExtensionPlies > 0, JSON.stringify(result.stats));
+  assert.ok(Engine.apply(state, result.action), 'tactical search returned an illegal move');
 });
 
 test('root search widens enough to examine more than the top handful of legal actions', () => {
