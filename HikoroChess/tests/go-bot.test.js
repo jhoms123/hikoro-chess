@@ -248,3 +248,15 @@ test('worker wrapper returns an analyzed legal move with its request ticket', ()
   assert.ok(posted.stats.iterations > 0);
 });
 
+
+
+test('RAVE shares later legal placement outcomes with matching search actions', () => {
+  const state = Engine.initial(9);
+  const result = Bot.analyze(state, {
+    maxIterations: 40, timeMs: 10000, rolloutDepth: 4,
+    rootPlacementLimit: 12, rolloutPlacementLimit: 8, seed: 101
+  });
+  assert.ok(result.stats.raveUpdates > 0, JSON.stringify(result.stats));
+  assert.ok(Engine.apply(state, result.action), 'RAVE search returned an illegal move');
+  assert.equal(state.ply, 0, 'RAVE analysis mutated the input state');
+});
