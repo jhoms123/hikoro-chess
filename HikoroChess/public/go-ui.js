@@ -4,8 +4,9 @@ const $=id=>document.getElementById(id),G=GoVariant,names={1:'Black',2:'White'},
 const chainHint=()=>G.legalMoves(state,state.chain).length?'Continue a highlighted jump, or make a shield here to finish your turn.':'No further jumps. Make a shield here to finish your turn.';
 let state=G.initial(Number(params.get('size'))===13?13:9),journal=[],cursor=0,selected=null,flipped=false,nodes=[],socket,mySeat=null,connected=false,synced=false,pending=false,closed=false,confirmation=null,botSeat=0,botBusy=false,botTask=0;
 function notice(text){$('notice').textContent=text;$('notice').hidden=!text;}
-function seatLabel(seat){if(!online&&botSeat)return botSeat===seat?`Bot · ${names[seat]}`:`You · ${names[seat]}`;return window.SiteAccounts.playerName?.(seat,names[seat])||names[seat];}
-function labelLocalBotSeats(){if(online||!botSeat)return;for(const seat of [1,2]){const area=document.querySelector('[data-player-seat="'+seat+'"]'),name=area?.querySelector('strong')||area;if(name)name.textContent=seatLabel(seat);}}
+function localSeatName(seat){return botSeat===seat?'Shield Go bot':'You';}
+function seatLabel(seat){if(!online&&botSeat)return localSeatName(seat)+' · '+names[seat];return window.SiteAccounts.playerName?.(seat,names[seat])||names[seat];}
+function labelLocalBotSeats(){if(online||!botSeat)return;for(const seat of [1,2]){const area=document.querySelector('[data-player-seat="'+seat+'"]'),name=area?.querySelector('strong')||area;if(name)name.textContent=localSeatName(seat);}}
 
 function persist(){if(online)return;try{localStorage.setItem(storeKey,JSON.stringify({version:1,size:state.size,journal,cursor,flipped,botSeat}));}catch{notice('Automatic saving is unavailable. Save a record to keep this match.');}}
 if(!online)try{const saved=JSON.parse(localStorage.getItem(storeKey)||'null');if(saved?.version===1&&G.replay(saved.journal,saved.size)&&G.replay(saved.journal,saved.size,saved.cursor)){journal=saved.journal;cursor=saved.cursor;state=G.replay(journal,saved.size,cursor);selected=state.chain;flipped=Boolean(saved.flipped);botSeat=[1,2].includes(Number(saved.botSeat))?Number(saved.botSeat):0;if(cursor)notice('Your local match has been restored.');}else if(saved)notice('This saved match cannot be replayed under the current rules. A fresh board is ready.');}catch{notice('Saved progress could not be restored. A fresh board is ready.');}

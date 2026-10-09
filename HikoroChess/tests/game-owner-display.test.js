@@ -50,7 +50,7 @@ test('local Shield Go as White labels the bot Black and reports the winner by co
   opponent.dispatchEvent(new w.Event('change',{bubbles:true}));
   await new Promise(resolve=>setTimeout(resolve,100));
   const seatNames=[...w.document.querySelectorAll('.table-player strong')].map(n=>n.textContent);
-  assert.deepEqual(seatNames,['You · White','Bot · Black']);
+  assert.deepEqual(seatNames,['You','Shield Go bot']);
   assert.equal(w.document.querySelector('#turn-status').textContent,'You · White to move');
   w.document.querySelector('#pass-button').click();
   assert.equal(w.document.querySelector('#turn-status').textContent,'You win as White');
