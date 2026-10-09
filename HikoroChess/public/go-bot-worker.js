@@ -1,7 +1,7 @@
 /* Keeps Shield Go search off the UI thread during local bot matches. */
 'use strict';
 
-importScripts('go-engine.js?v=shield-search-v7', 'go-bot.js?v=shield-search-v7');
+importScripts('go-engine.js?v=shield-search-v8', 'go-bot.js?v=shield-search-v8');
 
 self.onmessage = event => {
   const request = event.data || {};

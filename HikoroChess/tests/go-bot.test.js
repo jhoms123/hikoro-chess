@@ -242,7 +242,7 @@ test('worker wrapper returns an analyzed legal move with its request ticket', ()
   vm.runInNewContext(source, context);
   const state = Engine.initial(9);
   context.self.onmessage({ data: { ticket: 42, state, options: { maxIterations: 8, timeMs: 1000, rolloutDepth: 1, seed: 3 } } });
-  assert.equal(imports, 'go-engine.js?v=shield-search-v7,go-bot.js?v=shield-search-v7');
+  assert.equal(imports, 'go-engine.js?v=shield-search-v8,go-bot.js?v=shield-search-v8');
   assert.equal(posted.ticket, 42);
   assert.ok(Engine.apply(state, posted.action), 'worker returned an illegal action');
   assert.ok(posted.stats.iterations > 0);
