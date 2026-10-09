@@ -1,6 +1,6 @@
 /* Shield Go bot: variant-aware search built against GoVariant's shared rules engine.
- * It combines score-aware MCTS with a local tactical reader for jump captures, atari captures,
- * and atari saves, adapting Go life-and-death search ideas to this variant's legal actions.
+ * It combines score-aware MCTS with a local tactical reader for jump captures, jump threats,
+ * atari captures, and atari saves, adapting Go life-and-death search ideas to this variant's legal actions.
  * No KataGo source or standard-Go model is bundled: the stock model is not trained for
  * Shield Go's jump captures or mandatory shield chains, and its move format lacks those actions.
  * Research references: KataGo's score/ownership evaluation, GNU Go's influence and moyo model
@@ -567,7 +567,34 @@
     return Math.min(2.8,bonus);
   }
 
-  function quickPolicyScore(state,row,engine,atariGroups){
+  function jumpThreatExposure(state,engine){
+    const size=state.size,board=state.board,total=size*size;
+    const threatened={1:new Uint8Array(total),2:new Uint8Array(total)};
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const value=board[y][x];
+      if(!value||value>2) continue;
+      const attacker=playerOf(engine,value),defender=3-attacker;
+      if(!(state.remaining&&state.remaining[attacker])) continue;
+      if(state.chain&&(attacker!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
+      for(const[dx,dy]of DIRS){
+        const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
+        if(!inBounds(size,mx,my)||!inBounds(size,tx,ty)||board[ty][tx]) continue;
+        const victim=board[my][mx];
+        if(!victim||victim>2||playerOf(engine,victim)!==defender) continue;
+        const index=my*size+mx;
+        // Exposure saturates after three approaches, so keep the compact count capped.
+        if(threatened[defender][index]<3) threatened[defender][index]++;
+      }
+    }
+    const exposure={1:0,2:0};
+    for(const side of [1,2]) for(let index=0;index<total;index++){
+      const count=threatened[side][index];
+      if(count) exposure[side]+=2.70+Math.min(0.60,(count-1)*0.30);
+    }
+    return exposure;
+  }
+
+  function quickPolicyScore(state,row,engine,atariGroups,threatsBefore){
     const mover=state.player;
     const captured=(row.next.lost&&row.next.lost[3-mover]||0)-(state.lost&&state.lost[3-mover]||0);
     let value=captured*2.2;
@@ -580,6 +607,13 @@
       value+=placementQuality(state,p.x,p.y)*0.9;
     }
     value+=atariRescueBonus(state,row,engine,atariGroups||[]);
+    if(threatsBefore){
+      const threatsAfter=jumpThreatExposure(row.next,engine);
+      // Tactical rollouts must notice a shield or landing-point block that prevents
+      // an immediate jump, as well as a move that exposes an enemy stone to one.
+      value+=0.72*((threatsBefore[3-mover]-threatsAfter[3-mover])+
+        (threatsBefore[mover]-threatsAfter[mover]));
+    }
     if (row.next.result){
       value+=row.next.result.winner===0?0:row.next.result.winner===mover?12:-12;
     }
@@ -673,7 +707,8 @@
       const rows=legalActions(state,{engine,placementLimit:actionLimit,rng});
       if (!rows.length) return finish();
       const atariGroups=tacticalStep?findAtariGroups(state,engine,state.player):[];
-      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine,atariGroups)}));
+      const threatsBefore=tacticalStep?jumpThreatExposure(state,engine):null;
+      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine,atariGroups,threatsBefore)}));
       scored.sort((a,b)=>b.score-a.score);
       const shortlist=scored.slice(0,Math.min(scored.length,10));
       const temp=1.35;
@@ -805,7 +840,7 @@
   }
 
   return {
-    version:"0.4.0-shield-go",
+    version:"0.5.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),
