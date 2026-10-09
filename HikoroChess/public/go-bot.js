@@ -611,7 +611,7 @@
       const threatsAfter=jumpThreatExposure(row.next,engine);
       // Tactical rollouts must notice a shield or landing-point block that prevents
       // an immediate jump, as well as a move that exposes an enemy stone to one.
-      value+=0.72*((threatsBefore[3-mover]-threatsAfter[3-mover])+
+      value+=0.72*((threatsAfter[3-mover]-threatsBefore[3-mover])+
         (threatsBefore[mover]-threatsAfter[mover]));
     }
     if (row.next.result){
@@ -641,6 +641,17 @@
     for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++){
       const value=state.board[y][x];
       if (value>0 && value<=2 && playerOf(engine,value)===side){
+        if(engine===defaultEngine){
+          if(state.chain&&(state.chain.x!==x||state.chain.y!==y)) continue;
+          // The captured midpoint becomes a liberty of the landing stone, so
+          // a geometric jump in the shared engine cannot be suicide.
+          for(const[dx,dy]of DIRS){
+            const tx=x+2*dx,ty=y+2*dy;
+            if(inBounds(state.size,tx,ty)&&!state.board[ty][tx]&&
+               state.board[y+dy][x+dx]===3-side) return true;
+          }
+          continue;
+        }
         if (engine.legalMoves(probe,{x,y}).some(move=>move.type==="jump")) return true;
       }
     }
@@ -659,6 +670,8 @@
     };
     const targets=new Map(groups.map(group=>[coordKey(group.liberty.x,group.liberty.y),group.liberty]));
     if(probe.remaining&&probe.remaining[attacker]){
+      // Filling an enemy group's only liberty captures it and releases a liberty.
+      if(engine===defaultEngine&&targets.size) return true;
       for(const target of targets.values()){
         if(captures({type:"place",to:target})) return true;
       }
@@ -679,9 +692,10 @@
   }
 
   function hasTacticalThreat(state,engine){
-    for(const side of [state.player,3-state.player]){
-      if(hasLegalJump(state,side,engine)||hasLegalAtariCapture(state,side,engine)) return true;
-    }
+    const sides=[state.player,3-state.player];
+    for(const side of sides) if(hasLegalJump(state,side,engine)) return true;
+    const groups=findAllAtariGroups(state,engine);
+    for(const side of sides) if(hasLegalAtariCapture(state,side,engine,groups[3-side])) return true;
     return false;
   }
 
@@ -840,7 +854,7 @@
   }
 
   return {
-    version:"0.5.0-shield-go",
+    version:"0.6.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),
