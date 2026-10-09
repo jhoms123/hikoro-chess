@@ -1,12 +1,15 @@
 /* Shield Go bot: variant-aware search built against GoVariant's shared rules engine.
- * Search design is independently implemented, drawing on score-aware MCTS research in KataGo.
+ * It combines score-aware MCTS with a local tactical reader for jump captures, atari captures,
+ * and atari saves, adapting Go life-and-death search ideas to this variant's legal actions.
  * No KataGo source or standard-Go model is bundled: the stock model is not trained for
  * Shield Go's jump captures or mandatory shield chains, and its move format lacks those actions.
- * Research references: github.com/lightvector/KataGo and its Analysis_Engine.md / KataGoMethods.md.
+ * Research references: KataGo's score/ownership evaluation, GNU Go's influence and moyo model
+ * (www.gnu.org/software/gnugo/gnugo_13.html), and tactical search work such as Cazenave's
+ * "Combining tactical search and deep learning in Go".
  *
  * Browser: load go-engine.js first, then go-bot.js. Call GoVariantBot.chooseAction(state, options)
- * or analyze(state, options) for action plus search statistics. Search is synchronous; a UI
- * integration should run it in a worker so the board remains responsive during thinking.
+ * or analyze(state, options) for action plus search statistics. The local-match UI runs this
+ * synchronous search in go-bot-worker.js so the board remains responsive while it thinks.
  */
 (function(root,factory){
   const engine = root.GoVariant || (typeof module === "object" && module.exports ? require("./go-engine.js") : null);
@@ -19,6 +22,16 @@
   const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
   const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
   const coordKey = (x,y) => x + "," + y;
+  const INFLUENCE_DECAY = [1,0.66,0.44,0.29,0.19,0.13,0.085];
+  const makeInfluenceKernel = radius => {
+    const offsets=[];
+    for(let dy=-radius;dy<=radius;dy++) for(let dx=-radius;dx<=radius;dx++){
+      const distance=Math.abs(dx)+Math.abs(dy);
+      if(distance>0&&distance<=radius) offsets.push({dx,dy,weight:INFLUENCE_DECAY[distance]});
+    }
+    return offsets;
+  };
+  const INFLUENCE_KERNELS = {9:makeInfluenceKernel(5),13:makeInfluenceKernel(6)};
 
   function makeRng(seed){
     let value = (Number.isFinite(seed) ? seed : Date.now()) >>> 0;
@@ -80,7 +93,40 @@
     return value;
   }
 
-  function placementTargets(state,limit,rng){
+  function tacticalPlacementTargets(state,engine,knownAtariGroups){
+    const targets=new Set();
+    const current=state.player,opponent=3-current;
+    // Keep placements that capture or save an atari group even when progressive
+    // widening would otherwise prune their intersections.
+    const atariGroups=knownAtariGroups||findAllAtariGroups(state,engine);
+    for(const side of [current,opponent]){
+      if(!(state.remaining&&state.remaining[side])) continue;
+      for(const group of atariGroups[side]){
+        const p=group.liberty;
+        if(!state.board[p.y][p.x]) targets.add(coordKey(p.x,p.y));
+      }
+    }
+    // A placement on the landing point can stop an opponent's immediate jump.
+    if(!state.chain&&state.remaining&&state.remaining[opponent]){
+      const probe={...state,player:opponent,chain:null};
+      for(let y=0;y<state.size;y++) for(let x=0;x<state.size;x++){
+        const value=state.board[y][x];
+        if(!value||value>2||playerOf(engine,value)!==opponent) continue;
+        for(const[dx,dy]of DIRS){
+          const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
+          if(!inBounds(state.size,mx,my)||!inBounds(state.size,tx,ty)||state.board[ty][tx]) continue;
+          const middle=state.board[my][mx];
+          if(!middle||middle>2||playerOf(engine,middle)!==current) continue;
+          if(engine.legalMoves(probe,{x,y}).some(move=>move.type==="jump"&&move.to.x===tx&&move.to.y===ty)){
+            targets.add(coordKey(tx,ty));
+          }
+        }
+      }
+    }
+    return targets;
+  }
+
+  function placementTargets(state,limit,rng,engine,atariGroups){
     const empty = [];
     const occupied=occupiedCount(state);
     for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++){
@@ -90,7 +136,13 @@
     empty.sort((a,b)=>b.quality-a.quality);
     const keep = Math.max(1,Math.floor(limit*0.78));
     const chosen = empty.slice(0,keep);
-    const rest = empty.slice(keep);
+    const selected=new Set(chosen.map(p=>coordKey(p.x,p.y)));
+    const tactical=engine?tacticalPlacementTargets(state,engine,atariGroups):new Set();
+    for(const p of empty){
+      const key=coordKey(p.x,p.y);
+      if(tactical.has(key)&&!selected.has(key)){chosen.push(p);selected.add(key);}
+    }
+    const rest = empty.filter(p=>!selected.has(coordKey(p.x,p.y)));
     // Keep some lower-ranked intersections in the tree so a heuristic cannot permanently hide a move.
     while (chosen.length < limit && rest.length){
       const i = Math.floor(rng()*rest.length);
@@ -100,7 +152,7 @@
   }
 
   function applyForSearch(engine,state,action){
-    const next = engine.apply(state,action);
+    const next = typeof engine.applySearch === "function" ? engine.applySearch(state,action) : engine.apply(state,action);
     if (next && Array.isArray(next.history)) next.history = [];
     return next;
   }
@@ -131,7 +183,7 @@
     }
 
     if (reserve > 0){
-      const targets = placementTargets(state,opts.placementLimit,rng);
+      const targets = placementTargets(state,opts.placementLimit,rng,engine,opts.atariGroups);
       for (const p of targets) addAction(engine,state,{type:"place",to:{x:p.x,y:p.y}},"place",null,out);
     }
 
@@ -149,13 +201,15 @@
     return out;
   }
 
-  function groupAndThreatFeatures(state,engine){
+  function groupAndThreatFeatures(state,engine,includeAtariGroups){
     const size = state.size;
     const board = state.board;
     const seen = new Set();
     const safety = {1:0,2:0};
     const strength = {1:0,2:0};
+    const stability = {1:new Map(),2:new Map()};
     const threatened = {1:new Map(),2:new Map()};
+    const atariGroups=includeAtariGroups?{1:[],2:[]}:null;
 
     for (let y=0;y<size;y++) for (let x=0;x<size;x++){
       const value = board[y][x];
@@ -181,7 +235,15 @@
         }
       }
       const libCount=liberties.size, count=stones.length;
-      if (libCount <= 1) safety[side] += 1.10 + Math.min(1.8,(count-1)*0.28);
+      const influenceStability=libCount<=1?0.34:libCount===2?0.68:Math.min(1.12,0.88+libCount*0.025);
+      for(const stone of stones) stability[side].set(coordKey(stone.x,stone.y),influenceStability);
+      if (libCount <= 1){
+        safety[side] += 1.10 + Math.min(1.8,(count-1)*0.28);
+        if(libCount===1&&atariGroups){
+          const [x,y]=liberties.values().next().value.split(",").map(Number);
+          atariGroups[side].push({stones,liberty:{x,y}});
+        }
+      }
       else if (libCount === 2) safety[side] += 0.23 + Math.min(0.80,(count-1)*0.12);
       else strength[side] += Math.min(0.60,count*0.09)*Math.log2(libCount);
       strength[side] += Math.min(0.35,shields*0.09);
@@ -193,6 +255,9 @@
       const attackerValue=board[y][x];
       if (!attackerValue || attackerValue>2) continue;
       const attacker=playerOf(engine,attackerValue), defender=3-attacker;
+      if (!(state.remaining&&state.remaining[attacker])) continue;
+      // During a forced chain, only the jumping stone can make another jump this turn.
+      if (state.chain&&(attacker!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
       for (const [dx,dy] of DIRS){
         const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
         if (!inBounds(size,mx,my)||!inBounds(size,tx,ty)) continue;
@@ -205,9 +270,116 @@
     }
     for (const side of [1,2]){
       // A legal jump removes the exposed stone and gives the capturer a point, a two-point swing.
-      for (const count of threatened[side].values()) safety[side] += 2.70 + Math.min(0.60,(count-1)*0.30);
+      for (const [key,count] of threatened[side]){
+        safety[side] += 2.70 + Math.min(0.60,(count-1)*0.30);
+        stability[side].set(key,(stability[side].get(key)||1)*0.78);
+      }
     }
-    return {safety,strength,threatened};
+    return {safety,strength,stability,threatened,atariGroups};
+  }
+
+  function moyoPlacementGains(state,engine,shape){
+    // Estimate how much each placement expands or contests potential territory.
+    // Moyo is a move prior rather than guaranteed score, and settled points are
+    // discounted so softScores() remains the only source of territory points.
+    const size=state.size,board=state.board,total=size*size;
+    const fields={1:new Float32Array(total),2:new Float32Array(total)};
+    const kernel=INFLUENCE_KERNELS[size]||INFLUENCE_KERNELS[13];
+    const seen=new Uint8Array(total),unsettledWeight=new Float32Array(total);
+
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const start=y*size+x;
+      if(board[y][x]||seen[start]) continue;
+      const queue=[start],borders=new Set(),boundary=new Set();
+      seen[start]=1;
+      for(let i=0;i<queue.length;i++){
+        const index=queue[i],px=index%size,py=(index/size)|0;
+        for(const[dx,dy]of DIRS){
+          const nx=px+dx,ny=py+dy;
+          if(!inBounds(size,nx,ny)) continue;
+          const next=ny*size+nx,value=board[ny][nx];
+          if(!value){if(!seen[next]){seen[next]=1;queue.push(next);}}
+          else {borders.add(playerOf(engine,value));boundary.add(next);}
+        }
+      }
+      const confidence=borders.size===1?clamp(boundary.size/(1+Math.sqrt(queue.length)),0,1):0;
+      const weight=1-confidence*confidence;
+      for(const index of queue) unsettledWeight[index]=weight;
+    }
+
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const value=board[y][x];
+      if(!value) continue;
+      const side=playerOf(engine,value),key=coordKey(x,y);
+      let force=shape.stability[side].get(key)||1;
+      // Shield stones hold influence more reliably because jump capture cannot remove them.
+      if(value>2) force*=1.04;
+      for(const offset of kernel){
+        const nx=x+offset.dx,ny=y+offset.dy;
+        if(nx<0||ny<0||nx>=size||ny>=size||board[ny][nx]) continue;
+        fields[side][ny*size+nx]+=force*offset.weight;
+      }
+    }
+
+    // A legal jump contributes pressure at its landing point. Also look one jump
+    // deeper so the map recognizes the distinctive multi-capture chain rule.
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const value=board[y][x];
+      if(!value||value>2) continue;
+      const side=playerOf(engine,value);
+      if(!(state.remaining&&state.remaining[side])) continue;
+      if(state.chain&&(side!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
+      let mayJump=false;
+      for(const[dx,dy]of DIRS){
+        const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
+        if(inBounds(size,mx,my)&&inBounds(size,tx,ty)&&board[my][mx]&&board[my][mx]<=2&&
+           playerOf(engine,board[my][mx])!==side&&!board[ty][tx]){mayJump=true;break;}
+      }
+      if(!mayJump) continue;
+      const probe=side===state.player?state:{...state,player:side,chain:null};
+      for(const move of engine.legalMoves(probe,{x,y}).filter(move=>move.type==="jump")){
+        const landing=move.to.y*size+move.to.x;
+        fields[side][landing]+=0.88;
+        const cleared=new Set([y*size+x,((y+move.to.y)/2|0)*size+((x+move.to.x)/2|0)]);
+        let mayContinue=false;
+        for(const[dx,dy]of DIRS){
+          const mx=move.to.x+dx,my=move.to.y+dy,tx=move.to.x+2*dx,ty=move.to.y+2*dy;
+          if(!inBounds(size,mx,my)||!inBounds(size,tx,ty)) continue;
+          const middleIndex=my*size+mx,targetIndex=ty*size+tx,middle=board[my][mx];
+          if(!cleared.has(middleIndex)&&middle&&middle<=2&&playerOf(engine,middle)!==side&&
+             (!board[ty][tx]||cleared.has(targetIndex))){mayContinue=true;break;}
+        }
+        if(!mayContinue) continue;
+        const after=engine.applySearch(probe,{type:"move",from:{x,y},to:move.to});
+        if(!after||!after.chain) continue;
+        for(const continuation of engine.legalMoves(after,after.chain).filter(candidate=>candidate.type==="jump")){
+          fields[side][continuation.to.y*size+continuation.to.x]+=0.46;
+        }
+      }
+    }
+
+    const gains=new Float32Array(total),side=state.player;
+    for(let index=0;index<total;index++){
+      if(board[(index/size)|0][index%size]||!unsettledWeight[index]) continue;
+      const black=fields[1][index],white=fields[2][index];
+      const before=clamp((black-white)/(black+white+0.82),-0.62,0.62);
+      let gain=-before*unsettledWeight[index];
+      const x=index%size,y=(index/size)|0;
+      for(const offset of kernel){
+        const nx=x+offset.dx,ny=y+offset.dy;
+        if(nx<0||ny<0||nx>=size||ny>=size||board[ny][nx]) continue;
+        const target=ny*size+nx,weight=unsettledWeight[target];
+        if(!weight) continue;
+        const oldBlack=fields[1][target],oldWhite=fields[2][target];
+        const newBlack=oldBlack+(side===1?offset.weight:0);
+        const newWhite=oldWhite+(side===2?offset.weight:0);
+        const after=clamp((newBlack-newWhite)/(newBlack+newWhite+0.82),-0.62,0.62);
+        const oldControl=clamp((oldBlack-oldWhite)/(oldBlack+oldWhite+0.82),-0.62,0.62);
+        gain+=(after-oldControl)*weight;
+      }
+      gains[index]=gain*0.14;
+    }
+    return gains;
   }
 
   function softScores(state,engine){
@@ -247,7 +419,7 @@
     };
   }
 
-  function staticScore(state,perspective,engine){
+  function staticScore(state,perspective,engine,featureSink){
     if (state.result){
       if (!state.result.winner) return 0;
       return state.result.winner===perspective?36:-36;
@@ -255,7 +427,8 @@
     const other=3-perspective;
     const scores=softScores(state,engine);
     const boardLead=scores[perspective]-scores[other];
-    const shape=groupAndThreatFeatures(state,engine);
+    const shape=groupAndThreatFeatures(state,engine,Boolean(featureSink));
+    if(featureSink){featureSink.atariGroups=shape.atariGroups;featureSink.shape=shape;}
     const shapeLead=(shape.strength[perspective]-shape.safety[perspective])-
       (shape.strength[other]-shape.safety[other]);
     const reserves=state.remaining||{1:0,2:0};
@@ -276,7 +449,7 @@
     return Math.tanh(staticScore(state,perspective,engine)/11);
   }
 
-  function actionRaw(state,row,engine,beforeScore,occupied){
+  function actionRaw(state,row,engine,beforeScore,occupied,moyoGains){
     const mover=state.player;
     const nextScore=staticScore(row.next,mover,engine);
     const before=beforeScore===undefined?staticScore(state,mover,engine):beforeScore;
@@ -286,6 +459,7 @@
     if (row.kind==="place"){
       const to=row.action.to;
       raw+=placementQuality(state,to.x,to.y,occupied)*0.78;
+      if(moyoGains) raw+=moyoGains[to.y*state.size+to.x]||0;
       if (occupied<4) raw+=0.18;
     } else if (row.kind==="jump"){
       raw+=0.28;
@@ -306,12 +480,24 @@
     return clamp(raw,-12,12);
   }
 
-  function rankActions(state,rows,engine){
+  function rankActions(state,rows,engine,context){
     if (!rows.length) return rows;
-    const before=staticScore(state,state.player,engine);
+    const features=context||{};
+    const before=Number.isFinite(features.beforeScore)?features.beforeScore:staticScore(state,state.player,engine,features);
     const occupied=occupiedCount(state);
+    const shape=features.shape||groupAndThreatFeatures(state,engine,false);
+    const moyoGains=moyoPlacementGains(state,engine,shape);
+    const ownAtariGroups=features.atariGroups&&features.atariGroups[state.player]||findAtariGroups(state,engine,state.player);
+    const urgentAtariGroups=ownAtariGroups.filter(group=>hasLegalAtariCapture(state,3-state.player,engine,[group]));
     let max=-Infinity;
-    for (const row of rows){row.raw=actionRaw(state,row,engine,before,occupied);max=Math.max(max,row.raw);}
+    for (const row of rows){
+      row.raw=actionRaw(state,row,engine,before,occupied,moyoGains);
+      if(urgentAtariGroups.length){
+        const rescue=atariRescueBonus(state,row,engine,urgentAtariGroups);
+        row.raw+=rescue>0?3.5+rescue:-3.5;
+      }
+      max=Math.max(max,row.raw);
+    }
     let total=0;
     for (const row of rows){row.prior=Math.exp(clamp((row.raw-max)/1.45,-11,0));total+=row.prior;}
     if (!total) total=rows.length;
@@ -320,7 +506,68 @@
     return rows;
   }
 
-  function quickPolicyScore(state,row,engine){
+  function inspectGroup(state,start,engine){
+    const side=playerOf(engine,state.board[start.y][start.x]);
+    const queue=[start],seen=new Set(),stones=[],liberties=new Map();
+    for(let i=0;i<queue.length;i++){
+      const p=queue[i],key=coordKey(p.x,p.y);
+      if(seen.has(key)) continue;
+      seen.add(key);stones.push(p);
+      for(const[dx,dy]of DIRS){
+        const x=p.x+dx,y=p.y+dy;
+        if(!inBounds(state.size,x,y)) continue;
+        const value=state.board[y][x],nextKey=coordKey(x,y);
+        if(!value) liberties.set(nextKey,{x,y});
+        else if(playerOf(engine,value)===side&&!seen.has(nextKey)) queue.push({x,y});
+      }
+    }
+    return {side,stones,liberties};
+  }
+
+  function findAllAtariGroups(state,engine){
+    const seen=new Set(),groups={1:[],2:[]};
+    for(let y=0;y<state.size;y++) for(let x=0;x<state.size;x++){
+      const value=state.board[y][x],key=coordKey(x,y);
+      if(!value||seen.has(key)) continue;
+      const group=inspectGroup(state,{x,y},engine);
+      for(const stone of group.stones) seen.add(coordKey(stone.x,stone.y));
+      if(group.liberties.size===1){
+        groups[group.side].push({stones:group.stones,liberty:group.liberties.values().next().value});
+      }
+    }
+    return groups;
+  }
+
+  function findAtariGroups(state,engine,side){
+    return findAllAtariGroups(state,engine)[side];
+  }
+
+  function atariRescueBonus(state,row,engine,atariGroups){
+    if(!atariGroups.length) return 0;
+    const side=state.player,movedFrom=row.action.type==="move"?coordKey(row.action.from.x,row.action.from.y):null;
+    let bonus=0;
+    for(const group of atariGroups){
+      const survivors=[];
+      for(const stone of group.stones){
+        const point=movedFrom===coordKey(stone.x,stone.y)?row.action.to:stone;
+        if(playerOf(engine,row.next.board[point.y][point.x])===side) survivors.push(point);
+      }
+      if(survivors.length!==group.stones.length) continue;
+      const checked=new Set();
+      let safe=true;
+      for(const point of survivors){
+        const key=coordKey(point.x,point.y);
+        if(checked.has(key)) continue;
+        const nextGroup=inspectGroup(row.next,point,engine);
+        if(nextGroup.liberties.size<=1){safe=false;break;}
+        for(const stone of nextGroup.stones) checked.add(coordKey(stone.x,stone.y));
+      }
+      if(safe) bonus+=1.8+Math.min(0.5,group.stones.length*0.08);
+    }
+    return Math.min(2.8,bonus);
+  }
+
+  function quickPolicyScore(state,row,engine,atariGroups){
     const mover=state.player;
     const captured=(row.next.lost&&row.next.lost[3-mover]||0)-(state.lost&&state.lost[3-mover]||0);
     let value=captured*2.2;
@@ -332,6 +579,7 @@
       const p=row.action.to;
       value+=placementQuality(state,p.x,p.y)*0.9;
     }
+    value+=atariRescueBonus(state,row,engine,atariGroups||[]);
     if (row.next.result){
       value+=row.next.result.winner===0?0:row.next.result.winner===mover?12:-12;
     }
@@ -352,23 +600,89 @@
     return rows[rows.length-1];
   }
 
+  function hasLegalJump(state,side,engine){
+    if (!state || state.result || !(state.remaining&&state.remaining[side])) return false;
+    if (state.chain && side!==state.player) return false;
+    const probe=side===state.player?state:{...state,player:side,chain:null};
+    for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++){
+      const value=state.board[y][x];
+      if (value>0 && value<=2 && playerOf(engine,value)===side){
+        if (engine.legalMoves(probe,{x,y}).some(move=>move.type==="jump")) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasLegalAtariCapture(state,attacker,engine,knownGroups){
+    if(!state||state.result||state.chain) return false;
+    const defender=3-attacker,groups=knownGroups||findAtariGroups(state,engine,defender);
+    if(!groups.length) return false;
+    const probe=attacker===state.player?state:{...state,player:attacker,chain:null};
+    const before=state.lost&&state.lost[defender]||0;
+    const captures=(action)=>{
+      const next=applyForSearch(engine,probe,action);
+      return Boolean(next&&(next.lost&&next.lost[defender]||0)>before);
+    };
+    const targets=new Map(groups.map(group=>[coordKey(group.liberty.x,group.liberty.y),group.liberty]));
+    if(probe.remaining&&probe.remaining[attacker]){
+      for(const target of targets.values()){
+        if(captures({type:"place",to:target})) return true;
+      }
+    }
+    const checked=new Set();
+    for(const target of targets.values()) for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(!dx&&!dy) continue;
+      const from={x:target.x+dx,y:target.y+dy};
+      if(!inBounds(state.size,from.x,from.y)) continue;
+      const key=coordKey(from.x,from.y),value=state.board[from.y][from.x];
+      if(checked.has(key)||!value||value<=2||playerOf(engine,value)!==attacker) continue;
+      checked.add(key);
+      for(const move of engine.legalMoves(probe,from)){
+        if(move.to.x===target.x&&move.to.y===target.y&&captures({type:"move",from,to:move.to})) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasTacticalThreat(state,engine){
+    for(const side of [state.player,3-state.player]){
+      if(hasLegalJump(state,side,engine)||hasLegalAtariCapture(state,side,engine)) return true;
+    }
+    return false;
+  }
+
   function rollout(startState,rootPlayer,engine,options,rng){
     let state=startState;
     const depth=options.rolloutDepth;
     const actionLimit=options.rolloutPlacementLimit;
-    for (let ply=0;ply<depth;ply++){
-      if (state.result) return terminalValue(state,rootPlayer,engine);
+    const tacticalLimit=Math.max(0,options.tacticalExtension|0);
+    // Resolve forced chains fully, then extend through immediate jump and atari tactics.
+    // This avoids scoring a leaf while a capture or a save is still available.
+    const maxPly=depth+tacticalLimit+state.size*state.size;
+    let tacticalUsed=0,tacticalExtensionPlies=0;
+    const finish=()=>({value:terminalValue(state,rootPlayer,engine),tacticalExtensionPlies});
+    for (let ply=0;ply<maxPly;ply++){
+      if (state.result) return finish();
+      let tacticalStep=false;
+      if (ply>=depth&&!state.chain){
+        if (tacticalUsed>=tacticalLimit||!hasTacticalThreat(state,engine)) break;
+        tacticalUsed++;
+        tacticalStep=true;
+      }
+      if (ply>=depth&&!state.chain&&!tacticalStep) break;
       const rows=legalActions(state,{engine,placementLimit:actionLimit,rng});
-      if (!rows.length) return terminalValue(state,rootPlayer,engine);
-      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine)}));
+      if (!rows.length) return finish();
+      const atariGroups=tacticalStep?findAtariGroups(state,engine,state.player):[];
+      const scored=rows.map(row=>({row,score:quickPolicyScore(state,row,engine,atariGroups)}));
       scored.sort((a,b)=>b.score-a.score);
       const shortlist=scored.slice(0,Math.min(scored.length,10));
       const temp=1.35;
       const weights=shortlist.map(item=>Math.exp(clamp((item.score-shortlist[0].score)/temp,-7,0)));
       const chosen=weightedChoice(shortlist.map(item=>item.row),weights,rng);
       state=chosen.next;
+      if (tacticalStep) tacticalExtensionPlies++;
     }
-    return terminalValue(state,rootPlayer,engine);
+    return finish();
   }
 
   function now(){
@@ -377,8 +691,10 @@
 
   function prepareNode(node,engine,options,rng,isRoot){
     const limit=isRoot?options.rootPlacementLimit:options.treePlacementLimit;
-    const rows=legalActions(node.state,{engine,placementLimit:limit,rng});
-    node.actions=rankActions(node.state,rows,engine);
+    const features={};
+    features.beforeScore=staticScore(node.state,node.state.player,engine,features);
+    const rows=legalActions(node.state,{engine,placementLimit:limit,rng,atariGroups:features.atariGroups});
+    node.actions=rankActions(node.state,rows,engine,features);
   }
 
   function selectChild(node,rootPlayer,cpuct){
@@ -400,21 +716,24 @@
   }
 
   function analyze(state,options){
+    const largeBoard=state&&state.size===13;
     const opts=Object.assign({
       timeMs:180,
       maxIterations:128,
       rolloutDepth:8,
       rolloutPlacementLimit:16,
       rootPlacementLimit:Infinity,
-      treePlacementLimit:72,
+      treePlacementLimit:largeBoard?56:72,
       cpuct:1.32,
       widening:1.55,
+      rootWidening:1.9,
+      tacticalExtension:2,
       seed:(Date.now()^((state&&state.ply)||0)*2654435761)>>>0
     },options||{});
     const engine=engineFor(opts.engine);
     const start=now();
     const rootPlayer=state&&state.player;
-    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0};
+    const stats={iterations:0,nodes:0,rootLegal:0,rootExplored:0,elapsedMs:0,tacticalExtensionPlies:0};
     if (!state||state.result||![1,2].includes(rootPlayer)){
       return {action:null,stats,values:[]};
     }
@@ -436,7 +755,8 @@
       while (!node.state.result){
         if (node.actions===null) prepareNode(node,engine,opts,rng,node===root);
         if (!node.actions.length) break;
-        const width=Math.min(node.actions.length,Math.max(1,1+Math.floor(opts.widening*Math.sqrt(node.visits+1))));
+        const widening=node===root?opts.rootWidening:opts.widening;
+        const width=Math.min(node.actions.length,Math.max(1,1+Math.floor(widening*Math.sqrt(node.visits+1))));
         if (node.children.length<width){
           const candidate=node.actions[node.children.length];
           const child=makeNode(candidate.next,candidate.action,candidate.prior,node,node.depth+1);
@@ -453,7 +773,9 @@
         path.push(node);
         depth=node.depth;
       }
-      const value=rollout(node.state,rootPlayer,engine,opts,rng);
+      const result=rollout(node.state,rootPlayer,engine,opts,rng);
+      const value=result.value;
+      stats.tacticalExtensionPlies+=result.tacticalExtensionPlies;
       for (const visited of path){visited.visits++;visited.valueSum+=value;}
       stats.iterations++;
       stats.maxDepth=Math.max(stats.maxDepth||0,depth);
@@ -483,7 +805,7 @@
   }
 
   return {
-    version:"0.1.0-shield-go",
+    version:"0.4.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),
