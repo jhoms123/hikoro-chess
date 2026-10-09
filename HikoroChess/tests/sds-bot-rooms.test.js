@@ -6,6 +6,8 @@ const { JSDOM } = require('jsdom');
 const RoomDiscovery = require('../public/room-discovery');
 const { createSdsValidator, applySdsAction } = require('../sds-validator');
 const { createSdsBotRunner } = require('../sds-bot-runner');
+const { createServer } = require('../server');
+const { io: connect } = require('socket.io-client');
 
 const publicDir = path.join(__dirname, '../public');
 const read = file => fs.readFileSync(path.join(publicDir, file), 'utf8');
@@ -52,4 +54,23 @@ test('server worker uses the v13.5.1 bot path and returns a rules-legal move for
     } finally {
         runner.close();
     }
+});
+
+test('Sho Dan Sho local play carries player and bot seat choices into the official table', () => {
+    const script = read('script.js'), page = read('shodansho.html');
+    assert.match(script, /shodansho\.html\?players=\$\{players\}&bots=\$\{bots\}/);
+    assert.match(script, /sdsPlayerCount - sdsBotCount <= 1/);
+    assert.match(page, /localBotSeatCount/);
+    assert.match(page, /shodansho-local-bot-worker\.js/);
+});
+
+test('server rejects one-human bot rooms so they start as local matches', async t => {
+    const { server, io } = createServer();
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const socket = connect(`http://127.0.0.1:${server.address().port}`, { transports: ['websocket'], forceNew: true });
+    t.after(async () => { socket.disconnect(); await new Promise(resolve => io.close(resolve)); });
+    await new Promise(resolve => socket.once('connect', resolve));
+    const rejected = new Promise(resolve => socket.once('errorMsg', resolve));
+    socket.emit('createGame', { gameType: 'shodansho', sdsPlayerCount: 2, sdsBotCount: 1 });
+    assert.match(await rejected, /locally/i);
 });

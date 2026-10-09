@@ -101,7 +101,7 @@
     </style>
     <link rel="stylesheet" href="shodansho-ui.css?v=20261008-dashboard">
     <link rel="stylesheet" href="shodansho-medieval.css?v=20261008-dashboard">
-<link rel="stylesheet" href="site-audio.css?v=20261008-dashboard"><script src="site-audio.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="collection-theme.css?v=20261008-dashboard"><script src="collection-theme.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="mobile-table.css?v=20261008-mobile-gestures"><script src="mobile-table.js?v=20261008-mobile-gestures" defer></script><link rel="stylesheet" href="/accounts.css?v=20261008-dashboard"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261008-dashboard"></script><link rel="stylesheet" href="experience.css?v=20261008-dashboard"><script src="table-companion.js?v=20261008-leave-fix"></script><script src="experience.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard"></head>
+<link rel="stylesheet" href="site-audio.css?v=20261008-dashboard"><script src="site-audio.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="collection-theme.css?v=20261008-dashboard"><script src="collection-theme.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="mobile-table.css?v=20261009-mobile-scroll"><script src="mobile-table.js?v=20261009-mobile-scroll" defer></script><link rel="stylesheet" href="/accounts.css?v=20261008-dashboard"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261008-dashboard"></script><link rel="stylesheet" href="experience.css?v=20261008-dashboard"><script src="table-companion.js?v=20261009-leave-fix"></script><script src="experience.js?v=20261008-dashboard" defer></script><link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard"></head>
 <body data-audio-theme="shodansho" class="sds-page text-slate-100">
     <header class="site-header">
         <a class="site-brand" href="/" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a>
@@ -139,7 +139,7 @@
                 Actions
             </h3>
             <div class="flex flex-col gap-2">
-                <button id="pickup-btn" class="w-full py-2 px-3 text-sm bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
+                <button id="pickup-btn" class="w-full py-2 px-3 text-sm bg-amber-600/80 hover:bg-amber-500 text-white font-bold rounded-xl border border-amber-400/50 shadow transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" onclick="if(isLocalBotTurn()) return; if(isOnline && game.currentPlayer !== myPlayerIndex) { game.message = 'Not your turn.'; updateDOM(); return; } if(waitingForServer) return; game.pickupSelectedSun()">
                     Pick up Sun <kbd>P</kbd>
                 </button>
                 <div class="flex gap-2 mt-1">
@@ -361,6 +361,9 @@ let myPlayerIndex = urlParams.get('p') !== null ? parseInt(urlParams.get('p')) :
 const requestedPlayerCount = Number(urlParams.get('players') || 2);
 let onlinePlayerCount = [2, 3, 4].includes(requestedPlayerCount) ? requestedPlayerCount : 2;
 const isOnline = gameId !== null && myPlayerIndex !== null && !isNaN(myPlayerIndex) && !gameId.startsWith("sp_");
+const requestedBotCount = Number.parseInt(urlParams.get('bots') || '0', 10);
+const localBotSeatCount = isOnline ? 0 : Math.max(0, Math.min(onlinePlayerCount - 1, Number.isInteger(requestedBotCount) ? requestedBotCount : 0));
+let localSdsBotWorker = null, localSdsBotPending = false, localSdsBotDisabled = false, localSdsBotRequestId = 0;
 let socket = null;
 let waitingForServer = false;
 
@@ -415,6 +418,16 @@ const ctx = canvas.getContext("2d");
 
 const board = new BoardData();
 const game = new Game(board, onlinePlayerCount);
+const localHumanSeatCount = () => game.playerCount - Math.min(localBotSeatCount, game.playerCount - 1);
+function isLocalBotTurn() { return !isOnline && localBotSeatCount > 0 && game.currentPlayer >= localHumanSeatCount(); }
+function protectLocalBotAction(name, remoteArg = -1) {
+    const original = game[name].bind(game);
+    game[name] = (...args) => {
+        if (isLocalBotTurn() && (remoteArg < 0 || args[remoteArg] !== true)) { game.message = 'v13.5.1 bot is thinking.'; updateDOM(); return; }
+        return original(...args);
+    };
+}
+for (const [name, remoteArg] of [['clickVertex',-1],['selectHand',-1],['applyMove',1],['dropSelectedHand',2],['pickupSelectedSun',1]]) protectLocalBotAction(name,remoteArg);
 
 // Preload Sprite Images
 const loadedSprites = {};
@@ -437,6 +450,7 @@ spriteKinds.forEach(kind => {
 });
 
 function selectHandPiece(kind) {
+    if (isLocalBotTurn()) return;
     if (isOnline && game.currentPlayer !== myPlayerIndex) return;
     if (waitingForServer) return;
     game.selectHand(kind);
@@ -465,12 +479,26 @@ function showPieceInfo(kind, owner = null) {
 
 function recordPayload(){return {journal:game.actionJournal,playerCount:game.playerCount,gameId:isOnline?gameId:null,result:game.phase==='game_over'?{winner:game.winner===null?0:game.winner+1,reason:game.message}:null};}
 let tableProfiles=null;
+function localSdsBotState(){return{playerCount:game.playerCount,players:game.players.map(p=>({hand:{...p.hand},captured:{...p.captured},eliminated:Boolean(p.eliminated)})),pieces:[...game.pieces].map(([id,p])=>[id,{...p}]),currentPlayer:game.currentPlayer,turnNumber:game.turnNumber,nextPieceId:game.nextPieceId,phase:game.phase,winner:game.winner,ruleHistory:[]};}
+function localSdsAction(action){if(action?.type==='drop')return{type:'dropSelectedHand',kind:action.kind,key:action.dst};if(action?.type==='move')return{type:'applyMove',move:{pieceId:action.pieceId,dst:action.dst}};if(action?.type==='pickup')return{type:'pickupSelectedSun',pieceId:action.pieceId};return null;}
+function localSdsFallback(){const player=game.players[game.currentPlayer];for(const piece of game.pieces.values())if(piece.owner===game.currentPlayer&&piece.pos){const move=game.generateMoves(piece)[0];if(move)return{type:'applyMove',move};if(piece.kind==='sun')return{type:'pickupSelectedSun',pieceId:piece.id};}for(const [kind,count]of Object.entries(player.hand))if(count>0){const drop=game.generateDropMoves(kind)[0];if(drop)return{type:'dropSelectedHand',kind,key:drop.dst};}return null;}
+function scheduleLocalSdsBot(){
+ if(isOnline||!isLocalBotTurn()||game.phase==='game_over'||localSdsBotPending)return;
+ localSdsBotPending=true;const id=++localSdsBotRequestId;
+ const finish=action=>{if(id!==localSdsBotRequestId||!isLocalBotTurn())return;localSdsBotPending=false;game.selectedPieceId=null;game.selectedHandKind=null;game.legalMoves=[];const next=action||localSdsFallback();if(next){applyRemoteAction(next);updateDOM();}else{game.message='The bot found no legal action.';updateDOM();}};
+ if(localSdsBotDisabled){setTimeout(()=>finish(localSdsFallback()),0);return;}
+ try{
+  if(!localSdsBotWorker)localSdsBotWorker=new Worker('/shodansho-local-bot-worker.js?v=20261009-v135-local');localSdsBotWorker.onmessage=e=>{if(e.data?.id!==id)return;if(e.data.error){console.error('Local v13.5.1 bot failed:',e.data.error);localSdsBotDisabled=true;finish(null);}else finish(localSdsAction(e.data.result?.action));};localSdsBotWorker.onerror=()=>{localSdsBotDisabled=true;finish(null);};
+  localSdsBotWorker.postMessage({id,state:localSdsBotState(),budget:900,width:10});
+ }catch(error){console.error('Local v13.5.1 worker unavailable:',error);localSdsBotDisabled=true;setTimeout(()=>finish(localSdsFallback()),0);}
+}
 function updateDOM() {
  window.SiteAccounts.tablePlayers(tableProfiles,Array.from({length:game.playerCount},(_,i)=>'Player '+(i+1)),isOnline?gameId:null);
  document.querySelectorAll('.table-roster [data-player-seat]').forEach(n=>n.hidden=Number(n.dataset.playerSeat)>game.playerCount);
  window.SiteRecords?.completed('shodansho',recordPayload(),recordPayload().result,isOnline?gameId:null);
     const turnIndicator = document.getElementById('turn-indicator');
     const gameMessage = document.getElementById('game-message');
+    const localBotTurn = isLocalBotTurn();
 
     if (game.phase === "game_over") {
         turnIndicator.textContent = `Winner: ${window.SiteAccounts.playerName(game.winner+1,'Player '+(game.winner+1))}`;
@@ -479,7 +507,7 @@ function updateDOM() {
     } else {
         const isMyTurn = isOnline && (game.currentPlayer === myPlayerIndex);
         const turnPrefix = isMyTurn ? "(You) " : "";
-        turnIndicator.textContent = `Turn ${game.turnNumber} | ${turnPrefix}${window.SiteAccounts.playerName(game.currentPlayer+1,'Player '+(game.currentPlayer+1))}`;
+        turnIndicator.textContent = `Turn ${game.turnNumber} | ${localBotTurn ? 'v13.5.1 Bot · thinking' : turnPrefix + window.SiteAccounts.playerName(game.currentPlayer+1,'Player '+(game.currentPlayer+1))}`;
         turnIndicator.style.backgroundColor = PLAYER_COLORS[game.currentPlayer];
         turnIndicator.style.color = PLAYER_TEXT[game.currentPlayer];
     }
@@ -487,7 +515,7 @@ function updateDOM() {
     gameMessage.textContent = game.message;
 
     const pickupBtn = document.getElementById('pickup-btn');
-    if (pickupBtn) pickupBtn.disabled = waitingForServer;
+    if (pickupBtn) pickupBtn.disabled = waitingForServer || localBotTurn;
 
     const handsContainer = document.getElementById('hands-container');
     handsContainer.innerHTML = ''; 
@@ -530,7 +558,7 @@ function updateDOM() {
                 `;
                 
                 item.setAttribute('aria-pressed', String(isSelected));
-                item.disabled = game.currentPlayer !== p || game.phase === 'game_over' || waitingForServer || (isOnline && game.currentPlayer !== myPlayerIndex);
+                item.disabled = game.currentPlayer !== p || game.phase === 'game_over' || waitingForServer || localBotTurn || (isOnline && game.currentPlayer !== myPlayerIndex);
                 item.onfocus = () => showPieceInfo(kind, p);
                 item.onblur = () => showPieceInfo(null);
                 item.onmouseenter = () => showPieceInfo(kind, p);
@@ -553,6 +581,7 @@ function updateDOM() {
     }
     
     requestAnimationFrame(drawBoard);
+    scheduleLocalSdsBot();
 }
 
 const boardImage = new Image();
@@ -880,7 +909,7 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); cancelSelectio
 const gardenKeys=document.createElement('details');gardenKeys.className='garden-keyboard';gardenKeys.innerHTML='<summary>Garden keyboard navigation</summary><p>Choose a flower from your hand, or choose a piece below; then choose a legal gate. Army numbers identify owners without relying on flower color.</p><label>Board piece<select id="garden-source"><option value="">Choose a piece</option></select></label><label>Legal destination<select id="garden-destination"><option value="">Choose a gate</option></select></label><button id="garden-confirm">Select destination</button>';
 document.querySelector('.inventory-sidebar .bg-game-panel').append(gardenKeys);
 const gardenSource=gardenKeys.querySelector('#garden-source'),gardenDestination=gardenKeys.querySelector('#garden-destination');
-let gardenSignature='';function refreshGardenKeys(){const signature=JSON.stringify([[...game.pieces.values()].map(p=>[p.id,p.pos,p.owner]),game.legalMoves?.map(m=>m.dst),game.selectedPieceId,game.selectedHandKind]);if(signature===gardenSignature)return;gardenSignature=signature;gardenSource.replaceChildren(new Option('Choose a piece',''));for(const p of game.pieces.values())if(p.pos)gardenSource.add(new Option('Player '+(p.owner+1)+' · '+p.kind+' · '+p.pos,p.pos));const selected=game.pieces.get(game.selectedPieceId);gardenSource.value=selected?.pos||'';gardenDestination.replaceChildren(new Option('Choose a legal gate',''));for(const move of game.legalMoves||[])gardenDestination.add(new Option(move.dst+(move.captureId?' · capture':''),move.dst));gardenKeys.querySelector('#garden-confirm').disabled=!game.legalMoves?.length;}
+let gardenSignature='';function refreshGardenKeys(){const signature=JSON.stringify([[...game.pieces.values()].map(p=>[p.id,p.pos,p.owner]),game.legalMoves?.map(m=>m.dst),game.selectedPieceId,game.selectedHandKind]);if(signature===gardenSignature)return;gardenSignature=signature;gardenSource.replaceChildren(new Option('Choose a piece',''));for(const p of game.pieces.values())if(p.pos)gardenSource.add(new Option('Player '+(p.owner+1)+' · '+p.kind+' · '+p.pos,p.pos));const selected=game.pieces.get(game.selectedPieceId);gardenSource.value=selected?.pos||'';gardenDestination.replaceChildren(new Option('Choose a legal gate',''));for(const move of game.legalMoves||[])gardenDestination.add(new Option(move.dst+(move.captureId?' · capture':''),move.dst));gardenSource.disabled=isLocalBotTurn();gardenDestination.disabled=isLocalBotTurn();gardenKeys.querySelector('#garden-confirm').disabled=isLocalBotTurn()||!game.legalMoves?.length;}
 gardenSource.onchange=()=>{if(gardenSource.value){game.clickVertex(gardenSource.value);updateDOM();refreshGardenKeys();}};gardenKeys.querySelector('#garden-confirm').onclick=()=>{if(gardenDestination.value){game.clickVertex(gardenDestination.value);updateDOM();refreshGardenKeys();}};
 setInterval(refreshGardenKeys,500);refreshGardenKeys();window.addEventListener('accessibility-changed',()=>requestAnimationFrame(drawBoard));window.addEventListener('language-changed',()=>requestAnimationFrame(drawBoard));
 

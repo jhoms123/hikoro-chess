@@ -42,13 +42,34 @@ test('replay reconstructs stacks and splitting; third repeated position is a dra
     const cycle=[move([0,7],[0,6]),move([0,1],[0,2]),move([0,6],[0,7]),move([0,2],[0,1])];
     assert.deepEqual(Shavari.replay([...cycle,...cycle]).result,{winner:0,reason:'Threefold repetition'});
 });
+test('General formations use a two-piece cap while other formations may reach three',()=>{
+    const s=Shavari.initial();
+    s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}], '1,4':[{type:'G',owner:1}], '8,0':[{type:'G',owner:2}]};
+    assert.equal(Shavari.legalMoves(s,{x:0,y:4}).some(m=>m.x===1&&m.y===4&&m.kind==='stack'),false);
+    assert.ok(Shavari.legalMoves(s,{x:0,y:4},'top').some(m=>m.x===1&&m.y===4&&m.kind==='stack'));
+    s.board={'0,4':[{type:'C',owner:1},{type:'G',owner:1},{type:'P',owner:1}]};
+    assert.deepEqual(Shavari.legalMoves(s,{x:0,y:4}),[]);
+    assert.ok(Shavari.legalMoves(s,{x:0,y:4},'top').length);
+    const cover=Shavari.initial();cover.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}],'3,4':[{type:'G',owner:2}],'8,8':[{type:'G',owner:1}]};
+    assert.equal(Shavari.apply(cover,{...move([0,4],[3,4]),kind:'cover'}),null);
+    assert.ok(Shavari.apply(cover,{...move([0,4],[3,4]),kind:'capture'}));
+});
+test('the no-capture clock draws on ply 100 and a capture resets it',()=>{
+    const quiet=Shavari.initial();quiet.noCapturePlies=99;
+    const drawn=Shavari.apply(quiet,move([0,7],[0,6]));
+    assert.equal(drawn.noCapturePlies,100);
+    assert.deepEqual(drawn.result,{winner:0,reason:'100 plies without a capture'});
+    const capture=Shavari.initial();capture.noCapturePlies=99;capture.board={'0,4':[{type:'C',owner:1}],'3,4':[{type:'P',owner:2}],'0,8':[{type:'G',owner:1}],'8,0':[{type:'G',owner:2}]};
+    const next=Shavari.apply(capture,{...move([0,4],[3,4]),kind:'capture'});
+    assert.ok(next);assert.equal(next.noCapturePlies,0);assert.equal(next.result,null);
+});
 test('500 randomized legal plies preserve piece ownership, height and general termination',()=>{
     let s=Shavari.initial(),seed=12;
     for(let i=0;i<500;i++){
         if(s.result)s=Shavari.initial();const choices=[];
         for(const k of Object.keys(s.board)){const [x,y]=k.split(',').map(Number);for(const mode of ['all','top'])for(const to of Shavari.legalMoves(s,{x,y},mode))choices.push({from:{x,y},to,mode,kind:to.kind});}
         if(!choices.length)break;seed=(seed*1664525+1013904223)>>>0;s=Shavari.apply(s,choices[seed%choices.length]);assert.ok(s);
-        for(const stack of Object.values(s.board)){assert.ok(stack.length>=1&&stack.length<=3);assert.ok(stack.every(p=>[1,2].includes(p.owner)));}
+        for(const stack of Object.values(s.board)){assert.ok(stack.length>=1&&stack.length<=3);if(stack.some(p=>p.type==='G'))assert.ok(stack.length<=2);assert.ok(stack.every(p=>[1,2].includes(p.owner)));}
         const generals=Object.values(s.board).flat().filter(p=>p.type==='G');assert.ok(generals.length<=2);if(!s.result)assert.equal(generals.length,2);
     }
 });
@@ -77,7 +98,7 @@ test('a taller moving formation jumps shorter blockers; equal, larger and detach
     assert.equal(Shavari.apply(s,{...move([0,4],[4,4]),kind:'cover'}),null);
 });
 test('cover retains enemy movement and ownership; detaching the top restores enemy control',()=>{
-    const s=Shavari.initial();s.board={'2,4':[{type:'G',owner:1},{type:'P',owner:1}], '3,4':[{type:'C',owner:2}], '8,0':[{type:'G',owner:2}]};
+    const s=Shavari.initial();s.board={'2,4':[{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'C',owner:2}], '8,0':[{type:'G',owner:2}]};
     const covered=Shavari.apply(s,{...move([2,4],[3,4]),kind:'cover'});assert.ok(covered);assert.deepEqual(covered.board['3,4'].map(p=>p.owner),[2,1,1]);assert.equal(covered.result,null);
     assert.equal(Shavari.legalMoves(covered,{x:3,y:4}).length,0);covered.player=1;
     assert.ok(Shavari.legalMoves(covered,{x:3,y:4}).some(m=>m.x===8&&m.y===4));
@@ -90,9 +111,10 @@ test('top-two split can cover one enemy while retaining a base; cap and explicit
     const capture=Shavari.apply(s,{...move([0,4],[3,4],'pair'),kind:'capture'});assert.equal(capture.board['3,4'].length,2);assert.deepEqual(capture.lastMove.captured,['P']);
     s.board['0,4']=[{type:'C',owner:1}];assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
 });
-test('covering generals does not win; capturing your own buried general loses and both generals draws',()=>{
+test('Generals cannot be covered; capturing your own buried general loses and both generals draws',()=>{
     const s=Shavari.initial();s.board={'0,4':[{type:'C',owner:1},{type:'P',owner:1}], '3,4':[{type:'G',owner:2}], '0,8':[{type:'G',owner:1}], '8,0':[{type:'P',owner:2}]};
-    assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}).result,null);
+    assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'cover'}),null);
+    assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result.winner,1);
     s.board['3,4']=[{type:'G',owner:1},{type:'P',owner:2}];assert.equal(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result.winner,2);
     s.board['3,4']=[{type:'G',owner:1},{type:'G',owner:2},{type:'P',owner:2}];assert.deepEqual(Shavari.apply(s,{...move([0,4],[3,4]),kind:'capture'}).result,{winner:0,reason:'Both generals captured'});
 });
@@ -117,9 +139,9 @@ test('lotus excludes its original court forward diagonals and combines with buri
             assert.ok(legal.some(m=>m.x===4+dx&&m.y===4-forward));
         }
     }
-    const s=Shavari.initial();s.board={'4,4':[{type:'G',owner:2},{type:'L',owner:2},{type:'P',owner:1}]};
-    const all=Shavari.legalMoves(s,{x:4,y:4});assert.equal(all.length,10);assert.ok(all.some(m=>m.x===3&&m.y===3));assert.ok(!all.some(m=>m.x===3&&m.y===5));
-    const pair=Shavari.legalMoves(s,{x:4,y:4},'pair');assert.equal(pair.length,8);
-    assert.equal(Shavari.legalMoves(s,{x:4,y:4},'top').length,4);
+    const s=Shavari.initial();s.board={'4,4':[{type:'L',owner:2},{type:'G',owner:1}]};
+    const all=Shavari.legalMoves(s,{x:4,y:4});assert.equal(all.length,10);assert.ok(all.some(m=>m.x===2&&m.y===2));assert.ok(all.some(m=>m.x===3&&m.y===5));assert.ok(!all.some(m=>m.x===3&&m.y===3));
+    const pair=Shavari.legalMoves(s,{x:4,y:4},'pair');assert.equal(pair.length,10);
+    assert.equal(Shavari.legalMoves(s,{x:4,y:4},'top').length,6);
     assert.equal(new Set(all.map(m=>`${m.x},${m.y},${m.kind}`)).size,all.length);
 });

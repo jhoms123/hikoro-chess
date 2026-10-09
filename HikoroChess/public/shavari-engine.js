@@ -18,7 +18,7 @@
         return `${s.player}|` + Object.keys(s.board).sort().map(k => k + ':' + s.board[k].map(p => `${p.owner}${p.type}`).join('')).join('|');
     }
     function initial() {
-        const s = { board: {}, player: 1, ply: 0, result: null, lastMove: null, history: [], positions: {} };
+        const s = { board: {}, player: 1, ply: 0, noCapturePlies: 0, result: null, lastMove: null, history: [], positions: {} };
         for (const owner of [1, 2]) {
             const back = owner === 1 ? 8 : 0, front = owner === 1 ? 7 : 1;
             ['L','C','G','C','L'].forEach((type, i) => { s.board[`${i * 2},${back}`] = [{ type, owner }]; });
@@ -34,12 +34,13 @@
         if (mode === 'pair' && stack.length >= 2) return stack.slice(-2);
         return [];
     }
+    function stackLimit(pieces) { return pieces.some(piece => piece.type === 'G') ? 2 : 3; }
     function legalMoves(s, from, mode = 'all') {
         if (!s || s.result || !validPoint(from)) return [];
         const stack = s.board[key(from)];
         if (!stack?.length || stack.at(-1).owner !== s.player) return [];
         const moving = movingPieces(stack, mode);
-        if (!moving.length) return [];
+        if (!moving.length || (moving.some(piece => piece.type === 'G') && moving.length > 2)) return [];
         // Generate each carried piece's pattern independently, then union destinations.
         const orthogonal = [[0,-1],[0,1],[-1,0],[1,0]];
         const moves = [], seen = new Set();
@@ -62,8 +63,12 @@
                         if (!target.length) add(to, 'move');
                         else if (target.at(-1).owner !== s.player) {
                             add(to, 'capture');
-                            if (moving.length > target.length && moving.length + target.length <= 3) add(to, 'cover');
-                        } else if (target.length + moving.length <= 3) add(to, 'stack');
+                            const combined = [...moving, ...target];
+                            if (moving.length > target.length && combined.length <= stackLimit(combined)) add(to, 'cover');
+                        } else {
+                            const combined = [...moving, ...target];
+                            if (combined.length <= stackLimit(combined)) add(to, 'stack');
+                        }
                     }
                     // Camel's intermediate step obeys the same elevation rule as sliding paths.
                     if (target.length && moving.length <= target.length) break;
@@ -93,9 +98,11 @@
         next.lastMove = record; next.history.push(record); next.ply++; next.player = 3 - s.player;
         const lostGenerals = new Set(captured.filter(p => p.type === 'G').map(p => p.owner));
         if (lostGenerals.size) next.result = { winner: lostGenerals.size === 2 ? 0 : 3 - [...lostGenerals][0], reason: lostGenerals.size === 2 ? 'Both generals captured' : 'General captured' };
+        next.noCapturePlies = legal.kind === 'capture' ? 0 : (s.noCapturePlies || 0) + 1;
         const sig = signature(next); next.positions[sig] = (next.positions[sig] || 0) + 1;
         if (!next.result && next.positions[sig] >= 3) next.result = { winner: 0, reason: 'Threefold repetition' };
         if (!next.result && !hasMove(next)) next.result = { winner: 0, reason: 'No legal moves' };
+        if (!next.result && next.noCapturePlies >= 100) next.result = { winner: 0, reason: '100 plies without a capture' };
         if (!next.result && next.ply >= 4000) next.result = { winner: 0, reason: 'Move limit reached' };
         return next;
     }

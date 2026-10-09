@@ -23,15 +23,10 @@ function engineState(engine) {
 }
 
 if (!isMainThread) {
-    const htmlPath = path.join(__dirname, 'public', 'shodansho-bot.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
-    const workerMatch = html.match(/let workerSource=("(?:\\.|[^"\\])*");/);
-    const adapterMatch = html.match(/const MULTI_SEAT_WORKER_TAIL=("(?:\\.|[^"\\])*");/);
-    if (!workerMatch || !adapterMatch) throw Error('The Sho Dan Sho v13.5.1 worker bundle is missing.');
-    const program = new vm.Script(
-        JSON.parse(workerMatch[1]) + '\n' + JSON.parse(adapterMatch[1]),
-        { filename: 'shodansho-v135-worker.js' }
-    );
+    const corePath = path.join(__dirname, 'public', 'shodansho-bot-core.js');
+    const core = fs.readFileSync(corePath, 'utf8');
+    if (!core.includes('globalThis.searchServerBot')) throw Error('The Sho Dan Sho v13.5.1 worker core is missing.');
+    const program = new vm.Script(core, { filename: 'shodansho-bot-core.js' });
     const context = vm.createContext({ performance, postMessage() {}, onmessage: null });
     program.runInContext(context, { timeout: 15000 });
     const invoke = new vm.Script('globalThis.searchServerBot(input, budget, width)');

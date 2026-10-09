@@ -3,9 +3,9 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const params = new URLSearchParams(location.search), gameId = params.get('gameId');
-    const online = Boolean(gameId), storeKey = 'shavari-local-v3';
+    const online = Boolean(gameId), storeKey = 'shavari-local-v4';
     const courts = { 1: 'Carnelian', 2: 'Turquoise' };
-    let state = Shavari.initial(), selected = null, mode = 'all', flipped = false;
+    let state = Shavari.initial(), selected = null, mode = 'all', flipped = false, botSeat = null, botThinking = false, botGeneration = 0, botWorker = null, botErrorPly = -1;
     let journal = [], cursor = 0, mySeat = null, connected = false, pending = false, socket;
     let pendingAction = null;
     let confirmation = null, roomClosed = false, hasSynced = false;
@@ -13,19 +13,22 @@
     function notice(message) { $('notice').textContent = message; $('notice').hidden = !message; }
     function persist() {
         if (online) return;
-        try { localStorage.setItem(storeKey, JSON.stringify({ version: 3, journal, cursor, flipped })); }
+        try { localStorage.setItem(storeKey, JSON.stringify({ version: 4, journal, cursor, flipped, botSeat })); }
         catch { notice('Automatic saving is unavailable. Use Save record to keep this match.'); }
     }
     if (!online) {
         try {
             const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
-            if (saved?.version === 3 && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
+            if ((saved?.version === 3 || saved?.version === 4) && Number.isInteger(saved.cursor) && Shavari.replay(saved.journal) && Shavari.replay(saved.journal, saved.cursor)) {
                 journal = saved.journal; cursor = saved.cursor; state = Shavari.replay(journal, cursor); flipped = Boolean(saved.flipped);
+                botSeat = saved.version === 4 && [1,2].includes(saved.botSeat) ? saved.botSeat : null;
+                $('local-opponent').value = String(botSeat ?? 'none');
                 if (cursor) notice('Your local match has been restored.');
-            }
+            } else if (saved) notice('This saved match no longer fits the current Shavari rules. A new table is ready.');
         } catch { notice('The saved match could not be restored. A new table is ready.'); }
     }
-    function canPlay() { return !state.result && !roomClosed && (!online || connected && hasSynced && !pending && mySeat === state.player); }
+    function isBotTurn() { return !online && botSeat === state.player; }
+    function canPlay() { return !state.result && !roomClosed && !isBotTurn() && (!online || connected && hasSynced && !pending && mySeat === state.player); }
     for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
         const node = document.createElement('button'); node.type = 'button'; node.className = 'intersection';
         node.dataset.x = x; node.dataset.y = y; node.tabIndex = -1;
@@ -40,11 +43,11 @@
         });
         nodes.push(node); $('board-nodes').appendChild(node);
     }
-    function execute(action) {
-        if(!canPlay() || !Shavari.legalMoves(state,action.from,action.mode).some(m=>m.x===action.to.x&&m.y===action.to.y&&m.kind===action.kind))return;
-
+    function execute(action, fromBot = false) {
+        const botMoveAllowed = fromBot && !online && isBotTurn() && !state.result && !roomClosed;
+        if ((!fromBot && !canPlay()) || (fromBot && !botMoveAllowed) || !action?.from || !action?.to || !Shavari.legalMoves(state,action.from,action.mode).some(m=>m.x===action.to.x&&m.y===action.to.y&&m.kind===action.kind)) return;
         if(online){pending=true;socket.emit('shavariAction',{gameId,action});render();}
-        else{journal=journal.slice(0,cursor);journal.push(action);cursor++;const next=Shavari.apply(state,action);window.SiteAudio?.transition('shavari',state,next);state=next;selected=null;persist();render();}
+        else{journal=journal.slice(0,cursor);journal.push(action);cursor++;const next=Shavari.apply(state,action);if(!next)return;window.SiteAudio?.transition('shavari',state,next);state=next;selected=null;persist();render();}
     }
     function choose(to) {
         if(!canPlay())return;
@@ -75,6 +78,37 @@
             }
         }
     }
+    function cancelBot() {
+        botGeneration++; botThinking = false; botErrorPly = -1;
+        if (botWorker) { botWorker.terminate(); botWorker = null; }
+    }
+    function scheduleBot() {
+        if (online || !isBotTurn() || state.result || roomClosed || botThinking || botErrorPly === state.ply) return;
+        const ticket = ++botGeneration; botThinking = true;
+        $('turn-status').textContent = 'Shavari v1.3.2 bot to move';
+        $('connection-status').textContent = 'Shavari bot is thinking…';
+        try {
+            botWorker = new Worker('shavari-bot-worker.js?v=20261009-v132');
+            const worker = botWorker;
+            worker.onmessage = event => {
+                if (ticket !== botGeneration) return;
+                botWorker = null; botThinking = false; worker.terminate();
+                if (event.data?.error || !event.data?.action) {
+                    botErrorPly = state.ply; notice('The Shavari bot could not calculate a move. Change the local opponent or reload the match.'); render(); return;
+                }
+                botErrorPly = -1; execute(event.data.action, true);
+            };
+            worker.onerror = () => {
+                if (ticket !== botGeneration) return;
+                botWorker = null; botThinking = false; worker.terminate(); botErrorPly = state.ply;
+                notice('The Shavari bot worker could not start. Change the local opponent or reload the match.'); render();
+            };
+            worker.postMessage({ id: ticket, journal: journal.slice(0, cursor), ms: 900 });
+        } catch {
+            botThinking = false; botErrorPly = state.ply; botWorker = null;
+            notice('The Shavari bot worker could not start. Change the local opponent or reload the match.'); $('connection-status').textContent='Bot unavailable · change the local opponent to retry.';
+        }
+    }
     function render() {
 window.SiteAccounts.tablePlayers?.(online?state.playerProfiles:null,['Player 1','Player 2'],online?gameId:null);
 window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?gameId:null);
@@ -101,9 +135,9 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
         if (!nodes.some(n=>n.tabIndex===0)) nodes[76].tabIndex=0;
         if (nodes.includes(focus)) focus.focus();
         drawCoordinates();
-        $('turn-status').textContent=state.result ? (state.result.winner ? `${window.SiteAccounts.playerName?.(state.result.winner,courts[state.result.winner])||courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : `${window.SiteAccounts.playerName?.(state.player,courts[state.player])||courts[state.player]} to move`;
+        $('turn-status').textContent=state.result ? (state.result.winner ? `${window.SiteAccounts.playerName?.(state.result.winner,courts[state.result.winner])||courts[state.result.winner]} wins` : 'Draw') : roomClosed ? 'Table closed' : isBotTurn() ? 'Shavari v1.3.2 bot to move' : `${window.SiteAccounts.playerName?.(state.player,courts[state.player])||courts[state.player]} to move`;
         if (state.result) $('connection-status').textContent=state.result.reason;
-        else if (!online) $('connection-status').textContent=selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
+        else if (!online) $('connection-status').textContent=isBotTurn() ? (botErrorPly === state.ply ? 'Bot unavailable · change the local opponent to retry.' : 'Shavari bot is thinking…') : selected ? `${new Set(moves.map(m=>`${m.x},${m.y}`)).size} legal destinations · ${mode==='top'?'detach the top piece':mode==='pair'?'carry the top two':'move the full formation'}` : 'Select a piece to see its paths.';
         else $('connection-status').textContent=roomClosed ? 'Return to the collection to open another room.' : !connected ? 'Reconnecting… Moves are paused.' : !hasSynced ? 'Restoring your seat…' : pending ? 'Confirming your move…' : mySeat===state.player ? 'Your court’s turn.' : 'Waiting for the other court.';
         $('mode-all').setAttribute('aria-pressed',String(mode==='all'));$('mode-top').setAttribute('aria-pressed',String(mode==='top'));$('mode-pair').setAttribute('aria-pressed',String(mode==='pair'));
         document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
@@ -135,22 +169,30 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
         $('undo-button').disabled=online||cursor===0;$('redo-button').disabled=online||cursor===journal.length;
         $('new-button').hidden=online;$('resign-button').hidden=!online||Boolean(state.result)||roomClosed;
         $('resign-button').disabled=!connected||!hasSynced||pending;
+        $('local-opponent-control').hidden=online;
+        $('local-opponent').value=String(botSeat ?? 'none');
         const firstStrip=document.querySelector(flipped?'.carnelian':'.turquoise'),lastStrip=document.querySelector(flipped?'.turquoise':'.carnelian');
         $('board').parentElement.before(firstStrip);$('board').parentElement.after(lastStrip);
+        scheduleBot();
     }
     document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;render();}));
     for (const id of ['all','top','pair']) $(`mode-${id}`).addEventListener('click',()=>{mode=id;render();});
     $('cancel-landing').addEventListener('click',()=>$('landing-dialog').close());
     for(const kind of ['capture','cover']) $(`${kind}-landing`).addEventListener('click',()=>{const action=pendingAction;$('landing-dialog').close();pendingAction=null;if(action)execute({...action,kind});});
     $('flip-button').addEventListener('click',()=>{flipped=!flipped;persist();render();});
-    $('undo-button').addEventListener('click',()=>{if(online||!cursor)return;state=Shavari.replay(journal,--cursor);selected=null;notice('');persist();render();});
-    $('redo-button').addEventListener('click',()=>{if(online||cursor>=journal.length)return;state=Shavari.replay(journal,++cursor);selected=null;notice('');persist();render();});
+    $('undo-button').addEventListener('click',()=>{if(online||!cursor)return;cancelBot();let steps=1;if(botSeat&&state.player!==botSeat&&state.history.at(-1)?.player===botSeat&&cursor>1)steps=2;cursor=Math.max(0,cursor-steps);state=Shavari.replay(journal,cursor);selected=null;notice('');persist();render();});
+    $('redo-button').addEventListener('click',()=>{if(online||cursor>=journal.length)return;cancelBot();let steps=botSeat&&state.player!==botSeat&&cursor+1<journal.length?2:1;cursor=Math.min(journal.length,cursor+steps);state=Shavari.replay(journal,cursor);selected=null;notice('');persist();render();});
     function confirm(title,message,label,action){$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('accept-confirm').textContent=label;confirmation=action;$('confirm-dialog').showModal();$('cancel-confirm').focus();}
+    $('local-opponent').addEventListener('change',()=>{
+        const value=$('local-opponent').value, nextSeat=value==='none'?null:Number(value);
+        const start=()=>{cancelBot();botSeat=nextSeat;state=Shavari.initial();journal=[];cursor=0;selected=null;mode='all';notice('');window.SiteRecords?.newTable('shavari');persist();render();};
+        if(cursor||journal.length)confirm('Change local opponent?','Starting this setup replaces the current position. Save a record first if you want to keep it.','Start new match',start);else start();
+    });
     $('new-button').addEventListener('click',()=>{
-        const start=()=>{window.SiteRecords?.newTable('shavari');state=Shavari.initial();journal=[];cursor=0;selected=null;mode='all';notice('');persist();render();};
+        const start=()=>{cancelBot();window.SiteRecords?.newTable('shavari');state=Shavari.initial();journal=[];cursor=0;selected=null;mode='all';notice('');persist();render();};
         if(cursor||journal.length)confirm('Start a new match?','Your current position will be replaced. Save a record first if you want to keep it.','Start new match',start);else start();
     });
-    $('cancel-confirm').addEventListener('click',()=>$('confirm-dialog').close());
+    $('cancel-confirm').addEventListener('click',()=>{$('confirm-dialog').close();$('local-opponent').value=String(botSeat ?? 'none');});
     $('accept-confirm').addEventListener('click',()=>{$('confirm-dialog').close();confirmation?.();confirmation=null;});
     $('resign-button').addEventListener('click',()=>confirm('Resign this match?','The other court will win. You can save the move record afterwards.','Resign',()=>{if(connected&&hasSynced)socket.emit('shavariResign',{gameId});}));
     $('lobby-link').addEventListener('click',e=>{
@@ -185,9 +227,9 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
     if(params.get('showRules')==='1')$('rules-dialog').showModal();
 
     function recordPayload(){return {journal:online?(state.recordJournal||[]):journal,cursor:online?(state.recordJournal||[]).length:cursor,result:state.result,gameId:online?gameId:null};}
-window.SiteAccounts.register('shavari',()=>online?null:{version:3,journal,cursor,flipped},saved=>{
-        const restored=saved?.version===3&&Shavari.replay(saved.journal,saved.cursor);
+window.SiteAccounts.register('shavari',()=>online?null:{version:4,journal,cursor,flipped,botSeat},saved=>{
+        const restored=saved?.version===4&&Shavari.replay(saved.journal,saved.cursor);
         if(online||!restored||!Shavari.replay(saved.journal))throw Error('Invalid save');
-        journal=saved.journal;cursor=saved.cursor;state=restored;flipped=Boolean(saved.flipped);selected=null;persist();render();
+        cancelBot();journal=saved.journal;cursor=saved.cursor;state=restored;flipped=Boolean(saved.flipped);botSeat=[1,2].includes(saved.botSeat)?saved.botSeat:null;selected=null;persist();render();
     },recordPayload);
 })();

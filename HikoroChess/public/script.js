@@ -91,9 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (Number(sdsBotCountSelect.value) > maxBots) sdsBotCountSelect.value = String(maxBots);
         const bots = Number(sdsBotCountSelect.value || 0), humans = players - bots;
         const hint = document.getElementById('sds-bot-hint');
-        if (hint) hint.textContent = 'Bots use Adaptive Gumbel Guide v13.5.1 and fill the remaining seats.';
+        if (hint) hint.textContent = 'Bots use Adaptive Gumbel Guide v13.5.1. Choose Play locally to share this device.';
         const setupHint = document.getElementById('setup-hint');
-        if (setupHint && gameTypeSelect?.value === 'shodansho') setupHint.textContent = humans === 1 ? 'Your table starts right away; the other seats use v13.5.1 bots.' : 'The table starts when its human seats are filled. Bot seats are automatic.';
+        if (setupHint && gameTypeSelect?.value === 'shodansho') setupHint.textContent = humans === 1 ? 'With one human seat, this match starts locally against the selected v13.5.1 bots.' : 'Online play starts when its human seats fill. Choose Play locally to share this device.';
     }
     sdsPlayerCountSelect?.addEventListener('change', updateSdsBotOptions);
     sdsBotCountSelect?.addEventListener('change', updateSdsBotOptions);
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','academy'].includes(gameType);
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','academy','shodansho'].includes(gameType);
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
 
@@ -138,6 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
         const sdsBotCount = gameType === 'shodansho' && sdsBotCountSelect ? parseInt(sdsBotCountSelect.value, 10) : 0;
+        if (gameType === 'shodansho' && sdsPlayerCount - sdsBotCount <= 1) {
+            window.location.href = `/shodansho.html?players=${sdsPlayerCount}&bots=${sdsBotCount}`;
+            return;
+        }
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
         const timeControl = {
@@ -151,6 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     singlePlayerBtn.addEventListener('click', () => {
+        if (gameTypeSelect.value === 'shodansho') {
+            const players = Number(sdsPlayerCountSelect?.value || 2), bots = Number(sdsBotCountSelect?.value || 0);
+            window.location.href = `/shodansho.html?players=${players}&bots=${bots}`; return;
+        }
         if (['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html${gameTypeSelect.value === 'go' ? '?size=' + document.getElementById('go-board-size').value : ''}`; return; }
         isSinglePlayer = true;
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
@@ -171,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
+        document.getElementById('connection-status').title = '';
         createGameBtn.disabled = false; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
@@ -179,12 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('disconnect', () => {
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => announce(message));
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
-        announce("Cannot reach the game server. Retrying automatically. You can still review a saved Hikoro game.");
+        const status = document.getElementById('connection-status');
+        if (status) { status.textContent = 'Connection failed · retrying…'; status.title = err.message || 'The game server is unavailable'; }
+        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho'].includes(gameTypeSelect.value);
+        announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho and Shavari.");
     });
 
     rulesBtnIngame.addEventListener('click', () => {

@@ -7,3 +7,5 @@
 
 
 .cover-dot{background:#e1bf63}
+
+.local-opponent-control{display:grid;gap:5px;width:100%;color:var(--text,#eee);font-size:13px}.local-opponent-control select{width:100%;min-height:42px;padding:8px;border-radius:8px}.local-opponent-control small{opacity:.75}.local-opponent-control[hidden]{display:none!important}

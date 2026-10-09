@@ -271,17 +271,11 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         on('createGame', data => {
             const config = options(data);
             if (!config) return err(socket, 'Invalid game settings.');
+            if (config.gameType === 'shodansho' && config.botCount && config.humanCapacity === 1) return err(socket, 'With one human seat, start this Sho Dan Sho bot match locally from the collection.');
             if (!canCreate()) return;
             const game = newGame(socket, config, false);
-            if (game.gameType === 'shodansho' && game.botCount && game.humanCapacity === 1) {
-                addSdsBotSeats(game);
-                game.started = true;
-                game.lastMoveTimestamp = Date.now();
-                reply(socket, 'gameStart', state(game));
-            } else {
-                lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, humanCapacity:game.humanCapacity||game.maxPlayers, botCount:game.botCount||0, boardSize: game.boardSize });
-                reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: game.gameType === 'hikoro' ? 'white' : 'waiting' });
-            }
+            lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, humanCapacity:game.humanCapacity||game.maxPlayers, botCount:game.botCount||0, boardSize: game.boardSize });
+            reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: game.gameType === 'hikoro' ? 'white' : 'waiting' });
             roster(game); emitLobby();
         });
         on('createSinglePlayerGame', data => {
