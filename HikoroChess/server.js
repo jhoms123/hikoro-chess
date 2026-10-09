@@ -32,6 +32,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     const accounts = installAccounts(app, io, accountOptions);
     if(process.env.SITE_REVIEW_MODE==='true')app.get('/api/review-data',(_req,res)=>res.json(require('./review-data').reviewData()));
     app.use(express.static(path.join(__dirname, 'public')));
+    app.get('/hikoro.html', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
     app.get('/gamelogic.js', (req, res) => res.sendFile(path.join(__dirname, 'gamelogic.js')));
     app.get('/health', (req, res) => res.status(storageReady ? 200 : 503).json({ status: storageReady ? 'ok' : 'restoring', rooms: roomStore ? 'durable' : 'memory' }));
     // Keep the old bookmarked URL on the maintained game page.

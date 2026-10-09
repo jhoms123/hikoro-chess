@@ -29,6 +29,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const createGameBtn = document.getElementById('create-game-btn');
     const gameListElement = document.getElementById('game-list');
     const singlePlayerBtn = document.getElementById('single-player-btn');
+    const hikoroPage = window.location.pathname === '/hikoro.html';
+    const hikoroSetup = document.getElementById('hikoro-local-setup');
+    const hikoroStartLocal = document.getElementById('hikoro-start-local');
+    if (hikoroPage && hikoroSetup) {
+        document.body.classList.add('hikoro-dedicated');
+        hikoroSetup.hidden = false;
+    }
+    hikoroStartLocal?.addEventListener('click', () => {
+        if (!socket.connected) return announce('Connecting to the Hikoro table. Try again in a moment.');
+        hikoroStartLocal.disabled = true;
+        socket.emit('createSinglePlayerGame', {gameType:'hikoro',hikoroBot:document.querySelector('input[name="hikoro-opponent"]:checked')?.value === 'bot'});
+    });
     const gameTypeSelect = document.getElementById('game-type-select');
 
     // --- Game Wrappers ---
@@ -101,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            document.getElementById('hikoro-bot-option').hidden = gameType !== 'hikoro';
             singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','academy','shodansho'].includes(gameType);
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
@@ -161,11 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = `/shodansho.html?players=${players}&bots=${bots}`; return;
         }
         if (['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html${gameTypeSelect.value === 'go' ? '?size=' + document.getElementById('go-board-size').value : ''}`; return; }
-        isSinglePlayer = true;
-        const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        const sdsPlayerCountEl = document.getElementById('sds-player-count');
-        const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
-        socket.emit('createSinglePlayerGame', { gameType, sdsPlayerCount, hikoroBot: gameType === 'hikoro' && document.getElementById('hikoro-bot-checkbox')?.checked === true });
+        window.location.href = '/hikoro.html';
     });
 
     socket.on('lobbyUpdate', updateLobby);
@@ -175,11 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('timeUpdate', updateTimerDisplay);
     socket.on('validMoves', drawHikoroHighlights);
     socket.on('errorMsg', message => {
+        if (hikoroPage && hikoroStartLocal) hikoroStartLocal.disabled = false;
         if (message.includes('could not be restored')) { sessionStorage.removeItem('hikoro-active-room'); gameId = null; }
         announce(message);
     });
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
+        if (hikoroStartLocal) hikoroStartLocal.disabled = false;
         document.getElementById('connection-status').title = '';
         createGameBtn.disabled = false; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
@@ -188,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameId && !isReplayMode && seatToken) socket.emit(({hikoro:'resumeGame',shodansho:'joinSdsRoom',go:'joinGoRoom',shavari:'joinShavariRoom',hikoruka:'joinHikorukaRoom',academy:'joinAcademyRoom'})[roomType], { gameId, token: seatToken });
     });
     socket.on('disconnect', () => {
+        if (hikoroStartLocal) hikoroStartLocal.disabled = true;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
         createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho'].includes(gameTypeSelect.value);
     });
@@ -421,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         document.getElementById('site-notice').hidden = true;
+        if (hikoroSetup) hikoroSetup.hidden = true;
         gameId = initialGameState.id;
         sessionStorage.setItem('hikoro-active-room', gameId);
         gameState = initialGameState;
