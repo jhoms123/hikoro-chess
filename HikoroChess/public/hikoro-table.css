@@ -1,5 +1,11 @@
 /* Hikoro's own setup and match composition. Artwork and board rules stay shared. */
 .hikoro-site.hikoro-dedicated .hall-hero,.hikoro-site.hikoro-dedicated #lobby{display:none}
+.hikoro-site.hikoro-dedicated .collection-header{display:none}
+.hikoro-site.hikoro-dedicated .lesson-dock{width:min(1040px,calc(100% - 36px));min-height:0;margin:20px auto 0;padding:0;border:0;background:transparent;box-shadow:none;text-align:right}
+.hikoro-site.hikoro-dedicated.game-active .lesson-dock{display:none}
+.hikoro-site.hikoro-dedicated .lesson-dock>button{min-height:40px;padding:7px 16px}
+.hikoro-site.hikoro-dedicated.game-active .table-companion{width:min(1080px,calc(100% - 24px));margin:10px auto 0;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#18353a;color:#ead5a9;border:1px solid #b58c5366;box-shadow:none}
+.hikoro-site.hikoro-dedicated.game-active .table-companion :is(p,small){color:#cbd0c4;margin:0}
 .hikoro-local-setup[hidden]{display:none!important}
 .hikoro-local-setup{width:min(1040px,calc(100% - 36px));margin:38px auto 54px;display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.15fr);background:#182f32;border:1px solid #b58c5366;box-shadow:0 20px 55px #0008;color:#eee0ba;overflow:hidden}
 .hikoro-setup-art{position:relative;display:grid;place-items:center;min-height:550px;padding:32px;background:radial-gradient(circle at 50% 35%,#526567,#14292d 65%,#0d1c21);border-right:1px solid #b58c5344}
@@ -24,7 +30,7 @@
 .hikoro-setup-copy .hikoro-setup-note{font:12px/1.5 Georgia,serif!important;color:#aebdb8!important;margin:20px 0 0!important}
 
 @media(min-width:761px){
- .hikoro-site #hikoro-game-wrapper{--square-size:clamp(27px,min(3.55vw,4.25vh),40px);--notation-size:calc(var(--square-size)*.75);display:grid!important;grid-template-columns:minmax(190px,220px) max-content minmax(190px,220px);grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);grid-template-areas:'heading heading heading' 'opponent board history' 'player board status';align-items:stretch!important;justify-content:center;gap:14px 20px;width:min(100%,1080px);max-width:none;margin:20px auto 42px;padding:24px!important;background:linear-gradient(145deg,#183339,#0e252b);border:1px solid #ad8c5766;box-shadow:0 20px 60px #0008}
+ .hikoro-site.game-active #hikoro-game-wrapper{--square-size:clamp(27px,min(3.55vw,4.25vh),40px);--notation-size:calc(var(--square-size)*.75);display:grid!important;grid-template-columns:minmax(190px,220px) max-content minmax(190px,220px);grid-template-rows:auto auto 1fr;grid-template-areas:'heading heading heading' 'opponent board history' 'player board status';align-items:start!important;align-content:start;justify-content:center;gap:14px 20px;width:min(100%,1080px);max-width:none;margin:20px auto 42px;padding:24px!important;background:linear-gradient(145deg,#183339,#0e252b);border:1px solid #ad8c5766;box-shadow:0 20px 60px #0008}
  .hikoro-site #hikoro-game-wrapper .hikoro-match-heading{grid-area:heading}
  .hikoro-site #black-captured-area{grid-area:opponent}
  .hikoro-site #white-captured-area{grid-area:player}
@@ -33,18 +39,19 @@
  .hikoro-site #move-history-container{grid-area:history}
  .hikoro-site #turn-indicator-container{grid-area:status}
  .hikoro-site #hikoro-game-wrapper .captured-area{width:auto!important;min-width:0}
- .hikoro-site #hikoro-game-wrapper #move-history-container{width:auto;height:auto;min-height:0;overflow:auto}
+ .hikoro-site #hikoro-game-wrapper #move-history-container{width:auto;height:220px;min-height:0;overflow:auto}
  .hikoro-site #hikoro-game-wrapper #turn-indicator-container{width:auto;max-width:none;margin:0;padding:18px}
  .hikoro-site #hikoro-game-wrapper #board-container{margin:auto}
 }
 .hikoro-site .hikoro-match-heading{padding:0 0 18px;border-bottom:1px solid #b5966159}
 .hikoro-site .hikoro-match-heading h1{font:normal 32px/1.1 Georgia,serif;color:#f5e5bd;margin:4px 0 5px}
+.hikoro-site :is(.hikoro-setup-copy,.hikoro-match-heading) h1{display:block;background:none;border:0;border-radius:0;padding:0}
 .hikoro-site .hikoro-match-heading p:last-child{font:13px/1.5 Georgia,serif;color:#bfc9be;margin:0}
 .hikoro-site #hikoro-game-wrapper :is(.captured-area,#move-history-container,#turn-indicator-container){background:#153136;border:1px solid #a88b5a88;border-image:none;box-shadow:inset 0 1px #f0d19c22,0 5px 15px #0005;padding:18px;border-radius:2px}
 .hikoro-site #hikoro-game-wrapper .captured-area{display:flex;flex-direction:column;gap:10px}
 .hikoro-site #hikoro-game-wrapper .captured-area h3{font-size:14px;line-height:1.4;margin:0!important;color:#d3bc8f}
 .hikoro-site #hikoro-game-wrapper .table-player{min-height:0}
-.hikoro-site #hikoro-game-wrapper .captured-pieces-box{flex:1;min-height:46px;background:#0c2225;border:1px solid #947c5366}
+.hikoro-site #hikoro-game-wrapper .captured-pieces-box{flex:none;min-height:46px;background:#0c2225;border:1px solid #947c5366}
 .hikoro-site #hikoro-game-wrapper #move-history-container h3{font:normal 19px Georgia,serif;color:#ebd3a3}
 .hikoro-site #hikoro-game-wrapper #turn-indicator{font:normal clamp(19px,2vw,26px)/1.25 Georgia,serif;color:#f8e7ba;margin:0 0 14px}
 .hikoro-site #hikoro-game-wrapper #game-controls{display:flex;align-items:stretch;gap:9px}
