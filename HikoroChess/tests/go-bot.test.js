@@ -95,6 +95,40 @@ test('jump-threat evaluation ignores attackers that have no reserve stones', () 
     'a shield should gain tactical value when the opposing jump is actually available');
 });
 
+test('placement pruning keeps atari captures and saves in the search candidates', () => {
+  const capture = Engine.initial(9);
+  capture.board[4][4] = 2;
+  capture.board[4][3] = 3;
+  capture.board[3][4] = 3;
+  capture.board[4][5] = 3;
+  const captureMoves = Bot.legalActions(capture, { placementLimit: 1, seed: 19 });
+  assert.ok(captureMoves.some(row => row.action.type === 'place' && row.action.to.x === 4 && row.action.to.y === 5),
+    'the last-liberty capture must survive placement pruning');
+
+  const rescue = Engine.initial(9);
+  rescue.player = 2;
+  rescue.board[4][4] = 2;
+  rescue.board[4][3] = 3;
+  rescue.board[3][4] = 3;
+  rescue.board[4][5] = 3;
+  const rescueMoves = Bot.legalActions(rescue, { placementLimit: 1, seed: 19 });
+  assert.ok(rescueMoves.some(row => row.action.type === 'place' && row.action.to.x === 4 && row.action.to.y === 5),
+    'the only-liberty rescue must survive placement pruning');
+});
+
+test('placement pruning keeps a move that blocks an immediate enemy jump', () => {
+  const state = Engine.initial(13);
+  state.board[2][10] = 2;
+  state.board[2][11] = 1;
+  const enemyTurn = { ...state, player: 2 };
+  assert.ok(Engine.legalMoves(enemyTurn, { x: 10, y: 2 }).some(move =>
+    move.type === 'jump' && move.to.x === 12 && move.to.y === 2
+  ));
+  const actions = Bot.legalActions(state, { placementLimit: 1, seed: 23 });
+  assert.ok(actions.some(row => row.action.type === 'place' && row.action.to.x === 12 && row.action.to.y === 2),
+    'the jump landing point must remain available as a defensive placement');
+});
+
 test('rollouts extend through immediate jump tactics after normal depth', () => {
   const state = Engine.initial(9);
   state.board[4][0] = 2;

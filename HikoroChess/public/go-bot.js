@@ -82,7 +82,40 @@
     return value;
   }
 
-  function placementTargets(state,limit,rng){
+  function tacticalPlacementTargets(state,engine,knownAtariGroups){
+    const targets=new Set();
+    const current=state.player,opponent=3-current;
+    // Keep placements that capture or save an atari group even when progressive
+    // widening would otherwise prune their intersections.
+    const atariGroups=knownAtariGroups||findAllAtariGroups(state,engine);
+    for(const side of [current,opponent]){
+      if(!(state.remaining&&state.remaining[side])) continue;
+      for(const group of atariGroups[side]){
+        const p=group.liberty;
+        if(!state.board[p.y][p.x]) targets.add(coordKey(p.x,p.y));
+      }
+    }
+    // A placement on the landing point can stop an opponent's immediate jump.
+    if(!state.chain&&state.remaining&&state.remaining[opponent]){
+      const probe={...state,player:opponent,chain:null};
+      for(let y=0;y<state.size;y++) for(let x=0;x<state.size;x++){
+        const value=state.board[y][x];
+        if(!value||value>2||playerOf(engine,value)!==opponent) continue;
+        for(const[dx,dy]of DIRS){
+          const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
+          if(!inBounds(state.size,mx,my)||!inBounds(state.size,tx,ty)||state.board[ty][tx]) continue;
+          const middle=state.board[my][mx];
+          if(!middle||middle>2||playerOf(engine,middle)!==current) continue;
+          if(engine.legalMoves(probe,{x,y}).some(move=>move.type==="jump"&&move.to.x===tx&&move.to.y===ty)){
+            targets.add(coordKey(tx,ty));
+          }
+        }
+      }
+    }
+    return targets;
+  }
+
+  function placementTargets(state,limit,rng,engine,atariGroups){
     const empty = [];
     const occupied=occupiedCount(state);
     for (let y=0;y<state.size;y++) for (let x=0;x<state.size;x++){
@@ -92,7 +125,13 @@
     empty.sort((a,b)=>b.quality-a.quality);
     const keep = Math.max(1,Math.floor(limit*0.78));
     const chosen = empty.slice(0,keep);
-    const rest = empty.slice(keep);
+    const selected=new Set(chosen.map(p=>coordKey(p.x,p.y)));
+    const tactical=engine?tacticalPlacementTargets(state,engine,atariGroups):new Set();
+    for(const p of empty){
+      const key=coordKey(p.x,p.y);
+      if(tactical.has(key)&&!selected.has(key)){chosen.push(p);selected.add(key);}
+    }
+    const rest = empty.filter(p=>!selected.has(coordKey(p.x,p.y)));
     // Keep some lower-ranked intersections in the tree so a heuristic cannot permanently hide a move.
     while (chosen.length < limit && rest.length){
       const i = Math.floor(rng()*rest.length);
@@ -133,7 +172,7 @@
     }
 
     if (reserve > 0){
-      const targets = placementTargets(state,opts.placementLimit,rng);
+      const targets = placementTargets(state,opts.placementLimit,rng,engine,opts.atariGroups);
       for (const p of targets) addAction(engine,state,{type:"place",to:{x:p.x,y:p.y}},"place",null,out);
     }
 
@@ -151,13 +190,14 @@
     return out;
   }
 
-  function groupAndThreatFeatures(state,engine){
+  function groupAndThreatFeatures(state,engine,includeAtariGroups){
     const size = state.size;
     const board = state.board;
     const seen = new Set();
     const safety = {1:0,2:0};
     const strength = {1:0,2:0};
     const threatened = {1:new Map(),2:new Map()};
+    const atariGroups=includeAtariGroups?{1:[],2:[]}:null;
 
     for (let y=0;y<size;y++) for (let x=0;x<size;x++){
       const value = board[y][x];
@@ -183,7 +223,13 @@
         }
       }
       const libCount=liberties.size, count=stones.length;
-      if (libCount <= 1) safety[side] += 1.10 + Math.min(1.8,(count-1)*0.28);
+      if (libCount <= 1){
+        safety[side] += 1.10 + Math.min(1.8,(count-1)*0.28);
+        if(libCount===1&&atariGroups){
+          const [x,y]=liberties.values().next().value.split(",").map(Number);
+          atariGroups[side].push({stones,liberty:{x,y}});
+        }
+      }
       else if (libCount === 2) safety[side] += 0.23 + Math.min(0.80,(count-1)*0.12);
       else strength[side] += Math.min(0.60,count*0.09)*Math.log2(libCount);
       strength[side] += Math.min(0.35,shields*0.09);
@@ -212,7 +258,7 @@
       // A legal jump removes the exposed stone and gives the capturer a point, a two-point swing.
       for (const count of threatened[side].values()) safety[side] += 2.70 + Math.min(0.60,(count-1)*0.30);
     }
-    return {safety,strength,threatened};
+    return {safety,strength,threatened,atariGroups};
   }
 
   function softScores(state,engine){
@@ -252,7 +298,7 @@
     };
   }
 
-  function staticScore(state,perspective,engine){
+  function staticScore(state,perspective,engine,featureSink){
     if (state.result){
       if (!state.result.winner) return 0;
       return state.result.winner===perspective?36:-36;
@@ -260,7 +306,8 @@
     const other=3-perspective;
     const scores=softScores(state,engine);
     const boardLead=scores[perspective]-scores[other];
-    const shape=groupAndThreatFeatures(state,engine);
+    const shape=groupAndThreatFeatures(state,engine,Boolean(featureSink));
+    if(featureSink) featureSink.atariGroups=shape.atariGroups;
     const shapeLead=(shape.strength[perspective]-shape.safety[perspective])-
       (shape.strength[other]-shape.safety[other]);
     const reserves=state.remaining||{1:0,2:0};
@@ -311,12 +358,22 @@
     return clamp(raw,-12,12);
   }
 
-  function rankActions(state,rows,engine){
+  function rankActions(state,rows,engine,context){
     if (!rows.length) return rows;
-    const before=staticScore(state,state.player,engine);
+    const features=context||{};
+    const before=Number.isFinite(features.beforeScore)?features.beforeScore:staticScore(state,state.player,engine,features);
     const occupied=occupiedCount(state);
+    const ownAtariGroups=features.atariGroups&&features.atariGroups[state.player]||findAtariGroups(state,engine,state.player);
+    const urgentAtariGroups=ownAtariGroups.filter(group=>hasLegalAtariCapture(state,3-state.player,engine,[group]));
     let max=-Infinity;
-    for (const row of rows){row.raw=actionRaw(state,row,engine,before,occupied);max=Math.max(max,row.raw);}
+    for (const row of rows){
+      row.raw=actionRaw(state,row,engine,before,occupied);
+      if(urgentAtariGroups.length){
+        const rescue=atariRescueBonus(state,row,engine,urgentAtariGroups);
+        row.raw+=rescue>0?3.5+rescue:-3.5;
+      }
+      max=Math.max(max,row.raw);
+    }
     let total=0;
     for (const row of rows){row.prior=Math.exp(clamp((row.raw-max)/1.45,-11,0));total+=row.prior;}
     if (!total) total=rows.length;
@@ -343,18 +400,22 @@
     return {side,stones,liberties};
   }
 
-  function findAtariGroups(state,engine,side){
-    const seen=new Set(),groups=[];
+  function findAllAtariGroups(state,engine){
+    const seen=new Set(),groups={1:[],2:[]};
     for(let y=0;y<state.size;y++) for(let x=0;x<state.size;x++){
       const value=state.board[y][x],key=coordKey(x,y);
       if(!value||seen.has(key)) continue;
       const group=inspectGroup(state,{x,y},engine);
       for(const stone of group.stones) seen.add(coordKey(stone.x,stone.y));
-      if(group.side===side&&group.liberties.size===1){
-        groups.push({stones:group.stones,liberty:group.liberties.values().next().value});
+      if(group.liberties.size===1){
+        groups[group.side].push({stones:group.stones,liberty:group.liberties.values().next().value});
       }
     }
     return groups;
+  }
+
+  function findAtariGroups(state,engine,side){
+    return findAllAtariGroups(state,engine)[side];
   }
 
   function atariRescueBonus(state,row,engine,atariGroups){
@@ -428,9 +489,9 @@
     return false;
   }
 
-  function hasLegalAtariCapture(state,attacker,engine){
+  function hasLegalAtariCapture(state,attacker,engine,knownGroups){
     if(!state||state.result||state.chain) return false;
-    const defender=3-attacker,groups=findAtariGroups(state,engine,defender);
+    const defender=3-attacker,groups=knownGroups||findAtariGroups(state,engine,defender);
     if(!groups.length) return false;
     const probe=attacker===state.player?state:{...state,player:attacker,chain:null};
     const before=state.lost&&state.lost[defender]||0;
@@ -506,8 +567,10 @@
 
   function prepareNode(node,engine,options,rng,isRoot){
     const limit=isRoot?options.rootPlacementLimit:options.treePlacementLimit;
-    const rows=legalActions(node.state,{engine,placementLimit:limit,rng});
-    node.actions=rankActions(node.state,rows,engine);
+    const features={};
+    features.beforeScore=staticScore(node.state,node.state.player,engine,features);
+    const rows=legalActions(node.state,{engine,placementLimit:limit,rng,atariGroups:features.atariGroups});
+    node.actions=rankActions(node.state,rows,engine,features);
   }
 
   function selectChild(node,rootPlayer,cpuct){
@@ -617,7 +680,7 @@
   }
 
   return {
-    version:"0.1.0-shield-go",
+    version:"0.2.0-shield-go",
     analyze,
     chooseAction,
     legalActions:(state,options)=>legalActions(state,options),
