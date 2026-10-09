@@ -1,6 +1,6 @@
 # Shield Go
 
-A browser port of the moving-stone Go variant in the owner's `jhoms123/goGameLocal` and `jhoms123/csharpgogame` repositories. The web version uses the shared movement/liberty rules and the C# version's reserve and final scoring rules. Bot code, workers, trainers, playout heuristics, and AI controls are not included.
+A browser port of the moving-stone Go variant in the owner's `jhoms123/goGameLocal` and `jhoms123/csharpgogame` repositories. The web version uses the shared movement/liberty rules and the C# version's reserve and final scoring rules. A standalone experimental bot module is available at `public/go-bot.js`; UI integration, worker wrapper, self-play trainer, and a learned Shield Go model are not included.
 
 ## Rules
 
@@ -28,3 +28,8 @@ Shavari's floating stack inspector, hover/focus listeners, and inspection toggle
 Run `npm test` in `HikoroChess/`. Go coverage includes both sizes, ownership/bounds, capture groups, suicide rollback, shields, mandatory chain shielding, early chain stops, blocked mid-chain passes, scoring, repetition, reserves, replay, online turn authorization/state synchronization/seat refresh/stale sockets. Browser checks cover local and online play, 390/900/1440px layouts, keyboard controls, undo/redo, save restore, downloads and popup removal.
 
 Merge into `main` and use the existing Render service configuration: root `HikoroChess`, build `npm ci`, start `npm start`, health `/health`. No dependency or hosting changes are required.
+
+
+## Experimental bot module
+
+`public/go-bot.js` is an optional standalone bot module. Load `public/go-engine.js` first, then the bot. `GoVariantBot.chooseAction(state, options)` returns a legal action; `GoVariantBot.analyze(state, options)` also returns search statistics. The bot uses the shared rules engine for legal actions and evaluates jump threats, shields, group liberties, and mandatory jump chains. Its search adapts score-aware Monte Carlo tree search ideas researched from KataGo, but it does not include KataGo code or its standard-Go model, which is not trained for Shield Go's custom actions. Search is synchronous, so a future UI integration should run it in a Web Worker.
