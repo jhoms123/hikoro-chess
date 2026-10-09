@@ -30,7 +30,7 @@ window.SiteRecords?.completed('hikoruka',recordPayload(),state.result,online?gam
             cell.style.order=(flipped?4-r:r)*5+(flipped?4-c:c);cell.className='mini-cell'+((r+c)%2?' dark':'')+(isSelected?' selected':'')+(valid?' legal'+(piece?' capture':''):'');
             if([state.lastMove?.from,state.lastMove?.to].some(p=>p?.r===r&&p?.c===c))cell.classList.add('last');
             cell.setAttribute('aria-pressed',String(isSelected));cell.setAttribute('aria-label',`${Hikoruka.coord({r,c})}: ${piece?names[piece.owner]+' '+Hikoruka.TYPES[piece.type].name:'empty'}${valid?piece?'; legal capture':'; legal move':''}`);cell.replaceChildren();
-            if(piece){const token=document.createElement('span');token.className=`mini-piece p${piece.owner}`;const img=document.createElement('img');img.src=sprite(piece.type,piece.owner);img.alt='';const mark=document.createElement('span');mark.className='piece-owner';const army=document.createElement('span');army.className='piece-army-label';army.textContent=piece.owner;army.setAttribute('aria-hidden','true');token.append(img,mark,army);cell.append(token);}
+            if(piece){const token=document.createElement('span');token.className=`mini-piece p${piece.owner}`;const img=document.createElement('img');img.src=sprite(piece.type,piece.owner);img.alt='';const mark=document.createElement('span');mark.className='piece-owner';token.append(img,mark);cell.append(token);}
             const coordinate=document.createElement('span');coordinate.className='cell-coordinate';coordinate.textContent=Hikoruka.coord({r,c});cell.append(coordinate);
         }
         if(!cells.some(b=>b.tabIndex===0))cells[22].tabIndex=0;

@@ -411,7 +411,7 @@ let hasSpun = false;
 
 // Setup new board size
 </script>
-<script src="shodansho-engine.js?v=20261008-dashboard"></script><script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script>
+<script src="shodansho-engine.js?v=20261009-owner-labels"></script><script src="match-record.js?v=20261008-dashboard"></script><script src="record-library.js?v=20261008-dashboard"></script>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -821,7 +821,7 @@ function drawBoard(timestamp) {
                 ctx.fillText(PIECES[piece.kind].letter, 0, 1);
             }
 
-            if(document.documentElement.dataset.ownerLabels!=='false'){ctx.save();ctx.fillStyle='#f6e8c4';ctx.strokeStyle='#403320';ctx.lineWidth=2;ctx.beginPath();ctx.arc(PIECE_RADIUS*.65,PIECE_RADIUS*.65,10,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#302819';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(piece.owner+1),PIECE_RADIUS*.65,PIECE_RADIUS*.65);ctx.restore();}
+
             if (piece.kind === "shining" && game.shiningPausedBySun(piece)) {
                 ctx.strokeStyle = `rgba(239, 68, 68, ${0.9 * alpha})`; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.stroke();
@@ -906,7 +906,7 @@ canvas.addEventListener('click', (e) => {
 
 canvas.addEventListener('contextmenu', e => { e.preventDefault(); cancelSelection(); });
 // Text controls use the same vertex selection and legal destinations as the canvas.
-const gardenKeys=document.createElement('details');gardenKeys.className='garden-keyboard';gardenKeys.innerHTML='<summary>Garden keyboard navigation</summary><p>Choose a flower from your hand, or choose a piece below; then choose a legal gate. Army numbers identify owners without relying on flower color.</p><label>Board piece<select id="garden-source"><option value="">Choose a piece</option></select></label><label>Legal destination<select id="garden-destination"><option value="">Choose a gate</option></select></label><button id="garden-confirm">Select destination</button>';
+const gardenKeys=document.createElement('details');gardenKeys.className='garden-keyboard';gardenKeys.innerHTML='<summary>Garden keyboard navigation</summary><p>Choose a flower from your hand, or choose a piece below; then choose a legal gate. Each flower’s color shows its owner.</p><label>Board piece<select id="garden-source"><option value="">Choose a piece</option></select></label><label>Legal destination<select id="garden-destination"><option value="">Choose a gate</option></select></label><button id="garden-confirm">Select destination</button>';
 document.querySelector('.inventory-sidebar .bg-game-panel').append(gardenKeys);
 const gardenSource=gardenKeys.querySelector('#garden-source'),gardenDestination=gardenKeys.querySelector('#garden-destination');
 let gardenSignature='';function refreshGardenKeys(){const signature=JSON.stringify([[...game.pieces.values()].map(p=>[p.id,p.pos,p.owner]),game.legalMoves?.map(m=>m.dst),game.selectedPieceId,game.selectedHandKind]);if(signature===gardenSignature)return;gardenSignature=signature;gardenSource.replaceChildren(new Option('Choose a piece',''));for(const p of game.pieces.values())if(p.pos)gardenSource.add(new Option('Player '+(p.owner+1)+' · '+p.kind+' · '+p.pos,p.pos));const selected=game.pieces.get(game.selectedPieceId);gardenSource.value=selected?.pos||'';gardenDestination.replaceChildren(new Option('Choose a legal gate',''));for(const move of game.legalMoves||[])gardenDestination.add(new Option(move.dst+(move.captureId?' · capture':''),move.dst));gardenSource.disabled=isLocalBotTurn();gardenDestination.disabled=isLocalBotTurn();gardenKeys.querySelector('#garden-confirm').disabled=isLocalBotTurn()||!game.legalMoves?.length;}
