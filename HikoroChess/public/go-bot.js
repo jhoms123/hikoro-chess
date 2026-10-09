@@ -22,6 +22,16 @@
   const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
   const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
   const coordKey = (x,y) => x + "," + y;
+  const INFLUENCE_DECAY = [1,0.66,0.44,0.29,0.19,0.13,0.085];
+  const makeInfluenceKernel = radius => {
+    const offsets=[];
+    for(let dy=-radius;dy<=radius;dy++) for(let dx=-radius;dx<=radius;dx++){
+      const distance=Math.abs(dx)+Math.abs(dy);
+      if(distance>0&&distance<=radius) offsets.push({dx,dy,weight:INFLUENCE_DECAY[distance]});
+    }
+    return offsets;
+  };
+  const INFLUENCE_KERNELS = {9:makeInfluenceKernel(5),13:makeInfluenceKernel(6)};
 
   function makeRng(seed){
     let value = (Number.isFinite(seed) ? seed : Date.now()) >>> 0;
@@ -268,15 +278,13 @@
     return {safety,strength,stability,threatened,atariGroups};
   }
 
-  function influenceLead(state,engine,shape){
-    // Moyo is potential territory, not guaranteed score. Build a modest, decaying
-    // influence field from stable groups, then value only points outside settled
-    // one-colour territory. This keeps the field strategic without counting the same
-    // secure points twice in softScores().
+  function moyoPlacementGains(state,engine,shape){
+    // Estimate how much each placement expands or contests potential territory.
+    // Moyo is a move prior rather than guaranteed score, and settled points are
+    // discounted so softScores() remains the only source of territory points.
     const size=state.size,board=state.board,total=size*size;
     const fields={1:new Float32Array(total),2:new Float32Array(total)};
-    const decay=[1,0.66,0.44,0.29,0.19,0.13,0.085];
-    const radius=size===9?5:6;
+    const kernel=INFLUENCE_KERNELS[size]||INFLUENCE_KERNELS[13];
     const seen=new Uint8Array(total),unsettledWeight=new Float32Array(total);
 
     for(let y=0;y<size;y++) for(let x=0;x<size;x++){
@@ -306,17 +314,10 @@
       let force=shape.stability[side].get(key)||1;
       // Shield stones hold influence more reliably because jump capture cannot remove them.
       if(value>2) force*=1.04;
-      for(let dy=-radius;dy<=radius;dy++){
-        const ny=y+dy;
-        if(ny<0||ny>=size) continue;
-        for(let dx=-radius;dx<=radius;dx++){
-          const distance=Math.abs(dx)+Math.abs(dy);
-          if(distance===0||distance>radius) continue;
-          const nx=x+dx;
-          if(nx<0||nx>=size) continue;
-          const index=ny*size+nx;
-          if(!board[ny][nx]) fields[side][index]+=force*decay[distance];
-        }
+      for(const offset of kernel){
+        const nx=x+offset.dx,ny=y+offset.dy;
+        if(nx<0||ny<0||nx>=size||ny>=size||board[ny][nx]) continue;
+        fields[side][ny*size+nx]+=force*offset.weight;
       }
     }
 
@@ -328,10 +329,27 @@
       const side=playerOf(engine,value);
       if(!(state.remaining&&state.remaining[side])) continue;
       if(state.chain&&(side!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
+      let mayJump=false;
+      for(const[dx,dy]of DIRS){
+        const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
+        if(inBounds(size,mx,my)&&inBounds(size,tx,ty)&&board[my][mx]&&board[my][mx]<=2&&
+           playerOf(engine,board[my][mx])!==side&&!board[ty][tx]){mayJump=true;break;}
+      }
+      if(!mayJump) continue;
       const probe=side===state.player?state:{...state,player:side,chain:null};
       for(const move of engine.legalMoves(probe,{x,y}).filter(move=>move.type==="jump")){
         const landing=move.to.y*size+move.to.x;
         fields[side][landing]+=0.88;
+        const cleared=new Set([y*size+x,((y+move.to.y)/2|0)*size+((x+move.to.x)/2|0)]);
+        let mayContinue=false;
+        for(const[dx,dy]of DIRS){
+          const mx=move.to.x+dx,my=move.to.y+dy,tx=move.to.x+2*dx,ty=move.to.y+2*dy;
+          if(!inBounds(size,mx,my)||!inBounds(size,tx,ty)) continue;
+          const middleIndex=my*size+mx,targetIndex=ty*size+tx,middle=board[my][mx];
+          if(!cleared.has(middleIndex)&&middle&&middle<=2&&playerOf(engine,middle)!==side&&
+             (!board[ty][tx]||cleared.has(targetIndex))){mayContinue=true;break;}
+        }
+        if(!mayContinue) continue;
         const after=engine.applySearch(probe,{type:"move",from:{x,y},to:move.to});
         if(!after||!after.chain) continue;
         for(const continuation of engine.legalMoves(after,after.chain).filter(candidate=>candidate.type==="jump")){
@@ -340,14 +358,28 @@
       }
     }
 
-    let score=0;
+    const gains=new Float32Array(total),side=state.player;
     for(let index=0;index<total;index++){
       if(board[(index/size)|0][index%size]||!unsettledWeight[index]) continue;
       const black=fields[1][index],white=fields[2][index];
-      const control=clamp((black-white)/(black+white+0.82),-0.62,0.62);
-      score+=control*unsettledWeight[index];
+      const before=clamp((black-white)/(black+white+0.82),-0.62,0.62);
+      let gain=-before*unsettledWeight[index];
+      const x=index%size,y=(index/size)|0;
+      for(const offset of kernel){
+        const nx=x+offset.dx,ny=y+offset.dy;
+        if(nx<0||ny<0||nx>=size||ny>=size||board[ny][nx]) continue;
+        const target=ny*size+nx,weight=unsettledWeight[target];
+        if(!weight) continue;
+        const oldBlack=fields[1][target],oldWhite=fields[2][target];
+        const newBlack=oldBlack+(side===1?offset.weight:0);
+        const newWhite=oldWhite+(side===2?offset.weight:0);
+        const after=clamp((newBlack-newWhite)/(newBlack+newWhite+0.82),-0.62,0.62);
+        const oldControl=clamp((oldBlack-oldWhite)/(oldBlack+oldWhite+0.82),-0.62,0.62);
+        gain+=(after-oldControl)*weight;
+      }
+      gains[index]=gain*0.14;
     }
-    return score*0.14;
+    return gains;
   }
 
   function softScores(state,engine){
@@ -396,10 +428,9 @@
     const scores=softScores(state,engine);
     const boardLead=scores[perspective]-scores[other];
     const shape=groupAndThreatFeatures(state,engine,Boolean(featureSink));
-    if(featureSink) featureSink.atariGroups=shape.atariGroups;
+    if(featureSink){featureSink.atariGroups=shape.atariGroups;featureSink.shape=shape;}
     const shapeLead=(shape.strength[perspective]-shape.safety[perspective])-
       (shape.strength[other]-shape.safety[other]);
-    const moyoLead=influenceLead(state,engine,shape)*(perspective===1?1:-1);
     const reserves=state.remaining||{1:0,2:0};
     const reserveLead=clamp((reserves[perspective]||0)-(reserves[other]||0),-40,40)*0.022;
     let chainBonus=0;
@@ -407,7 +438,7 @@
       const jumps=engine.legalMoves(state,state.chain).filter(m=>m.type==="jump").length;
       chainBonus=Math.min(0.52,jumps*0.16);
     }
-    return boardLead + shapeLead + moyoLead + reserveLead + chainBonus;
+    return boardLead + shapeLead + reserveLead + chainBonus;
   }
 
   function terminalValue(state,perspective,engine){
@@ -418,7 +449,7 @@
     return Math.tanh(staticScore(state,perspective,engine)/11);
   }
 
-  function actionRaw(state,row,engine,beforeScore,occupied){
+  function actionRaw(state,row,engine,beforeScore,occupied,moyoGains){
     const mover=state.player;
     const nextScore=staticScore(row.next,mover,engine);
     const before=beforeScore===undefined?staticScore(state,mover,engine):beforeScore;
@@ -428,6 +459,7 @@
     if (row.kind==="place"){
       const to=row.action.to;
       raw+=placementQuality(state,to.x,to.y,occupied)*0.78;
+      if(moyoGains) raw+=moyoGains[to.y*state.size+to.x]||0;
       if (occupied<4) raw+=0.18;
     } else if (row.kind==="jump"){
       raw+=0.28;
@@ -453,11 +485,13 @@
     const features=context||{};
     const before=Number.isFinite(features.beforeScore)?features.beforeScore:staticScore(state,state.player,engine,features);
     const occupied=occupiedCount(state);
+    const shape=features.shape||groupAndThreatFeatures(state,engine,false);
+    const moyoGains=moyoPlacementGains(state,engine,shape);
     const ownAtariGroups=features.atariGroups&&features.atariGroups[state.player]||findAtariGroups(state,engine,state.player);
     const urgentAtariGroups=ownAtariGroups.filter(group=>hasLegalAtariCapture(state,3-state.player,engine,[group]));
     let max=-Infinity;
     for (const row of rows){
-      row.raw=actionRaw(state,row,engine,before,occupied);
+      row.raw=actionRaw(state,row,engine,before,occupied,moyoGains);
       if(urgentAtariGroups.length){
         const rescue=atariRescueBonus(state,row,engine,urgentAtariGroups);
         row.raw+=rescue>0?3.5+rescue:-3.5;
