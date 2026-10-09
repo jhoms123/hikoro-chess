@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
 const Engine = require('../public/go-engine.js');
 const Bot = require('../public/go-bot.js');
 
@@ -34,6 +37,79 @@ test('bot only continues or shields during a chained jump', () => {
   assert.ok(chain?.chain);
   const actions = Bot.legalActions(chain, { seed: 7 });
   assert.deepEqual(actions.map(row => row.action.type).sort(), ['move', 'shield']);
-  const action = Bot.chooseAction(chain, { maxIterations: 16, timeMs: 40, rolloutDepth: 2, seed: 7 });
+  const action = Bot.chooseAction(chain, { maxIterations: 20, timeMs: 1000, rolloutDepth: 1, seed: 7 });
   assert.ok(Engine.apply(chain, action), 'bot returned an illegal chain action');
+  assert.equal(action.type, 'move', 'the bot should take the available second jump before shielding');
 });
+
+test('search transitions avoid copying history and never mutate their parent state', () => {
+  const initial = Engine.initial(9);
+  const first = Engine.apply(initial, { type: 'place', to: { x: 0, y: 0 } });
+  const searched = Engine.applySearch(first, { type: 'place', to: { x: 1, y: 0 } });
+  assert.ok(searched);
+  assert.equal(searched.history.length, 0);
+  assert.equal(first.history.length, 1, 'search must not clear or append to the parent history');
+  assert.equal(initial.board.flat().filter(Boolean).length, 0);
+  assert.equal(first.board.flat().filter(Boolean).length, 1);
+  assert.equal(searched.board.flat().filter(Boolean).length, 2);
+  const initialPosition = Object.keys(first.positions)[0];
+  const continued = Engine.apply(searched, { type: 'pass' });
+  assert.equal(continued.positions[initialPosition], 1, 'normal transitions must preserve search repetition history');
+});
+
+test('legal move checks do not mutate the supplied board state', () => {
+  const state = Engine.initial(9);
+  state.board[4][3] = 1;
+  state.board[4][4] = 2;
+  const before = JSON.stringify(state);
+  assert.deepEqual(Engine.legalMoves(state, { x: 3, y: 4 }).map(move => move.type), ['jump']);
+  assert.equal(JSON.stringify(state), before);
+});
+
+test('jump-threat evaluation ignores attackers that have no reserve stones', () => {
+  const makePosition = whiteReserve => {
+    const state = Engine.initial(9);
+    state.board[4][0] = 2;
+    state.board[4][1] = 1;
+    state.remaining[2] = whiteReserve;
+    return state;
+  };
+  const shieldScore = state => Bot.rankActions(state, { seed: 17 }).find(row =>
+    row.action.type === 'shield' && row.action.at.x === 1 && row.action.at.y === 4
+  ).score;
+  assert.ok(shieldScore(makePosition(100)) > shieldScore(makePosition(0)) + 1.5,
+    'a shield should gain tactical value when the opposing jump is actually available');
+});
+
+test('root search widens enough to examine more than the top handful of legal actions', () => {
+  const state = Engine.initial(9);
+  const result = Bot.analyze(state, {
+    maxIterations: 40,
+    timeMs: 10000,
+    rolloutDepth: 1,
+    seed: 31
+  });
+  assert.equal(result.stats.iterations, 40);
+  assert.ok(result.stats.rootExplored >= 10,
+    JSON.stringify({ legal: result.stats.rootLegal, explored: result.stats.rootExplored }));
+  assert.ok(result.stats.rootExplored < result.stats.rootLegal);
+});
+
+test('worker wrapper returns an analyzed legal move with its request ticket', () => {
+  let posted = null;
+  let imports = '';
+  const context = {
+    importScripts: (...files) => { imports = files.join(','); },
+    GoVariantBot: Bot,
+    self: { postMessage: message => { posted = message; } }
+  };
+  const source = fs.readFileSync(path.join(__dirname, '../public/go-bot-worker.js'), 'utf8');
+  vm.runInNewContext(source, context);
+  const state = Engine.initial(9);
+  context.self.onmessage({ data: { ticket: 42, state, options: { maxIterations: 8, timeMs: 1000, rolloutDepth: 1, seed: 3 } } });
+  assert.equal(imports, 'go-engine.js,go-bot.js');
+  assert.equal(posted.ticket, 42);
+  assert.ok(Engine.apply(state, posted.action), 'worker returned an illegal action');
+  assert.ok(posted.stats.iterations > 0);
+});
+

@@ -5,8 +5,8 @@
  * Research references: github.com/lightvector/KataGo and its Analysis_Engine.md / KataGoMethods.md.
  *
  * Browser: load go-engine.js first, then go-bot.js. Call GoVariantBot.chooseAction(state, options)
- * or analyze(state, options) for action plus search statistics. Search is synchronous; a UI
- * integration should run it in a worker so the board remains responsive during thinking.
+ * or analyze(state, options) for action plus search statistics. The local-match UI runs this
+ * synchronous search in go-bot-worker.js so the board remains responsive while it thinks.
  */
 (function(root,factory){
   const engine = root.GoVariant || (typeof module === "object" && module.exports ? require("./go-engine.js") : null);
@@ -100,7 +100,7 @@
   }
 
   function applyForSearch(engine,state,action){
-    const next = engine.apply(state,action);
+    const next = typeof engine.applySearch === "function" ? engine.applySearch(state,action) : engine.apply(state,action);
     if (next && Array.isArray(next.history)) next.history = [];
     return next;
   }
@@ -193,6 +193,9 @@
       const attackerValue=board[y][x];
       if (!attackerValue || attackerValue>2) continue;
       const attacker=playerOf(engine,attackerValue), defender=3-attacker;
+      if (!(state.remaining&&state.remaining[attacker])) continue;
+      // During a forced chain, only the jumping stone can make another jump this turn.
+      if (state.chain&&(attacker!==state.player||state.chain.x!==x||state.chain.y!==y)) continue;
       for (const [dx,dy] of DIRS){
         const mx=x+dx,my=y+dy,tx=x+2*dx,ty=y+2*dy;
         if (!inBounds(size,mx,my)||!inBounds(size,tx,ty)) continue;
@@ -356,7 +359,10 @@
     let state=startState;
     const depth=options.rolloutDepth;
     const actionLimit=options.rolloutPlacementLimit;
-    for (let ply=0;ply<depth;ply++){
+    // Never cut off a rollout in the middle of a forced chain. Otherwise the leaf is
+    // evaluated before the chain's extra captures or required shield have happened.
+    const maxPly=depth+state.size*state.size;
+    for (let ply=0;ply<maxPly&&(ply<depth||state.chain);ply++){
       if (state.result) return terminalValue(state,rootPlayer,engine);
       const rows=legalActions(state,{engine,placementLimit:actionLimit,rng});
       if (!rows.length) return terminalValue(state,rootPlayer,engine);
@@ -409,6 +415,7 @@
       treePlacementLimit:72,
       cpuct:1.32,
       widening:1.55,
+      rootWidening:1.9,
       seed:(Date.now()^((state&&state.ply)||0)*2654435761)>>>0
     },options||{});
     const engine=engineFor(opts.engine);
@@ -436,7 +443,8 @@
       while (!node.state.result){
         if (node.actions===null) prepareNode(node,engine,opts,rng,node===root);
         if (!node.actions.length) break;
-        const width=Math.min(node.actions.length,Math.max(1,1+Math.floor(opts.widening*Math.sqrt(node.visits+1))));
+        const widening=node===root?opts.rootWidening:opts.widening;
+        const width=Math.min(node.actions.length,Math.max(1,1+Math.floor(widening*Math.sqrt(node.visits+1))));
         if (node.children.length<width){
           const candidate=node.actions[node.children.length];
           const child=makeNode(candidate.next,candidate.action,candidate.prior,node,node.depth+1);
