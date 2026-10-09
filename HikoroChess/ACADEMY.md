@@ -27,6 +27,10 @@ Yellow sanctuaries occupy A4/A5 and H4/H5: one column by two central ranks on ei
 
 Guided practice allows either color to move and has no terminal result. The Kraken lesson includes its Prince so students can explore confinement and release. The Prince lesson includes a home Kraken. Lessons show moves, captures, and blockers; matches enforce alternating turns. Squids retain their normal shielding of the friendly piece directly behind them. This board omits promotions, bonus turns, and drops.
 
+## Local bot
+
+Choose a second local player or the Academy bot for a teaching match. The Academy opponent searches only 8×8 Academy positions and uses the Academy rules engine; the full-board Hikoro bot remains separate for the 10×16 game. Its search runs in a Web Worker so the board remains responsive on phones.
+
 ## Interface and persistence
 
 Eight lessons, original sprites, palace and sanctuary markings, selected-piece explanations, coordinates, captures, history, board flipping, keyboard navigation, undo/redo, and text records. Flipping affects only the view, including palace and sanctuary positions. Online play uses the shared server engine, authenticated seats, refresh recovery, and no undo.
@@ -35,6 +39,6 @@ Local journals use `hikoro-academy-local-v3` to avoid interpreting earlier army 
 
 ## Verification and deployment
 
-50 collection tests pass, covering both courts' confinement and release, Prince direction, all four sanctuary squares, non-royal exclusion, surviving royalty, random legal play, movement comparisons against full Hikoro, and online synchronization and seat protection. Browser checks cover all lessons, moves, captures, undo/redo, refresh, keyboard and flip controls, mobile/tablet/desktop layouts, and online play.
+The tests cover both courts' confinement and release, Prince direction, all four sanctuary squares, non-royal exclusion, surviving royalty, random legal play, movement comparisons against full Hikoro, online synchronization and seat protection, plus Academy bot legality, tactical wins, and sanctuary defense. Browser checks cover all lessons, moves, captures, undo/redo, refresh, keyboard and flip controls, mobile/tablet/desktop layouts, and online play.
 
 Preview images are in `docs/academy/`. Deployment uses the existing main branch and Render configuration: root HikoroChess, build npm ci, start npm start, health /health. No new dependencies.
