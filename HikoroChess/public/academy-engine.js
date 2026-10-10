@@ -22,6 +22,10 @@ const TYPES=Object.freeze({
 const point=p=>p&&Number.isInteger(p.r)&&Number.isInteger(p.c)&&p.r>=0&&p.r<SIZE&&p.c>=0&&p.c<SIZE;
 const coord=p=>'ABCDEFGH'[p.c]+(SIZE-p.r);
 const signature=s=>s.player+'|'+s.board.flat().map(p=>p?p.owner+':'+p.type:'-').join(',');
+// The full Hikoro adapter is shared by every piece on this immutable board.
+// Reuse its padded representation instead of allocating a new 16×10 board
+// for every piece at every search node. WeakMap avoids retaining old boards.
+const paddedCache=new WeakMap();
 function initial(mode='match',lesson='pawn'){
     if(!['match','lesson'].includes(mode)||!TYPES[lesson])throw Error('Invalid teaching setup');
     const s={mode,lesson,board:Array.from({length:SIZE},()=>Array(SIZE).fill(null)),player:1,ply:0,history:[],lastMove:null,captured:{1:[],2:[]},result:null,positions:{}};
@@ -47,9 +51,15 @@ function movesFor(board,from){
     const current=board[from.r][from.c];
     // Embed the 8×8 square in the full board's uninterrupted center, away from cut-out corners.
     // Map White's forward toward rank 8 (decreasing rows), Black toward rank 1.
-    const padded=Array.from({length:full.BOARD_HEIGHT},()=>Array(full.BOARD_WIDTH).fill(null));
-    for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){const p=board[r][c];if(p)padded[r+4][c+1]={type:p.type,color:p.owner===1?'black':'white'};}
-    // Let the full engine handle Kraken steps and Squid shields, then apply the smaller palace.
+    let base=paddedCache.get(board);
+    if(!base){
+        base=Array.from({length:full.BOARD_HEIGHT},()=>Array(full.BOARD_WIDTH).fill(null));
+        for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){const p=board[r][c];if(p)base[r+4][c+1]={type:p.type,color:p.owner===1?'black':'white'};}
+        paddedCache.set(board,base);
+    }
+    // A king needs a private copy so suppressing the full-board palace
+    // restriction cannot erase its Prince from the shared cached position.
+    const padded=current.type==='lupa'?base.map(row=>row.slice()):base;
     if(current.type==='lupa')for(const row of padded)for(let c=0;c<row.length;c++)if(row[c]?.type==='prince'&&row[c].color===(current.owner===1?'black':'white'))row[c]=null;
     const piece=padded[from.r+4][from.c+1],seen=new Set();
     return full.getValidMovesForPiece(piece,from.c+1,from.r+4,padded).map(m=>({r:m.y-4,c:m.x-1})).filter(m=>{const k=m.r+','+m.c;if(!point(m)||seen.has(k)||current.type==='lupa'&&hasPrince(board,current.owner)&&!inPalace(m,current.owner))return false;seen.add(k);return true;});
