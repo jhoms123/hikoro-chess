@@ -52,8 +52,8 @@ test('Academy page wires a local bot selector and off-thread worker',()=>{
     const html=fs.readFileSync(path.join(__dirname,'../public/academy.html'),'utf8');
     const ui=fs.readFileSync(path.join(__dirname,'../public/academy-ui.js'),'utf8');
     assert.match(html,/id="academy-opponent"/);
-    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v3/);
-    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v3/);
+    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v4/);
+    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v4/);
 });
 test('bot returns null for a terminal or move-less Academy position',()=>{
     const state=emptyState(2);
