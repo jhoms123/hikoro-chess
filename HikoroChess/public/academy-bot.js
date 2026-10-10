@@ -191,7 +191,7 @@ function moveOrder(s,a,ttMove=0,kill=0,history=null){
 function chooseMove(state,options={}){
  if(!state||state.mode!=='match'||state.result)return null;
  const all=A.allMoves(state);if(!all.length)return null;
- const budget=Math.max(35,Math.min(2000,Number(options.budgetMs)||220));
+ const budget=Math.max(35,Math.min(4000,Number(options.budgetMs)||1000));
  const maxDepth=Math.max(1,Math.min(6,Number(options.maxDepth)||4));
  const replyWidth=Math.max(8,Math.min(48,Number(options.replyWidth)||24));
  const rootWidth=Math.max(8,Math.min(96,Number(options.rootWidth)||64));
