@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(theme==='go'){syncActions.push(action('Pass','#pass-button'));syncActions.push(action('Shield','#shield-button'));}
   if(theme==='shodansho'){syncActions.push(action('Pick up','#pickup-btn'));syncActions.push(action('Cancel','#cancel-selection-btn'));}
   syncActions.push(action('Resign','#resign-button'));
-  syncActions.push(action(theme==='academy'?'Reset':'New match','#new-button')||action('New match','#hikoro-new-match'));
   syncActions=syncActions.filter(Boolean);
   openButton=document.createElement('button');openButton.type='button';openButton.className='phone-options-toggle';openButton.textContent='Options';openButton.setAttribute('aria-controls','phone-options');openButton.setAttribute('aria-expanded','false');openButton.addEventListener('click',()=>body.classList.contains('phone-options-open')?close():open());bar.append(openButton);
   const anchor=theme==='lobby'?document.getElementById('hikoro-game-wrapper'):document.querySelector('main')||document.querySelector('.match-layout');
