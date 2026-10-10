@@ -54,19 +54,20 @@ document.addEventListener('DOMContentLoaded',()=>{
    relocate(document.querySelector('.mobile-garden-actions'));relocate(document.querySelector('.game-sidebar'));relocate(document.querySelector('.inventory-sidebar'));
   }else if(theme==='lobby'){
    const history=document.getElementById('move-history-container');
+   relocate(document.querySelector('.table-companion'));
    relocate(document.getElementById('hikoro-local-settings'));
    const historyGroup=history?.closest('.mobile-disclosure')||history;relocate(historyGroup);
    relocate(document.getElementById('game-controls'));relocate(document.getElementById('post-game-controls'));relocate(document.getElementById('replay-controls'));
   }else{
    const panel=document.querySelector('.match-panel'),play=document.querySelector('.play-area'),turn=panel?.querySelector('.turn-panel');
    if(turn&&play&&!turn.closest('.play-area'))relocateTo(turn,play,play.firstElementChild);
-   relocate(panel);relocate(document.getElementById('rules-button'));
+   relocate(panel);
   }
   const candidates=[...document.querySelectorAll('.mobile-disclosure,.collection-audio')].filter(el=>!el.parentElement?.closest('.mobile-disclosure'));
   for(const el of candidates)relocate(el);
   relocate(document.querySelector('.lesson-dock'));relocate(document.querySelector('.mobile-board-tools'));
   if(theme==='academy'){relocate(document.querySelector('.mobile-lesson-picker'));relocate(document.querySelector('.mobile-selection'));}
-  if(theme==='lobby'){relocate(document.getElementById('hikoro-local-settings'));relocate(document.querySelector('.mobile-hikoro-actions'));}
+  if(theme==='lobby'){relocate(document.getElementById('hikoro-local-settings'));relocate(document.getElementById('mobile-hikoro-actions'));}
   relocate(document.querySelector('.board-tools'));relocate(document.querySelector('.mobile-stack-tools'));relocate(document.querySelector('.captures'));relocate(document.querySelector('.piece-guide'));relocate(document.querySelector('.go-summary'));
   body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');
   resizeObserver=new ResizeObserver(schedule);
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  function refresh(){if(playing()){if(!bar)setup();placeDesktopStatus();}else teardown();}
  media.addEventListener('change',()=>requestAnimationFrame(refresh));
  window.addEventListener('resize',()=>{if(bar)body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');schedule();});
- observer=new MutationObserver(()=>{if(theme==='lobby'&&!bar&&playing())requestAnimationFrame(refresh);else if(theme==='lobby'&&bar&&!playing())requestAnimationFrame(refresh);else if(bar)schedule();});
+ observer=new MutationObserver(()=>{if(theme==='lobby'&&!bar&&playing())requestAnimationFrame(refresh);else if(theme==='lobby'&&bar&&!playing())requestAnimationFrame(refresh);else if(bar){if(theme==='lobby')relocate(document.querySelector('.table-companion'));schedule();}});
  observer.observe(body,{subtree:true,attributes:true,attributeFilter:['class','hidden','disabled','style']});
  requestAnimationFrame(refresh);
 });

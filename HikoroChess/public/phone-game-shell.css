@@ -160,7 +160,7 @@
  body.phone-game-shell .phone-options-list .board-tools>span{display:none!important}
  body.phone-game-shell .phone-options-list :is(.mobile-board-tools,.mobile-stack-tools,.board-tools) button{flex:1;min-width:90px;min-height:36px}
  body.phone-game-shell .phone-options-list :is(.captures,.piece-guide,.go-summary){display:block!important}
- body.phone-game-shell .phone-options-list :is(#main-menu-btn,#lobby-link,#resign-button,#pass-button,#shield-button,#cancel-selection-btn,#pickup-btn){display:none!important}
+ body.phone-game-shell .phone-options-list :is(#main-menu-btn,#lobby-link,#resign-button,#pass-button,#shield-button,#cancel-selection-btn,#pickup-btn,#new-button,#hikoro-new-match){display:none!important}
  body.phone-game-shell .phone-options-list .mobile-hikoro-actions{display:flex!important;gap:8px}
  body.phone-game-shell main{box-sizing:border-box;width:100%;height:calc(100dvh - var(--phone-top,100px));min-height:0;max-width:none;display:flex;flex-direction:column;overflow:hidden;margin:0;padding:0 clamp(18px,3vw,42px) 10px!important}
  body.phone-game-shell main>.introduction{flex:none;width:min(100%,1160px);margin:0 auto!important;padding:4px 0!important;text-align:left}
@@ -195,7 +195,7 @@
  body.phone-game-shell .phone-options-list :is(.match-panel,.game-sidebar,.inventory-sidebar){position:static!important;display:grid!important;grid-template-columns:1fr!important;gap:6px!important;width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important}
  body.phone-game-shell .phone-options-list :is(.match-actions,.history-tools){display:flex;flex-wrap:wrap;gap:6px}
  body.phone-game-shell .phone-options-list .mobile-hikoro-actions{display:flex!important;gap:6px}
- body.phone-game-shell .phone-options-list :is(#main-menu-btn,#lobby-link,#resign-button,#pass-button,#shield-button,#cancel-selection-btn,#pickup-btn){display:none!important}
+ body.phone-game-shell .phone-options-list :is(#main-menu-btn,#lobby-link,#resign-button,#pass-button,#shield-button,#cancel-selection-btn,#pickup-btn,#new-button,#hikoro-new-match){display:none!important}
  body.phone-game-shell .phone-options-list :is(.board-tools,.mobile-stack-tools){display:flex!important;flex-wrap:wrap;gap:6px}
  body.phone-game-shell .phone-options-list .board-tools button{min-height:36px!important;padding:3px 8px!important}
  body.phone-game-shell .play-area>.board-tools{display:none!important}
@@ -205,3 +205,21 @@
 }
 
 @media(max-width:420px){body.phone-game-shell .phone-table-bar{gap:3px}body.phone-game-shell .phone-game-name{max-width:64px!important}}
+
+/* Hikoro desktop uses the same status / player / board / player order as the other tables. */
+@media(min-width:761px){
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:40px 48px minmax(0,1fr) 48px!important;grid-template-areas:"status" "opponent" "board" "player"!important;align-content:stretch!important;justify-content:stretch!important;gap:6px!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper #turn-indicator-container{display:flex!important;align-items:center;gap:10px;box-sizing:border-box;width:100%!important;min-height:0!important;height:40px!important;max-height:40px!important;margin:0!important;padding:4px 10px!important;overflow:hidden;background:var(--table-ui)!important;color:var(--table-ink)!important;border:1px solid var(--table-line)!important;box-shadow:none!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #turn-indicator{margin:0!important;color:var(--table-ink)!important;font:600 14px/1.2 system-ui!important;white-space:nowrap}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #winnerText{margin:0!important;color:var(--table-ink)!important;font:12px/1.2 system-ui!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper .captured-area{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;box-sizing:border-box;width:100%!important;min-height:48px!important;height:48px!important;max-height:48px!important;margin:0!important;padding:4px 9px!important;overflow:hidden;background:var(--table-ui)!important;color:var(--table-ink)!important;border:1px solid var(--table-line)!important;border-radius:4px!important;box-shadow:none!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper .captured-area .table-player{display:flex!important;align-items:center;gap:5px;flex:0 1 150px;min-width:75px;max-width:180px;min-height:0;overflow:hidden;color:var(--table-ink)!important;font:600 13px/1.2 system-ui!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper .captured-area h3{flex:none;margin:0!important;color:var(--table-ink)!important;font:600 11px/1.2 system-ui!important;white-space:nowrap}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper .captured-pieces-box{display:flex!important;align-items:center!important;flex:1 1 auto!important;min-width:0!important;min-height:28px!important;max-height:36px!important;margin:0!important;padding:0 2px!important;overflow-x:auto!important;overflow-y:hidden!important;background:transparent!important;border:0!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper{--square-size:clamp(22px,min(3.2vw,calc((100dvh - var(--phone-top,120px) - 145px)/18)),40px)!important;--notation-size:calc(var(--square-size)*.75)!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper #board-container{align-self:center!important;justify-self:center!important;margin:auto!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active .phone-options-list #table-companion{display:flex!important;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin:0;padding:8px;background:var(--table-ui);color:var(--table-ink);border:1px solid var(--table-line)}
+}
+@media(max-width:760px){
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active .phone-options-list #table-companion{display:flex!important;flex-wrap:wrap;width:100%;margin:0;padding:8px;background:var(--table-ui);color:var(--table-ink);border:1px solid var(--table-line)}
+}
