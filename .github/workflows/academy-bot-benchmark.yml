@@ -1,8 +1,8 @@
-name: Academy v3 royal-race benchmark
+name: Academy v4 tactical-horizon benchmark
 on:
   push:
     branches:
-      - feat/academy-bot-v3-royal-interception
+      - feat/academy-v4-tactical-search
   workflow_dispatch:
 jobs:
   academy:

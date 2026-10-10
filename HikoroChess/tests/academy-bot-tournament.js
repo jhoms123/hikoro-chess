@@ -2,12 +2,12 @@
 'use strict';
 const assert=require('node:assert/strict');
 const A=require('../public/academy-engine');
-const v1=require('./fixtures/academy-bot-v2');
+const v1=require('./fixtures/academy-bot-v3');
 const v2=require('../public/academy-bot');
 const games=20,MAX_PLIES=180;
 const MOVE_BUDGET=Number(process.env.ACADEMY_BUDGET_MS||60);
 const OPENING_SEED=Number(process.env.ACADEMY_SEED||744733);
-const maxDepth={v1:4,v2:5};
+const maxDepth={v1:5,v2:5};
 const opts=who=>({budgetMs:MOVE_BUDGET,maxDepth:maxDepth[who],rootWidth:64,replyWidth:24});
 function rng(seed){let n=seed>>>0;return()=>{n=(Math.imul(1664525,n)+1013904223)>>>0;return n/4294967296;};}
 function opening(seed){

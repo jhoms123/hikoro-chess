@@ -107,3 +107,32 @@ test('Cached Academy move adaptation agrees across repeated calls and after Krak
  detached[7][4]=null;
  assert.ok(A.movesFor(detached,{r:7,c:3}).length>=A.movesFor(s.board,{r:7,c:3}).length);
 });
+
+test('V4 immediate win detection includes final-royal captures by ordinary pieces',()=>{
+ const s=emptyState(1);
+ put(s,'lupa',1,7,3);
+ put(s,'kota',1,3,3);
+ put(s,'prince',2,3,4);
+ assert.equal(bot.immediateWin(s,1),true);
+ assert.equal(bot.immediateWin(s,2),false);
+});
+test('V4 notices a one-turn sanctuary victory by either color, even off turn',()=>{
+ const s=emptyState(2);
+ put(s,'lupa',1,7,3); put(s,'prince',1,3,1);
+ put(s,'lupa',2,0,3); put(s,'prince',2,0,4);
+ assert.equal(bot.immediateWin(s,1),true);
+ assert.equal(bot.immediateWin(s,2),false);
+ s.board[4][0]={owner:1,type:'pawn'};
+ assert.equal(bot.immediateWin(s,1),false);
+});
+test('V4 chooses a legal royal escape when its final royal is threatened',()=>{
+ const s=emptyState(2);
+ put(s,'lupa',1,7,3);
+ put(s,'kota',1,3,3);
+ put(s,'prince',2,3,4);
+ const a=bot.chooseMove(s,{budgetMs:500,maxDepth:3});
+ const next=A.apply(s,a);
+ assert.ok(next);
+ assert.equal(next.result?.winner===1,false);
+ assert.equal(bot.immediateWin(next,1),false);
+});
