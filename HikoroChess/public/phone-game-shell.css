@@ -11,7 +11,7 @@
  body[data-audio-theme] .introduction h1{font-size:clamp(24px,2.5vw,34px)!important;margin:0!important;line-height:1.1}
  body[data-audio-theme] .introduction :is(.eyebrow,p:last-child),body[data-audio-theme] .introduction::after{display:none}
  .sds-page .game-layout{display:grid!important;grid-template-columns:minmax(0,720px) minmax(275px,340px)!important;gap:16px!important;justify-content:center;align-items:start}
- .sds-page .game-layout>.mobile-board-viewport{grid-column:1;grid-row:1;width:100%}
+ .sds-page .game-layout>.mobile-board-viewport{display:block!important;grid-column:1;grid-row:1;width:100%}
  .sds-page .game-layout>.game-sidebar{grid-column:2;grid-row:1;width:100%!important;max-height:calc(100dvh - 100px);overflow:auto}
  .sds-page .game-layout>.inventory-sidebar{grid-column:2;grid-row:2;width:100%!important;max-height:240px;overflow:auto}
 }
@@ -77,6 +77,8 @@
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .hikoro-match-heading,
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions{display:none}
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-status{order:0;flex:none;min-height:26px;margin:0;padding:3px 8px;background:var(--table-ui);border:1px solid var(--table-line);border-radius:3px;color:var(--table-ink);font:600 14px/1.2 system-ui}
+ body.phone-game-shell[data-audio-theme=lobby] #black-captured-area{order:1}
+ body.phone-game-shell[data-audio-theme=lobby] #white-captured-area{order:3}
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0}
  body.phone-game-shell[data-audio-theme=lobby] #board-container{--square-size:calc((var(--mobile-board-width) - 10px)/11.5);width:var(--mobile-board-width)}
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area{flex:none;width:100%!important;padding:2px 5px!important;margin:0!important;border-width:2px!important;border-image:none!important}
