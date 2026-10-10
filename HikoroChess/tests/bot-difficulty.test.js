@@ -79,7 +79,7 @@ test('Hikoruka Worker actually receives a 0.5-second search budget and returns l
  let response;
  const scope=vm.createContext({console,Date,Math,Int8Array,Map,Set,setTimeout,clearTimeout});
  scope.self={postMessage:data=>{response=data;}};
- scope.importScripts=(...urls)=>{for(const uri of urls)vm.runInContext(read('public/'+uri.split('?')[0].replace(/^\\//,'')),scope);};
+ scope.importScripts=(...urls)=>{for(const uri of urls){const clean=uri.split('?')[0];vm.runInContext(read('public/'+(clean.startsWith('/')?clean.slice(1):clean)),scope);}};
  vm.runInContext(read('public/hikoruka-bot-worker.js'),scope);
  const position=Hikoruka.initial();
  scope.self.onmessage({data:{id:88,state:position,timeMs:500}});
