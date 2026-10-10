@@ -1,4 +1,4 @@
-/* Hikoro Academy v2: royal-race search, full-width tactical replies and safe iterative alpha-beta. */
+/* Academy v3: sanctuary corridor planning, immediate-loss interception and efficient PVS. */
 (function(root,factory){
  if(typeof module==='object'&&module.exports)module.exports=factory(require('./academy-engine'));
  else root.HikoroAcademyBot=factory(root.HikoroAcademy);
@@ -6,7 +6,9 @@
 'use strict';
 const V={pilut:95,pawn:170,yoli:320,fin:300,chair:410,kota:335,lupa:1350,prince:1650};
 const MATE=1000000, royals=new Set(['lupa','prince']);
-const safeOwner=o=>3-o;
+const ROYAL_STEPS={prince:{1:[[-1,0],[-1,-1],[-1,1],[1,-1],[1,1]],2:[[1,0],[-1,-1],[-1,1],[1,-1],[1,1]]},lupa:{1:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]],2:[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]}};
+const ENCODE={pilut:1,pawn:2,yoli:3,fin:4,chair:5,kota:6,lupa:7,prince:8};
+function fastKey(s){return String(s.player)+s.board.flat().map(p=>p?String.fromCharCode(65+(p.owner-1)*8+ENCODE[p.type]):'.').join('');}
 const squares=[{r:3,c:0},{r:4,c:0},{r:3,c:7},{r:4,c:7}];
 function distTable(owner,type){
  const a=Array(64).fill(99);
@@ -41,6 +43,7 @@ function nextState(s,a){
  const piece=b[f.r][f.c],victim=b[t.r][t.c];
  b[t.r][t.c]=piece;b[f.r][f.c]=null;
  const n={board:b,player:3-s.player,mode:'match',ply:s.ply+1,result:null,positions:Object.create(s.positions||null)};
+ if(s.fastKey){const chars=s.fastKey.split('');chars[0]=String(n.player);chars[f.r*8+f.c+1]='.';chars[t.r*8+t.c+1]=String.fromCharCode(65+(piece.owner-1)*8+ENCODE[piece.type]);n.fastKey=chars.join('');}
  if(piece&&royals.has(piece.type)&&A.sanctuary(t))n.result={winner:piece.owner,reason:'Sanctuary reached'};
  if(!n.result&&victim&&royals.has(victim.type)&&royalCount(b,3-piece.owner)===0)n.result={winner:piece.owner,reason:'Both opposing royals captured'};
  const sig=boardKey(n);n.positions[sig]=(n.positions[sig]||0)+1;
@@ -62,28 +65,83 @@ function directRoyalWin(s,owner){
  return false;
 }
 function center(r,c){return 7-Math.abs(3.5-r)-Math.abs(3.5-c);}
+// Actual royal movement geometry, accounting for friendly blockers and palace confinement.
+// This is a route HEURISTIC, not a replacement for the official move generator.
+function royalRoute(board,owner,type,startR,startC,princeAlive){
+ if(type==='lupa'&&princeAlive)return 12;
+ const queue=[startR*8+startC],dist=new Int8Array(64).fill(-1),steps=ROYAL_STEPS[type][owner];
+ dist[queue[0]]=0;
+ for(let head=0;head<queue.length;head++){
+  const cell=queue[head],r=cell>>3,c=cell&7,d=dist[cell];
+  if((c===0||c===7)&&(r===3||r===4))return d;
+  if(d>=9)continue;
+  for(const [dr,dc] of steps){
+   const rr=r+dr,cc=c+dc;
+   if(rr<0||rr>7||cc<0||cc>7)continue;
+   const to=rr*8+cc,p=board[rr][cc];
+   if(dist[to]>=0 || p?.owner===owner)continue;
+   dist[to]=d+1;queue.push(to);
+  }
+ }
+ return 12;
+}
+function royalPlans(board){
+ const princes={1:false,2:false},info={1:[],2:[]};
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+  const p=board[r][c];if(p?.type==='prince')princes[p.owner]=true;
+ }
+ for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+  const p=board[r][c];if(p&&royals.has(p.type))
+   info[p.owner].push({r,c,type:p.type,d:royalRoute(board,p.owner,p.type,r,c,princes[p.owner])});
+ }
+ return info;
+}
+function raceScore(d){
+ if(d===0)return 5000;
+ if(d===1)return 1750;
+ if(d===2)return 950;
+ if(d===3)return 510;
+ if(d===4)return 230;
+ if(d===5)return 100;
+ return d<12?Math.max(0,90-15*(d-6)):0;
+}
+function quickest(info,owner){return Math.min(12,...info[owner].map(p=>p.d));}
 function evaluate(s,who,ply=0){
  const end=terminal(s,who,ply);if(end!==null)return end;
  let score=0;
- const has={1:A.hasPrince(s.board,1),2:A.hasPrince(s.board,2)};
+ const plans=royalPlans(s.board);
+ const has={1:plans[1].some(p=>p.type==='prince'),2:plans[2].some(p=>p.type==='prince')};
  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
   const p=s.board[r][c];if(!p)continue;
   const sign=p.owner===who?1:-1;let v=V[p.type]||100;
   if(royals.has(p.type)){
-   const d=distances[p.owner][p.type][r*8+c];
-   if(p.type==='prince')v+=Math.max(0,7-d)*90+(p.owner===1?7-r:r)*10;
-   else if(has[p.owner])v+=25-Math.abs(c-3)*10;
-   else v+=Math.max(0,7-d)*100;
-   if(A.sanctuary({r,c}))v+=4000;
+   const path=plans[p.owner].find(royal=>royal.r===r&&royal.c===c);
+   const d=path?.d??12;
+   v+=raceScore(d);
+   // The Prince is the only sanctuary runner while the Kraken is palace-locked.
+   if(p.type==='lupa'&&has[p.owner])v+=20-Math.abs(c-3)*10;
   }else{
    v+=center(r,c)*7;
    if(p.type==='pilut')v+=Math.max(0,p.owner===1?6-r:r-1)*8;
   }
+  // Intercept an approaching royal: centralize defenders near its actual corridor.
+  if(!royals.has(p.type)){
+   const foes=plans[3-p.owner];
+   let proximity=0;
+   for(const foe of foes)if(foe.d<=4){
+    const cheby=Math.max(Math.abs(r-foe.r),Math.abs(c-foe.c));
+    proximity=Math.max(proximity,cheby<=1?165:cheby===2?90:cheby===3?30:0);
+   }
+   v+=proximity;
+  }
   score+=sign*v;
  }
+ // Race urgency uses both sides; this makes defending a two-ply threat valuable.
+ const own=quickest(plans,s.player),opp=quickest(plans,3-s.player);
+ if(opp<=3 && own>opp)score+=(s.player===who?-1:1)*(4-opp)*160;
  // Unlike ordinary chess, a royal may enter sanctuary even when its destination is attacked.
  // Therefore an immediately available royal sanctuary move is an urgent, game-ending threat.
- if(directRoyalWin(s,s.player))score+=(s.player===who?1:-1)*65000;
+ if(directRoyalWin(s,s.player))score+=(s.player===who?1:-1)*125000;
  return score;
 }
 function moveOrder(s,a,ttMove=0,kill=0,history=null){
@@ -114,14 +172,26 @@ function chooseMove(state,options={}){
  const rootWidth=Math.max(8,Math.min(96,Number(options.rootWidth)||64));
  const deadline=Date.now()+budget;
  const who=state.player,tt=new Map(),history=new Map(),killers=[];
+ // Single-character per-square TT keys avoid rebuilding 64 long tokens at every node.
+ state={...state,fastKey:fastKey(state)};
  const roots=all.sort((a,b)=>moveOrder(state,b)-moveOrder(state,a));
+ // Tactical override: if the enemy can win on their NEXT turn, prioritize
+ // candidate moves that remove every immediately winning sanctuary entrance.
+ if(directRoyalWin(state,3-who)){
+  const forcedSafe=[],losing=[];
+  for(const a of roots){const n=nextState(state,a);
+   if(!n.result && directRoyalWin(n,3-who))losing.push(a);
+   else forcedSafe.push(a);
+  }
+  if(forcedSafe.length){roots.splice(0,roots.length,...forcedSafe,...losing);}
+ }
  for(const a of roots)if(winningAction(state,a))return a;
  let best=roots[0],bestScore=-Infinity,nodes=0,aborted=false;
  function search(s,depth,alpha,beta,ply){
   nodes++;if((nodes&15)===0&&Date.now()>=deadline){aborted=true;return 0;}
   const done=terminal(s,s.player,ply);if(done!==null)return done;
-  const originalAlpha=alpha;
-  const k=boardKey(s),repeated=(s.positions[k]||0)>1;
+  const originalAlpha=alpha,originalBeta=beta;
+  const k=s.fastKey||fastKey(s),repeated=(s.positions[boardKey(s)]||0)>1;
   const cached=!repeated?tt.get(k):null;
   if(cached&&cached.depth>=depth){
    if(cached.flag==='exact')return cached.score;
@@ -137,11 +207,21 @@ function chooseMove(state,options={}){
   let value=-Infinity,pv=0;
   // Do not discard captures, royals, or immediate wins just because they rank low.
   // At the widest late plies, trim only quiet moves after examining a substantial prefix.
-  const limit=depth>=3?Math.max(replyWidth,Math.ceil(actions.length*.65)):actions.length;
+  const limit=depth>=3?Math.max(replyWidth,Math.ceil(actions.length*.55)):actions.length;
   for(let i=0;i<actions.length;i++){
    const a=actions[i],p=s.board[a.from.r][a.from.c],target=s.board[a.to.r][a.to.c];
-   if(i>=limit&&!target&&!royals.has(p.type))continue;
-   const n=nextState(s,a),score=-search(n,depth-1,-beta,-alpha,ply+1);
+   const n=nextState(s,a);
+   const quiet=(!target&&!royals.has(p.type));
+   // PVS: prove later candidates inferior with a cheap null-window search.
+   // LMR is verified by a full search if the reduced result improves alpha.
+   let reduced=i>=limit&&quiet&&depth>=3?1:0;
+   let score;
+   if(i===0)score=-search(n,depth-1,-beta,-alpha,ply+1);
+   else{
+    score=-search(n,depth-1-reduced,-alpha-1,-alpha,ply+1);
+    if(!aborted&&reduced&&score>alpha)score=-search(n,depth-1,-alpha-1,-alpha,ply+1);
+    if(!aborted&&score>alpha&&score<beta)score=-search(n,depth-1,-beta,-alpha,ply+1);
+   }
    if(aborted)return 0;
    if(score>value){value=score;pv=keyOf(a);}
    if(score>alpha)alpha=score;
@@ -151,7 +231,7 @@ function chooseMove(state,options={}){
    }
   }
   if(!Number.isFinite(value))value=evaluate(s,s.player,ply);
-  if(!aborted&&!repeated&&tt.size<80000)tt.set(k,{depth,score:value,move:pv,flag:value<=originalAlpha?'upper':value>=beta?'lower':'exact'});
+  if(!aborted&&!repeated&&tt.size<80000)tt.set(k,{depth,score:value,move:pv,flag:value<=originalAlpha?'upper':value>=originalBeta?'lower':'exact'});
   return value;
  }
  for(let depth=1;depth<=maxDepth;depth++){
@@ -161,7 +241,12 @@ function chooseMove(state,options={}){
   for(let i=0;i<Math.min(rootWidth,ordered.length);i++){
    if(Date.now()>=deadline){aborted=true;break;}
    const a=ordered[i],n=nextState(state,a);
-   const result=-search(n,depth-1,-Infinity,Infinity,1);
+   let result;
+   if(i===0)result=-search(n,depth-1,-Infinity,Infinity,1);
+   else{
+    result=-search(n,depth-1,-alpha-1,-alpha,1);
+    if(!aborted&&result>alpha)result=-search(n,depth-1,-Infinity,-alpha,1);
+   }
    if(aborted)break;
    if(result>score){score=result;iteration=a;}
    if(score>alpha)alpha=score;
@@ -172,5 +257,5 @@ function chooseMove(state,options={}){
  }
  return best;
 }
-return{chooseMove,legalMoves:s=>A.allMoves(s),evaluate,moveOrder};
+return{chooseMove,legalMoves:s=>A.allMoves(s),evaluate,moveOrder,royalPlans,directRoyalWin};
 });
