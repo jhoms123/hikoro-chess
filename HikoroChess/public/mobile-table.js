@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     fold(document.querySelector('.captures'),'Captured pieces');fold(document.querySelector('.piece-guide'),'Piece guide');fold(document.querySelector('.go-summary'),'Strategy & scoring');
    }
    if(theme==='shodansho'){
-    const gameLayout=document.querySelector('.game-layout'),statusBox=document.querySelector('.game-sidebar>div');statusBox.classList.add('mobile-garden-status');move(statusBox,gameLayout,gameLayout.firstChild);
+    const gameLayout=document.querySelector('.game-layout'),statusBox=document.getElementById('turn-indicator')?.closest('.bg-game-panel');if(statusBox){statusBox.classList.add('mobile-garden-status');if(!statusBox.closest('.game-layout'))move(statusBox,gameLayout,gameLayout.firstChild);}
     move(document.getElementById('hands-container'),gameLayout,viewport);
     const actions=document.createElement('div');actions.className='mobile-garden-actions';move(document.getElementById('pickup-btn'),actions);move(document.getElementById('cancel-selection-btn'),actions);move(document.getElementById('main-menu-btn'),actions);gameLayout.insertBefore(actions,viewport);
     const handToggle=control('Other players’ hands',()=>{const on=body.classList.toggle('show-all-hands');handToggle.setAttribute('aria-expanded',String(on));handToggle.textContent=on?'Hide other hands':'Other players’ hands';},document.querySelector('.inventory-sidebar>.bg-game-panel'));handToggle.classList.add('mobile-hand-toggle');handToggle.setAttribute('aria-expanded','false');
