@@ -1,5 +1,12 @@
 /* Board-first responsive table layout */
 @media(min-width:761px){
+ body[data-audio-theme] .lesson-dock{min-height:0!important;padding:3px 8px!important;margin:4px auto!important;max-width:1120px!important}
+ body[data-audio-theme] .lesson-dock button{min-height:38px!important;padding:5px 12px!important;font-size:13px!important}
+ body[data-audio-theme] .introduction{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0!important;min-height:0!important}
+ body[data-audio-theme] .introduction h1{font-size:clamp(24px,2.5vw,34px)!important;margin:0!important;line-height:1.1}
+ body[data-audio-theme] .introduction :is(.eyebrow,p:last-child){display:none}
+ body[data-audio-theme] .introduction::after{display:none}
+
  body[data-audio-theme] .match-layout{gap:clamp(14px,2vw,28px);align-items:start}
  body[data-audio-theme] .play-area{min-width:0}
  body[data-audio-theme] .match-panel{position:sticky;top:16px;max-height:calc(100dvh - 32px);overflow:auto;scrollbar-width:thin;gap:10px}
