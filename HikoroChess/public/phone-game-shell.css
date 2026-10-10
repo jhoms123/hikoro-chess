@@ -120,6 +120,19 @@
  body.phone-game-shell.hikoro-site #hikoro-game-wrapper #board-container{box-sizing:border-box!important;margin:auto!important;padding:0!important;border-width:3px!important}
  body.phone-game-shell.hikoro-site #hikoro-game-wrapper :is(#move-history-container,#turn-indicator-container){display:none!important}
 
+ /* Keep the garden board in the center of the space between status and hand. */
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport{align-items:center!important;justify-content:center!important}
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport .mobile-board-surface{margin:auto!important}
+ /* Academy keeps the turn and both armies visible; lesson controls live in Options. */
+ body.phone-game-shell.academy-table .play-area>.turn-panel{height:31px!important;min-height:31px!important;max-height:31px!important;padding:4px 8px!important}
+ body.phone-game-shell.academy-table .play-area>.turn-panel #notice{display:none!important}
+ body.phone-game-shell.academy-table .play-area>.mobile-board-viewport{min-height:0!important;align-items:center!important;justify-content:center!important}
+ body.phone-game-shell.academy-table .mobile-board-surface .mini-board-frame{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;padding:4px!important}
+ body.phone-game-shell.academy-table .phone-options-list .mobile-lesson-picker{display:flex;align-items:center;gap:8px;padding:5px 0}
+ body.phone-game-shell.academy-table .phone-options-list .mobile-lesson-picker label{flex:none;color:var(--table-ink)}
+ body.phone-game-shell.academy-table .phone-options-list .mobile-lesson-picker select{flex:1;min-width:0;margin:0}
+ body.phone-game-shell.academy-table .phone-options-list .mobile-selection{display:block!important;margin:4px 0!important}
+
 }
 @media(max-width:360px){
  body.phone-game-shell .phone-game-name{display:none}
