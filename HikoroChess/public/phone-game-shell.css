@@ -203,3 +203,5 @@
  body.phone-game-shell.sds-page .game-layout>#hands-container{display:flex!important;flex-flow:row nowrap!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x proximity}
  body.phone-game-shell.sds-page #hands-container>*{flex:0 0 min(78vw,310px);min-width:210px;max-height:72px;overflow:auto;scroll-snap-align:start}
 }
+
+@media(max-width:420px){body.phone-game-shell .phone-table-bar{gap:3px}body.phone-game-shell .phone-game-name{max-width:64px!important}}
