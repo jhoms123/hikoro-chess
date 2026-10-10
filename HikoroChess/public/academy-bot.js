@@ -83,6 +83,7 @@ function directRoyalWin(s,owner){
  if(royalCount(s.board,owner)===0)return false;
  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
   const p=s.board[r][c];if(!p||p.owner!==owner||!royals.has(p.type))continue;
+  if(distances[owner][p.type][r*8+c]!==1)continue;
   const ms=A.movesFor(s.board,{r,c});
   for(const t of ms)if(A.sanctuary(t))return true;
  }
@@ -221,6 +222,21 @@ function chooseMove(state,options={}){
   if(staticCache.size<25000)staticCache.set(k,v);
   return v;
  }
+ function threatenedHorizon(s){
+  // Full tactical resolution is needed only when the enemy royal is one
+  // legal step from the sanctuary or either side has a sole remaining royal.
+  // A general full-board threat scan at every leaf costs too much at 220ms.
+  let ourRoyals=0,theirRoyals=0,enemyNear=false;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+   const p=s.board[r][c];if(!p||!royals.has(p.type))continue;
+   if(p.owner===s.player)ourRoyals++;
+   else {
+    theirRoyals++;
+    if(distances[p.owner][p.type][r*8+c]===1)enemyNear=true;
+   }
+  }
+  return ourRoyals===1||theirRoyals===1||enemyNear;
+ }
  function horizon(s,ply){
   if((++nodes&15)===0&&Date.now()>=deadline){aborted=true;return 0;}
   const done=terminal(s,s.player,ply);if(done!==null)return done;
@@ -260,7 +276,7 @@ function chooseMove(state,options={}){
    else beta=Math.min(beta,cached.score);
    if(alpha>=beta)return cached.score;
   }
-  if(depth<=0)return horizon(s,ply);
+  if(depth<=0)return threatenedHorizon(s)?horizon(s,ply):staticEval(s,ply);
   const actions=A.allMoves(s);
   if(!actions.length)return 0;
   const preferred=cached?.move||0,kill=killers[ply]||0;
