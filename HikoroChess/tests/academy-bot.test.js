@@ -122,6 +122,7 @@ test('V4 notices a one-turn sanctuary victory by either color, even off turn',()
  put(s,'lupa',2,0,3); put(s,'prince',2,0,4);
  assert.equal(bot.immediateWin(s,1),true);
  assert.equal(bot.immediateWin(s,2),false);
+ s.board=s.board.map(row=>row.slice());
  s.board[4][0]={owner:1,type:'pawn'};
  assert.equal(bot.immediateWin(s,1),false);
 });
