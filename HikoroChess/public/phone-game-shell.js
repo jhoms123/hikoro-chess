@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   for(const el of candidates)relocate(el);
   relocate(document.querySelector('.lesson-dock'));relocate(document.querySelector('.mobile-board-tools'));
   if(theme==='academy'){relocate(document.querySelector('.mobile-lesson-picker'));relocate(document.querySelector('.mobile-selection'));}
-  if(theme==='lobby'){relocate(document.getElementById('hikoro-local-settings'));relocate(document.getElementById('mobile-hikoro-actions'));}
+  if(theme==='lobby'){relocate(document.getElementById('hikoro-local-settings'));relocate(document.querySelector('.mobile-hikoro-actions'));}
   relocate(document.querySelector('.board-tools'));relocate(document.querySelector('.mobile-stack-tools'));relocate(document.querySelector('.captures'));relocate(document.querySelector('.piece-guide'));relocate(document.querySelector('.go-summary'));
   body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');
   resizeObserver=new ResizeObserver(schedule);
