@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  function setup(){
   if(bar)return;
   body.classList.add('phone-game-shell');
+  window.scrollTo(0,0);
   bar=document.createElement('nav');bar.className='phone-table-bar';bar.setAttribute('aria-label','Game actions');
   drawer=document.createElement('section');drawer.id='phone-options';drawer.className='phone-options-drawer';drawer.setAttribute('aria-label','Game options');drawer.setAttribute('aria-hidden','true');
   const head=document.createElement('div');head.className='phone-options-head';const title=document.createElement('span');title.textContent='Game options';const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='Close';closeButton.addEventListener('click',close);head.append(title,closeButton);
