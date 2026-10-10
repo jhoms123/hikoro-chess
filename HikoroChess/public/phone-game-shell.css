@@ -76,17 +76,17 @@
  body.phone-game-shell .phone-options-list .game-sidebar{display:block!important;width:100%!important;max-height:none;overflow:visible}
  body.phone-game-shell .phone-options-list .game-sidebar>div{margin:4px 0;padding:8px!important}
  body.phone-game-shell .phone-options-list .collection-audio{margin:3px 0!important}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper{display:flex;flex-direction:column;height:calc(100dvh - var(--phone-top,44px));overflow:hidden;padding:0 5px!important;gap:2px}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .hikoro-match-heading,
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions{display:none}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-status{order:0;flex:none;min-height:26px;margin:0;padding:3px 8px;background:var(--table-ui);border:1px solid var(--table-line);border-radius:3px;color:var(--table-ink);font:600 14px/1.2 system-ui}
- body.phone-game-shell[data-audio-theme=lobby] #black-captured-area{order:1}
- body.phone-game-shell[data-audio-theme=lobby] #white-captured-area{order:3}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0}
- body.phone-game-shell[data-audio-theme=lobby] #board-container{--square-size:calc((var(--mobile-board-width) - 10px)/11.5);width:var(--mobile-board-width)}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area{flex:none;width:100%!important;padding:2px 5px!important;margin:0!important;border-width:2px!important;border-image:none!important}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area h3{font:600 11px/1.1 system-ui!important;margin:0!important}
- body.phone-game-shell[data-audio-theme=lobby] .captured-pieces-box{min-height:25px!important;max-height:32px;overflow-x:auto}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper{display:flex;flex-direction:column;height:calc(100dvh - var(--phone-top,44px));overflow:hidden;padding:0 5px!important;gap:2px}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .hikoro-match-heading,
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper>.mobile-hikoro-actions{display:none}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper>.mobile-hikoro-status{order:0;flex:none;min-height:26px;margin:0;padding:3px 8px;background:var(--table-ui);border:1px solid var(--table-line);border-radius:3px;color:var(--table-ink);font:600 14px/1.2 system-ui}
+ body.phone-game-shell.hikoro-site #black-captured-area{order:1}
+ body.phone-game-shell.hikoro-site #white-captured-area{order:3}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0}
+ body.phone-game-shell.hikoro-site #board-container{--square-size:calc((var(--mobile-board-width) - 10px)/11.5);width:var(--mobile-board-width)}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-area{flex:none;width:100%!important;padding:2px 5px!important;margin:0!important;border-width:2px!important;border-image:none!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-area h3{font:600 11px/1.1 system-ui!important;margin:0!important}
+ body.phone-game-shell.hikoro-site .captured-pieces-box{min-height:25px!important;max-height:32px;overflow-x:auto}
  body.phone-game-shell.sds-page .game-layout{display:flex!important;flex-direction:column;height:calc(100dvh - var(--phone-top,44px));overflow:hidden;padding:0 5px!important;gap:2px}
  body.phone-game-shell.sds-page .game-layout>.mobile-garden-status{order:0;flex:none;min-height:32px;max-height:64px;overflow:hidden;padding:2px 5px!important;border:1px solid var(--table-line);background:var(--table-ui)}
  body.phone-game-shell.sds-page .mobile-garden-status #turn-indicator{min-height:0;margin:0;padding:2px;font:600 14px/1.2 system-ui!important;background:var(--table-ui-2)!important;color:var(--table-ink)!important}
@@ -108,6 +108,18 @@
  body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-2){order:1}
  body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-1){order:3}
  body.phone-game-shell[data-audio-theme=shavari] .play-area>.board-tools{order:8}
+ /* Hikoro: the board owns the available height; reserve hands become compact strips. */
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active{overflow:hidden!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #table-companion{display:none!important}
+ body.phone-game-shell.hikoro-site.hikoro-dedicated.game-active #hikoro-game-wrapper{box-sizing:border-box!important;width:100%!important;max-width:none!important;margin:0!important;border:0!important;background:none!important;box-shadow:none!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-area{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;box-sizing:border-box!important;min-height:36px!important;max-height:48px!important;height:auto!important;overflow:hidden!important;background:var(--table-ui)!important;color:var(--table-ink)!important;border:1px solid var(--table-line)!important;border-radius:3px!important;box-shadow:none!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-area .table-player{display:none!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-area h3{flex:none;color:var(--table-ink)!important;font:600 11px/1.15 system-ui!important;white-space:nowrap}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .captured-pieces-box{display:flex!important;align-items:center!important;flex:1!important;min-width:0!important;min-height:26px!important;max-height:33px!important;padding:0 2px!important;overflow-x:auto!important;overflow-y:hidden!important;background:transparent!important;border:0!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper .mobile-board-viewport{align-self:stretch!important;min-height:0!important;overflow:auto!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper #board-container{box-sizing:border-box!important;margin:auto!important;padding:0!important;border-width:3px!important}
+ body.phone-game-shell.hikoro-site #hikoro-game-wrapper :is(#move-history-container,#turn-indicator-container){display:none!important}
+
 }
 @media(max-width:360px){
  body.phone-game-shell .phone-game-name{display:none}

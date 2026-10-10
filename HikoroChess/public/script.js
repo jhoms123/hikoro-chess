@@ -237,7 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameId && !isReplayMode) {
             socket.emit('leaveGame', gameId);
         }
-        window.location.reload();
+        if (hikoroPage) window.location.assign('/');
+        else window.location.reload();
     });
 
     if (resignButton) {
