@@ -1,6 +1,6 @@
-/* Academy v4: sanctuary tactics, forced-threat defense, search ordering and time control. */
+/* Academy v3: sanctuary corridor planning, immediate-loss interception and efficient PVS. */
 (function(root,factory){
- if(typeof module==='object'&&module.exports)module.exports=factory(require('./academy-engine'));
+ if(typeof module==='object'&&module.exports)module.exports=factory(require('../../public/academy-engine'));
  else root.HikoroAcademyBot=factory(root.HikoroAcademy);
 })(typeof globalThis!=='undefined'?globalThis:this,function(A){
 'use strict';
@@ -55,35 +55,10 @@ function terminal(s,who,ply){
  if(!s.result)return null;
  return s.result.winner===0?0:s.result.winner===who?MATE-ply:-MATE+ply;
 }
-// Detect true one-turn wins using the authoritative Academy move generator.
-// In particular, capturing the last surviving enemy royal also wins, even
-// when the capturing piece is not itself a royal.
-function immediateWin(s,owner){
- const board=s.board,enemy=3-owner;
- let remaining=0,last=null,attackerRoyals=[];
- for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-  const p=board[r][c];if(!p)continue;
-  if(p.owner===enemy&&royals.has(p.type)){remaining++;last={r,c};}
-  if(p.owner===owner&&royals.has(p.type))attackerRoyals.push({r,c,type:p.type});
- }
- for(const p of attackerRoyals){
-  if(distances[owner][p.type][p.r*8+p.c]!==1)continue;
-  for(const dest of A.movesFor(board,{r:p.r,c:p.c}))
-   if(A.sanctuary(dest))return true;
- }
- if(remaining!==1)return false;
- for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-  const p=board[r][c];if(p?.owner!==owner)continue;
-  for(const dest of A.movesFor(board,{r,c}))
-   if(dest.r===last.r&&dest.c===last.c)return true;
- }
- return false;
-}
 function directRoyalWin(s,owner){
  if(royalCount(s.board,owner)===0)return false;
  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
   const p=s.board[r][c];if(!p||p.owner!==owner||!royals.has(p.type))continue;
-  if(distances[owner][p.type][r*8+c]!==1)continue;
   const ms=A.movesFor(s.board,{r,c});
   for(const t of ms)if(A.sanctuary(t))return true;
  }
@@ -196,7 +171,7 @@ function chooseMove(state,options={}){
  const replyWidth=Math.max(8,Math.min(48,Number(options.replyWidth)||24));
  const rootWidth=Math.max(8,Math.min(96,Number(options.rootWidth)||64));
  const deadline=Date.now()+budget;
- const who=state.player,tt=new Map(),history=new Map(),killers=[],staticCache=new Map();
+ const who=state.player,tt=new Map(),history=new Map(),killers=[];
  // Single-character per-square TT keys avoid rebuilding 64 long tokens at every node.
  state={...state,fastKey:fastKey(state)};
  const roots=all.sort((a,b)=>moveOrder(state,b)-moveOrder(state,a));
@@ -213,57 +188,6 @@ function chooseMove(state,options={}){
  }
  for(const a of roots)if(winningAction(state,a))return a;
  let best=roots[0],bestScore=-Infinity,nodes=0,aborted=false;
- function staticEval(s,ply){
-  // The route BFS used in evaluation is expensive. Memoize per position
-  // (evaluation uses side-to-move, not depth, unless terminal).
-  const k=s.fastKey||fastKey(s);
-  if(staticCache.has(k))return staticCache.get(k);
-  const v=evaluate(s,s.player,ply);
-  if(staticCache.size<25000)staticCache.set(k,v);
-  return v;
- }
- function threatenedHorizon(s){
-  // Full tactical resolution is needed only when the enemy royal is one
-  // legal step from the sanctuary or either side has a sole remaining royal.
-  // A general full-board threat scan at every leaf costs too much at 220ms.
-  let ourRoyals=0,theirRoyals=0,enemyNear=false;
-  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-   const p=s.board[r][c];if(!p||!royals.has(p.type))continue;
-   if(p.owner===s.player)ourRoyals++;
-   else {
-    theirRoyals++;
-    if(distances[p.owner][p.type][r*8+c]===1)enemyNear=true;
-   }
-  }
-  return ourRoyals===1||theirRoyals===1||enemyNear;
- }
- function horizon(s,ply){
-  if((++nodes&15)===0&&Date.now()>=deadline){aborted=true;return 0;}
-  const done=terminal(s,s.player,ply);if(done!==null)return done;
-  // The side to move always gets a winning sanctuary move before its enemy.
-  if(immediateWin(s,s.player))return MATE-ply-1;
-  // A threatened one-turn loss requires a defensive reply, even at depth zero.
-  // Do not let the horizon reward a move that abandons a side sanctuary.
-  if(immediateWin(s,3-s.player)){
-   let bestDefense=-Infinity;
-   const replies=A.allMoves(s);
-   if(!replies.length)return 0; // Under Academy rules, no legal moves is a draw.
-   for(const a of replies){
-    if((++nodes&7)===0&&Date.now()>=deadline){aborted=true;return 0;}
-    const next=nextState(s,a);
-    if(next.result){const value=-terminal(next,next.player,ply+1);if(value>bestDefense)bestDefense=value;continue;}
-    if(immediateWin(next,next.player))continue;
-    const value=-staticEval(next,ply+1);
-    if(value>bestDefense)bestDefense=value;
-   }
-   return bestDefense===-Infinity?-MATE+ply+2:bestDefense;
-  }
-  return staticEval(s,ply);
- }
- function rankMoves(s,actions,preferred,kill){
-  return actions.map(a=>({a,score:moveOrder(s,a,preferred,kill,history)}))
-   .sort((x,y)=>y.score-x.score).map(item=>item.a);
- }
  function search(s,depth,alpha,beta,ply){
   nodes++;if((nodes&15)===0&&Date.now()>=deadline){aborted=true;return 0;}
   const done=terminal(s,s.player,ply);if(done!==null)return done;
@@ -276,17 +200,17 @@ function chooseMove(state,options={}){
    else beta=Math.min(beta,cached.score);
    if(alpha>=beta)return cached.score;
   }
-  if(depth<=0)return threatenedHorizon(s)?horizon(s,ply):staticEval(s,ply);
+  if(depth<=0)return evaluate(s,s.player,ply);
   const actions=A.allMoves(s);
   if(!actions.length)return 0;
   const preferred=cached?.move||0,kill=killers[ply]||0;
-  const ranked=rankMoves(s,actions,preferred,kill);
+  actions.sort((a,b)=>moveOrder(s,b,preferred,kill,history)-moveOrder(s,a,preferred,kill,history));
   let value=-Infinity,pv=0;
   // Do not discard captures, royals, or immediate wins just because they rank low.
   // At the widest late plies, trim only quiet moves after examining a substantial prefix.
-  const limit=depth>=3?Math.max(replyWidth,Math.ceil(ranked.length*.55)):ranked.length;
-  for(let i=0;i<ranked.length;i++){
-   const a=ranked[i],p=s.board[a.from.r][a.from.c],target=s.board[a.to.r][a.to.c];
+  const limit=depth>=3?Math.max(replyWidth,Math.ceil(actions.length*.55)):actions.length;
+  for(let i=0;i<actions.length;i++){
+   const a=actions[i],p=s.board[a.from.r][a.from.c],target=s.board[a.to.r][a.to.c];
    const n=nextState(s,a);
    const quiet=(!target&&!royals.has(p.type));
    // PVS: prove later candidates inferior with a cheap null-window search.
@@ -307,14 +231,14 @@ function chooseMove(state,options={}){
     break;
    }
   }
-  if(!Number.isFinite(value))value=staticEval(s,ply);
+  if(!Number.isFinite(value))value=evaluate(s,s.player,ply);
   if(!aborted&&!repeated&&tt.size<80000)tt.set(k,{depth,score:value,move:pv,flag:value<=originalAlpha?'upper':value>=beta?'lower':'exact'});
   return value;
  }
  for(let depth=1;depth<=maxDepth;depth++){
   if(Date.now()>=deadline)break;
   let iteration=null,score=-Infinity,alpha=-Infinity;
-  const ordered=rankMoves(state,roots,keyOf(best),0).sort((a,b)=>Number(emergencySafe.has(keyOf(b)))-Number(emergencySafe.has(keyOf(a))));
+  const ordered=roots.slice().sort((a,b)=>Number(keyOf(b)===keyOf(best))-Number(keyOf(a)===keyOf(best))||Number(emergencySafe.has(keyOf(b)))-Number(emergencySafe.has(keyOf(a)))||moveOrder(state,b)-moveOrder(state,a));
   for(let i=0;i<Math.min(rootWidth,ordered.length);i++){
    if(Date.now()>=deadline){aborted=true;break;}
    const a=ordered[i],n=nextState(state,a);
@@ -334,5 +258,5 @@ function chooseMove(state,options={}){
  }
  return best;
 }
-return{chooseMove,legalMoves:s=>A.allMoves(s),evaluate,moveOrder,royalPlans,directRoyalWin,immediateWin};
+return{chooseMove,legalMoves:s=>A.allMoves(s),evaluate,moveOrder,royalPlans,directRoyalWin};
 });

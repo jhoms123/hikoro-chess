@@ -1,13 +1,16 @@
-name: Academy v3 royal-race benchmark
+name: Academy v4 tactical-horizon benchmark
 on:
   push:
     branches:
-      - feat/academy-bot-v3-royal-interception
+      - feat/academy-v4-tactical-search
   workflow_dispatch:
 jobs:
   academy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        seed: ['529103', '744733']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,5 +21,5 @@ jobs:
       - name: Paired 20-game comparison
         env:
           ACADEMY_BUDGET_MS: '220'
-          ACADEMY_SEED: '529103'
+          ACADEMY_SEED: ${{ matrix.seed }}
         run: node HikoroChess/tests/academy-bot-tournament.js

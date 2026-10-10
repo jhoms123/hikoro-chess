@@ -42,3 +42,9 @@ Local journals use `hikoro-academy-local-v3` to avoid interpreting earlier army 
 The tests cover both courts' confinement and release, Prince direction, all four sanctuary squares, non-royal exclusion, surviving royalty, random legal play, movement comparisons against full Hikoro, online synchronization and seat protection, plus Academy bot legality, tactical wins, and sanctuary defense. Browser checks cover all lessons, moves, captures, undo/redo, refresh, keyboard and flip controls, mobile/tablet/desktop layouts, and online play.
 
 Preview images are in `docs/academy/`. Deployment uses the existing main branch and Render configuration: root HikoroChess, build npm ci, start npm start, health /health. No new dependencies.
+
+## Academy Bot V4.1 tactical search
+
+The local Academy AI uses the official 8×8 move generator. V4.1 retains V3's royal routes and defensive positioning, and adds a selective horizon search for immediate sanctuary finishes and final-royal captures. Tactical replies are extended when an opposing royal is at immediate risk or either side has only one royal; quiet positions keep the faster static evaluation. Legal move sorting is pre-scored once per node and evaluation transpositions are cached within a move. This is a deterministic, neural-network-free AI; the regular website budget remains 220 ms per move, maximum depth 5. The exact baseline V3 code is frozen in tests/fixtures/academy-bot-v3.js.
+
+The paired tournament runner compares V4.1 with V3 over ten opening pairs (twenty games) with equal move-time budgets, swapping colors for each opening. Two seeds, 529103 and 744733, provide forty games. All win claims must refer to this head-to-head evidence rather than to regression tests alone.
