@@ -1,0 +1,65 @@
+/* Phone game shell: board-first play, with secondary controls in one drawer. */
+@media (max-width:760px) {
+ body.phone-game-shell { height:100dvh; overflow:hidden; }
+ body.phone-game-shell main { height:calc(100dvh - var(--phone-top, 0px)); overflow:hidden; }
+ body.phone-game-shell .site-header,
+ body.phone-game-shell .collection-header { min-height:44px!important; padding-block:3px!important; }
+ body.phone-game-shell .introduction { padding:2px 0!important; }
+ body.phone-game-shell .introduction h1 { font-size:19px!important; line-height:1.2; }
+ body.phone-game-shell .match-layout { height:calc(100% - 30px); overflow:hidden; }
+ body.phone-game-shell .play-area { height:100%; display:flex; flex-direction:column; min-height:0; }
+ body.phone-game-shell .play-area>.turn-panel { order:0; margin:0 0 3px; padding:3px 9px; flex:none; }
+ body.phone-game-shell .play-area>.turn-panel h2 { font-size:16px; }
+ body.phone-game-shell .play-area>.turn-panel #connection-status { display:none; }
+ body.phone-game-shell .play-area>.player-strip { min-height:35px; padding:2px 8px; flex:none; }
+ body.phone-game-shell .player-strip small { display:none; }
+ body.phone-game-shell .mobile-board-viewport { flex:0 1 auto; min-height:0; overflow:auto; margin:2px auto!important; width:100%; }
+ body.phone-game-shell .mobile-board-surface { width:min(100%, var(--phone-board-max, calc(100dvh - 280px)))!important; }
+ body.phone-game-shell .mobile-board-viewport.is-detailed .mobile-board-surface { width:var(--mobile-board-width)!important; }
+ body.phone-game-shell .mobile-board-surface>:is(.mini-board-frame,.board-shell,#board-wrapper) { margin:0!important; }
+ body.phone-game-shell .mobile-board-tools { flex:none; margin:2px 0; }
+ body.phone-game-shell .mobile-board-tools button { min-height:40px!important; padding:2px!important; }
+ body.phone-game-shell .mobile-board-hint { display:none; }
+ body.phone-game-shell .board-tools { flex:none; margin:2px 0; }
+ body.phone-game-shell .board-tools>button { min-height:38px; padding:3px 8px; }
+ body.phone-game-shell .play-area>.mobile-selection { flex:none; margin:2px 0; padding:5px 8px; }
+ body.phone-game-shell .mobile-selection h2,.mobile-selection .fine-print { display:none; }
+ body.phone-game-shell .mobile-selection .selection-detail { font-size:12px; line-height:1.2; max-height:31px; overflow:hidden; }
+ body.phone-game-shell .mobile-go-actions,body.phone-game-shell .mobile-stack-tools { position:static; padding:2px 0; }
+ body.phone-game-shell .captures,body.phone-game-shell .piece-guide,body.phone-game-shell .go-summary { display:none; }
+ body.phone-game-shell .phone-options-open .captures,
+ body.phone-game-shell .phone-options-open .piece-guide,
+ body.phone-game-shell .phone-options-open .go-summary { display:block; }
+ body.phone-game-shell .phone-options-toggle { position:fixed; right:10px; bottom:calc(9px + env(safe-area-inset-bottom)); z-index:91; min-width:96px; min-height:44px; border:1px solid #bda16d; border-radius:24px; background:#20392f; color:#fff4d9; box-shadow:0 4px 18px #0008; font:600 14px/1.1 system-ui; }
+ body.phone-game-shell .phone-options-drawer { display:none; position:fixed; inset:auto 0 0; z-index:90; max-height:min(75dvh,680px); overflow:auto; overscroll-behavior:contain; padding:14px 12px calc(65px + env(safe-area-inset-bottom)); background:#1b2924; border-top:2px solid #c3a36a; box-shadow:0 -10px 35px #0009; }
+ body.phone-game-shell.phone-options-open .phone-options-drawer { display:block; }
+ body.phone-game-shell .phone-options-drawer .mobile-disclosure { margin:5px 0; }
+ body.phone-game-shell .phone-options-drawer .mobile-disclosure>summary { min-height:46px; }
+ body.phone-game-shell .phone-options-drawer .collection-audio { margin:5px 0!important; }
+ body.phone-game-shell :is(.piece-guide,.go-summary,footer) { display:none; }
+ body.phone-game-shell .phone-options-drawer :is(.piece-guide,.go-summary) { display:block; }
+ body.phone-game-shell :is(button,select,summary) { touch-action:manipulation; }
+ body.phone-game-shell .mobile-board-viewport:not(.is-navigating) { touch-action:pan-y pinch-zoom; }
+ body.phone-game-shell .mobile-board-viewport.is-navigating { touch-action:pan-x pan-y pinch-zoom; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper { height:calc(100dvh - 60px); overflow:hidden; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport { flex:1 1 auto; min-height:0; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport .mobile-board-surface { width:min(100%, calc((100dvh - 240px)*.625))!important; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area { padding:2px 6px!important; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-pieces-box { min-height:28px!important; }
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions { position:static; padding:2px; }
+ body.phone-game-shell.sds-page .game-layout { height:calc(100dvh - 45px); overflow:hidden; gap:2px; }
+ body.phone-game-shell.sds-page .garden-masthead { padding:3px; }
+ body.phone-game-shell.sds-page .garden-masthead h1 { font-size:19px; }
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport { flex:1 1 auto; min-height:0; }
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport .mobile-board-surface { width:min(100%, calc(100dvh - 260px))!important; }
+ body.phone-game-shell.sds-page .game-layout>.mobile-garden-actions { position:static; }
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-tools { order:4; }
+ body.phone-game-shell.sds-page .game-layout>.mobile-garden-status { padding:3px!important; }
+ body.phone-game-shell.sds-page .inventory-sidebar { flex:none; max-height:105px; overflow:auto; }
+ body.phone-game-shell.sds-page .game-sidebar { display:none!important; }
+ body.phone-game-shell.sds-page.phone-options-open .phone-options-drawer .game-sidebar { display:block!important; }
+}
+@media (max-width:760px) and (orientation:landscape) {
+ body.phone-game-shell .match-layout { display:block!important; }
+ body.phone-game-shell .play-area { max-width:min(100%, 560px); }
+}
