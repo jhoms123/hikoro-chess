@@ -63,6 +63,9 @@
  body.phone-game-shell .phone-options-list :is(.captures,.piece-guide,.go-summary){display:block}
  body.phone-game-shell .phone-options-list :is(button,select){min-height:38px;padding:4px 8px;font-size:13px}
  body.phone-game-shell .phone-options-list .collection-audio{margin:4px 0!important}
+ body.phone-game-shell .phone-options-list .mobile-board-tools{display:flex;flex-wrap:wrap;margin:4px 0}
+ body.phone-game-shell .phone-options-list .mobile-board-tools button{flex:1;min-width:80px}
+ body.phone-game-shell .phone-options-list .mobile-board-hint{display:block;flex-basis:100%}
  body.phone-game-shell :is(.phone-table-bar button,.phone-options-head button,summary){touch-action:manipulation}
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper{height:calc(100dvh - var(--phone-top, 0px));padding:0 5px!important;gap:2px;overflow:hidden}
  body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .hikoro-match-heading{display:none}

@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const candidates=[...document.querySelectorAll('.mobile-disclosure,.collection-audio')].filter(el=>!el.parentElement?.closest('.mobile-disclosure'));
   for(const el of candidates)relocate(el);
   relocate(document.querySelector('.lesson-dock'));
+  relocate(document.querySelector('.mobile-board-tools'));
   if(theme==='shodansho')relocate(document.querySelector('.game-sidebar'));
   if(theme==='lobby')relocate(document.getElementById('hikoro-local-settings'));
   body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');
