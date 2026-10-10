@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const hikoroLocalSettings = document.getElementById('hikoro-local-settings');
     const hikoroOpponentSelect = document.getElementById('hikoro-opponent-select');
     const hikoroNewMatch = document.getElementById('hikoro-new-match');
+    window.BotDifficulty?.attach('hikoro',hikoroLocalSettings,ms=>{
+        if(gameId&&gameState?.hikoroBot)socket.emit('setHikoroBotDifficulty',{gameId,budgetMs:ms});
+    });
+    hikoroOpponentSelect?.addEventListener('change',()=>window.BotDifficulty?.show('hikoro',hikoroOpponentSelect.value==='bot'));
     let localCreationPending = false, switchingLocalMatch = false;
     if (hikoroPage) {
         document.title = 'Hikoro Chess · Play locally';
@@ -48,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.removeItem('hikoro-active-room');
             gameId = null; seatToken = null;
         }
-        socket.emit('createSinglePlayerGame',{gameType:'hikoro',hikoroBot:hikoroOpponentSelect?.value === 'bot'});
+        socket.emit('createSinglePlayerGame',{gameType:'hikoro',hikoroBot:hikoroOpponentSelect?.value === 'bot',hikoroBotBudgetMs:window.BotDifficulty.get('hikoro')});
     }
     hikoroNewMatch?.addEventListener('click',()=>{
         if (gameState.turnCount > 0 && !window.confirm('Start a new local match? This position will be replaced.')) return;
@@ -452,6 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isSinglePlayer = initialGameState.isSinglePlayer;
         if (hikoroLocalSettings) hikoroLocalSettings.hidden = !(hikoroPage && isSinglePlayer);
         if (hikoroOpponentSelect && isSinglePlayer) hikoroOpponentSelect.value = initialGameState.hikoroBot ? 'bot' : 'human';
+        window.BotDifficulty?.show('hikoro',Boolean(hikoroPage&&isSinglePlayer&&initialGameState.hikoroBot));
         if (resignButton) resignButton.hidden = isSinglePlayer;
 
         if (isSinglePlayer) {
