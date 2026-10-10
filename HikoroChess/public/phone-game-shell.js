@@ -46,11 +46,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   anchor?.before(bar);body.append(drawer);
   const candidates=[...document.querySelectorAll('.mobile-disclosure,.collection-audio')].filter(el=>!el.parentElement?.closest('.mobile-disclosure'));
   for(const el of candidates)relocate(el);
+  relocate(document.querySelector('.lesson-dock'));
   if(theme==='shodansho')relocate(document.querySelector('.game-sidebar'));
   if(theme==='lobby')relocate(document.getElementById('hikoro-local-settings'));
-  const header=document.querySelector('.site-header,.collection-header,.garden-masthead');
-  const headerHeight=header&&getComputedStyle(header).display!=='none'?header.getBoundingClientRect().height:0;
-  body.style.setProperty('--phone-top',Math.ceil(headerHeight+43)+'px');
+  body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');
   resizeObserver=new ResizeObserver(schedule);
   const viewport=document.querySelector('.mobile-board-viewport');if(viewport)resizeObserver.observe(viewport);
   document.addEventListener('keydown',keydown);schedule();
@@ -64,7 +63,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  }
  function refresh(){if(media.matches&&playing())setup();else teardown();}
  media.addEventListener('change',()=>requestAnimationFrame(refresh));
- window.addEventListener('resize',schedule);
+ window.addEventListener('resize',()=>{if(bar)body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');schedule();});
  observer=new MutationObserver(()=>{if(theme==='lobby'&&!bar&&playing()&&media.matches)requestAnimationFrame(refresh);else if(theme==='lobby'&&bar&&!playing())requestAnimationFrame(refresh);else if(bar)schedule();});
  observer.observe(body,{subtree:true,attributes:true,attributeFilter:['class','hidden','disabled','style']});
  requestAnimationFrame(refresh);
