@@ -1,128 +1,110 @@
-/* Board-first responsive table layout */
+/* Shared game shell. Boards keep their own artwork; controls share one layout. */
+:root{--table-ui:#1b302b;--table-ui-2:#29443c;--table-line:#829a88;--table-ink:#f6ecd5;--table-gold:#d4b57b}
 @media(min-width:761px){
+ body[data-audio-theme] .match-layout{gap:clamp(14px,2vw,28px);align-items:start}
+ body[data-audio-theme] .match-panel{position:sticky;top:12px;max-height:calc(100dvh - 24px);overflow:auto;scrollbar-width:thin;gap:10px}
+ body[data-audio-theme] .match-panel .panel{padding:14px}
+ body[data-audio-theme] .match-panel .history-tools{display:flex;flex-wrap:wrap;gap:6px}
  body[data-audio-theme] .lesson-dock{min-height:0!important;padding:3px 8px!important;margin:4px auto!important;max-width:1120px!important}
  body[data-audio-theme] .lesson-dock button{min-height:38px!important;padding:5px 12px!important;font-size:13px!important}
- body[data-audio-theme] .introduction{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0!important;min-height:0!important}
+ body[data-audio-theme] .introduction{display:flex;align-items:center;justify-content:center;padding:8px 0!important;min-height:0!important}
  body[data-audio-theme] .introduction h1{font-size:clamp(24px,2.5vw,34px)!important;margin:0!important;line-height:1.1}
- body[data-audio-theme] .introduction :is(.eyebrow,p:last-child){display:none}
- body[data-audio-theme] .introduction::after{display:none}
-
- body[data-audio-theme] .match-layout{gap:clamp(14px,2vw,28px);align-items:start}
- body[data-audio-theme] .play-area{min-width:0}
- body[data-audio-theme] .match-panel{position:sticky;top:16px;max-height:calc(100dvh - 32px);overflow:auto;scrollbar-width:thin;gap:10px}
- body[data-audio-theme] .match-panel .panel{padding:14px}
- body[data-audio-theme] .match-panel .fine-print{line-height:1.4}
- body[data-audio-theme] .match-panel .history-tools{display:flex;flex-wrap:wrap;gap:6px}
- body[data-audio-theme] .match-panel button{min-height:40px}
+ body[data-audio-theme] .introduction :is(.eyebrow,p:last-child),body[data-audio-theme] .introduction::after{display:none}
+ .sds-page .game-layout{display:grid!important;grid-template-columns:minmax(0,720px) minmax(275px,340px)!important;gap:16px!important;justify-content:center;align-items:start}
+ .sds-page .game-layout>.mobile-board-viewport{grid-column:1;grid-row:1;width:100%}
+ .sds-page .game-layout>.game-sidebar{grid-column:2;grid-row:1;width:100%!important;max-height:calc(100dvh - 100px);overflow:auto}
+ .sds-page .game-layout>.inventory-sidebar{grid-column:2;grid-row:2;width:100%!important;max-height:240px;overflow:auto}
 }
-@media(max-width:760px){
- body.phone-game-shell{height:100dvh;overflow:hidden}
- body.phone-game-shell :is(.site-header,.collection-header){min-height:42px!important;padding:3px 8px!important}
- body.phone-game-shell .site-header .edition,body.phone-game-shell .collection-header .edition{display:none}
- body.phone-game-shell main{height:calc(100dvh - var(--phone-top, 0px));overflow:hidden;padding:0 5px!important}
- body.phone-game-shell .introduction{display:none}
- body.phone-game-shell .match-layout{height:100%;display:block!important;max-width:none;overflow:hidden}
- body.phone-game-shell .play-area{height:100%;width:100%;max-width:none;display:flex;flex-direction:column;min-height:0;gap:2px}
- body.phone-game-shell .play-area>.turn-panel{order:0;flex:none;padding:2px 7px;margin:0;border-width:4px;border-image-width:4px}
- body.phone-game-shell .play-area>.turn-panel h2{font-size:15px;line-height:1.2;margin:0}
- body.phone-game-shell .play-area>.turn-panel :is(.eyebrow,#connection-status){display:none}
- body.phone-game-shell .play-area>.player-strip{flex:none;min-height:35px;padding:2px 6px;gap:5px}
- body.phone-game-shell .player-strip strong{font-size:13px}
- body.phone-game-shell .player-strip small{display:none}
- body.phone-game-shell .player-strip .army-count{font-size:11px}
- body.phone-game-shell .mobile-board-viewport{flex:1 1 0;min-height:0;width:100%;margin:0!important;overflow:auto;display:flex;justify-content:center;align-items:center}
- body.phone-game-shell .mobile-board-viewport.is-detailed{display:block}
- body.phone-game-shell .mobile-board-surface{flex:none;width:var(--phone-fit-width,100%)!important;margin:auto}
- body.phone-game-shell .mobile-board-viewport.is-detailed .mobile-board-surface{width:var(--mobile-board-width)!important}
- body.phone-game-shell .mobile-board-surface>:is(.mini-board-frame,.board-shell,#board-wrapper){margin:0!important;width:100%!important}
- body.phone-game-shell .mobile-board-surface .board-shell{padding:0}
- body.phone-game-shell .mobile-board-tools{display:none}
- body.phone-game-shell .board-tools{flex:none;margin:0;gap:4px}
- body.phone-game-shell .board-tools>span{display:none}
- body.phone-game-shell .board-tools>button{min-height:36px;padding:2px 8px;font-size:12px}
- body.phone-game-shell .mobile-stack-tools{position:static;margin:0;padding:0;gap:3px}
- body.phone-game-shell .mobile-stack-tools button{min-height:36px!important;font-size:11px!important}
- body.phone-game-shell .play-area>.mobile-selection{flex:none;margin:0;padding:3px 6px;border-width:4px;border-image-width:4px}
- body.phone-game-shell .mobile-selection h2,body.phone-game-shell .mobile-selection .fine-print{display:none}
- body.phone-game-shell .mobile-selection .selection-detail{font-size:12px;line-height:1.2;min-height:0;max-height:29px;overflow:hidden}
- body.phone-game-shell .mobile-go-actions{position:static;margin:0;padding:2px 0}
- body.phone-game-shell .mobile-go-actions button{min-height:38px;font-size:11px!important}\n body.phone-game-shell .mobile-go-actions :is(#pass-button,#shield-button){display:none}
- body.phone-game-shell .mobile-lesson-picker{flex:none;margin:0;padding:2px 4px}
- body.phone-game-shell :is(.captures,.piece-guide,.go-summary,footer){display:none}
- body.phone-game-shell .phone-table-bar{display:flex;align-items:center;gap:5px;height:43px;min-height:43px;padding:2px 5px;background:#1d3029;color:#f4e8cc;z-index:55}
- body.phone-game-shell .phone-table-bar button{flex:0 1 auto;min-width:0;min-height:38px;padding:3px 9px;border:1px solid #b39b6b;border-radius:6px;background:#354d3a;color:#fff2d7;font:600 12px/1.15 system-ui;white-space:nowrap}
- body.phone-game-shell .phone-table-bar .phone-options-toggle{margin-left:auto;background:#8b6340}
- body.phone-game-shell .phone-options-drawer{display:none!important;position:fixed;left:0;right:0;bottom:0;z-index:100;height:auto;max-height:min(58dvh,470px);overflow:hidden;padding:0;background:#1d3029;border-top:2px solid #c2a66d;box-shadow:0 -8px 28px #0009}
- body.phone-game-shell.phone-options-open .phone-options-drawer{display:flex!important;flex-direction:column}
- body.phone-game-shell .phone-options-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;min-height:48px;padding:5px 12px;background:#25392e;color:#fff2d7;font:600 16px system-ui;z-index:1}
- body.phone-game-shell .phone-options-head button{min-width:70px;min-height:40px;border:1px solid #c5a873;background:#59432e;color:white;border-radius:6px;font:600 14px system-ui}
- body.phone-game-shell .phone-options-list{overflow:auto;overscroll-behavior:contain;padding:6px 10px calc(10px + env(safe-area-inset-bottom));scrollbar-width:thin}
- body.phone-game-shell .phone-options-list .mobile-disclosure{margin:4px 0}
- body.phone-game-shell .phone-options-list .mobile-disclosure>summary{min-height:42px;padding:6px 10px;font-size:14px}
- body.phone-game-shell .phone-options-list .mobile-disclosure .panel{padding:8px}
- body.phone-game-shell .phone-options-list :is(.captures,.piece-guide,.go-summary){display:block}
- body.phone-game-shell .phone-options-list :is(button,select){min-height:38px;padding:4px 8px;font-size:13px}
- body.phone-game-shell .phone-options-list .collection-audio{margin:4px 0!important}
- body.phone-game-shell .phone-options-list .mobile-board-tools{display:flex;flex-wrap:wrap;margin:4px 0}
- body.phone-game-shell .phone-options-list .mobile-board-tools button{flex:1;min-width:80px}
- body.phone-game-shell .phone-options-list .mobile-board-hint{display:block;flex-basis:100%}
- body.phone-game-shell :is(.phone-table-bar button,.phone-options-head button,summary){touch-action:manipulation}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper{height:calc(100dvh - var(--phone-top, 0px));padding:0 5px!important;gap:2px;overflow:hidden}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .hikoro-match-heading{display:none}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions{display:none}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-status{order:0;margin:0;font-size:15px;line-height:1.2;min-height:20px}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport{order:2;flex:1 1 0;min-height:0}
- body.phone-game-shell[data-audio-theme=lobby] #board-container{--square-size:calc((var(--mobile-board-width) - 10px)/11.5);width:var(--mobile-board-width)}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area{padding:2px 5px!important;flex:none}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area h3{font-size:12px!important;line-height:1.1}
- body.phone-game-shell[data-audio-theme=lobby] .captured-pieces-box{min-height:26px!important;max-height:36px;overflow-x:auto}
- body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions+*{min-height:0}
- body.phone-game-shell.sds-page .garden-masthead{display:none}
- body.phone-game-shell.sds-page .game-layout{height:calc(100dvh - var(--phone-top, 0px));padding:0 5px;gap:2px;overflow:hidden}
- body.phone-game-shell.sds-page .game-layout>.mobile-garden-status{order:0;padding:2px!important}
- body.phone-game-shell.sds-page .game-layout>.mobile-garden-actions{display:none}
- body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport{order:2;flex:1 1 0;min-height:0}
- body.phone-game-shell.sds-page .inventory-sidebar{order:3;flex:none;max-height:100px;overflow:auto}
- body.phone-game-shell.sds-page .game-sidebar{display:none!important}
- body.phone-game-shell.sds-page .phone-options-list .game-sidebar{display:block!important;width:100%!important;max-height:none;overflow:visible}
- body.phone-game-shell.sds-page .game-layout>.mobile-board-tools{display:none}
- body.phone-game-shell.sds-page #gameCanvas{width:100%;height:auto}
-}
-@media(max-width:760px) and (orientation:landscape){
- body.phone-game-shell .match-layout{display:block!important}
- body.phone-game-shell .play-area{max-width:540px;margin:auto}
- body.phone-game-shell.sds-page .inventory-sidebar{max-height:56px}
-}
-
-/* Game-only phone corrections: keep the board ahead of reserves and page chrome. */
 @media(max-width:760px){
  html:has(body.phone-game-shell){height:100dvh;overflow:hidden}
- body.phone-game-shell[data-audio-theme=shavari] .player-appbar,
- body.phone-game-shell[data-audio-theme=shavari] .site-header,
- body.phone-game-shell.sds-page .player-appbar,
- body.phone-game-shell.sds-page :is(.site-header,.collection-header,.garden-masthead){display:none!important}
- body.phone-game-shell .phone-table-bar{height:40px;min-height:40px;padding:2px 5px}
- body.phone-game-shell .phone-table-bar button{min-height:35px;padding:2px 8px!important;border-image:none!important;border-width:1px!important;border-radius:5px!important;box-shadow:none!important;font-size:12px!important}
- body.phone-game-shell .mobile-disclosure{display:none}
- body.phone-game-shell .phone-options-list .mobile-disclosure{display:block}
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-stack-tools{
-  order:5;flex:0 0 auto!important;flex-basis:auto!important;width:100%;height:38px!important;min-height:38px!important;max-height:38px!important;margin:0!important;padding:0!important;align-items:stretch
- }
- body.phone-game-shell[data-audio-theme=shavari] .mobile-stack-tools button{
-  flex:1 1 0!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:2px 3px!important;border:1px solid #8caa9b!important;border-image:none!important;box-shadow:none!important;font-size:11px!important;line-height:1.1!important
- }
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0!important}
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-2){order:1}
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-1){order:3}
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-selection{order:4}
- body.phone-game-shell[data-audio-theme=shavari] .play-area>.board-tools{order:6}
- body.phone-game-shell.sds-page .game-layout>#hands-container{order:4!important;flex:0 0 auto!important;height:76px!important;max-height:76px!important;width:100%;overflow:hidden!important;padding:0}
- body.phone-game-shell.sds-page #hands-container .reserve-card{padding:2px 6px!important}
- body.phone-game-shell.sds-page #hands-container .reserve-card>div:first-child{display:none}
- body.phone-game-shell.sds-page #hands-container .reserve-card>div:nth-child(2){gap:4px}
- body.phone-game-shell.sds-page #hands-container .reserve-flower{flex:0 0 92px;min-height:64px;max-height:64px;padding:2px!important}
- body.phone-game-shell.sds-page .inventory-sidebar{display:none!important}
- body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport{order:2!important;flex:1 1 0!important;min-height:0!important;align-items:flex-start}
+ body.phone-game-shell{height:100dvh;overflow:hidden;color:var(--table-ink)}
+ body.phone-game-shell :is(.player-appbar,.site-header,.collection-header,.garden-masthead){display:none!important}
+ body.phone-game-shell :is(.lesson-dock,.collection-audio,.mobile-disclosure){display:none}
+ body.phone-game-shell .phone-options-list :is(.lesson-dock,.collection-audio,.mobile-disclosure){display:block}
+ body.phone-game-shell :is(footer,.site-footer,.piece-guide,.go-summary,.captures){display:none}
+ body.phone-game-shell main{height:calc(100dvh - var(--phone-top,44px));min-height:0;overflow:hidden;padding:0 5px!important}
+ body.phone-game-shell .introduction{display:none!important}
+ body.phone-game-shell .match-layout{display:block!important;height:100%;max-width:none;overflow:hidden;margin:0 auto}
+ body.phone-game-shell .play-area{display:flex;flex-direction:column;gap:2px;height:100%;min-width:0;max-width:none;margin:0;overflow:hidden}
+ body.phone-game-shell .phone-table-bar{display:flex;align-items:center;gap:4px;box-sizing:border-box;height:44px;min-height:44px;padding:3px 6px;background:var(--table-ui);border-bottom:1px solid var(--table-line);color:var(--table-ink);font:600 12px/1.1 system-ui;z-index:50}
+ body.phone-game-shell .phone-game-name{min-width:0;max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px/1.1 system-ui;color:var(--table-gold)}
+ body.phone-game-shell .phone-table-bar button{flex:0 1 auto;min-width:0;height:36px!important;min-height:36px!important;max-height:36px!important;margin:0!important;padding:2px 7px!important;border:1px solid var(--table-line)!important;border-image:none!important;border-radius:5px!important;background:var(--table-ui-2)!important;color:var(--table-ink)!important;box-shadow:none!important;text-shadow:none!important;font:600 12px/1.1 system-ui!important;white-space:nowrap}
+ body.phone-game-shell .phone-table-bar button[hidden]{display:none!important}
+ body.phone-game-shell .phone-table-bar .phone-options-toggle{margin-left:auto!important;background:#765638!important}
+ body.phone-game-shell .play-area>.turn-panel{order:0;flex:0 0 auto;min-height:31px;max-height:44px;overflow:hidden;margin:0!important;padding:3px 8px!important;border:1px solid var(--table-line)!important;border-image:none!important;border-radius:3px!important;background:var(--table-ui)!important;box-shadow:none!important;color:var(--table-ink)!important}
+ body.phone-game-shell .play-area>.turn-panel :is(.eyebrow,#connection-status,.fine-print){display:none!important}
+ body.phone-game-shell .play-area>.turn-panel h2{margin:0!important;font:600 14px/1.35 system-ui!important;color:var(--table-ink)!important}
+ body.phone-game-shell .play-area>.turn-panel #notice:not([hidden]){font:12px/1.2 system-ui;margin:0}
+ body.phone-game-shell .play-area>.player-strip{flex:0 0 auto;min-height:32px!important;max-height:37px;padding:2px 7px!important;margin:0!important;gap:5px;border-radius:3px}
+ body.phone-game-shell .player-strip :is(.player-mark,.go-mark){width:20px;height:20px;flex:none}
+ body.phone-game-shell .player-strip strong{font:600 13px/1.2 system-ui!important}
+ body.phone-game-shell .player-strip small{display:none!important}
+ body.phone-game-shell .player-strip .army-count{font:11px/1.1 system-ui!important;white-space:nowrap}
+ body.phone-game-shell .play-area>.player-strip:has(#court-2),body.phone-game-shell .play-area>#strip-2{order:1}
+ body.phone-game-shell .play-area>.player-strip:has(#court-1),body.phone-game-shell .play-area>#strip-1{order:3}
+ body.phone-game-shell .mobile-board-viewport{order:2;display:flex;align-items:center;justify-content:center;flex:1 1 0!important;min-height:0!important;width:100%;margin:0!important;overflow:auto;touch-action:pan-y pinch-zoom}
+ body.phone-game-shell .mobile-board-viewport.is-detailed{display:block;touch-action:pan-x pan-y pinch-zoom}
+ body.phone-game-shell .mobile-board-surface{flex:none;width:var(--phone-fit-width,100%)!important;margin:auto}
+ body.phone-game-shell .mobile-board-viewport.is-detailed .mobile-board-surface{width:var(--mobile-board-width)!important}
+ body.phone-game-shell .mobile-board-surface>:is(.mini-board-frame,.board-shell,#board-wrapper){width:100%!important;margin:0!important;padding:0!important}
+ body.phone-game-shell .board-tools{order:6;flex:0 0 auto;min-height:36px;margin:0!important;padding:0}
+ body.phone-game-shell .board-tools>span{display:none}
+ body.phone-game-shell .board-tools button{min-height:34px!important;padding:2px 6px!important;font-size:11px!important}
+ body.phone-game-shell .play-area>.mobile-selection{order:5;flex:0 0 auto;min-height:0;margin:0!important;padding:3px 7px!important;border:1px solid var(--table-line)!important;border-image:none!important;background:var(--table-ui)!important;color:var(--table-ink)!important}
+ body.phone-game-shell .mobile-selection :is(h2,.fine-print){display:none!important}
+ body.phone-game-shell .mobile-selection .selection-detail{min-height:0;max-height:26px;overflow:hidden;margin:0;font:12px/1.2 system-ui}
+ body.phone-game-shell .mobile-lesson-picker{order:5;flex:0 0 auto;margin:0;padding:2px 4px}
+ body.phone-game-shell .play-area>.mobile-go-actions{order:7;position:static;flex:0 0 auto;margin:0;padding:2px 0;background:var(--table-ui)}
+ body.phone-game-shell .mobile-go-actions :is(#pass-button,#shield-button){display:none}
+ body.phone-game-shell .mobile-go-actions button{min-height:34px!important;font-size:11px!important}
+ body.phone-game-shell .mobile-board-tools{display:none}
+ body.phone-game-shell .phone-options-drawer{display:none!important;position:fixed;inset:auto 0 0;z-index:100;max-height:min(56dvh,470px);overflow:hidden;padding:0;background:var(--table-ui);border-top:2px solid var(--table-gold);box-shadow:0 -8px 28px #0009}
+ body.phone-game-shell.phone-options-open .phone-options-drawer{display:flex!important;flex-direction:column}
+ body.phone-game-shell .phone-options-head{display:flex;align-items:center;justify-content:space-between;flex:none;min-height:45px;padding:4px 12px;background:var(--table-ui-2);color:var(--table-ink);font:600 15px system-ui}
+ body.phone-game-shell .phone-options-head button{min-height:35px;padding:3px 12px;border:1px solid var(--table-line);background:#765638;color:white;border-radius:5px;font:600 12px system-ui}
+ body.phone-game-shell .phone-options-list{overflow:auto;overscroll-behavior:contain;padding:5px 9px calc(10px + env(safe-area-inset-bottom))}
+ body.phone-game-shell .phone-options-list .mobile-disclosure{margin:3px 0}
+ body.phone-game-shell .phone-options-list .mobile-disclosure>summary{min-height:38px;padding:5px 9px;font:600 13px system-ui}
+ body.phone-game-shell .phone-options-list .mobile-board-tools{display:flex;flex-wrap:wrap;margin:3px 0}
+ body.phone-game-shell .phone-options-list .mobile-board-tools button{flex:1;min-width:75px;min-height:35px}
+ body.phone-game-shell .phone-options-list .mobile-board-hint{display:block;flex-basis:100%}
+ body.phone-game-shell .phone-options-list :is(.captures,.piece-guide,.go-summary){display:block}
+ body.phone-game-shell .phone-options-list :is(button,select){min-height:35px;padding:3px 8px;font-size:12px}
+ body.phone-game-shell .phone-options-list .game-sidebar{display:block!important;width:100%!important;max-height:none;overflow:visible}
+ body.phone-game-shell .phone-options-list .game-sidebar>div{margin:4px 0;padding:8px!important}
+ body.phone-game-shell .phone-options-list .collection-audio{margin:3px 0!important}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper{display:flex;flex-direction:column;height:calc(100dvh - var(--phone-top,44px));overflow:hidden;padding:0 5px!important;gap:2px}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .hikoro-match-heading,
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-actions{display:none}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-hikoro-status{order:0;flex:none;min-height:26px;margin:0;padding:3px 8px;background:var(--table-ui);border:1px solid var(--table-line);border-radius:3px;color:var(--table-ink);font:600 14px/1.2 system-ui}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0}
+ body.phone-game-shell[data-audio-theme=lobby] #board-container{--square-size:calc((var(--mobile-board-width) - 10px)/11.5);width:var(--mobile-board-width)}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area{flex:none;width:100%!important;padding:2px 5px!important;margin:0!important;border-width:2px!important;border-image:none!important}
+ body.phone-game-shell[data-audio-theme=lobby] #hikoro-game-wrapper .captured-area h3{font:600 11px/1.1 system-ui!important;margin:0!important}
+ body.phone-game-shell[data-audio-theme=lobby] .captured-pieces-box{min-height:25px!important;max-height:32px;overflow-x:auto}
+ body.phone-game-shell.sds-page .game-layout{display:flex!important;flex-direction:column;height:calc(100dvh - var(--phone-top,44px));overflow:hidden;padding:0 5px!important;gap:2px}
+ body.phone-game-shell.sds-page .game-layout>.mobile-garden-status{order:0;flex:none;min-height:32px;max-height:64px;overflow:hidden;padding:2px 5px!important;border:1px solid var(--table-line);background:var(--table-ui)}
+ body.phone-game-shell.sds-page .mobile-garden-status #turn-indicator{min-height:0;margin:0;padding:2px;font:600 14px/1.2 system-ui!important;background:var(--table-ui-2)!important;color:var(--table-ink)!important}
+ body.phone-game-shell.sds-page .mobile-garden-status #game-message{min-height:0;max-height:26px;margin:1px 0 0;padding:2px 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/1.2 system-ui;color:var(--table-ink);background:transparent}
+ body.phone-game-shell.sds-page .game-layout>.mobile-garden-actions,
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-tools,
+ body.phone-game-shell.sds-page .inventory-sidebar,
+ body.phone-game-shell.sds-page .game-sidebar{display:none!important}
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport{order:2!important;flex:1 1 0!important;align-items:flex-start}
  body.phone-game-shell.sds-page .mobile-board-surface{margin:0 auto}
  body.phone-game-shell.sds-page #board-wrapper .table-roster{display:none}
+ body.phone-game-shell.sds-page .game-layout>#hands-container{order:4!important;flex:0 0 auto!important;height:72px!important;max-height:72px!important;width:100%;overflow:hidden!important;padding:0}
+ body.phone-game-shell.sds-page #hands-container .reserve-card{padding:2px 5px!important}
+ body.phone-game-shell.sds-page #hands-container .reserve-card>div:first-child{display:none}
+ body.phone-game-shell.sds-page #hands-container .reserve-card>div:nth-child(2){gap:4px}
+ body.phone-game-shell.sds-page #hands-container .reserve-flower{flex:0 0 88px;min-height:61px;max-height:61px;padding:2px!important}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-stack-tools{order:7;display:flex;flex:0 0 auto!important;flex-basis:auto!important;height:37px!important;min-height:37px!important;max-height:37px!important;width:100%;margin:0!important;padding:0!important;align-items:stretch}
+ body.phone-game-shell[data-audio-theme=shavari] .mobile-stack-tools button{flex:1 1 0!important;height:35px!important;min-height:35px!important;max-height:35px!important;padding:2px 3px!important;border:1px solid var(--table-line)!important;border-image:none!important;box-shadow:none!important;font:600 11px/1.1 system-ui!important}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-2){order:1}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-1){order:3}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.board-tools{order:8}
+}
+@media(max-width:360px){
+ body.phone-game-shell .phone-game-name{display:none}
+ body.phone-game-shell .phone-table-bar button{padding-inline:5px!important;font-size:11px!important}
 }
