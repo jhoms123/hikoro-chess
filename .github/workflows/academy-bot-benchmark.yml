@@ -1,8 +1,8 @@
-name: Academy 20-game bot benchmark
+name: Academy v3 royal-race benchmark
 on:
   push:
     branches:
-      - feat/academy-bot-v2-benchmark
+      - feat/academy-bot-v3-royal-interception
   workflow_dispatch:
 jobs:
   academy:
