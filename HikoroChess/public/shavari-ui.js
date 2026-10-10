@@ -27,6 +27,7 @@
             } else if (saved) notice('This saved match no longer fits the current Shavari rules. A new table is ready.');
         } catch { notice('The saved match could not be restored. A new table is ready.'); }
     }
+    window.BotDifficulty?.attach('shavari',$('local-opponent-control').parentElement,()=>{cancelBot();render();});
     function isBotTurn() { return !online && botSeat === state.player; }
     function canPlay() { return !state.result && !roomClosed && !isBotTurn() && (!online || connected && hasSynced && !pending && mySeat === state.player); }
     for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
@@ -103,7 +104,7 @@
                 botWorker = null; botThinking = false; worker.terminate(); botErrorPly = state.ply;
                 notice('The Shavari bot worker could not start. Change the local opponent or reload the match.'); render();
             };
-            worker.postMessage({ id: ticket, journal: journal.slice(0, cursor), ms: 900 });
+            worker.postMessage({ id: ticket, journal: journal.slice(0, cursor), ms: window.BotDifficulty.get('shavari') });
         } catch {
             botThinking = false; botErrorPly = state.ply; botWorker = null;
             notice('The Shavari bot worker could not start. Change the local opponent or reload the match.'); $('connection-status').textContent='Bot unavailable · change the local opponent to retry.';
@@ -171,6 +172,7 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
         $('resign-button').disabled=!connected||!hasSynced||pending;
         $('local-opponent-control').hidden=online;
         $('local-opponent').value=String(botSeat ?? 'none');
+        window.BotDifficulty?.show('shavari',!online&&botSeat!==null);
         const firstStrip=document.querySelector(flipped?'.carnelian':'.turquoise'),lastStrip=document.querySelector(flipped?'.turquoise':'.carnelian');
         $('board').parentElement.before(firstStrip);$('board').parentElement.after(lastStrip);
         scheduleBot();

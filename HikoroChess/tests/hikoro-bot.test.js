@@ -22,8 +22,11 @@ test('uploaded Hikoro bot replies legally and keeps the black seat server owned'
     const answer=event(socket,'gameStateUpdate');const afterBot=await answer;
     assert.equal(afterBot.actionJournal.length,2);
     assert.equal(afterBot.actionJournal[1].type,'board');
-    assert.equal(afterBot.isWhiteTurn,true);
-    assert.deepEqual(rules.makeMove(afterWhite,afterBot.actionJournal[1],'black').updatedGame.boardState,afterBot.boardState);
+    const official=rules.makeMove(afterWhite,afterBot.actionJournal[1],'black');
+    assert.equal(official.success,true);
+    assert.deepEqual(official.updatedGame.boardState,afterBot.boardState);
+    // Some legal Hikoro moves earn a bonus action for the same color.
+    assert.equal(afterBot.isWhiteTurn,official.updatedGame.isWhiteTurn);
 });
 
 test('shared-screen Hikoro leaves the black seat to a second human',async t=>{

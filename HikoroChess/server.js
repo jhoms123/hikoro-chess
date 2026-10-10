@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const socketIo = require('socket.io');
 const hikoroLogic = require('./gamelogic');
-const HikoroBot = require('./hikoro-bot');
+const {Worker} = require('node:worker_threads');
 const { remainingTime, commitClock } = require('./clock');
 const { createSdsValidator, applySdsAction } = require('./sds-validator');
 const Shavari = require('./public/shavari-engine');
@@ -169,27 +169,55 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         roster(game);
         return game;
     }
+    const allowedBotBudgets=new Set([500,1000,1500,2000,3000,4000]);
+    const botBudget=value=>allowedBotBudgets.has(Number(value))?Number(value):1000;
+    // Run longer Hikoro searches off-thread, keeping the shared server responsive.
+    function calculateHikoroBotMove(game,budgetMs){
+        return new Promise((resolve,reject)=>{
+            const worker=new Worker(path.join(__dirname,'hikoro-bot-worker.js'),{workerData:{game,budgetMs}});
+            let settled=false;
+            const timeout=setTimeout(()=>finish(new Error('Hikoro bot search timed out')),budgetMs+3500);
+            function finish(error,move){
+                if(settled)return;
+                settled=true;clearTimeout(timeout);void worker.terminate();
+                if(error)reject(error);else resolve(move);
+            }
+            worker.once('message',data=>data?.error?finish(new Error(data.error)):finish(null,data?.move));
+            worker.once('error',error=>finish(error));
+            worker.once('exit',code=>{if(!settled)finish(new Error('Hikoro bot worker stopped ('+code+')'));});
+        });
+    }
     function startHikoroBotTurn(gameId) {
         const game=games.get(gameId);
-        if (!game?.hikoroBot || game.gameOver || game.isWhiteTurn || hikoroBotJobs.has(gameId)) return;
+        if(!game?.hikoroBot||game.gameOver||game.isWhiteTurn||hikoroBotJobs.has(gameId))return;
         hikoroBotJobs.add(gameId);
-        setTimeout(()=>{
-            void command(()=>{
-                const latest=games.get(gameId);
-                if (!latest?.hikoroBot || latest.gameOver || latest.isWhiteTurn) return;
-                const move=HikoroBot.chooseMove(latest);
-                const result=move&&hikoroLogic.makeMove(latest,move,'black');
-                if (!result?.success) {latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not find a legal move.');return;}
-                const next=result.updatedGame;
-                next.actionJournal=[...(latest.actionJournal||[]),move];
-                next.lastActivity=Date.now();games.set(gameId,next);
-                if (next.gameOver) {persistResult(next);roster(next);}
-                broadcast(gameId,'gameStateUpdate',state(next));
-            }).finally(()=>{
+        setTimeout(async()=>{
+            const snapshot=games.get(gameId);
+            try{
+                if(!snapshot?.hikoroBot||snapshot.gameOver||snapshot.isWhiteTurn)return;
+                const move=await calculateHikoroBotMove(snapshot,botBudget(snapshot.hikoroBotBudgetMs));
+                await command(()=>{
+                    const latest=games.get(gameId);
+                    if(latest!==snapshot||!latest?.hikoroBot||latest.gameOver||latest.isWhiteTurn)return;
+                    const result=move&&hikoroLogic.makeMove(latest,move,'black');
+                    if(!result?.success){latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not find a legal move.');return;}
+                    const next=result.updatedGame;
+                    next.actionJournal=[...(latest.actionJournal||[]),move];
+                    next.lastActivity=Date.now();games.set(gameId,next);
+                    if(next.gameOver){persistResult(next);roster(next);}
+                    broadcast(gameId,'gameStateUpdate',state(next));
+                });
+            }catch(error){
+                await command(()=>{
+                    const latest=games.get(gameId);
+                    if(latest===snapshot){latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not finish its search.');}
+                });
+            }finally{
                 hikoroBotJobs.delete(gameId);
-                if (games.get(gameId)?.hikoroBot && !games.get(gameId).hikoroBotStalled && !games.get(gameId).isWhiteTurn && !games.get(gameId).gameOver) startHikoroBotTurn(gameId);
-            });
-        },250);
+                const latest=games.get(gameId);
+                if(latest?.hikoroBot&&!latest.hikoroBotStalled&&!latest.isWhiteTurn&&!latest.gameOver)startHikoroBotTurn(gameId);
+            }
+        },80);
     }
     const SDS_BOT_ENGINE = 'Adaptive Gumbel Guide v13.5.1';
     function addSdsBotSeats(game) {
@@ -311,10 +339,16 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             const game=newGame(socket, config, true);
             if (config.gameType==='hikoro' && data?.hikoroBot===true) {
                 game.hikoroBot=true;
+                game.hikoroBotBudgetMs=botBudget(data?.hikoroBotBudgetMs);
                 game.playerProfiles[1]={...Identity.publicIdentity({display_name:'Hikoro Bot'}),isBot:true,botEngine:'HikoroChess/Bot.cs'};
                 roster(game);
             }
             reply(socket, 'gameStart', state(game));
+        });
+        on('setHikoroBotDifficulty', data=>{
+            const game=games.get(data?.gameId);
+            if(!game||!game.hikoroBot||!game.isSinglePlayer||game.players.white!==socket.id)return err(socket,'You cannot change this bot difficulty.');
+            game.hikoroBotBudgetMs=botBudget(data?.budgetMs);
         });
         on('restoreHikoroSave', data => {
             if (!Array.isArray(data?.journal) || data.journal.length > 10000 || !canCreate()) return err(socket, 'This saved match cannot be restored.');
