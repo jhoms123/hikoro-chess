@@ -18,4 +18,5 @@ jobs:
       - name: Paired 20-game comparison
         env:
           ACADEMY_BUDGET_MS: '220'
+          ACADEMY_SEED: '529103'
         run: node HikoroChess/tests/academy-bot-tournament.js
