@@ -1,0 +1,21 @@
+name: Academy 20-game bot benchmark
+on:
+  push:
+    branches:
+      - feat/academy-bot-v2-benchmark
+  workflow_dispatch:
+jobs:
+  academy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Academy bot regression tests
+        run: node --test HikoroChess/tests/academy-bot.test.js
+      - name: Paired 20-game comparison
+        env:
+          ACADEMY_BUDGET_MS: '220'
+        run: node HikoroChess/tests/academy-bot-tournament.js

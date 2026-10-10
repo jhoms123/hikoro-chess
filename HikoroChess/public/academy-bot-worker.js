@@ -1,5 +1,5 @@
 /* Runs Academy search off the main thread so mobile controls stay responsive. */
-importScripts('/gamelogic.js?v=20261009-academy-bot','/academy-engine.js?v=20261009-academy-bot','/academy-bot.js?v=20261009-academy-bot');
+importScripts('/gamelogic.js?v=20261010-academy-bot-v2','/academy-engine.js?v=20261010-academy-bot-v2','/academy-bot.js?v=20261010-academy-bot-v2');
 self.onmessage=event=>{
     const data=event.data||{};
     try{
