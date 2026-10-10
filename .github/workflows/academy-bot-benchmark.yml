@@ -1,8 +1,8 @@
-name: Academy 20-game bot benchmark
+name: Academy v3 royal-race benchmark
 on:
   push:
     branches:
-      - feat/academy-bot-v2-benchmark
+      - feat/academy-bot-v3-royal-interception
   workflow_dispatch:
 jobs:
   academy:
@@ -18,4 +18,5 @@ jobs:
       - name: Paired 20-game comparison
         env:
           ACADEMY_BUDGET_MS: '220'
+          ACADEMY_SEED: '529103'
         run: node HikoroChess/tests/academy-bot-tournament.js

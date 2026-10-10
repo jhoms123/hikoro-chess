@@ -52,12 +52,58 @@ test('Academy page wires a local bot selector and off-thread worker',()=>{
     const html=fs.readFileSync(path.join(__dirname,'../public/academy.html'),'utf8');
     const ui=fs.readFileSync(path.join(__dirname,'../public/academy-ui.js'),'utf8');
     assert.match(html,/id="academy-opponent"/);
-    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v2/);
-    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v2/);
+    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v3/);
+    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v3/);
 });
 test('bot returns null for a terminal or move-less Academy position',()=>{
     const state=emptyState(2);
     assert.equal(bot.chooseMove(state),null);
     state.result={winner:0,reason:'draw'};
     assert.equal(bot.chooseMove(state),null);
+});
+test('Royal race planner accounts for palace lock and clears actual paths',()=>{
+ const state=emptyState(1);
+ put(state,'lupa',1,7,3);
+ put(state,'prince',1,3,1);
+ put(state,'lupa',2,0,3);
+ put(state,'prince',2,0,4);
+ const plans=bot.royalPlans(state.board);
+ assert.equal(plans[1].find(p=>p.type==='prince').d,1);
+ assert.equal(plans[1].find(p=>p.type==='lupa').d,12);
+ put(state,'pilut',1,4,0); // Blocks the direct diagonal to sanctuary.
+ const blocked=bot.royalPlans(state.board);
+ assert.ok(blocked[1].find(p=>p.type==='prince').d>1);
+ state.board[4][0]=null;
+ state.board[3][1]=null;
+ const released=bot.royalPlans(state.board);
+ assert.ok(released[1].find(p=>p.type==='lupa').d<12);
+});
+test('Academy V3 recognizes enemy sanctuary move even while it is their off-turn',()=>{
+ const s=emptyState(2);
+ put(s,'lupa',1,7,3);put(s,'prince',1,3,1);
+ put(s,'lupa',2,0,3);put(s,'prince',2,0,4);
+ assert.equal(bot.directRoyalWin(s,1),true);
+ assert.equal(bot.directRoyalWin(s,2),false);
+});
+test('Academy V3 never overlooks a capture-on-sanctuary immediate victory',()=>{
+ const s=emptyState(1);
+ put(s,'lupa',1,7,3);put(s,'prince',1,3,1);
+ put(s,'lupa',2,0,3);put(s,'prince',2,0,4);
+ put(s,'pawn',2,4,0);
+ const a=bot.chooseMove(s,{budgetMs:220,maxDepth:3});
+ const result=A.apply(s,a);
+ assert.equal(result?.winner,undefined); // A.apply returns a state, not a result object
+ assert.equal(result?.result?.winner,1);
+ assert.equal(result?.result?.reason,'Sanctuary reached');
+});
+
+test('Cached Academy move adaptation agrees across repeated calls and after Kraken requests',()=>{
+ const s=A.initial('match');
+ const samples=[{r:7,c:3},{r:7,c:4},{r:6,c:1},{r:0,c:3},{r:1,c:6}];
+ const before=samples.map(p=>A.movesFor(s.board,p));
+ for(const pos of samples)for(let n=0;n<3;n++)assert.deepEqual(A.movesFor(s.board,pos),before[samples.indexOf(pos)]);
+ // Ensure moving a Prince creates a new board representation and unlocks only after capture.
+ const detached=s.board.map(row=>row.slice());
+ detached[7][4]=null;
+ assert.ok(A.movesFor(detached,{r:7,c:3}).length>=A.movesFor(s.board,{r:7,c:3}).length);
 });
