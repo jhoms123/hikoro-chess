@@ -27,9 +27,9 @@
  body.phone-game-shell .mobile-selection .selection-detail { font-size:12px; line-height:1.2; max-height:31px; overflow:hidden; }
  body.phone-game-shell .mobile-go-actions,body.phone-game-shell .mobile-stack-tools { position:static; padding:2px 0; }
  body.phone-game-shell .captures,body.phone-game-shell .piece-guide,body.phone-game-shell .go-summary { display:none; }
- body.phone-game-shell .phone-options-open .captures,
- body.phone-game-shell .phone-options-open .piece-guide,
- body.phone-game-shell .phone-options-open .go-summary { display:block; }
+ body.phone-game-shell.phone-options-open .phone-options-drawer .captures,
+ body.phone-game-shell.phone-options-open .phone-options-drawer .piece-guide,
+ body.phone-game-shell.phone-options-open .phone-options-drawer .go-summary { display:block; }
  body.phone-game-shell .phone-options-toggle { position:fixed; right:10px; bottom:calc(9px + env(safe-area-inset-bottom)); z-index:91; min-width:96px; min-height:44px; border:1px solid #bda16d; border-radius:24px; background:#20392f; color:#fff4d9; box-shadow:0 4px 18px #0008; font:600 14px/1.1 system-ui; }
  body.phone-game-shell .phone-options-drawer { display:none; position:fixed; inset:auto 0 0; z-index:90; max-height:min(75dvh,680px); overflow:auto; overscroll-behavior:contain; padding:14px 12px calc(65px + env(safe-area-inset-bottom)); background:#1b2924; border-top:2px solid #c3a36a; box-shadow:0 -10px 35px #0009; }
  body.phone-game-shell.phone-options-open .phone-options-drawer { display:block; }
