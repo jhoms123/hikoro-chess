@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!media.matches||!playing())return;
   const viewport=document.querySelector('.mobile-board-viewport');
   if(!viewport||viewport.classList.contains('is-detailed'))return;
-  const ratio=theme==='lobby'?0.615:1;
+  const ratio=theme==='lobby'?0.64:1;
   const width=Math.max(100,Math.floor(Math.min(viewport.clientWidth-4,(viewport.clientHeight-4)*ratio)));
   const surface=viewport.querySelector('.mobile-board-surface');if(!surface)return;
   const size=width+'px';
@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   for(const el of candidates)relocate(el);
   relocate(document.querySelector('.lesson-dock'));
   relocate(document.querySelector('.mobile-board-tools'));
+  if(theme==='academy'){relocate(document.querySelector('.mobile-lesson-picker'));relocate(document.querySelector('.mobile-selection'));}
   if(theme==='shodansho')relocate(document.querySelector('.game-sidebar'));
   if(theme==='lobby')relocate(document.getElementById('hikoro-local-settings'));
   body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');
