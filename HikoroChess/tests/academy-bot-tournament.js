@@ -6,11 +6,12 @@ const v1=require('./fixtures/academy-bot-v2');
 const v2=require('../public/academy-bot');
 const games=20,MAX_PLIES=180;
 const MOVE_BUDGET=Number(process.env.ACADEMY_BUDGET_MS||60);
+const OPENING_SEED=Number(process.env.ACADEMY_SEED||744733);
 const maxDepth={v1:4,v2:5};
 const opts=who=>({budgetMs:MOVE_BUDGET,maxDepth:maxDepth[who],rootWidth:64,replyWidth:24});
 function rng(seed){let n=seed>>>0;return()=>{n=(Math.imul(1664525,n)+1013904223)>>>0;return n/4294967296;};}
 function opening(seed){
- const random=rng(744733+seed*8191),actions=[];let state=A.initial('match');
+ const random=rng(OPENING_SEED+seed*8191),actions=[];let state=A.initial('match');
  for(let i=0;i<4;i++){
   const moves=A.allMoves(state).filter(a=>{
    const p=state.board[a.from.r][a.from.c];
@@ -58,6 +59,6 @@ for(let pair=0;pair<10;pair++){
   if(issue)console.error(issue);
  }
 }
-const summary={games:results.length,openingPairs:10,gameBudgetMs:MOVE_BUDGET,capPlies:MAX_PLIES,aggregate,decisiveRate:aggregate.v2+aggregate.v1?aggregate.v2/(aggregate.v2+aggregate.v1):null,elapsedSeconds:Math.round((Date.now()-start)/1000),results};
+const summary={games:results.length,openingPairs:10,gameBudgetMs:MOVE_BUDGET,openingSeed:OPENING_SEED,capPlies:MAX_PLIES,aggregate,decisiveRate:aggregate.v2+aggregate.v1?aggregate.v2/(aggregate.v2+aggregate.v1):null,elapsedSeconds:Math.round((Date.now()-start)/1000),results};
 console.log('ACADEMY_TOURNAMENT_SUMMARY='+JSON.stringify(summary));
 if(aggregate.errors)process.exitCode=1;
