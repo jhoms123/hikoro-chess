@@ -22,4 +22,4 @@ jobs:
             node --check "$file"
           done
       - name: Bot difficulty and core gameplay regression tests
-        run: node --test HikoroChess/tests/bot-difficulty.test.js HikoroChess/tests/hikoruka.test.js HikoroChess/tests/academy-bot.test.js HikoroChess/tests/hikoro-bot.test.js HikoroChess/tests/sds-bot-rooms.test.js HikoroChess/tests/shavari-bot.test.js HikoroChess/tests/go-bot.test.js
+        run: node --test HikoroChess/tests/bot-difficulty.test.js HikoroChess/tests/hikoruka.test.js HikoroChess/tests/academy-bot.test.js HikoroChess/tests/hikoro-bot.test.js HikoroChess/tests/sds-bot-rooms.test.js HikoroChess/tests/shavari-bot.test.js HikoroChess/tests/go-bot-0.5.1.test.js
