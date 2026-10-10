@@ -2,12 +2,12 @@
 'use strict';
 const assert=require('node:assert/strict');
 const A=require('../public/academy-engine');
-const v1=require('./fixtures/academy-bot-v1');
+const v1=require('./fixtures/academy-bot-v2');
 const v2=require('../public/academy-bot');
 const games=20,MAX_PLIES=180;
 const MOVE_BUDGET=Number(process.env.ACADEMY_BUDGET_MS||60);
-const maxDepth={v1:3,v2:4};
-const opts=who=>({budgetMs:MOVE_BUDGET,maxDepth:maxDepth[who],rootWidth:who==='v1'?32:64,replyWidth:who==='v1'?12:24});
+const maxDepth={v1:4,v2:5};
+const opts=who=>({budgetMs:MOVE_BUDGET,maxDepth:maxDepth[who],rootWidth:64,replyWidth:24});
 function rng(seed){let n=seed>>>0;return()=>{n=(Math.imul(1664525,n)+1013904223)>>>0;return n/4294967296;};}
 function opening(seed){
  const random=rng(744733+seed*8191),actions=[];let state=A.initial('match');
