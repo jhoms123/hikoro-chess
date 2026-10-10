@@ -1,0 +1,25 @@
+name: Six-game bot difficulty validation
+on:
+  push:
+    branches:
+      - feat/six-game-bot-thinking-difficulty
+  workflow_dispatch:
+jobs:
+  difficulty:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        working-directory: HikoroChess
+        run: npm ci --ignore-scripts
+      - name: Syntax check all modified JavaScript files
+        run: |
+          for file in HikoroChess/server.js HikoroChess/hikoro-bot-worker.js HikoroChess/public/bot-difficulty.js HikoroChess/public/hikoruka-bot.js HikoroChess/public/hikoruka-bot-worker.js HikoroChess/public/hikoruka-ui.js HikoroChess/public/go-ui.js HikoroChess/public/academy-ui.js HikoroChess/public/academy-bot.js HikoroChess/public/shavari-ui.js HikoroChess/public/script.js; do
+            node --check "$file"
+          done
+      - name: Bot difficulty and core gameplay regression tests
+        run: node --test HikoroChess/tests/bot-difficulty.test.js HikoroChess/tests/hikoruka.test.js HikoroChess/tests/academy-bot.test.js HikoroChess/tests/hikoro-bot.test.js HikoroChess/tests/sds-bot-rooms.test.js HikoroChess/tests/shavari-bot.test.js HikoroChess/tests/go-bot.test.js
