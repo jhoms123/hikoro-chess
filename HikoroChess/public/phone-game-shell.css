@@ -93,3 +93,36 @@
  body.phone-game-shell .play-area{max-width:540px;margin:auto}
  body.phone-game-shell.sds-page .inventory-sidebar{max-height:56px}
 }
+
+/* Game-only phone corrections: keep the board ahead of reserves and page chrome. */
+@media(max-width:760px){
+ html:has(body.phone-game-shell){height:100dvh;overflow:hidden}
+ body.phone-game-shell[data-audio-theme=shavari] .player-appbar,
+ body.phone-game-shell[data-audio-theme=shavari] .site-header,
+ body.phone-game-shell.sds-page .player-appbar,
+ body.phone-game-shell.sds-page :is(.site-header,.collection-header,.garden-masthead){display:none!important}
+ body.phone-game-shell .phone-table-bar{height:40px;min-height:40px;padding:2px 5px}
+ body.phone-game-shell .phone-table-bar button{min-height:35px;padding:2px 8px!important;border-image:none!important;border-width:1px!important;border-radius:5px!important;box-shadow:none!important;font-size:12px!important}
+ body.phone-game-shell .mobile-disclosure{display:none}
+ body.phone-game-shell .phone-options-list .mobile-disclosure{display:block}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-stack-tools{
+  order:5;flex:0 0 auto!important;flex-basis:auto!important;width:100%;height:38px!important;min-height:38px!important;max-height:38px!important;margin:0!important;padding:0!important;align-items:stretch
+ }
+ body.phone-game-shell[data-audio-theme=shavari] .mobile-stack-tools button{
+  flex:1 1 0!important;height:36px!important;min-height:36px!important;max-height:36px!important;padding:2px 3px!important;border:1px solid #8caa9b!important;border-image:none!important;box-shadow:none!important;font-size:11px!important;line-height:1.1!important
+ }
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-board-viewport{order:2;flex:1 1 0!important;min-height:0!important}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-2){order:1}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.player-strip:has(#court-1){order:3}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.mobile-selection{order:4}
+ body.phone-game-shell[data-audio-theme=shavari] .play-area>.board-tools{order:6}
+ body.phone-game-shell.sds-page .game-layout>#hands-container{order:4!important;flex:0 0 auto!important;height:76px!important;max-height:76px!important;width:100%;overflow:hidden!important;padding:0}
+ body.phone-game-shell.sds-page #hands-container .reserve-card{padding:2px 6px!important}
+ body.phone-game-shell.sds-page #hands-container .reserve-card>div:first-child{display:none}
+ body.phone-game-shell.sds-page #hands-container .reserve-card>div:nth-child(2){gap:4px}
+ body.phone-game-shell.sds-page #hands-container .reserve-flower{flex:0 0 92px;min-height:64px;max-height:64px;padding:2px!important}
+ body.phone-game-shell.sds-page .inventory-sidebar{display:none!important}
+ body.phone-game-shell.sds-page .game-layout>.mobile-board-viewport{order:2!important;flex:1 1 0!important;min-height:0!important;align-items:flex-start}
+ body.phone-game-shell.sds-page .mobile-board-surface{margin:0 auto}
+ body.phone-game-shell.sds-page #board-wrapper .table-roster{display:none}
+}
