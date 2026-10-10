@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   body.classList.add('phone-game-shell');
   window.scrollTo(0,0);
   bar=document.createElement('nav');bar.className='phone-table-bar';bar.setAttribute('aria-label','Game actions');
+  const name=document.createElement('strong');name.className='phone-game-name';name.textContent=({lobby:'Hikoro',academy:'Academy',hikoruka:'Hikorüka',shavari:'Shavari',shodansho:'Sho Dan Sho',go:'Shield Go'})[theme]||'Game';bar.append(name);
   drawer=document.createElement('section');drawer.id='phone-options';drawer.className='phone-options-drawer';drawer.setAttribute('aria-label','Game options');drawer.setAttribute('aria-hidden','true');
   const head=document.createElement('div');head.className='phone-options-head';const title=document.createElement('span');title.textContent='Game options';const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='Close';closeButton.addEventListener('click',close);head.append(title,closeButton);
   list=document.createElement('div');list.className='phone-options-list';drawer.append(head,list);
