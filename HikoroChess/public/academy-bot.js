@@ -175,13 +175,14 @@ function chooseMove(state,options={}){
  // Single-character per-square TT keys avoid rebuilding 64 long tokens at every node.
  state={...state,fastKey:fastKey(state)};
  const roots=all.sort((a,b)=>moveOrder(state,b)-moveOrder(state,a));
+ const emergencySafe=new Set();
  // Tactical override: if the enemy can win on their NEXT turn, prioritize
  // candidate moves that remove every immediately winning sanctuary entrance.
  if(directRoyalWin(state,3-who)){
   const forcedSafe=[],losing=[];
   for(const a of roots){const n=nextState(state,a);
    if(!n.result && directRoyalWin(n,3-who))losing.push(a);
-   else forcedSafe.push(a);
+   else{forcedSafe.push(a);emergencySafe.add(keyOf(a));}
   }
   if(forcedSafe.length){roots.splice(0,roots.length,...forcedSafe,...losing);}
  }
@@ -190,7 +191,7 @@ function chooseMove(state,options={}){
  function search(s,depth,alpha,beta,ply){
   nodes++;if((nodes&15)===0&&Date.now()>=deadline){aborted=true;return 0;}
   const done=terminal(s,s.player,ply);if(done!==null)return done;
-  const originalAlpha=alpha,originalBeta=beta;
+  const originalAlpha=alpha;
   const k=s.fastKey||fastKey(s),repeated=(s.positions[boardKey(s)]||0)>1;
   const cached=!repeated?tt.get(k):null;
   if(cached&&cached.depth>=depth){
@@ -231,13 +232,13 @@ function chooseMove(state,options={}){
    }
   }
   if(!Number.isFinite(value))value=evaluate(s,s.player,ply);
-  if(!aborted&&!repeated&&tt.size<80000)tt.set(k,{depth,score:value,move:pv,flag:value<=originalAlpha?'upper':value>=originalBeta?'lower':'exact'});
+  if(!aborted&&!repeated&&tt.size<80000)tt.set(k,{depth,score:value,move:pv,flag:value<=originalAlpha?'upper':value>=beta?'lower':'exact'});
   return value;
  }
  for(let depth=1;depth<=maxDepth;depth++){
   if(Date.now()>=deadline)break;
   let iteration=null,score=-Infinity,alpha=-Infinity;
-  const ordered=roots.slice().sort((a,b)=>Number(keyOf(b)===keyOf(best))-Number(keyOf(a)===keyOf(best))||moveOrder(state,b)-moveOrder(state,a));
+  const ordered=roots.slice().sort((a,b)=>Number(keyOf(b)===keyOf(best))-Number(keyOf(a)===keyOf(best))||Number(emergencySafe.has(keyOf(b)))-Number(emergencySafe.has(keyOf(a)))||moveOrder(state,b)-moveOrder(state,a));
   for(let i=0;i<Math.min(rootWidth,ordered.length);i++){
    if(Date.now()>=deadline){aborted=true;break;}
    const a=ordered[i],n=nextState(state,a);
@@ -245,7 +246,7 @@ function chooseMove(state,options={}){
    if(i===0)result=-search(n,depth-1,-Infinity,Infinity,1);
    else{
     result=-search(n,depth-1,-alpha-1,-alpha,1);
-    if(!aborted&&result>alpha)result=-search(n,depth-1,-Infinity,-alpha,1);
+    if(!aborted&&result>alpha)result=-search(n,depth-1,-Infinity,Infinity,1);
    }
    if(aborted)break;
    if(result>score){score=result;iteration=a;}
