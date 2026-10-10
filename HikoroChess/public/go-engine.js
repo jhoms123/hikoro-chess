@@ -28,7 +28,7 @@ else if(a.type==='move'){to=a.to;const from=a.from;if(!valid(s,to)||!valid(s,fro
 else return null;
 if(a.type==='place'||a.type==='shield')s.remaining[p]--;
 if(!s.result&&!s.remaining[p]){const sc=score(s);s.result={winner:sc[1].total===sc[2].total?0:sc[1].total>sc[2].total?1:2,reason:namesForReserve(p)+' used the final reserve stone'};}
-s.ply++;s.last=to?{...to}:null;if(!search)s.history.push({player:p,action:JSON.parse(JSON.stringify(a))});if(!s.result&&!s.chain&&a.type!=='pass'){const k=key(s);s.positions[k]=(s.positions[k]||0)+1;if(s.positions[k]>=3)s.result={winner:0,reason:'Threefold repetition'};}return s;}
+s.ply++;s.last=to?{...to}:null;if(!search)s.history.push({player:p,action:JSON.parse(JSON.stringify(a))});if(!s.result&&!s.chain&&a.type!=='pass'){const k=key(s);s.positions[k]=(s.positions[k]||0)+1;if(s.positions[k]>=3){const sc=score(s);s.result={winner:sc[1].total===sc[2].total?0:sc[1].total>sc[2].total?1:2,reason:'Threefold repetition; score decides'};}}return s;}
 // Ephemeral search transitions preserve repetition counts but intentionally omit replay history.
 function applySearch(state,a){return apply(state,a,{search:true});}
 function canMove(s,from,m){const copy={size:s.size,board:s.board.map(row=>row.slice()),lost:{...s.lost}};const to=m.to,v=copy.board[from.y][from.x];copy.board[from.y][from.x]=0;copy.board[to.y][to.x]=v;if(m.type==='jump')copy.board[(from.y+to.y)/2][(from.x+to.x)/2]=0;return capture(copy,to);}
