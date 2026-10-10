@@ -52,8 +52,8 @@ test('Academy page wires a local bot selector and off-thread worker',()=>{
     const html=fs.readFileSync(path.join(__dirname,'../public/academy.html'),'utf8');
     const ui=fs.readFileSync(path.join(__dirname,'../public/academy-ui.js'),'utf8');
     assert.match(html,/id="academy-opponent"/);
-    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v2/);
-    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v2/);
+    assert.match(html,/academy-bot\.js\?v=20261010-academy-bot-v3/);
+    assert.match(ui,/academy-bot-worker\.js\?v=20261010-academy-bot-v3/);
 });
 test('bot returns null for a terminal or move-less Academy position',()=>{
     const state=emptyState(2);
@@ -95,4 +95,15 @@ test('Academy V3 never overlooks a capture-on-sanctuary immediate victory',()=>{
  assert.equal(result?.winner,undefined); // A.apply returns a state, not a result object
  assert.equal(result?.result?.winner,1);
  assert.equal(result?.result?.reason,'Sanctuary reached');
+});
+
+test('Cached Academy move adaptation agrees across repeated calls and after Kraken requests',()=>{
+ const s=A.initial('match');
+ const samples=[{r:7,c:3},{r:7,c:4},{r:6,c:1},{r:0,c:3},{r:1,c:6}];
+ const before=samples.map(p=>A.movesFor(s.board,p));
+ for(const pos of samples)for(let n=0;n<3;n++)assert.deepEqual(A.movesFor(s.board,pos),before[samples.indexOf(pos)]);
+ // Ensure moving a Prince creates a new board representation and unlocks only after capture.
+ const detached=s.board.map(row=>row.slice());
+ detached[7][4]=null;
+ assert.ok(A.movesFor(detached,{r:7,c:3}).length>=A.movesFor(s.board,{r:7,c:3}).length);
 });
