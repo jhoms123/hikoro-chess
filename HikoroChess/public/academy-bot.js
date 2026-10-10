@@ -161,7 +161,7 @@ function chooseMove(state,options={}){
   for(let i=0;i<Math.min(rootWidth,ordered.length);i++){
    if(Date.now()>=deadline){aborted=true;break;}
    const a=ordered[i],n=nextState(state,a);
-   const result=-search(n,depth-1,-Infinity,-alpha,1);
+   const result=-search(n,depth-1,-Infinity,Infinity,1);
    if(aborted)break;
    if(result>score){score=result;iteration=a;}
    if(score>alpha)alpha=score;
