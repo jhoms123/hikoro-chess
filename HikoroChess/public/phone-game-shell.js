@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }else{
    const panel=document.querySelector('.match-panel'),play=document.querySelector('.play-area'),turn=panel?.querySelector('.turn-panel');
    if(turn&&play&&!turn.closest('.play-area'))relocateTo(turn,play,play.firstElementChild);
-   relocate(panel);
+   relocate(panel);relocate(document.getElementById('rules-button'));
   }
   const candidates=[...document.querySelectorAll('.mobile-disclosure,.collection-audio')].filter(el=>!el.parentElement?.closest('.mobile-disclosure'));
   for(const el of candidates)relocate(el);
