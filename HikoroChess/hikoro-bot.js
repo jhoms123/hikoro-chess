@@ -547,10 +547,11 @@ function chooseMove(game, options = {}) {
         const mandatoryBonus = Boolean(position.bonusMoveInfo);
         const forced = threatened || mandatoryBonus;
         const standPat = staticFor(position, key, rootColor);
-        if (remaining <= 0) {
-            if (threatened) return signFor(opposite(current), rootColor) * MATE;
-            return standPat;
-        }
+    // Do not call an attacked royal lost just because the quiescence
+    // horizon was reached: the side to move may still respond or evade.
+    // Extend forced royal-safety replies for up to two extra plies, then use
+    // the ordinary threat-aware evaluation.
+        if (remaining <= -2 || (remaining <= 0 && !threatened)) return standPat;
 
         if (!forced) {
             if (maximizing) {
