@@ -20,6 +20,14 @@ const sanctuarySet = new Set(sanctuarySquares.map(({x, y}) => `${x},${y}`));
 const MATE = 1_000_000;
 const INF = 1_100_000;
 const MAX_TABLE_ENTRIES = 50000;
+const MAX_EVAL_ENTRIES = 25000;
+const MAX_SEARCH_CONTEXTS = 16;
+const searchContexts = new Map();
+const EVAL_WEIGHT_NAMES = [
+    'material', 'reserve', 'royalRoute', 'center', 'promotion',
+    'protection', 'sanctuaryThreat', 'royalAttack', 'mobility', 'lastRoyal'
+];
+const DEFAULT_EVAL_WEIGHTS = Object.freeze(Object.fromEntries(EVAL_WEIGHT_NAMES.map(name => [name, 1])));
 
 const opposite = color => color === 'white' ? 'black' : 'white';
 const turn = game => game?.isWhiteTurn ? 'white' : 'black';
@@ -91,24 +99,28 @@ function sanctuaryThreats(game, color) {
     return targets;
 }
 
-function royalCaptureThreats(game, victimColor) {
+function royalCaptureThreats(game, victimColor, onlyLastRoyal = true) {
     const targets = new Map();
-    const loneRoyal = [];
+    const royals = [];
     for (let y = 0; y < rules.BOARD_HEIGHT; y++) {
         for (let x = 0; x < rules.BOARD_WIDTH; x++) {
             const piece = game.boardState[y]?.[x];
-            if (piece?.color === victimColor && royalTypes.has(piece.type)) loneRoyal.push({x, y});
+            if (piece?.color === victimColor && royalTypes.has(piece.type)) royals.push({x, y});
         }
     }
-    if (loneRoyal.length !== 1) return targets;
-    const attacker = opposite(victimColor), royal = loneRoyal[0];
+    if (!royals.length || (onlyLastRoyal && royals.length !== 1)) return targets;
+    const attacker = opposite(victimColor);
     for (let y = 0; y < rules.BOARD_HEIGHT; y++) {
         for (let x = 0; x < rules.BOARD_WIDTH; x++) {
             const piece = game.boardState[y]?.[x];
             if (!piece || piece.color !== attacker) continue;
-            if (pieceMoves(game, attacker, x, y).some(move => move.x === royal.x && move.y === royal.y)) {
-                targets.set(`${royal.x},${royal.y}`, {x: royal.x, y: royal.y, kind: 'capture'});
-                return targets;
+            const moves = pieceMoves(game, attacker, x, y);
+            for (const target of royals) {
+                if (moves.some(move => move.x === target.x && move.y === target.y)) {
+                    targets.set(`${target.x},${target.y}`, {
+                        x: target.x, y: target.y, kind: 'capture', lastRoyal: royals.length === 1
+                    });
+                }
             }
         }
     }
@@ -128,6 +140,27 @@ function moveKey(move) {
     if (!move) return '';
     if (move.type === 'drop') return `d:${move.piece?.type || ''}:${move.to.x},${move.to.y}`;
     return `b:${move.from.x},${move.from.y}:${move.to.x},${move.to.y}`;
+}
+
+function boundedSet(map, key, value, limit) {
+    if (map.has(key)) map.delete(key);
+    else if (map.size >= limit) map.delete(map.keys().next().value);
+    map.set(key, value);
+}
+
+function getSearchContext(sessionId, color, weightKey) {
+    const namespace = sessionId === undefined || sessionId === null ? 'shared' : String(sessionId);
+    const key = `${namespace}:${color}:${weightKey}`;
+    let context = searchContexts.get(key);
+    if (!context) {
+        context = {table: new Map(), evalCache: new Map(), history: new Map(), killers: [], uses: 0};
+        if (searchContexts.size >= MAX_SEARCH_CONTEXTS) searchContexts.delete(searchContexts.keys().next().value);
+    } else {
+        searchContexts.delete(key);
+    }
+    context.uses++;
+    searchContexts.set(key, context);
+    return context;
 }
 
 function positionKey(game) {
@@ -232,9 +265,8 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
         }
     };
     const threatened = emergencyTargets?.size > 0;
-    const mandatory = Boolean(game.bonusMoveInfo);
 
-    if (threatened || mandatory) {
+    if (threatened || game.bonusMoveInfo) {
         for (const move of ordered) {
             if (move.type === 'board') {
                 include(move);
@@ -257,10 +289,12 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
         return selected;
     }
 
+    const forcingKeys = new Set();
+    for (const move of ordered) if (isForcingMove(game, move)) forcingKeys.add(moveKey(move));
     const bonusCandidates = new Map();
     const bonusLimit = Math.max(1, Math.min(4, Math.ceil(width / 12)));
     for (const move of ordered) {
-        if (!isForcingMove(game, move)) continue;
+        if (!forcingKeys.has(moveKey(move))) continue;
         const piece = move.type === 'board' ? game.boardState[move.from.y]?.[move.from.x] : null;
         const quietBonus = !game.bonusMoveInfo && !game.boardState[move.to.y]?.[move.to.x] &&
             ['greathorsegeneral', 'cthulhu'].includes(piece?.type);
@@ -274,7 +308,7 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
     }
     let quietCount = 0;
     for (const move of ordered) {
-        if (seen.has(moveKey(move)) || isForcingMove(game, move)) continue;
+        if (seen.has(moveKey(move)) || forcingKeys.has(moveKey(move))) continue;
         if (quietCount++ >= width) break;
         include(move);
     }
@@ -285,31 +319,7 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
 // search may apply thousands of valid hypothetical moves, so keep that internal
 // search chatter out of the server log and restore the logger immediately.
 function applyMove(game, move, color) {
-    const log = console.log, warn = console.warn;
-    // The rules engine clones its input. Keep only rule-relevant state so the
-    // growing notation/journal history is not recopied at every search node.
-    const ruleState = {
-        boardState: game.boardState,
-        isWhiteTurn: game.isWhiteTurn,
-        turnCount: Number(game.turnCount) || 0,
-        gameOver: Boolean(game.gameOver),
-        winner: game.winner,
-        reason: game.reason,
-        whiteCaptured: game.whiteCaptured || [],
-        blackCaptured: game.blackCaptured || [],
-        whitePrinceOnBoard: game.whitePrinceOnBoard,
-        blackPrinceOnBoard: game.blackPrinceOnBoard,
-        bonusMoveInfo: game.bonusMoveInfo || null,
-        moveList: []
-    };
-    console.log = () => {};
-    console.warn = () => {};
-    try {
-        return rules.makeMove(ruleState, move, color);
-    } finally {
-        console.log = log;
-        console.warn = warn;
-    }
+    return rules.makeMoveForSearch(game, move, color);
 }
 
 function handMobilityFactor(game) {
@@ -336,12 +346,22 @@ function mobilityForSide(game, color) {
     return total;
 }
 
-function evaluateWhite(game) {
-    if (game.gameOver) {
-        if (game.winner === 'draw') return 0;
-        return game.winner === 'white' ? MATE : -MATE;
+function normalizeEvalWeights(weights = null) {
+    const normalized = {};
+    for (const name of EVAL_WEIGHT_NAMES) {
+        const value = Number(weights?.[name]);
+        normalized[name] = Number.isFinite(value) ? Math.max(0.25, Math.min(1.75, value)) : 1;
     }
-    let score = 0;
+    return normalized;
+}
+
+function evalWeightKey(weights) {
+    return EVAL_WEIGHT_NAMES.map(name => weights[name].toFixed(3)).join(',');
+}
+
+function evaluateFeatures(game) {
+    const features = Object.fromEntries(EVAL_WEIGHT_NAMES.map(name => [name, 0]));
+    if (!game?.boardState || game.gameOver) return features;
     const handFactor = handMobilityFactor(game);
     const royals = {white: [], black: []};
 
@@ -351,61 +371,70 @@ function evaluateWhite(game) {
             if (!piece) continue;
             const side = piece.color === 'white' ? 1 : -1;
             const value = values[piece.type] || 100;
-            score += side * value;
+            features.material += side * value;
             if (royalTypes.has(piece.type)) {
                 royals[piece.color].push({piece, x, y});
                 const distance = distanceToSanctuary(x, y);
-                score += side * (260 / (distance + 1));
+                features.royalRoute += side * (260 / (distance + 1));
                 const moves = pieceMoves(game, piece.color, x, y);
                 const bestDistance = moves.reduce((best, move) => Math.min(best,
                     distanceToSanctuary(move.x, move.y)), distance);
-                score += side * Math.max(0, distance - bestDistance) * 45;
-                if (moves.some(move => isSanctuary(move.x, move.y))) score += side * 1200;
-                if (rules.isProtected(piece, x, y, game.boardState)) score += side * 110;
+                features.royalRoute += side * Math.max(0, distance - bestDistance) * 45;
+                if (moves.some(move => isSanctuary(move.x, move.y))) features.royalRoute += side * 1200;
+                if (rules.isProtected(piece, x, y, game.boardState)) features.protection += side * 110;
                 let nearbyFriends = 0;
                 for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
                     if (!dx && !dy) continue;
                     const neighbor = game.boardState[y + dy]?.[x + dx];
                     if (neighbor?.color === piece.color) nearbyFriends++;
                 }
-                score += side * Math.min(nearbyFriends, 4) * 18;
+                features.protection += side * Math.min(nearbyFriends, 4) * 18;
             } else {
-                score += side * centerValue(x, y);
+                features.center += side * centerValue(x, y);
                 if (promotableTypes.has(piece.type)) {
                     const advance = piece.color === 'white' ? y : 15 - y;
-                    score += side * Math.max(0, advance - 4) * 10;
+                    features.promotion += side * Math.max(0, advance - 4) * 10;
                 }
-                if (rules.isProtected(piece, x, y, game.boardState)) score += side * Math.min(60, value * 0.08);
+                if (rules.isProtected(piece, x, y, game.boardState)) features.protection += side * Math.min(60, value * 0.08);
             }
         }
     }
 
     for (const side of ['white', 'black']) {
         const sign = side === 'white' ? 1 : -1;
-        for (const piece of game[`${side}Captured`] || []) score += sign * (values[piece.type] || 100) * handFactor;
+        for (const piece of game[`${side}Captured`] || []) features.reserve += sign * (values[piece.type] || 100) * handFactor;
     }
 
     const whiteThreats = sanctuaryThreats(game, 'white').size;
     const blackThreats = sanctuaryThreats(game, 'black').size;
-    score += (whiteThreats - blackThreats) * 850;
+    features.sanctuaryThreat += (whiteThreats - blackThreats) * 850;
     const whiteRoyalCaptureThreat = royalCaptureThreats(game, 'white').size;
     const blackRoyalCaptureThreat = royalCaptureThreats(game, 'black').size;
-    score += (blackRoyalCaptureThreat - whiteRoyalCaptureThreat) * 2400;
-    score += (mobilityForSide(game, 'white') - mobilityForSide(game, 'black')) * 2;
+    features.royalAttack += (blackRoyalCaptureThreat - whiteRoyalCaptureThreat) * 2400;
+    features.mobility += (mobilityForSide(game, 'white') - mobilityForSide(game, 'black')) * 2;
 
     // A lone surviving royal is much closer to a capture-based loss.
     for (const side of ['white', 'black']) {
         const onBoard = royals[side].length;
-        if (onBoard === 1) score += (side === 'white' ? 1 : -1) * -360;
+        if (onBoard === 1) features.lastRoyal += (side === 'white' ? 1 : -1) * -360;
         else if (onBoard === 0 && game[`${side}PrinceOnBoard`] === false) {
-            score += side === 'white' ? -MATE : MATE;
+            features.lastRoyal += side === 'white' ? -MATE : MATE;
         }
     }
-    return score;
+    return features;
 }
 
-function evaluate(game, color = turn(game)) {
-    const score = evaluateWhite(game);
+function evaluateWhite(game, weights = DEFAULT_EVAL_WEIGHTS) {
+    if (game?.gameOver) {
+        if (game.winner === 'draw') return 0;
+        return game.winner === 'white' ? MATE : -MATE;
+    }
+    const features = evaluateFeatures(game);
+    return EVAL_WEIGHT_NAMES.reduce((score, name) => score + features[name] * weights[name], 0);
+}
+
+function evaluate(game, color = turn(game), weights = DEFAULT_EVAL_WEIGHTS) {
+    const score = evaluateWhite(game, normalizeEvalWeights(weights));
     return color === 'white' ? score : -score;
 }
 
@@ -432,7 +461,11 @@ function chooseMove(game, options = {}) {
     const qDepth = Math.max(1, Math.min(8, Number(options.quiescenceDepth) || 1));
     const deadline = Date.now() + budgetMs;
     const rootColor = turn(game);
-    const table = new Map(), evalCache = new Map(), history = new Map(), killers = [];
+    const evaluationWeights = normalizeEvalWeights(options.evaluationWeights);
+    const weightKey = evalWeightKey(evaluationWeights);
+    const context = getSearchContext(options.searchSessionId, rootColor, weightKey);
+    const {table, evalCache, history, killers} = context;
+    const ttStartSize = table.size;
     let nodes = 0, ttHits = 0, aborted = false, completedDepth = 0;
 
     const rootMoves = legalMoves(game);
@@ -451,8 +484,8 @@ function chooseMove(game, options = {}) {
 
     function cachedEval(position, key) {
         if (evalCache.has(key)) return evalCache.get(key);
-        const score = evaluateWhite(position);
-        if (evalCache.size < 25000) evalCache.set(key, score);
+        const score = evaluateWhite(position, evaluationWeights);
+        boundedSet(evalCache, key, score, MAX_EVAL_ENTRIES);
         return score;
     }
 
@@ -523,9 +556,9 @@ function chooseMove(game, options = {}) {
         }
 
         if (!Number.isFinite(bestScore)) bestScore = staticFor(position, key, rootColor);
-        if (!aborted && table.size < MAX_TABLE_ENTRIES) {
+        if (!aborted) {
             const flag = bestScore <= originalAlpha ? 'upper' : bestScore >= originalBeta ? 'lower' : 'exact';
-            table.set(key, {depth, score: bestScore, flag, move: bestKey});
+            boundedSet(table, key, {depth, score: bestScore, flag, move: bestKey}, MAX_TABLE_ENTRIES);
         }
         return bestScore;
     }
@@ -625,6 +658,8 @@ function chooseMove(game, options = {}) {
     if (options.searchStats && typeof options.searchStats === 'object') {
         Object.assign(options.searchStats, {
             nodes, ttHits, completedDepth, rootMoveCount: rootMoves.length, rootCandidateCount: rootCandidates.length,
+            ttEntries: table.size, ttEntriesBefore: ttStartSize, searchContextUses: context.uses,
+            evaluationWeights: {...evaluationWeights},
             elapsedMs: Math.max(0, budgetMs - Math.max(0, deadline - Date.now())),
             aborted
         });
@@ -632,4 +667,15 @@ function chooseMove(game, options = {}) {
     return bestCompleted;
 }
 
-module.exports = {chooseMove, legalMoves, evaluate, positionKey};
+function clearSearchCache(sessionId = null) {
+    if (sessionId === null) searchContexts.clear();
+    else {
+        const prefix = `${String(sessionId)}:`;
+        for (const key of searchContexts.keys()) if (key.startsWith(prefix)) searchContexts.delete(key);
+    }
+}
+
+module.exports = {
+    chooseMove, legalMoves, evaluate, evaluateFeatures, defaultEvalWeights: DEFAULT_EVAL_WEIGHTS,
+    positionKey, clearSearchCache
+};

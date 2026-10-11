@@ -1,7 +1,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
+const {Worker} = require('node:worker_threads');
 const rules = require('../gamelogic');
 const bot = require('../hikoro-bot');
+
+function askPersistentWorker(worker, game, budgetMs = 500) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Persistent worker timed out')), budgetMs + 5000);
+        worker.once('message', result => {
+            clearTimeout(timer);
+            if (result?.error) reject(new Error(result.error));
+            else resolve(result);
+        });
+        worker.once('error', error => {
+            clearTimeout(timer);
+            reject(error);
+        });
+        worker.postMessage({game, budgetMs, searchSessionId: 'worker-cache-test'});
+    });
+}
 
 function makeGame(pieces, options = {}) {
     const boardState = Array.from({length: rules.BOARD_HEIGHT}, () => Array(rules.BOARD_WIDTH).fill(null));
@@ -37,6 +55,23 @@ function minimalRoyalLineup(extra = [], options = {}) {
     if (!extraWhitePrince && options.whitePrinceOnBoard !== false) pieces.push({x: 5, y: 0, type: 'prince', color: 'white'});
     if (!extraBlackPrince && options.blackPrinceOnBoard !== false) pieces.push({x: 5, y: 15, type: 'prince', color: 'black'});
     return makeGame([...pieces, ...extra], options);
+}
+
+function assertSearchTransitionMatches(game, move) {
+    const color = game.isWhiteTurn ? 'white' : 'black';
+    const before = JSON.stringify(game);
+    const officialInput = {...structuredClone(game), moveList: [], actionJournal: []};
+    const searchInput = {...structuredClone(game), moveList: [], actionJournal: []};
+    const official = rules.makeMove(officialInput, move, color);
+    const fast = rules.makeMoveForSearch(searchInput, move, color);
+    assert.equal(official.success, true, `official rules rejected ${JSON.stringify(move)}`);
+    assert.equal(fast.success, true, `search rules rejected ${JSON.stringify(move)}`);
+    for (const field of [
+        'boardState', 'isWhiteTurn', 'turnCount', 'gameOver', 'winner', 'reason',
+        'whiteCaptured', 'blackCaptured', 'whitePrinceOnBoard', 'blackPrinceOnBoard',
+        'bonusMoveInfo', 'lastMove', 'moveList'
+    ]) assert.deepEqual(fast.updatedGame[field], official.updatedGame[field], `mismatch in ${field}`);
+    assert.equal(JSON.stringify(game), before, 'search transition must leave its input unchanged');
 }
 
 test('bot takes an immediate Hikoro sanctuary win', () => {
@@ -165,6 +200,17 @@ test('evaluation rewards promotion and a royal route toward sanctuary', () => {
     assert.ok(bot.evaluate(near, 'white') > bot.evaluate(far, 'white'));
 });
 
+test('evaluation features reproduce the baseline score and accept trained weights', () => {
+    const game = minimalRoyalLineup([
+        {x: 3, y: 6, type: 'zur', color: 'white'},
+        {x: 6, y: 9, type: 'chair', color: 'black'}
+    ], {whiteCaptured: [{type: 'pawn'}]});
+    const features = bot.evaluateFeatures(game);
+    const baselineScore = Object.values(features).reduce((sum, value) => sum + value, 0);
+    assert.equal(bot.evaluate(game, 'white'), baselineScore);
+    assert.notEqual(bot.evaluate(game, 'white', {material: 1.5}), baselineScore);
+});
+
 test('short budget always returns a move accepted by the authoritative rules', () => {
     const game = {
         boardState: rules.getInitialBoard(), isWhiteTurn: true, turnCount: 0, gameOver: false,
@@ -177,4 +223,57 @@ test('short budget always returns a move accepted by the authoritative rules', (
     assert.equal(rules.makeMove(game, move, 'white').success, true);
     assert.ok(stats.nodes > 0);
     assert.ok(stats.elapsedMs <= 120);
+});
+
+test('copy-on-write search transitions match the official rules for special actions', () => {
+    const drop = minimalRoyalLineup([], {whiteCaptured: [{type: 'chair'}]});
+    assertSearchTransitionMatches(drop, bot.legalMoves(drop).find(move => move.type === 'drop'));
+
+    const promotion = minimalRoyalLineup([{x: 4, y: 8, type: 'sult', color: 'white'}]);
+    assertSearchTransitionMatches(promotion, {type: 'board', from: {x: 4, y: 8}, to: {x: 4, y: 9}});
+
+    const jump = minimalRoyalLineup([
+        {x: 1, y: 5, type: 'jotu', color: 'white'},
+        {x: 2, y: 5, type: 'pawn', color: 'white'},
+        {x: 4, y: 5, type: 'pawn', color: 'black'}
+    ]);
+    assertSearchTransitionMatches(jump, {type: 'board', from: {x: 1, y: 5}, to: {x: 4, y: 5}});
+
+    const bonus = minimalRoyalLineup([{x: 4, y: 6, type: 'greathorsegeneral', color: 'white'}]);
+    const quietBonus = bot.legalMoves(bonus).find(move => move.type === 'board' && move.from.x === 4 &&
+        move.from.y === 6 && !bonus.boardState[move.to.y][move.to.x]);
+    assertSearchTransitionMatches(bonus, quietBonus);
+});
+
+test('search cache is reused across consecutive searches in the same session', () => {
+    const game = minimalRoyalLineup([
+        {x: 3, y: 6, type: 'zur', color: 'white'},
+        {x: 6, y: 9, type: 'chair', color: 'black'}
+    ]);
+    bot.clearSearchCache('reuse-test');
+    const first = {}, second = {};
+    const options = {budgetMs: 600, width: 12, rootWidth: 12, maxDepth: 3, searchSessionId: 'reuse-test'};
+    const firstMove = bot.chooseMove(game, {...options, searchStats: first});
+    const secondMove = bot.chooseMove(game, {...options, searchStats: second});
+    assert.ok(firstMove && secondMove);
+    assert.ok(second.ttHits > 0, 'the second search should reuse exact entries from the first');
+    assert.equal(second.searchContextUses, 2);
+    bot.clearSearchCache('reuse-test');
+});
+
+test('persistent search worker keeps its transposition table between turns', async t => {
+    const game = minimalRoyalLineup([
+        {x: 3, y: 6, type: 'zur', color: 'white'},
+        {x: 6, y: 9, type: 'chair', color: 'black'}
+    ]);
+    const worker = new Worker(path.join(__dirname, '..', 'hikoro-bot-worker.js'), {
+        workerData: {persistent: true, searchSessionId: 'worker-cache-test'}
+    });
+    t.after(async () => { await worker.terminate(); });
+    const first = await askPersistentWorker(worker, game);
+    const second = await askPersistentWorker(worker, game);
+    assert.ok(first.move && second.move);
+    assert.equal(rules.makeMove(game, second.move, 'white').success, true);
+    assert.ok(second.searchStats.ttHits > 0);
+    assert.equal(second.searchStats.searchContextUses, 2);
 });

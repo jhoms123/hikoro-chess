@@ -395,15 +395,40 @@ exports.getValidMoves = function(game, data) {
  * Public-facing function for the server to make a move.
  * move: { type: 'board', from, to } or { type: 'drop', piece, to }
  */
+function cloneGameForSearch(game) {
+    // Search positions are private to the bot. Copy the board rows and the
+    // small mutable collections, while leaving untouched piece records shared.
+    // The moving piece is copied immediately before it is changed/promoted.
+    const copy = {...game};
+    copy.boardState = game.boardState.map(row => row.slice());
+    copy.whiteCaptured = Array.isArray(game.whiteCaptured) ? game.whiteCaptured.slice() : [];
+    copy.blackCaptured = Array.isArray(game.blackCaptured) ? game.blackCaptured.slice() : [];
+    copy.moveList = [];
+    copy.actionJournal = [];
+    copy.bonusMoveInfo = game.bonusMoveInfo ? {...game.bonusMoveInfo} : null;
+    copy.lastMove = game.lastMove ? {
+        from: game.lastMove.from ? {...game.lastMove.from} : null,
+        to: game.lastMove.to ? {...game.lastMove.to} : null
+    } : null;
+    return copy;
+}
+
 exports.makeMove = function(game, move, playerColor) {
+    return makeMoveInternal(game, move, playerColor, false);
+};
+
+// Faster copy-on-write transition used only by search. Public moves continue
+// to receive a full deep clone so callers retain the original isolation contract.
+exports.makeMoveForSearch = function(game, move, playerColor) {
+    return makeMoveInternal(game, move, playerColor, true);
+};
+
+function makeMoveInternal(game, move, playerColor, searchMode) {
     if (!move || typeof move !== 'object' || !['white', 'black'].includes(playerColor) || game.gameOver) return { success: false, error: 'Invalid move or finished game.' };
     const validCoord = c => c && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.x < BOARD_WIDTH && c.y >= 0 && c.y < BOARD_HEIGHT;
     if ((move.type === 'board' && (!validCoord(move.from) || !validCoord(move.to))) || (move.type === 'drop' && !validCoord(move.to))) return { success: false, error: 'Invalid coordinates.' };
     if (game.bonusMoveInfo && move.type === 'drop') return { success: false, error: 'Complete the bonus move before dropping a piece.' };
-    // Deep clone the game state to prevent mutation issues
-    // Note: JSON stringify/parse is a simple way, but can be slow for large states or complex objects.
-    // Consider a dedicated deep cloning library if performance becomes an issue.
-    const newGame = JSON.parse(JSON.stringify(game));
+    const newGame = searchMode ? cloneGameForSearch(game) : JSON.parse(JSON.stringify(game));
 
     if (move.type === 'board') {
         const { from, to } = move;
@@ -417,7 +442,8 @@ exports.makeMove = function(game, move, playerColor) {
         }
         // --- End Validation ---
 
-        const piece = newGame.boardState[from.y][from.x];
+        const sourcePiece = newGame.boardState[from.y][from.x];
+        const piece = searchMode && sourcePiece ? {...sourcePiece} : sourcePiece;
 
         if (!piece) {
             return { success: false, error: "No piece at the 'from' square." };
@@ -439,7 +465,7 @@ exports.makeMove = function(game, move, playerColor) {
         const isValidMove = validMoves.some(m => m.x === to.x && m.y === to.y);
 
         if (!isValidMove) {
-            console.warn(`Invalid move attempt: ${playerColor} ${piece.type} from ${from.x},${from.y} to ${to.x},${to.y}. Bonus: ${bonusMoveActive}`);
+            if (!searchMode) console.warn(`Invalid move attempt: ${playerColor} ${piece.type} from ${from.x},${from.y} to ${to.x},${to.y}. Bonus: ${bonusMoveActive}`);
             // console.log("Calculated valid moves:", validMoves); // Uncomment for debugging
             return { success: false, error: "Invalid move target." };
         }
@@ -470,7 +496,7 @@ exports.makeMove = function(game, move, playerColor) {
                                  if (capturedArray.length < 6) {
                                      capturedArray.push(pieceForHand);
                                  } else {
-                                     console.log("Hand is full, cannot add jumped piece:", intermediatePiece.type);
+                                     if (!searchMode) console.log("Hand is full, cannot add jumped piece:", intermediatePiece.type);
                                  }
                              }
                              // Remove the jumped piece from the board
@@ -489,7 +515,7 @@ exports.makeMove = function(game, move, playerColor) {
             if(targetPiece.type === 'prince') {
                 if (targetPiece.color === 'white') newGame.whitePrinceOnBoard = false;
                 else newGame.blackPrinceOnBoard = false;
-                console.log(`${targetPiece.color} Prince captured!`);
+                if (!searchMode) console.log(`${targetPiece.color} Prince captured!`);
             } else {
                 const indestructiblePieces = ['greathorsegeneral', 'cthulhu', 'mermaid'];
                 if (targetPiece.type === 'neptune') {
@@ -506,7 +532,7 @@ exports.makeMove = function(game, move, playerColor) {
                      if (capturedArray.length < 6) {
                          capturedArray.push(pieceForHand);
                      } else {
-                          console.log("Hand is full, cannot add captured piece:", targetPiece.type);
+                          if (!searchMode) console.log("Hand is full, cannot add captured piece:", targetPiece.type);
                      }
                  }
                  // If Lupa or indestructible, piece is just removed (no hand add)
@@ -521,14 +547,14 @@ exports.makeMove = function(game, move, playerColor) {
 
         // --- Handle Promotion ---
         // handlePromotion modifies the piece object *at the target square*
-        handlePromotion(newGame.boardState[to.y][to.x], to.y, wasCapture);
+        handlePromotion(newGame.boardState[to.y][to.x], to.y, wasCapture, searchMode);
         // --- End Handle Promotion ---
 
         // --- Update Game State ---
         updateMoveList(newGame, notationString);
         newGame.lastMove = { from, to };
 
-        checkForWinner(newGame); // Check win conditions
+        checkForWinner(newGame, searchMode); // Check win conditions
         newGame.turnCount++; // Increment turn count (might be adjusted by bonus logic)
 
         // --- Bonus Move Logic ---
@@ -618,7 +644,7 @@ exports.makeMove = function(game, move, playerColor) {
 
 // --- INTERNAL HELPER FUNCTIONS (Not Exported, but used by makeMove) ---
 
-function handlePromotion(piece, y, wasCapture) {
+function handlePromotion(piece, y, wasCapture, quiet = false) {
     // Safety check
     if (!piece) return;
 
@@ -652,13 +678,13 @@ function handlePromotion(piece, y, wasCapture) {
     }
 
     // Optional: Log if a promotion occurred
-    if (piece.type !== originalType) {
+    if (!quiet && piece.type !== originalType) {
         console.log(`Promotion: ${color} ${originalType} -> ${piece.type} at y=${y}`);
     }
 }
 
 
-function checkForWinner(game) {
+function checkForWinner(game, quiet = false) {
     if (game.gameOver) return; // Don't check if already over
 
     // 1. Sanctuary Check
@@ -673,7 +699,7 @@ function checkForWinner(game) {
             game.gameOver = true;
             game.winner = pieceOnSquare.color;
             game.reason = "Sanctuary";
-            console.log(`${game.winner} wins by Sanctuary! Piece: ${pieceOnSquare.type}`);
+            if (!quiet) console.log(`${game.winner} wins by Sanctuary! Piece: ${pieceOnSquare.type}`);
             return; // Game over, no need to check further
         }
     }
@@ -698,12 +724,12 @@ function checkForWinner(game) {
         game.gameOver = true;
         game.winner = 'white';
         game.reason = "Royalty Capture";
-        console.log("White wins by Royalty Capture!");
+        if (!quiet) console.log("White wins by Royalty Capture!");
     } else if (!whiteLupaOnBoard && !game.whitePrinceOnBoard && game.turnCount > 0) {
         game.gameOver = true;
         game.winner = 'black';
         game.reason = "Royalty Capture";
-        console.log("Black wins by Royalty Capture!");
+        if (!quiet) console.log("Black wins by Royalty Capture!");
     }
 }
 

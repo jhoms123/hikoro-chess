@@ -43,7 +43,10 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     const resultRetries = new Map();
     const sdsBotJobs = new Set();
     const hikoroBotJobs = new Set();
+    const hikoroBotWorkers = new Map();
+    const hikoroBotTimers = new Map();
     const sdsBotRunner = createSdsBotRunner();
+    let serverClosing = false;
     let effects = null, queue = Promise.resolve(), storageReady = !roomStore;
     const defer = action => effects ? effects.push(action) : action();
     const broadcast = (id, event, data) => { const copy = structuredClone(data); defer(() => io.to(id).emit(event, copy)); };
@@ -68,7 +71,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         if(!game.started&&!game.gameOver)lobby.set(game.id,{id:game.id,gameType:game.gameType,creatorName:game.name,timeControl:game.timeControl,currentPlayers:data.tokens.filter(Boolean).length,maxPlayers:game.maxPlayers,humanCapacity:game.humanCapacity||game.maxPlayers,botCount:game.botCount||0,boardSize:game.boardSize});
     }
     const ready = roomStore ? roomStore.load().then(rows=>{ for(const saved of rows){try{if(Date.now()-saved.game.lastActivity<=ttl(saved.game))restore(saved);}catch{console.error('A stored room could not be restored.');}} storageReady=true; }).catch(error=>{console.error('Online room storage could not load.');throw error;}) : Promise.resolve();
-    ready.then(()=>{for(const game of games.values())if(game.gameOver)persistResult(game);else if(game.hikoroBot) setTimeout(()=>startHikoroBotTurn(game.id),400);}).catch(()=>{});
+    ready.then(()=>{for(const game of games.values())if(game.gameOver)persistResult(game);else if(game.hikoroBot) startHikoroBotTurn(game.id);}).catch(()=>{});
     io.use(async (_socket,next)=>{try{await ready;next();}catch{next(Error('Online tables are temporarily unavailable. Please try again.'));}});
     function command(action,socket) {
         const task=queue.then(async()=>{
@@ -113,6 +116,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function finish(game, winner, reason) {
         game.gameOver = true; game.winner = winner; game.reason = reason;
         game.lastActivity = Date.now();
+        if (game.gameType === 'hikoro') disposeHikoroBotWorker(game.id);
         persistResult(game);
         if (['shavari','hikoruka','go','academy'].includes(game.gameType)) {
             sessions.get(game.id).engine.result = { winner: winner === 'draw' ? 0 : Number(winner), reason };
@@ -122,6 +126,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         roster(game);
     }
     function remove(game) {
+        if (game.gameType === 'hikoro') disposeHikoroBotWorker(game.id);
         accounts.forget(game.id);resultRetries.delete(game.id);
         games.delete(game.id); sessions.delete(game.id); lobby.delete(game.id); emitLobby();
     }
@@ -172,30 +177,67 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     const allowedBotBudgets=new Set([500,1000,1500,2000,3000,4000]);
     const botBudget=value=>allowedBotBudgets.has(Number(value))?Number(value):1000;
     // Run longer Hikoro searches off-thread, keeping the shared server responsive.
-    function calculateHikoroBotMove(game,budgetMs){
+    function disposeHikoroBotWorker(gameId, expected=null){
+        const entry=hikoroBotWorkers.get(gameId);
+        if(!entry||(expected&&entry!==expected))return;
+        hikoroBotWorkers.delete(gameId);
+        entry.closing=true;
+        if(entry.idleTimer)clearTimeout(entry.idleTimer);
+        if(entry.timeout)clearTimeout(entry.timeout);
+        if(entry.pending){const pending=entry.pending;entry.pending=null;pending.reject(new Error('Hikoro bot worker closed.'));}
+        void entry.worker.terminate();
+    }
+    function calculateHikoroBotMove(gameId,game,budgetMs){
+        let entry=hikoroBotWorkers.get(gameId);
+        if(!entry){
+            const searchSessionId='hikoro:'+gameId;
+            const worker=new Worker(path.join(__dirname,'hikoro-bot-worker.js'),{
+                workerData:{persistent:true,searchSessionId}
+            });
+            entry={worker,pending:null,timeout:null,idleTimer:null,closing:false};
+            hikoroBotWorkers.set(gameId,entry);
+            worker.on('message',data=>{
+                if(!entry.pending)return;
+                const pending=entry.pending;entry.pending=null;
+                if(entry.timeout)clearTimeout(entry.timeout);entry.timeout=null;
+                if(data?.error){pending.reject(new Error(data.error));disposeHikoroBotWorker(gameId,entry);return;}
+                if(entry.idleTimer)clearTimeout(entry.idleTimer);
+                entry.idleTimer=setTimeout(()=>disposeHikoroBotWorker(gameId,entry),300000);
+                entry.idleTimer.unref?.();
+                pending.resolve(data?.move);
+            });
+            worker.on('error',error=>{
+                if(entry.pending){const pending=entry.pending;entry.pending=null;pending.reject(error);}
+                disposeHikoroBotWorker(gameId,entry);
+            });
+            worker.on('exit',code=>{
+                if(!entry.closing&&entry.pending){const pending=entry.pending;entry.pending=null;pending.reject(new Error('Hikoro bot worker stopped ('+code+')'));}
+                disposeHikoroBotWorker(gameId,entry);
+            });
+        }
+        if(entry.pending)return Promise.reject(new Error('Hikoro bot search is already running.'));
+        if(entry.idleTimer)clearTimeout(entry.idleTimer);entry.idleTimer=null;
         return new Promise((resolve,reject)=>{
-            const worker=new Worker(path.join(__dirname,'hikoro-bot-worker.js'),{workerData:{game,budgetMs}});
-            let settled=false;
-            const timeout=setTimeout(()=>finish(new Error('Hikoro bot search timed out')),budgetMs+3500);
-            function finish(error,move){
-                if(settled)return;
-                settled=true;clearTimeout(timeout);void worker.terminate();
-                if(error)reject(error);else resolve(move);
-            }
-            worker.once('message',data=>data?.error?finish(new Error(data.error)):finish(null,data?.move));
-            worker.once('error',error=>finish(error));
-            worker.once('exit',code=>{if(!settled)finish(new Error('Hikoro bot worker stopped ('+code+')'));});
+            entry.pending={resolve,reject};
+            entry.timeout=setTimeout(()=>{
+                if(entry.pending){const pending=entry.pending;entry.pending=null;pending.reject(new Error('Hikoro bot search timed out'));}
+                disposeHikoroBotWorker(gameId,entry);
+            },budgetMs+3500);
+            try{entry.worker.postMessage({game,budgetMs,searchSessionId:'hikoro:'+gameId});}
+            catch(error){const pending=entry.pending;entry.pending=null;pending.reject(error);disposeHikoroBotWorker(gameId,entry);}
         });
     }
     function startHikoroBotTurn(gameId) {
         const game=games.get(gameId);
-        if(!game?.hikoroBot||game.gameOver||game.isWhiteTurn||hikoroBotJobs.has(gameId))return;
+        if(serverClosing||!game?.hikoroBot||game.gameOver||game.isWhiteTurn||hikoroBotJobs.has(gameId))return;
         hikoroBotJobs.add(gameId);
-        setTimeout(async()=>{
+        const timer=setTimeout(async()=>{
+            hikoroBotTimers.delete(gameId);
+            if(serverClosing){hikoroBotJobs.delete(gameId);return;}
             const snapshot=games.get(gameId);
             try{
                 if(!snapshot?.hikoroBot||snapshot.gameOver||snapshot.isWhiteTurn)return;
-                const move=await calculateHikoroBotMove(snapshot,botBudget(snapshot.hikoroBotBudgetMs));
+                const move=await calculateHikoroBotMove(gameId,snapshot,botBudget(snapshot.hikoroBotBudgetMs));
                 await command(()=>{
                     const latest=games.get(gameId);
                     if(latest!==snapshot||!latest?.hikoroBot||latest.gameOver||latest.isWhiteTurn)return;
@@ -204,20 +246,21 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
                     const next=result.updatedGame;
                     next.actionJournal=[...(latest.actionJournal||[]),move];
                     next.lastActivity=Date.now();games.set(gameId,next);
-                    if(next.gameOver){persistResult(next);roster(next);}
+                    if(next.gameOver){persistResult(next);roster(next);disposeHikoroBotWorker(gameId);}
                     broadcast(gameId,'gameStateUpdate',state(next));
                 });
             }catch(error){
                 await command(()=>{
                     const latest=games.get(gameId);
-                    if(latest===snapshot){latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not finish its search.');}
+                    if(!serverClosing&&latest===snapshot&&!latest.gameOver){latest.hikoroBotStalled=true;broadcast(gameId,'errorMsg','The Hikoro bot could not finish its search.');}
                 });
             }finally{
                 hikoroBotJobs.delete(gameId);
                 const latest=games.get(gameId);
-                if(latest?.hikoroBot&&!latest.hikoroBotStalled&&!latest.isWhiteTurn&&!latest.gameOver)startHikoroBotTurn(gameId);
+                if(!serverClosing&&latest?.hikoroBot&&!latest.hikoroBotStalled&&!latest.isWhiteTurn&&!latest.gameOver)startHikoroBotTurn(gameId);
             }
         },80);
+        hikoroBotTimers.set(gameId,timer);
     }
     const SDS_BOT_ENGINE = 'Adaptive Gumbel Guide v13.5.1';
     function addSdsBotSeats(game) {
@@ -311,7 +354,14 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         }
     }
     const interval = setInterval(() => command(tick), 1000);
-    interval.unref(); server.on('close', () => { clearInterval(interval); sdsBotRunner.close(); });
+    interval.unref(); server.on('close', () => {
+        serverClosing = true;
+        for (const timer of hikoroBotTimers.values()) clearTimeout(timer);
+        hikoroBotTimers.clear();
+        hikoroBotJobs.clear();
+        clearInterval(interval); sdsBotRunner.close();
+        for (const gameId of hikoroBotWorkers.keys()) disposeHikoroBotWorker(gameId);
+    });
     io.on('connection', socket => {
         const on = (event, action) => socket.on(event, data => command(() => action(data),socket));
         reply(socket, 'lobbyUpdate', Object.fromEntries(lobby));
@@ -491,7 +541,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             commitClock(game, now, complete);
             next.whiteTimeLeft = game.whiteTimeLeft; next.blackTimeLeft = game.blackTimeLeft; next.lastMoveTimestamp = game.lastMoveTimestamp;
             next.lastActivity = now; games.set(game.id, next);
-            if(next.gameOver){persistResult(next);roster(next);}
+            if(next.gameOver){persistResult(next);roster(next);disposeHikoroBotWorker(game.id);}
             broadcast(game.id, 'gameStateUpdate', state(next));
             if (next.hikoroBot && !next.gameOver) defer(()=>startHikoroBotTurn(game.id));
         });
