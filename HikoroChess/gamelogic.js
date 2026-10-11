@@ -533,23 +533,25 @@ exports.makeMove = function(game, move, playerColor) {
 
         // --- Bonus Move Logic ---
         if (bonusMoveActive) {
-            // This was the second (bonus) move
-            newGame.bonusMoveInfo = null; // Clear bonus flag
-            newGame.isWhiteTurn = !newGame.isWhiteTurn; // Switch turn AFTER bonus
-        } else if (['greathorsegeneral', 'cthulhu'].includes(piece.type) && !wasCapture) {
-            // First move, non-capture GH/Ct triggers bonus
-            newGame.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-            // Turn does NOT change yet
-            newGame.turnCount--; // Decrement turn count as bonus doesn't count as a full turn progression yet
-        } else if (piece.type === 'cope' && wasCapture) {
-            // First move, capture Cope triggers bonus
-            newGame.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
-            // Turn does NOT change yet
-            newGame.turnCount--; // Decrement turn count
-        } else {
-            // Normal move, no bonus triggered
+            // This was the second (bonus) move.
             newGame.bonusMoveInfo = null;
-            newGame.isWhiteTurn = !newGame.isWhiteTurn; // Switch turn
+            newGame.isWhiteTurn = !newGame.isWhiteTurn;
+        } else {
+            const earnsBonusMove = !newGame.gameOver && (
+                (['greathorsegeneral', 'cthulhu'].includes(piece.type) && !wasCapture) ||
+                (piece.type === 'cope' && wasCapture)
+            );
+            const hasLegalBonusMove = earnsBonusMove &&
+                getValidMovesForPiece(piece, to.x, to.y, newGame.boardState, true).length > 0;
+
+            if (hasLegalBonusMove) {
+                newGame.bonusMoveInfo = { pieceX: to.x, pieceY: to.y };
+                newGame.turnCount--; // The bonus action is part of this turn.
+            } else {
+                // Without a legal non-capture continuation, no bonus is awarded.
+                newGame.bonusMoveInfo = null;
+                newGame.isWhiteTurn = !newGame.isWhiteTurn;
+            }
         }
         // --- End Bonus Move Logic ---
         // --- End Update Game State ---
