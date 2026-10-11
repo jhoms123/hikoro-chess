@@ -4,6 +4,9 @@
 const rules = require('./gamelogic');
 
 const values = {pawn:100,sult:200,pilut:200,kota:250,fin:250,yoli:300,chair:300,zur:400,kor:450,jotu:500,cope:350,greatshield:500,finor:500,greathorsegeneral:800,mermaid:700,neptune:900,cthulhu:1000,prince:10000,lupa:10000};
+const CYCLE_HISTORY_WINDOW = 24;
+const CYCLE_MOVE_PENALTY = 400;
+const MAX_CYCLE_MOVE_PENALTY = 1600;
 const opposite = color => color === 'white' ? 'black' : 'white';
 const turn = game => game.isWhiteTurn ? 'white' : 'black';
 const validSquare = (x,y) => x >= 0 && x < 10 && y >= 0 && y < 16 && !((x <= 1 || x >= 8) && (y <= 2 || y >= 13));
@@ -37,10 +40,32 @@ function order(game, move) {
     const target=game.boardState[move.to.y][move.to.x], piece=game.boardState[move.from.y][move.from.x];
     return (target?(values[target.type]||100)*12-(values[piece.type]||100)/10:0)+(move.to.y>=6&&move.to.y<=9&&move.to.x>=3&&move.to.x<=6?20:0);
 }
+function moveSignature(move) {
+    if (move?.type==='drop' && move.to) return `drop:${move.piece?.type||''}:${move.to.x},${move.to.y}`;
+    if (move?.from && move.to) return `board:${move.from.x},${move.from.y}:${move.to.x},${move.to.y}:${move.promotion||move.promoteTo||''}`;
+    return '';
+}
+function recentMoveCounts(game) {
+    const counts = new Map();
+    for (const move of (game.actionJournal||[]).slice(-CYCLE_HISTORY_WINDOW)) {
+        const signature = moveSignature(move);
+        if (signature) counts.set(signature, (counts.get(signature)||0)+1);
+    }
+    return counts;
+}
+function cyclePenalty(game, move, counts, next) {
+    if (move?.type==='board' && game.boardState[move.to.y]?.[move.to.x]) return 0;
+    if (move?.promotion || move?.promoteTo || move?.isPromotion) return 0;
+    if (next?.gameOver) return 0;
+    if (move?.type==='board' && game.boardState[move.from.y]?.[move.from.x]?.type !== next?.boardState[move.to.y]?.[move.to.x]?.type) return 0;
+    const repeats = counts.get(moveSignature(move))||0;
+    return Math.min(MAX_CYCLE_MOVE_PENALTY, repeats*CYCLE_MOVE_PENALTY);
+}
 function chooseMove(game,{budgetMs=150,width=12}={}) {
     const color=turn(game), deadline=Date.now()+budgetMs;
     const roots=legalMoves(game).sort((a,b)=>order(game,b)-order(game,a));
     if (!roots.length) return null;
+    const repeatedMoves=recentMoveCounts(game);
     let best=roots[0],bestScore=-Infinity;
     // Include every root capture and the strongest quiet candidates. A bonus move
     // keeps the same player; its continuation must therefore maximize again.
@@ -61,6 +86,7 @@ function chooseMove(game,{budgetMs=150,width=12}={}) {
             }
             if (Number.isFinite(replyScore)) score=replyScore;
         }
+        score-=cyclePenalty(game,move,repeatedMoves,next);
         if (score>bestScore) {bestScore=score;best=move;}
     }
     return best;
