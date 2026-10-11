@@ -57,10 +57,12 @@ function openingPosition(seed, openingActions) {
     return game;
 }
 
-function runGame(whiteBot, blackBot, start, budgetMs, maxActions) {
+function runGame(whiteBot, blackBot, start, budgetMs, maxActions, maxMovesPerSide = null) {
     let game = structuredClone(start), actions = 0;
+    const movesBySide = {white: 0, black: 0};
     const engineStats = {white: {moves: 0, milliseconds: 0, nodes: 0}, black: {moves: 0, milliseconds: 0, nodes: 0}};
-    while (!game.gameOver && actions < maxActions) {
+    while (!game.gameOver && actions < maxActions &&
+        (!maxMovesPerSide || (movesBySide.white < maxMovesPerSide && movesBySide.black < maxMovesPerSide))) {
         const color = game.isWhiteTurn ? 'white' : 'black';
         const engine = color === 'white' ? whiteBot : blackBot;
         const stats = {};
@@ -71,20 +73,33 @@ function runGame(whiteBot, blackBot, start, budgetMs, maxActions) {
         engineStats[color].moves++;
         engineStats[color].milliseconds += Date.now() - started;
         engineStats[color].nodes += stats.nodes || 0;
-        if (!move) return {winner: 'draw', reason: 'no legal move', actions, engineStats};
+        if (!move) return {winner: 'draw', reason: 'no legal move', actions, movesBySide, engineStats};
         const result = withoutRuleChatter(() => rules.makeMove(game, move, color));
         if (!result.success) throw new Error(`Bot returned illegal ${color} move: ${JSON.stringify(move)}`);
         game = result.updatedGame;
         actions++;
+        movesBySide[color]++;
     }
-    if (game.gameOver) return {winner: game.winner, reason: game.reason, actions, engineStats};
-    return {winner: 'draw', reason: 'action limit', actions, engineStats};
+    if (game.gameOver) return {winner: game.winner, reason: game.reason, actions, movesBySide, engineStats};
+    const moveCapReached = maxMovesPerSide &&
+        (movesBySide.white >= maxMovesPerSide || movesBySide.black >= maxMovesPerSide);
+    return {
+        winner: 'draw',
+        reason: moveCapReached ? `${maxMovesPerSide} move cap per side` : 'action limit',
+        actions, movesBySide, engineStats
+    };
 }
 
-function runTournament(botA, botB, {games = 20, budgetMs = 500, maxActions = 160, openingActions = 4} = {}) {
+function runTournament(botA, botB, options = {}) {
+    const games = options.games ?? 20;
+    const budgetMs = options.budgetMs ?? 500;
+    const maxMovesPerSide = options.maxMovesPerSide ?? null;
+    const maxActions = options.maxActions ?? (maxMovesPerSide ? maxMovesPerSide * 2 : 160);
+    const openingActions = options.openingActions ?? 4;
+    const onGameComplete = options.onGameComplete;
     if (games < 2 || games % 2 !== 0) throw new Error('Use an even game count so each bot gets both colors.');
     const summary = {
-        games, budgetMs, maxActions, openingActions,
+        games, budgetMs, maxActions, maxMovesPerSide, openingActions,
         A: {wins: 0, losses: 0, draws: 0, whiteWins: 0, blackWins: 0},
         B: {wins: 0, losses: 0, draws: 0, whiteWins: 0, blackWins: 0},
         gamesDetail: []
@@ -93,7 +108,11 @@ function runTournament(botA, botB, {games = 20, budgetMs = 500, maxActions = 160
         const pair = Math.floor(index / 2);
         const aIsWhite = index % 2 === 0;
         const start = openingPosition(20261010 + pair * 7919, openingActions);
-        const result = runGame(aIsWhite ? botA : botB, aIsWhite ? botB : botA, start, budgetMs, maxActions);
+        const result = runGame(
+            aIsWhite ? botA : botB,
+            aIsWhite ? botB : botA,
+            start, budgetMs, maxActions, maxMovesPerSide
+        );
         const botAColor = aIsWhite ? 'white' : 'black';
         const botBColor = aIsWhite ? 'black' : 'white';
         const winnerName = result.winner === 'draw' ? 'draw' : result.winner === botAColor ? 'A' : 'B';
@@ -106,11 +125,14 @@ function runTournament(botA, botB, {games = 20, budgetMs = 500, maxActions = 160
             loser.losses++;
             winner[result.winner === 'white' ? 'whiteWins' : 'blackWins']++;
         }
-        summary.gamesDetail.push({
+        const detail = {
             game: index + 1, openingSeed: 20261010 + pair * 7919,
             AColor: botAColor, winner: winnerName, reason: result.reason,
-            actions: result.actions, engineStats: result.engineStats
-        });
+            actions: result.actions, movesBySide: result.movesBySide,
+            engineStats: result.engineStats
+        };
+        summary.gamesDetail.push(detail);
+        if (typeof onGameComplete === 'function') onGameComplete(detail, summary);
     }
     return summary;
 }
@@ -119,11 +141,23 @@ if (require.main === module) {
     try {
         const botA = loadBot(process.argv[2], defaultBot);
         const botB = loadBot(process.argv[3], defaultBot);
+        const moveCapOption = option('--max-moves-per-side', null);
+        const maxMovesPerSide = moveCapOption === null ? null : Number(moveCapOption);
+        if (maxMovesPerSide !== null && (!Number.isInteger(maxMovesPerSide) || maxMovesPerSide < 1)) {
+            throw new Error('--max-moves-per-side must be a positive integer.');
+        }
         const summary = runTournament(botA, botB, {
             games: Number(option('--games', 20)),
             budgetMs: Number(option('--budget-ms', 500)),
-            maxActions: Number(option('--max-actions', 160)),
-            openingActions: Number(option('--opening-actions', 4))
+            maxActions: Number(option('--max-actions', maxMovesPerSide ? maxMovesPerSide * 2 : 160)),
+            maxMovesPerSide,
+            openingActions: Number(option('--opening-actions', 4)),
+            onGameComplete: detail => {
+                process.stderr.write(
+                    `Game ${detail.game}: ${detail.winner} (${detail.reason}), ` +
+                    `${detail.actions} actions [W ${detail.movesBySide.white} / B ${detail.movesBySide.black}]\n`
+                );
+            }
         });
         process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
     } catch (error) {
