@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {collectSelfPlay, trainEvaluationWeights} = require('../tools/hikoro-selfplay-trainer');
+const {
+    collectSelfPlay, trainEvaluationWeights, splitByGame, trainEvaluationCandidate
+} = require('../tools/hikoro-selfplay-trainer');
 
 test('self-play trainer moves material weight toward features associated with wins', () => {
     const zeros = {
@@ -27,4 +29,28 @@ test('self-play collector records outcome-labeled Hikoro positions', () => {
     assert.equal(result.gamesDetail.length, 2);
     assert.ok(result.samples.length > 0);
     assert.ok(result.samples.every(sample => sample.target >= 0 && sample.target <= 1));
+});
+
+test('weight candidates use game-level holdout data and stay explicitly gated', () => {
+    const samples = [
+        {game: 1, features: {material: 1200}, target: 1},
+        {game: 1, features: {material: 900}, target: 1},
+        {game: 2, features: {material: -1200}, target: 0},
+        {game: 2, features: {material: -900}, target: 0},
+        {game: 3, features: {material: 100}, target: 0.5},
+        {game: 4, features: {material: -100}, target: 0.5}
+    ];
+    const split = splitByGame(samples, {validationFraction: 0.25, seed: 19});
+    const trainingGames = new Set(split.training.map(row => row.game));
+    const validationGames = new Set(split.validation.map(row => row.game));
+    assert.ok(split.training.length > 0 && split.validation.length > 0);
+    assert.equal([...trainingGames].some(game => validationGames.has(game)), false);
+
+    const candidate = trainEvaluationCandidate(samples, {
+        validationFraction: 0.25, epochs: 80, seed: 19
+    });
+    assert.equal(candidate.validationLevel, 'held-out games');
+    assert.ok(Number.isFinite(candidate.validationLoss));
+    assert.ok(Number.isFinite(candidate.baselineValidationLoss));
+    assert.match(candidate.candidateRecommendation, /paired bot tournament|keep the candidate disabled/);
 });

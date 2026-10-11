@@ -4,6 +4,7 @@ const path = require('node:path');
 const {Worker} = require('node:worker_threads');
 const rules = require('../gamelogic');
 const bot = require('../hikoro-bot');
+const {openingPosition} = require('./hikoro-bot-tournament');
 
 function askPersistentWorker(worker, game, budgetMs = 500) {
     return new Promise((resolve, reject) => {
@@ -186,6 +187,118 @@ test('hand drops match the rules engine and reserve count is part of the search 
     assert.equal(result.updatedGame.whiteCaptured.length, 1);
     assert.equal(result.updatedGame.boardState[drops[0].to.y][drops[0].to.x].type, 'chair');
     assert.notEqual(bot.positionKey(game), bot.positionKey(result.updatedGame));
+});
+
+test('incremental search hashes match a full Hikoro position hash across special moves', () => {
+    const assertHashAfter = (game, move) => {
+        const color = game.isWhiteTurn ? 'white' : 'black';
+        const result = bot.applySearchMove(game, move, color);
+        assert.equal(result.success, true, `rules rejected ${JSON.stringify(move)}`);
+        assert.equal(bot.positionHash(result.updatedGame), bot.positionHashSlow(result.updatedGame));
+        return result.updatedGame;
+    };
+
+    const initial = {
+        boardState: rules.getInitialBoard(), isWhiteTurn: true, turnCount: 0, gameOver: false,
+        whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true,
+        moveList: [], actionJournal: []
+    };
+    assertHashAfter(initial, bot.legalMoves(initial).find(move => move.type === 'board'));
+
+    const drop = minimalRoyalLineup([], {whiteCaptured: [{type: 'chair'}]});
+    assertHashAfter(drop, bot.legalMoves(drop).find(move => move.type === 'drop'));
+
+    const promotion = minimalRoyalLineup([{x: 4, y: 8, type: 'sult', color: 'white'}]);
+    assertHashAfter(promotion, {type: 'board', from: {x: 4, y: 8}, to: {x: 4, y: 9}});
+
+    const jotuCapture = minimalRoyalLineup([
+        {x: 1, y: 5, type: 'jotu', color: 'white'},
+        {x: 2, y: 5, type: 'pawn', color: 'white'},
+        {x: 3, y: 5, type: 'pawn', color: 'black'}
+    ]);
+    assertHashAfter(jotuCapture, {type: 'board', from: {x: 1, y: 5}, to: {x: 3, y: 5}});
+
+    const bonus = minimalRoyalLineup([{x: 4, y: 6, type: 'greathorsegeneral', color: 'white'}]);
+    const first = assertHashAfter(bonus, {type: 'board', from: {x: 4, y: 6}, to: {x: 4, y: 7}});
+    assert.ok(first.bonusMoveInfo);
+    const second = bot.legalMoves(first).find(move => move.type === 'board');
+    assert.ok(second);
+    assertHashAfter(first, second);
+});
+
+test('quiescence recognizes only direct drops against the opponent\'s last royal', () => {
+    const onlyRoyal = makeGame([
+        {x: 4, y: 0, type: 'lupa', color: 'white'},
+        {x: 5, y: 0, type: 'prince', color: 'white'},
+        {x: 4, y: 7, type: 'prince', color: 'black'}
+    ], {whiteCaptured: [{type: 'zur'}]});
+    const checkingDrop = {type: 'drop', piece: {type: 'zur'}, to: {x: 4, y: 4}};
+    assert.equal(bot.isForcingMove(onlyRoyal, checkingDrop), true);
+
+    const twoRoyals = makeGame([
+        {x: 4, y: 0, type: 'lupa', color: 'white'},
+        {x: 5, y: 0, type: 'prince', color: 'white'},
+        {x: 4, y: 7, type: 'prince', color: 'black'},
+        {x: 7, y: 15, type: 'lupa', color: 'black'}
+    ], {whiteCaptured: [{type: 'zur'}]});
+    assert.equal(bot.isForcingMove(twoRoyals, checkingDrop), false);
+});
+
+test('PVS and aspiration searches recheck a narrow root window and return legal moves', () => {
+    const game = makeGame([
+        {x: 4, y: 0, type: 'lupa', color: 'white'},
+        {x: 5, y: 0, type: 'prince', color: 'white'},
+        {x: 1, y: 5, type: 'zur', color: 'white'},
+        {x: 4, y: 15, type: 'lupa', color: 'black'},
+        {x: 5, y: 15, type: 'prince', color: 'black'},
+        {x: 8, y: 10, type: 'chair', color: 'black'}
+    ]);
+    const stats = {};
+    const move = bot.chooseMove(game, {
+        budgetMs: 1000, maxDepth: 3, width: 10, rootWidth: 12,
+        enableLmr: false, aspirationWindow: 1,
+        searchSessionId: 'pvs-aspiration-regression', searchStats: stats
+    });
+    assert.ok(bot.legalMoves(game).some(candidate => JSON.stringify(candidate) === JSON.stringify(move)));
+    assert.equal(stats.completedDepth, 3);
+    assert.ok(stats.aspirationResearches > 0);
+});
+
+test('PVS preserves the fixed-depth result when every root move is searched', () => {
+    const game = makeGame([
+        {x: 4, y: 0, type: 'lupa', color: 'white'},
+        {x: 5, y: 0, type: 'prince', color: 'white'},
+        {x: 4, y: 15, type: 'lupa', color: 'black'},
+        {x: 5, y: 15, type: 'prince', color: 'black'}
+    ]);
+    const run = (sessionId, enablePvs) => {
+        const stats = {};
+        const move = bot.chooseMove(game, {
+            budgetMs: 500, maxDepth: 3, width: 32, rootWidth: 32,
+            enablePvs, enableLmr: false, enableAspiration: false,
+            searchSessionId: sessionId, searchStats: stats
+        });
+        return {move, stats};
+    };
+    const plain = run('pvs-fixed-depth-plain', false);
+    const pvs = run('pvs-fixed-depth-enabled', true);
+    assert.equal(plain.stats.completedDepth, 3);
+    assert.equal(pvs.stats.completedDepth, 3);
+    assert.equal(pvs.stats.score, plain.stats.score);
+    assert.deepEqual(pvs.move, plain.move);
+    assert.ok(pvs.stats.pvsResearches > 0);
+});
+
+test('LMR activates in a non-tactical midgame while preserving a legal move', () => {
+    const game = openingPosition(7281, 8);
+    const stats = {};
+    const move = bot.chooseMove(game, {
+        budgetMs: 2000, maxDepth: 8, width: 12, rootWidth: 12,
+        searchSessionId: 'lmr-midgame-regression', searchStats: stats
+    });
+    assert.ok(bot.legalMoves(game).some(candidate => JSON.stringify(candidate) === JSON.stringify(move)));
+    assert.ok(stats.lmrReductions > 0);
+    assert.equal(stats.searchFeatures.lmr, true);
 });
 
 test('evaluation rewards promotion and a royal route toward sanctuary', () => {

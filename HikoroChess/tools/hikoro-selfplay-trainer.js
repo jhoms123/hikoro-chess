@@ -133,6 +133,78 @@ function trainEvaluationWeights(samples, options = {}) {
     };
 }
 
+function splitByGame(samples, options = {}) {
+    const validationFraction = Math.max(0.1, Math.min(0.45, Number(options.validationFraction ?? 0.2)));
+    const random = seededRandom(Number(options.seed ?? 20261011));
+    const groups = new Map();
+    samples.forEach((sample, index) => {
+        const key = sample.game === undefined ? `sample-${index}` : `game-${sample.game}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(sample);
+    });
+    const gameKeys = [...groups.keys()];
+    if (gameKeys.length < 2) {
+        return {training: samples.slice(), validation: [], validationLevel: 'unavailable'};
+    }
+    for (let i = gameKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [gameKeys[i], gameKeys[j]] = [gameKeys[j], gameKeys[i]];
+    }
+    const validationCount = Math.max(1, Math.min(gameKeys.length - 1,
+        Math.round(gameKeys.length * validationFraction)));
+    const validationGames = new Set(gameKeys.slice(0, validationCount));
+    const training = [], validation = [];
+    for (const [key, rows] of groups) (validationGames.has(key) ? validation : training).push(...rows);
+    const usesGameIds = samples.some(sample => sample.game !== undefined);
+    return {
+        training, validation,
+        validationLevel: usesGameIds ? 'held-out games' : 'held-out samples',
+        trainingGames: gameKeys.length - validationCount,
+        validationGames: validationCount
+    };
+}
+
+function evaluationLoss(samples, weights, temperature = 3) {
+    if (!samples.length) return null;
+    return samples.reduce((total, sample) => {
+        let score = 0;
+        for (const [name, scale] of Object.entries(featureScale)) {
+            score += (Number(sample.features?.[name]) || 0) / scale * (Number(weights?.[name]) || 1);
+        }
+        const p = Math.max(1e-6, Math.min(1 - 1e-6, sigmoid(score / temperature)));
+        const target = Math.max(0, Math.min(1, Number(sample.target)));
+        return total - target * Math.log(p) - (1 - target) * Math.log(1 - p);
+    }, 0) / samples.length;
+}
+
+function trainEvaluationCandidate(samples, options = {}) {
+    const split = splitByGame(samples, options);
+    const baseline = Object.fromEntries(Object.keys(featureScale).map(name => [name, 1]));
+    if (!split.validation.length) {
+        const trained = trainEvaluationWeights(split.training, options);
+        return {...trained, validationLevel: split.validationLevel,
+            validationSamples: 0, baselineValidationLoss: null, validationLoss: null,
+            candidateRecommendation: 'Collect outcomes from at least two games before judging a candidate.'};
+    }
+    const trained = trainEvaluationWeights(split.training, options);
+    const temperature = Math.max(0.5, Number(options.temperature ?? 3));
+    const baselineValidationLoss = evaluationLoss(split.validation, baseline, temperature);
+    const validationLoss = evaluationLoss(split.validation, trained.weights, temperature);
+    return {
+        ...trained,
+        trainingSamples: split.training.length,
+        validationSamples: split.validation.length,
+        trainingGames: split.trainingGames,
+        validationGames: split.validationGames,
+        validationLevel: split.validationLevel,
+        baselineValidationLoss: Number(baselineValidationLoss.toFixed(6)),
+        validationLoss: Number(validationLoss.toFixed(6)),
+        candidateRecommendation: validationLoss < baselineValidationLoss
+            ? 'Validation loss improved; confirm with a separate paired bot tournament before enabling.'
+            : 'Validation did not beat default weights; keep the candidate disabled.'
+    };
+}
+
 function option(name, fallback) {
     const index = process.argv.indexOf(name);
     return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
@@ -149,8 +221,9 @@ if (require.main === module) {
             seed: Number(option('--seed', 20261011)),
             onGameComplete: game => process.stderr.write(`Self-play ${game.game}: ${game.winner} (${game.reason}), ${game.plies} plies\n`)
         });
-        const trained = trainEvaluationWeights(result.samples, {
-            epochs: Number(option('--epochs', 300)), seed: result.seed
+        const trained = trainEvaluationCandidate(result.samples, {
+            epochs: Number(option('--epochs', 300)), seed: result.seed,
+            validationFraction: Number(option('--validation-fraction', 0.2))
         });
         const outputPath = path.resolve(process.cwd(), option('--out', 'hikoro-eval-model.candidate.json'));
         fs.writeFileSync(outputPath, JSON.stringify({
@@ -167,4 +240,7 @@ if (require.main === module) {
     }
 }
 
-module.exports = {collectSelfPlay, trainEvaluationWeights};
+module.exports = {
+    collectSelfPlay, trainEvaluationWeights, splitByGame,
+    evaluationLoss, trainEvaluationCandidate
+};

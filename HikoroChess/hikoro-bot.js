@@ -21,8 +21,14 @@ const MATE = 1_000_000;
 const INF = 1_100_000;
 const MAX_TABLE_ENTRIES = 50000;
 const MAX_EVAL_ENTRIES = 25000;
+const MAX_THREAT_ENTRIES = 16000;
 const MAX_SEARCH_CONTEXTS = 16;
 const searchContexts = new Map();
+const positionHashCache = new WeakMap();
+const metadataHashCache = new WeakMap();
+const zobristTokenCache = new Map();
+const ZOBRIST_MASK = (1n << 64n) - 1n;
+const ZOBRIST_SEED = 0x6a09e667f3bcc909n;
 const EVAL_WEIGHT_NAMES = [
     'material', 'reserve', 'royalRoute', 'center', 'promotion',
     'protection', 'sanctuaryThreat', 'royalAttack', 'mobility', 'lastRoyal'
@@ -142,6 +148,114 @@ function moveKey(move) {
     return `b:${move.from.x},${move.from.y}:${move.to.x},${move.to.y}`;
 }
 
+function splitmix64(value) {
+    let z = (value + 0x9e3779b97f4a7c15n) & ZOBRIST_MASK;
+    z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & ZOBRIST_MASK;
+    z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & ZOBRIST_MASK;
+    return (z ^ (z >> 31n)) & ZOBRIST_MASK;
+}
+
+function zobristToken(tag, index) {
+    const cacheKey = `${tag}:${index}`;
+    if (zobristTokenCache.has(cacheKey)) return zobristTokenCache.get(cacheKey);
+    const value = splitmix64(ZOBRIST_SEED ^ (BigInt(tag) << 48n) ^ BigInt.asUintN(48, BigInt(index)));
+    zobristTokenCache.set(cacheKey, value);
+    return value;
+}
+
+function pieceHash(piece, x, y) {
+    if (!piece) return 0n;
+    const type = pieceCode[piece.type] || 0;
+    const color = piece.color === 'black' ? 1 : 0;
+    const square = y * rules.BOARD_WIDTH + x;
+    return zobristToken(1, (square * (pieceTypes.length + 1) + type) * 2 + color);
+}
+
+function handHash(hand, side) {
+    const counts = new Map();
+    for (const piece of hand || []) counts.set(piece.type, (counts.get(piece.type) || 0) + 1);
+    let hash = 0n;
+    for (let index = 0; index < pieceTypes.length; index++) {
+        const count = counts.get(pieceTypes[index]) || 0;
+        hash ^= zobristToken(2, side * pieceTypes.length * 7 + index * 7 + Math.min(6, count));
+    }
+    return hash;
+}
+
+function metadataHash(game) {
+    if (metadataHashCache.has(game)) return metadataHashCache.get(game);
+    let hash = 0n;
+    if (!game.isWhiteTurn) hash ^= zobristToken(3, 1);
+    hash ^= handHash(game.whiteCaptured, 0) ^ handHash(game.blackCaptured, 1);
+    if (game.bonusMoveInfo) {
+        const {pieceX, pieceY} = game.bonusMoveInfo;
+        hash ^= zobristToken(4, pieceY * rules.BOARD_WIDTH + pieceX + 1);
+    }
+    hash ^= zobristToken(5, Math.trunc(Number(game.turnCount) || 0));
+    if (game.whitePrinceOnBoard === false) hash ^= zobristToken(6, 1);
+    if (game.blackPrinceOnBoard === false) hash ^= zobristToken(6, 2);
+    if (game.gameOver) {
+        hash ^= zobristToken(7, 1);
+        hash ^= zobristToken(8, game.winner === 'white' ? 1 : game.winner === 'black' ? 2 : 3);
+    }
+    metadataHashCache.set(game, hash);
+    return hash;
+}
+
+function positionHashSlow(game) {
+    if (!game?.boardState) return 0n;
+    let hash = metadataHash(game);
+    for (let y = 0; y < rules.BOARD_HEIGHT; y++) {
+        for (let x = 0; x < rules.BOARD_WIDTH; x++) {
+            hash ^= pieceHash(game.boardState[y]?.[x], x, y);
+        }
+    }
+    return hash;
+}
+
+function searchHash(game) {
+    if (!game?.boardState) return 0n;
+    if (positionHashCache.has(game)) return positionHashCache.get(game);
+    const hash = positionHashSlow(game);
+    positionHashCache.set(game, hash);
+    return hash;
+}
+
+function changedSquaresForMove(game, move) {
+    const changed = new Set();
+    const add = (x, y) => changed.add(y * rules.BOARD_WIDTH + x);
+    if (move?.type === 'drop') {
+        add(move.to.x, move.to.y);
+    } else if (move?.type === 'board') {
+        add(move.from.x, move.from.y);
+        add(move.to.x, move.to.y);
+        const movingPiece = game.boardState[move.from.y]?.[move.from.x];
+        if (movingPiece?.type === 'jotu') {
+            const dx = Math.sign(move.to.x - move.from.x);
+            const dy = Math.sign(move.to.y - move.from.y);
+            let x = move.from.x + dx, y = move.from.y + dy;
+            while ((x !== move.to.x || y !== move.to.y) && inside(x, y)) {
+                add(x, y);
+                x += dx;
+                y += dy;
+            }
+        }
+    }
+    return changed;
+}
+
+function updateSearchHash(game, move, nextGame, parentHash) {
+    if (move?.type !== 'board' && move?.type !== 'drop') return positionHashSlow(nextGame);
+    let hash = parentHash ^ metadataHash(game) ^ metadataHash(nextGame);
+    for (const square of changedSquaresForMove(game, move)) {
+        const x = square % rules.BOARD_WIDTH;
+        const y = Math.floor(square / rules.BOARD_WIDTH);
+        hash ^= pieceHash(game.boardState[y]?.[x], x, y);
+        hash ^= pieceHash(nextGame.boardState[y]?.[x], x, y);
+    }
+    return hash & ZOBRIST_MASK;
+}
+
 function boundedSet(map, key, value, limit) {
     if (map.has(key)) map.delete(key);
     else if (map.size >= limit) map.delete(map.keys().next().value);
@@ -153,7 +267,10 @@ function getSearchContext(sessionId, color, weightKey) {
     const key = `${namespace}:${color}:${weightKey}`;
     let context = searchContexts.get(key);
     if (!context) {
-        context = {table: new Map(), evalCache: new Map(), history: new Map(), killers: [], uses: 0};
+        context = {
+            table: new Map(), evalCache: new Map(), threatCache: new Map(),
+            history: new Map(), killers: [], uses: 0
+        };
         if (searchContexts.size >= MAX_SEARCH_CONTEXTS) searchContexts.delete(searchContexts.keys().next().value);
     } else {
         searchContexts.delete(key);
@@ -161,6 +278,14 @@ function getSearchContext(sessionId, color, weightKey) {
     context.uses++;
     searchContexts.set(key, context);
     return context;
+}
+
+function cachedCriticalThreats(game, color, hash, cache) {
+    const key = `${hash.toString(16)}:${color}`;
+    if (cache.has(key)) return cache.get(key);
+    const threats = criticalThreats(game, color);
+    boundedSet(cache, key, threats, MAX_THREAT_ENTRIES);
+    return threats;
 }
 
 function positionKey(game) {
@@ -200,14 +325,89 @@ function isPromotionCandidate(game, move) {
     return piece.color === 'white' ? move.to.y > 8 : move.to.y < 7;
 }
 
-function isForcingMove(game, move) {
-    if (move.type === 'drop') return false;
+const longRangeDropTypes = new Set([
+    'kota', 'zur', 'fin', 'chair', 'jotu', 'finor',
+    'greathorsegeneral', 'neptune', 'cthulhu'
+]);
+
+function createDropTacticalContext(game, allowCheckingDrops = true) {
+    const enemy = opposite(turn(game));
+    const royals = [];
+    const allRoyals = [];
+    for (let y = 0; y < rules.BOARD_HEIGHT; y++) {
+        for (let x = 0; x < rules.BOARD_WIDTH; x++) {
+            const piece = game.boardState[y]?.[x];
+            if (piece && royalTypes.has(piece.type)) {
+                allRoyals.push({x, y, color: piece.color});
+                if (piece.color === enemy) royals.push({x, y});
+            }
+        }
+    }
+    return {
+        royal: allowCheckingDrops && royals.length === 1 ? royals[0] : null,
+        allRoyals, cache: new Map()
+    };
+}
+
+function dropAttacksLastRoyal(game, move, context) {
+    if (move.type !== 'drop' || game.bonusMoveInfo || !context?.royal) return false;
+    const {x, y} = move.to;
+    const cacheKey = `${move.piece?.type}:${x},${y}`;
+    if (context.cache.has(cacheKey)) return context.cache.get(cacheKey);
+    const royal = context.royal;
+    const dx = Math.abs(royal.x - x), dy = Math.abs(royal.y - y);
+    const aligned = dx === 0 || dy === 0 || dx === dy;
+    const plausible = Math.max(dx, dy) <= 3 || (longRangeDropTypes.has(move.piece.type) && aligned);
+    if (!plausible || game.boardState[y]?.[x]) {
+        context.cache.set(cacheKey, false);
+        return false;
+    }
+
+    // Drops are rare in a tactical extension. Test on a shallow scratch board
+    // and use the authoritative move generator, including Hikoro protection,
+    // blockers, directional movement, and palace restrictions.
+    const board = game.boardState.slice();
+    board[y] = game.boardState[y].slice();
+    const droppedPiece = {type: move.piece.type, color: turn(game)};
+    board[y][x] = droppedPiece;
+    const attacks = rules.getValidMovesForPiece(droppedPiece, x, y, board, false)
+        .some(destination => destination.x === royal.x && destination.y === royal.y);
+    context.cache.set(cacheKey, attacks);
+    return attacks;
+}
+
+function isForcingMove(game, move, dropContext = null) {
+    if (move.type === 'drop') return dropAttacksLastRoyal(game, move, dropContext || createDropTacticalContext(game));
     const piece = game.boardState[move.from.y]?.[move.from.x];
     if (!piece) return false;
     const target = game.boardState[move.to.y]?.[move.to.x];
     if (target || isPromotionCandidate(game, move)) return true;
+    if (royalTypes.has(piece.type) && isSanctuary(move.to.x, move.to.y)) return true;
     if (!game.bonusMoveInfo && ['greathorsegeneral', 'cthulhu'].includes(piece.type)) return true;
     return false;
+}
+
+function nearCriticalArea(game, move, dropContext) {
+    const piece = move.type === 'board' ? game.boardState[move.from.y]?.[move.from.x] : null;
+    if (piece && royalTypes.has(piece.type)) return true;
+    const squares = move.type === 'drop' ? [move.to] : [move.from, move.to];
+    for (const square of squares) {
+        if (distanceToSanctuary(square.x, square.y) <= 2) return true;
+        if ((dropContext?.allRoyals || []).some(royal =>
+            Math.max(Math.abs(royal.x - square.x), Math.abs(royal.y - square.y)) <= 2)) return true;
+    }
+    return false;
+}
+
+function lateMoveReduction(game, move, moveIndex, depth, threats, dropContext, preferred) {
+    if (depth < 3 || game.bonusMoveInfo || threats.size || moveKey(move) === preferred) return 0;
+    if (isForcingMove(game, move, dropContext) || nearCriticalArea(game, move, dropContext)) return 0;
+    if (move.type === 'drop') {
+        if (depth < 4 || moveIndex < 8) return 0;
+        return depth >= 8 && moveIndex >= 24 ? 2 : 1;
+    }
+    if (moveIndex < 3) return 0;
+    return depth >= 8 && moveIndex >= 12 ? 2 : 1;
 }
 
 function centerValue(x, y) {
@@ -255,8 +455,15 @@ function orderMoves(game, moves, preferredKey, killers, history, ply) {
     }).sort((a, b) => b.score - a.score).map(entry => entry.move);
 }
 
-function selectCandidates(game, ordered, width, emergencyTargets = null) {
+function selectCandidates(game, ordered, width, emergencyTargets = null, suppliedDropContext = null) {
     const selected = [], seen = new Set();
+    const dropContext = suppliedDropContext || createDropTacticalContext(game);
+    const forcingCache = new Map();
+    const isForcing = move => {
+        const key = moveKey(move);
+        if (!forcingCache.has(key)) forcingCache.set(key, isForcingMove(game, move, dropContext));
+        return forcingCache.get(key);
+    };
     const include = move => {
         const key = moveKey(move);
         if (!seen.has(key)) {
@@ -290,7 +497,7 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
     }
 
     const forcingKeys = new Set();
-    for (const move of ordered) if (isForcingMove(game, move)) forcingKeys.add(moveKey(move));
+    for (const move of ordered) if (isForcing(move)) forcingKeys.add(moveKey(move));
     const bonusCandidates = new Map();
     const bonusLimit = Math.max(1, Math.min(4, Math.ceil(width / 12)));
     for (const move of ordered) {
@@ -319,7 +526,12 @@ function selectCandidates(game, ordered, width, emergencyTargets = null) {
 // search may apply thousands of valid hypothetical moves, so keep that internal
 // search chatter out of the server log and restore the logger immediately.
 function applyMove(game, move, color) {
-    return rules.makeMoveForSearch(game, move, color);
+    const beforeHash = searchHash(game);
+    const result = rules.makeMoveForSearch(game, move, color);
+    if (result.success) {
+        positionHashCache.set(result.updatedGame, updateSearchHash(game, move, result.updatedGame, beforeHash));
+    }
+    return result;
 }
 
 function handMobilityFactor(game) {
@@ -459,6 +671,13 @@ function chooseMove(game, options = {}) {
     const rootWidth = Math.max(12, Math.min(32, Number(options.rootWidth) || Math.round(10 + budgetMs / 500)));
     const maxDepth = Math.max(1, Math.min(16, Number(options.maxDepth) || 12));
     const qDepth = Math.max(1, Math.min(8, Number(options.quiescenceDepth) || 1));
+    const enablePvs = options.enablePvs !== false;
+    const enableLmr = options.enableLmr !== false;
+    const enableAspiration = options.enableAspiration !== false;
+    const enableDropQuiescence = options.enableDropQuiescence !== false;
+    const requestedAspirationWindow = Number(options.aspirationWindow);
+    const aspirationBaseWindow = Number.isFinite(requestedAspirationWindow) && requestedAspirationWindow > 0
+        ? Math.min(INF, requestedAspirationWindow) : null;
     const deadline = Date.now() + budgetMs;
     const rootColor = turn(game);
     const evaluationWeights = normalizeEvalWeights(options.evaluationWeights);
@@ -466,7 +685,8 @@ function chooseMove(game, options = {}) {
     const context = getSearchContext(options.searchSessionId, rootColor, weightKey);
     const {table, evalCache, history, killers} = context;
     const ttStartSize = table.size;
-    let nodes = 0, ttHits = 0, aborted = false, completedDepth = 0;
+    let nodes = 0, ttHits = 0, pvsResearches = 0, lmrReductions = 0, lmrResearches = 0;
+    let aspirationResearches = 0, aborted = false, completedDepth = 0, completedScore = 0;
 
     const rootMoves = legalMoves(game);
     if (!rootMoves.length) return null;
@@ -474,7 +694,8 @@ function chooseMove(game, options = {}) {
     const firstOrder = orderMoves(game, rootMoves, '', killers, history, 0);
     const winning = immediateWinningMove(game, firstOrder, rootColor);
     if (winning) return winning;
-    const rootCandidates = selectCandidates(game, firstOrder, rootWidth, rootThreats);
+    const rootDropContext = createDropTacticalContext(game, enableDropQuiescence);
+    const rootCandidates = selectCandidates(game, firstOrder, rootWidth, rootThreats, rootDropContext);
     let bestCompleted = rootCandidates[0] || firstOrder[0];
 
     function isExpired() {
@@ -507,7 +728,7 @@ function chooseMove(game, options = {}) {
         if (end !== null) return end;
         if (depth <= 0) return quiescence(position, alpha, beta, ply, qDepth);
 
-        const key = positionKey(position);
+        const key = searchHash(position);
         const originalAlpha = alpha, originalBeta = beta;
         const cached = table.get(key);
         let preferred = '';
@@ -525,18 +746,50 @@ function chooseMove(game, options = {}) {
         const moves = legalMoves(position);
         if (!moves.length) return staticFor(position, key, rootColor);
         const current = turn(position), maximizing = current === rootColor;
-        const threats = criticalThreats(position, current);
+        const threats = cachedCriticalThreats(position, current, key, context.threatCache);
+        const dropContext = createDropTacticalContext(position, enableDropQuiescence);
         const ordered = orderMoves(position, moves, preferred, killers, history, ply);
-        const candidates = selectCandidates(position, ordered, width, threats);
+        const candidates = selectCandidates(position, ordered, width, threats, dropContext);
         let bestScore = maximizing ? -INF : INF;
         let bestKey = '';
 
+        const usePvsAtNode = enablePvs && depth >= 3;
+        let searchedMoves = 0;
         for (const move of candidates) {
             if (isExpired()) return 0;
             const result = applyMove(position, move, current);
             if (!result.success) continue;
-            const score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1);
+            const reduction = enableLmr
+                ? lateMoveReduction(position, move, searchedMoves, depth, threats, dropContext, preferred)
+                : 0;
+            let score;
+            if (searchedMoves === 0) {
+                score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1);
+            } else {
+                const nullAlpha = !usePvsAtNode ? alpha : maximizing ? alpha : Math.max(alpha, beta - 1);
+                const nullBeta = !usePvsAtNode ? beta : maximizing ? Math.min(beta, alpha + 1) : beta;
+                const reducedDepth = Math.max(0, depth - 1 - reduction);
+                if (reduction) lmrReductions++;
+                score = search(result.updatedGame, reducedDepth, nullAlpha, nullBeta, ply + 1);
+
+                // Hikoro's wide drop tree makes reductions useful, but every
+                // promising late move is restored to full depth before it can
+                // raise alpha or lower beta.
+                const improvesWindow = maximizing ? score > alpha : score < beta;
+                if (reduction && !aborted && improvesWindow) {
+                    lmrResearches++;
+                    score = search(result.updatedGame, depth - 1, nullAlpha, nullBeta, ply + 1);
+                }
+                const needsFullWindow = maximizing
+                    ? score > alpha && score < beta
+                    : score < beta && score > alpha;
+                if (usePvsAtNode && !aborted && needsFullWindow) {
+                    pvsResearches++;
+                    score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1);
+                }
+            }
             if (aborted) return 0;
+            searchedMoves++;
             const keyOfMove = moveKey(move);
             if ((maximizing && score > bestScore) || (!maximizing && score < bestScore)) {
                 bestScore = score;
@@ -545,7 +798,7 @@ function chooseMove(game, options = {}) {
             if (maximizing) alpha = Math.max(alpha, bestScore);
             else beta = Math.min(beta, bestScore);
             if (alpha >= beta) {
-                if (!isForcingMove(position, move)) {
+                if (!isForcingMove(position, move, dropContext)) {
                     const list = killers[ply] || (killers[ply] = []);
                     if (!list.includes(keyOfMove)) list.unshift(keyOfMove);
                     if (list.length > 2) list.length = 2;
@@ -569,13 +822,13 @@ function chooseMove(game, options = {}) {
         const end = terminal(position, ply);
         if (end !== null) return end;
         const current = turn(position), maximizing = current === rootColor;
-        const key = positionKey(position);
+        const key = searchHash(position);
         const moves = legalMoves(position);
         if (!moves.length) return staticFor(position, key, rootColor);
 
         const winningMove = immediateWinningMove(position, moves, current);
         if (winningMove) return signFor(current, rootColor) * MATE;
-        const threats = criticalThreats(position, current);
+        const threats = cachedCriticalThreats(position, current, key, context.threatCache);
         const threatened = threats.size > 0;
         const mandatoryBonus = Boolean(position.bonusMoveInfo);
         const forced = threatened || mandatoryBonus;
@@ -597,9 +850,11 @@ function chooseMove(game, options = {}) {
         }
 
         const ordered = orderMoves(position, moves, '', killers, history, ply);
+        const dropContext = createDropTacticalContext(position, enableDropQuiescence);
+        const forcingDropContext = dropContext;
         const candidates = forced
-            ? selectCandidates(position, ordered, width, threatened ? threats : new Map())
-            : ordered.filter(move => isForcingMove(position, move));
+            ? selectCandidates(position, ordered, width, threatened ? threats : new Map(), dropContext)
+            : ordered.filter(move => isForcingMove(position, move, forcingDropContext));
         if (!candidates.length) {
             return threatened ? signFor(opposite(current), rootColor) * MATE : standPat;
         }
@@ -626,33 +881,83 @@ function chooseMove(game, options = {}) {
         return bestScore;
     }
 
+    let previousScore = null;
     for (let depth = 1; depth <= maxDepth; depth++) {
         if (Date.now() >= deadline) break;
         const preferred = moveKey(bestCompleted);
         const ordered = orderMoves(game, rootCandidates, preferred, killers, history, 0);
-        let iterationBest = null;
-        let iterationScore = -INF;
-        let alpha = -INF;
-        for (const move of ordered) {
-            if (Date.now() >= deadline) {
-                aborted = true;
-                break;
+        const useAspirationThisDepth = enableAspiration && depth >= 3;
+        const usePvsThisDepth = enablePvs && depth >= 3;
+        let window = previousScore === null || !useAspirationThisDepth
+            ? INF
+            : aspirationBaseWindow ?? Math.max(160, Math.min(900, 120 + Math.abs(previousScore) * 0.08));
+        let alphaBound = previousScore === null || !useAspirationThisDepth
+            ? -INF : Math.max(-INF, previousScore - window);
+        let betaBound = previousScore === null || !useAspirationThisDepth
+            ? INF : Math.min(INF, previousScore + window);
+        let iterationComplete = false;
+        let aspirationAttempts = 0;
+
+        while (!iterationComplete && !aborted) {
+            let iterationBest = null;
+            let iterationScore = -INF;
+            let alpha = alphaBound;
+            let searchedRootMoves = 0;
+
+            for (const move of ordered) {
+                if (Date.now() >= deadline) {
+                    aborted = true;
+                    break;
+                }
+                const result = applyMove(game, move, rootColor);
+                if (!result.success) continue;
+                let score;
+                if (!usePvsThisDepth || searchedRootMoves === 0) {
+                    score = search(result.updatedGame, depth - 1, alpha, betaBound, 1);
+                } else {
+                    score = search(result.updatedGame, depth - 1, alpha, Math.min(betaBound, alpha + 1), 1);
+                    if (!aborted && score > alpha && score < betaBound) {
+                        pvsResearches++;
+                        score = search(result.updatedGame, depth - 1, alpha, betaBound, 1);
+                    }
+                }
+                if (aborted) break;
+                searchedRootMoves++;
+                if (score > iterationScore) {
+                    iterationScore = score;
+                    iterationBest = move;
+                }
+                alpha = Math.max(alpha, iterationScore);
             }
-            const result = applyMove(game, move, rootColor);
-            if (!result.success) continue;
-            const score = search(result.updatedGame, depth - 1, alpha, INF, 1);
-            if (aborted) break;
-            if (score > iterationScore) {
-                iterationScore = score;
-                iterationBest = move;
+
+            // Preserve the last fully completed depth if a time budget expires
+            // during an aspiration retry or a PVS re-search.
+            if (aborted || !iterationBest) break;
+            const failedLow = iterationScore <= alphaBound && alphaBound > -INF;
+            const failedHigh = iterationScore >= betaBound && betaBound < INF;
+            if (useAspirationThisDepth && (failedLow || failedHigh)) {
+                aspirationResearches++;
+                aspirationAttempts++;
+                window = Math.min(INF, window * 2);
+                if (aspirationAttempts >= 4 || window >= INF / 2) {
+                    alphaBound = -INF;
+                    betaBound = INF;
+                } else {
+                    alphaBound = Math.max(-INF, previousScore - window);
+                    betaBound = Math.min(INF, previousScore + window);
+                }
+                continue;
             }
-            alpha = Math.max(alpha, iterationScore);
+
+            bestCompleted = iterationBest;
+            completedScore = iterationScore;
+            previousScore = iterationScore;
+            completedDepth = depth;
+            iterationComplete = true;
+            if (iterationScore >= MATE - 100) break;
         }
-        // Never replace a completed, shallower result with a partial iteration.
-        if (aborted || !iterationBest) break;
-        bestCompleted = iterationBest;
-        completedDepth = depth;
-        if (iterationScore >= MATE - 100) break;
+        if (aborted) break;
+        if (completedScore >= MATE - 100) break;
     }
 
     if (options.searchStats && typeof options.searchStats === 'object') {
@@ -660,6 +965,10 @@ function chooseMove(game, options = {}) {
             nodes, ttHits, completedDepth, rootMoveCount: rootMoves.length, rootCandidateCount: rootCandidates.length,
             ttEntries: table.size, ttEntriesBefore: ttStartSize, searchContextUses: context.uses,
             evaluationWeights: {...evaluationWeights},
+            score: completedScore, pvsResearches, lmrReductions, lmrResearches,
+            aspirationResearches, searchFeatures: {pvs: enablePvs, lmr: enableLmr,
+                aspiration: enableAspiration, dropQuiescence: enableDropQuiescence,
+                pvsMinimumDepth: 3, aspirationMinimumDepth: 3},
             elapsedMs: Math.max(0, budgetMs - Math.max(0, deadline - Date.now())),
             aborted
         });
@@ -677,5 +986,10 @@ function clearSearchCache(sessionId = null) {
 
 module.exports = {
     chooseMove, legalMoves, evaluate, evaluateFeatures, defaultEvalWeights: DEFAULT_EVAL_WEIGHTS,
-    positionKey, clearSearchCache
+    positionKey,
+    positionHash: game => searchHash(game).toString(16).padStart(16, '0'),
+    positionHashSlow: game => positionHashSlow(game).toString(16).padStart(16, '0'),
+    applySearchMove: applyMove,
+    isForcingMove,
+    clearSearchCache
 };
