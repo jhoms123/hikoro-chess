@@ -1663,15 +1663,15 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Squid', type: 'pilut', notation: 'S', desc: "Moves one or two squares forward (empty squares only). Shields piece behind it.", special: 'Promotes to Shield Squid.' },
         { name: 'Cray Fish', type: 'sult', notation: 'Cr', desc: 'Moves one step diagonally forward, straight forward, or straight backward. Can also move two steps straight forward.', special: 'Promotes to Dumbo Octopus.' },
         { name: 'Fish', type: 'pawn', notation: 'F', desc: 'Moves one square orthogonally OR two squares diagonally.', special: 'Promotes to Dumbo Octopus.' },
-        { name: 'Narwhal', type: 'cope', notation: 'Na', desc: "Unique forward jump and backward moves. Gets a second, non-capture move after capturing.", special: 'Bonus Move' },
+        { name: 'Narwhal', type: 'cope', notation: 'Na', desc: "Unique forward jump and backward moves. After capturing, it gets a second non-capture move only when at least one legal non-capture continuation exists; otherwise, the turn passes.", special: 'Bonus Move' },
         { name: 'Dumbo Octopus', type: 'chair', notation: 'Du', desc: 'Moves any squares diagonally or vertically.' },
         { name: 'Hammer Head', type: 'jotu', notation: 'Sh', desc: 'Moves like a Rook, jumping over friendly pieces (returning them to hand, except AC/Ct). Captures first enemy and stops.' },
         { name: 'Two Pincer Crab', type: 'finor', notation: 'Tc', desc: 'Moves like a Bishop or a Knight. (Promoted Fin)' },
         { name: 'Shield Squid', type: 'greatshield', notation: 'Ss', desc: 'Non-capture moves: one square forward (diag/straight) or straight backward. Shields adjacent friendly pieces on sides/behind.', special: 'Promoted Pilut.' },
-        { name: 'Ancient Creature', type: 'greathorsegeneral', notation: 'Ac', desc: "Gets a second, non-capture move after a non-capture move. Moves like a knight (extended 3+1/1+3), bishop forward diag, rook backward.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
+        { name: 'Ancient Creature', type: 'greathorsegeneral', notation: 'Ac', desc: "After a non-capture move, it gets a second non-capture move only when at least one legal non-capture continuation exists; otherwise, the turn passes. Moves like a knight (extended 3+1/1+3), bishop forward diag, rook backward.", special: 'Bonus Move & Promotes to Cthulhu upon capturing.' },
         { name: 'Neptune', type: 'neptune', notation: 'Np', desc: 'Moves like King or Narwhal. Jumps first piece orthogonally, continues moving/capturing.', special: 'Upon capture, returns to owner\'s hand as Mermaid.' },
         { name: 'Mermaid', type: 'mermaid', notation: 'Mm', desc: 'Moves/Captures in a 5x5 square around itself, jumping over any piece.', special: 'Promotes to Neptune upon capturing.' },
-        { name: 'Cthulhu', type: 'cthulhu', notation: 'Ct', desc: "Combines moves of Ancient Creature and Mermaid. Retains AC's bonus non-capture move." }
+        { name: 'Cthulhu', type: 'cthulhu', notation: 'Ct', desc: "Combines moves of Ancient Creature and Mermaid. After a non-capture move, it gets a bonus non-capture move only when a legal continuation exists; otherwise, the turn passes." }
     ];
 
     function populateHikoroRules() {
@@ -1694,9 +1694,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   <li><strong>Shield Squid (Greatshield):</strong> Protects adjacent friendly pieces on sides/behind (5 squares).</li>
               </ul>
               <h3><span style="color: #4CAF50;">⏩</span> Bonus Moves</h3>
+            <p>A bonus move is awarded only when the same piece has at least one legal non-capture continuation. If it has none, no bonus move is awarded and the turn passes normally.</p>
             <ul>
-                <li><strong>Narwhal (Cope):</strong> After a capture, gets a second non-capture move.</li>
-                <li><strong>Ancient Creature / Cthulhu:</strong> After a non-capture move, gets a second non-capture move.</li>
+                <li><strong>Narwhal (Cope):</strong> A capture can earn a second non-capture move.</li>
+                <li><strong>Ancient Creature / Cthulhu:</strong> A non-capture move can earn a second non-capture move.</li>
             </ul>
             <h3><span style="color: #4CAF50;">✋</span> Drops</h3>
             <p>Captured pieces (except royalty) go to your Hand. On your turn, drop a piece from hand onto any empty, valid square (max 6 pieces in hand).</p>
