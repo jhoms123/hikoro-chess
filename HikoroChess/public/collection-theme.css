@@ -72,8 +72,11 @@ body[data-audio-theme] :is(h1,h2,h3,.collection-brand,.card-copy strong,.materia
 .hikoro-site button.game-choice[data-game=shavari]{border:10px double #c5ad70;border-image:none;background:linear-gradient(#0b4e48d9,#083c37d9),var(--stone) center/350px;padding:4px}
 .hikoro-site button.game-choice[data-game=shodansho]{border:10px double #84976d;border-image:none;background:linear-gradient(#405836ce,#33482dcf),var(--stone) center/350px;padding:4px}
 .hikoro-site button.game-choice[data-game=go]{border:13px solid transparent;border-image:url('assets/collection/materials/stone.webp') 40 / 13px / 0 stretch;background:#30362d}
+.hikoro-site button.game-choice[data-game=shavari-go]{--card-tint:#654427}
+.hikoro-site button.game-choice[data-game=shavari-go] .match-peek{padding:6px;background:linear-gradient(#24180d66,#24180d66),var(--wood) center/400px}
 body[data-audio-theme=academy] :is(.panel,.guide-card) :is(.selection-detail,.selection-detail small,.empty-history,.guide-card small,.ply-no,#move-history){color:#564831!important}
 body[data-audio-theme=academy] .panel #notice{color:#6d4832}
 body[data-audio-theme] .material-control{font-size:16px!important}
 body[data-audio-theme] .collection-audio .material-control{font-size:12px!important}
 @media(max-width:700px){body[data-audio-theme] .material-control{font-size:15px!important}.hero-copy h1{font-size:43px!important}.mode-toggle .material-control{font-size:13px!important}.academy-table .guide-card .material-control{font-size:14px!important}}
+
