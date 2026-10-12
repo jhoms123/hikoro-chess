@@ -5,6 +5,7 @@ body[data-audio-theme=shodansho]{--accent:#b9c497;--surface:#293829;--theme-embl
 body[data-audio-theme=shavari]{--accent:#dcb786;--surface:#173f3d;--theme-emblem:url('assets/collection/icons/shavari.svg');background:linear-gradient(#123b38bf,#082423df),var(--stone) center/700px repeat}
 body[data-audio-theme=hikoruka]{--theme-emblem:url('assets/collection/icons/hikoruka.svg');background:linear-gradient(#29150c9c,#1e130de3),var(--wood) center/850px repeat}
 body[data-audio-theme=go]{--accent:#d6c69c;--surface:#353933;--theme-emblem:url('assets/collection/icons/go.svg');background:linear-gradient(#232721b5,#121612e0),var(--stone) center/700px repeat}
+body[data-audio-theme=bastion]{--accent:#d4ad70;--surface:#3f3425;--theme-emblem:url('assets/collection/icons/crown.svg');background:linear-gradient(#2a241ac4,#17140fe8),var(--wood) center/800px repeat}
 body[data-audio-theme=academy]{--accent:#caac79;--surface:#293d3a;--theme-emblem:url('assets/collection/icons/academy.svg');background:linear-gradient(#173332d6,#102523e8),var(--wood) center/850px repeat}
 body.hikoro-site.game-active{--theme-emblem:url('assets/collection/icons/hikoro.svg');background:linear-gradient(#173b48c9,#0d232dde),var(--stone) center/800px repeat}
 body[data-audio-theme] *{box-sizing:border-box}
