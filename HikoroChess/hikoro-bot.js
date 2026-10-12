@@ -935,6 +935,18 @@ function immediateWinningMove(game, moves, color) {
     return null;
 }
 
+function nullMoveMaterialCount(game, color) {
+    let count = 0;
+    for (const {x, y} of validSquares) {
+        const piece = game.boardState[y]?.[x];
+        if (piece?.color === color && !royalTypes.has(piece.type)) count++;
+    }
+    for (const piece of game[`${color}Captured`] || []) {
+        if (!royalTypes.has(piece.type)) count++;
+    }
+    return count;
+}
+
 function chooseMove(game, options = {}) {
     if (!game?.boardState || game.gameOver) return null;
     const budgetMs = Math.max(25, Math.min(4000, Number(options.budgetMs) || 1000));
@@ -946,6 +958,9 @@ function chooseMove(game, options = {}) {
     const enableLmr = options.enableLmr !== false;
     const enableAspiration = options.enableAspiration !== false;
     const enableDropQuiescence = options.enableDropQuiescence !== false;
+    const enableNullMove = options.enableNullMove !== false;
+    const enableFutilityPruning = options.enableFutilityPruning !== false;
+    const nullMoveMinDepth = Math.max(3, Math.min(8, Number(options.nullMoveMinDepth) || 4));
     const requestedAspirationWindow = Number(options.aspirationWindow);
     const aspirationBaseWindow = Number.isFinite(requestedAspirationWindow) && requestedAspirationWindow > 0
         ? Math.min(INF, requestedAspirationWindow) : null;
@@ -969,6 +984,8 @@ function chooseMove(game, options = {}) {
     let nodes = 0, ttHits = 0, pvsResearches = 0, lmrReductions = 0, lmrResearches = 0;
     let aspirationResearches = 0, aborted = false, completedDepth = 0, completedScore = 0;
     let repetitionPathHits = 0, ttStoresSkippedForRepetition = 0, rootCyclePenaltyMax = 0;
+    let nullMoveProbes = 0, nullMoveVerifiedCutoffs = 0, nullMoveVerificationFailures = 0;
+    let futilityPrunes = 0;
 
     const rootMoves = cachedLegalMoves(game, context, moveCacheStats, searchHash(game));
     if (!rootMoves.length) return null;
@@ -1010,8 +1027,9 @@ function chooseMove(game, options = {}) {
         recordRootChoice(winning);
         return winning;
     }
-    const rootCandidates = selectCandidates(game, firstOrder, rootWidth, rootThreats, rootDropContext);
-    let bestCompleted = rootCandidates[0] || firstOrder[0];
+    const initialRootCandidates = selectCandidates(game, firstOrder, rootWidth, rootThreats, rootDropContext);
+    let rootCandidateCount = initialRootCandidates.length;
+    let bestCompleted = initialRootCandidates[0] || firstOrder[0];
 
     function isExpired() {
         if ((nodes & 15) === 0 && Date.now() >= deadline) aborted = true;
@@ -1036,7 +1054,7 @@ function chooseMove(game, options = {}) {
         return position.winner === rootColor ? MATE : -MATE;
     }
 
-    function search(position, depth, alpha, beta, ply) {
+    function search(position, depth, alpha, beta, ply, allowNullMove = true, nullNode = false) {
         nodes++;
         if (isExpired()) return 0;
         const end = terminal(position, ply);
@@ -1049,13 +1067,13 @@ function chooseMove(game, options = {}) {
         }
         searchPath.add(repeatKey);
         try {
-            return searchBody(position, depth, alpha, beta, ply);
+            return searchBody(position, depth, alpha, beta, ply, allowNullMove, nullNode);
         } finally {
             searchPath.delete(repeatKey);
         }
     }
 
-    function searchBody(position, depth, alpha, beta, ply) {
+    function searchBody(position, depth, alpha, beta, ply, allowNullMove, nullNode) {
         const repetitionHitsAtEntry = repetitionPathHits;
 
         const key = searchHash(position);
@@ -1080,6 +1098,54 @@ function chooseMove(game, options = {}) {
         if (!moves.length) return position.bonusMoveInfo ? 0 : staticFor(position, key, rootColor);
         const current = turn(position), maximizing = current === rootColor;
         const threats = cachedCriticalThreats(position, current, key, context.threatCache);
+        const nullWindow = beta - alpha <= 1;
+        const canConsiderNullMove = enableNullMove && allowNullMove && !nullNode &&
+            depth >= nullMoveMinDepth && nullWindow && !position.bonusMoveInfo && threats.size === 0;
+        const canConsiderFutility = enableFutilityPruning && allowNullMove && depth <= 3 &&
+            nullWindow && !position.bonusMoveInfo && threats.size === 0;
+        const enoughMaterial = (canConsiderNullMove || canConsiderFutility) &&
+            nullMoveMaterialCount(position, current) >= 4 &&
+            nullMoveMaterialCount(position, opposite(current)) >= 2;
+        const staticScore = canConsiderNullMove && enoughMaterial
+            ? staticFor(position, key, rootColor) : null;
+        const staticCanCut = staticScore !== null && (maximizing ? staticScore >= beta : staticScore <= alpha);
+
+        // A null move is only a pruning probe, never a legal Hikoro action.
+        // Keep it out of forced bonus turns, royal/sanctuary danger, immediate
+        // wins, low-material endings, and principal-variation windows. A
+        // reduced verification search must confirm every proposed cutoff.
+        if (staticCanCut && !immediateWinningMove(position, moves, current)) {
+            nullMoveProbes++;
+            const reduction = depth >= 7 ? 3 : 2;
+            const nullPosition = {
+                ...position,
+                isWhiteTurn: !position.isWhiteTurn,
+                turnCount: (Number(position.turnCount) || 0) + 1,
+                bonusMoveInfo: null,
+                lastMove: null
+            };
+            const nullScore = search(nullPosition, Math.max(0, depth - 1 - reduction),
+                alpha, beta, ply + 1, true, true);
+            if (aborted) return 0;
+            const nullCutoff = maximizing ? nullScore >= beta : nullScore <= alpha;
+            if (nullCutoff) {
+                // This node is already on searchPath. Re-enter its body
+                // directly so verification is not misclassified as a cycle;
+                // descendants still use the normal repetition checks.
+                nodes++;
+                if (isExpired()) return 0;
+                const verifiedScore = searchBody(position, Math.max(1, depth - reduction),
+                    alpha, beta, ply, false, false);
+                if (aborted) return 0;
+                const verifiedCutoff = maximizing ? verifiedScore >= beta : verifiedScore <= alpha;
+                if (verifiedCutoff) {
+                    nullMoveVerifiedCutoffs++;
+                    return verifiedScore;
+                }
+                nullMoveVerificationFailures++;
+            }
+        }
+
         const dropContext = createDropTacticalContext(position, enableDropQuiescence);
         const ordered = orderMoves(position, moves, preferred, killers, history, ply, null, captureHistory);
         const candidates = selectCandidates(position, ordered, width, threats, dropContext);
@@ -1088,10 +1154,37 @@ function chooseMove(game, options = {}) {
         let bestMove = null;
 
         const usePvsAtNode = enablePvs && depth >= 3;
+        const futilityWindow = beta - alpha <= 1;
+        const canUseFutility = canConsiderFutility && enoughMaterial && futilityWindow;
+        let futilityEval = null;
+        if (canUseFutility) futilityEval = staticFor(position, key, rootColor);
         let searchedMoves = 0;
+        let candidateIndex = 0;
         const searchedCaptureKeys = [];
         for (const move of candidates) {
+            const moveOrderIndex = candidateIndex++;
             if (isExpired()) return 0;
+            if (canUseFutility && moveOrderIndex >= 3 && move.type === 'board') {
+                const piece = position.boardState[move.from.y]?.[move.from.x];
+                const target = position.boardState[move.to.y]?.[move.to.x];
+                const quietLowRiskMove = piece && !target && !royalTypes.has(piece.type) &&
+                    !isHighImpactMove(position, move) && !isPromotionCandidate(position, move) &&
+                    !nearCriticalArea(position, move, dropContext) && !isForcingMove(position, move, dropContext);
+                if (quietLowRiskMove) {
+                    // Conservative shallow futility pruning: only late, quiet
+                    // moves at non-PV nodes can be skipped. Large margins and
+                    // Hikoro danger-area guards account for the variant's
+                    // unusually high value of drops and royal route changes.
+                    const margin = 140 + depth * 220;
+                    const cannotImprove = maximizing
+                        ? futilityEval + margin <= alpha
+                        : futilityEval - margin >= beta;
+                    if (cannotImprove) {
+                        futilityPrunes++;
+                        continue;
+                    }
+                }
+            }
             const result = applyMove(position, move, current);
             if (!result.success) continue;
             const reduction = enableLmr
@@ -1099,13 +1192,13 @@ function chooseMove(game, options = {}) {
                 : 0;
             let score;
             if (searchedMoves === 0) {
-                score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1);
+                score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1, allowNullMove);
             } else {
                 const nullAlpha = !usePvsAtNode ? alpha : maximizing ? alpha : Math.max(alpha, beta - 1);
                 const nullBeta = !usePvsAtNode ? beta : maximizing ? Math.min(beta, alpha + 1) : beta;
                 const reducedDepth = Math.max(0, depth - 1 - reduction);
                 if (reduction) lmrReductions++;
-                score = search(result.updatedGame, reducedDepth, nullAlpha, nullBeta, ply + 1);
+                score = search(result.updatedGame, reducedDepth, nullAlpha, nullBeta, ply + 1, allowNullMove);
 
                 // Hikoro's wide drop tree makes reductions useful, but every
                 // promising late move is restored to full depth before it can
@@ -1113,14 +1206,14 @@ function chooseMove(game, options = {}) {
                 const improvesWindow = maximizing ? score > alpha : score < beta;
                 if (reduction && !aborted && improvesWindow) {
                     lmrResearches++;
-                    score = search(result.updatedGame, depth - 1, nullAlpha, nullBeta, ply + 1);
+                    score = search(result.updatedGame, depth - 1, nullAlpha, nullBeta, ply + 1, allowNullMove);
                 }
                 const needsFullWindow = maximizing
                     ? score > alpha && score < beta
                     : score < beta && score > alpha;
                 if (usePvsAtNode && !aborted && needsFullWindow) {
                     pvsResearches++;
-                    score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1);
+                    score = search(result.updatedGame, depth - 1, alpha, beta, ply + 1, allowNullMove);
                 }
             }
             if (aborted) return 0;
@@ -1246,8 +1339,14 @@ function chooseMove(game, options = {}) {
     let previousScore = null;
     for (let depth = 1; depth <= maxDepth; depth++) {
         if (Date.now() >= deadline) break;
+        const wideningStep = Math.max(2, Math.min(6, Math.round(rootWidth / 6)));
+        const iterationRootWidth = Math.min(32, rootWidth + (depth - 1) * wideningStep);
+        const iterationRootCandidates = depth === 1
+            ? initialRootCandidates
+            : selectCandidates(game, firstOrder, iterationRootWidth, rootThreats, rootDropContext);
+        rootCandidateCount = iterationRootCandidates.length;
         const preferred = moveKey(bestCompleted);
-        const ordered = orderMoves(game, rootCandidates, preferred, killers, history, 0,
+        const ordered = orderMoves(game, firstOrder, preferred, killers, history, 0,
             move => -rootCyclePenalty(move), captureHistory);
         const useAspirationThisDepth = enableAspiration && depth >= 3;
         const usePvsThisDepth = enablePvs && depth >= 3;
@@ -1267,7 +1366,11 @@ function chooseMove(game, options = {}) {
             let alpha = alphaBound;
             let searchedRootMoves = 0;
 
-            for (const move of ordered) {
+            const iterationOrdered = depth === 1
+                ? ordered.filter(move => iterationRootCandidates.some(candidate => moveKey(candidate) === moveKey(move)))
+                : orderMoves(game, iterationRootCandidates, preferred, killers, history, 0,
+                    move => -rootCyclePenalty(move), captureHistory);
+            for (const move of iterationOrdered) {
                 if (Date.now() >= deadline) {
                     aborted = true;
                     break;
@@ -1329,7 +1432,7 @@ function chooseMove(game, options = {}) {
 
     if (options.searchStats && typeof options.searchStats === 'object') {
         Object.assign(options.searchStats, {
-            nodes, ttHits, completedDepth, rootMoveCount: rootMoves.length, rootCandidateCount: rootCandidates.length,
+            nodes, ttHits, completedDepth, rootMoveCount: rootMoves.length, rootCandidateCount,
             ttEntries: table.size, ttEntriesBefore: ttStartSize, searchContextUses: context.uses,
             captureHistoryEntries: captureHistory.size,
             repetitionAware, repetitionPathHits, ttStoresSkippedForRepetition,
@@ -1337,9 +1440,13 @@ function chooseMove(game, options = {}) {
             ...moveCacheStats,
             evaluationWeights: {...evaluationWeights},
             score: completedScore, pvsResearches, lmrReductions, lmrResearches,
+            nullMoveProbes, nullMoveVerifiedCutoffs, nullMoveVerificationFailures,
+            futilityPrunes,
             aspirationResearches, searchFeatures: {pvs: enablePvs, lmr: enableLmr,
                 aspiration: enableAspiration, dropQuiescence: enableDropQuiescence,
-                pvsMinimumDepth: 3, aspirationMinimumDepth: 3},
+                nullMove: enableNullMove, nullMoveMinDepth,
+                futilityPruning: enableFutilityPruning, futilityMaxDepth: 3,
+                nullMoveRequiresVerification: true, pvsMinimumDepth: 3, aspirationMinimumDepth: 3},
             elapsedMs: Math.max(0, budgetMs - Math.max(0, deadline - Date.now())),
             aborted
         });
