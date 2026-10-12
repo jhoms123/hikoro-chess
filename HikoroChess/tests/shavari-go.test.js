@@ -180,4 +180,6 @@ test('collection replaces the old Bastion table with the 13×13 Shavari Go route
   assert.equal(w.document.getElementById('selected-table-name').textContent, 'Shavari Go');
   assert.match(w.document.getElementById('selected-table-art').getAttribute('src'), /shavari-go\.svg$/);
   assert.match(w.document.getElementById('setup-hint').textContent, /13 × 13.*friend.*bot/i);
+  const preview = fs.readFileSync(path.join(__dirname, '../public/assets/collection/matches/shavari-go.svg'), 'utf8');
+  for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) assert.ok(fs.existsSync(path.join(__dirname, '../public/assets/collection/matches', asset)), asset);
 });
