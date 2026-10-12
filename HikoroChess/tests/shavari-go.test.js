@@ -132,12 +132,21 @@ test('game page supports local play, undo, pass scoring and device history', t =
   w.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
   w.crypto.randomUUID = () => 'test-match-id';
+  const audioEvents = [];
+  w.SiteAudio = { transition: (game, before, after) => audioEvents.push([game, before.ply, after.ply]) };
   w.eval(read('shavari-go-engine.js'));
   w.eval(read('shavari-go-bot.js'));
   w.eval(read('match-record.js'));
   w.eval(read('record-library.js'));
   w.eval(read('shavari-go-ui.js'));
   const $ = id => w.document.getElementById(id);
+  $('rules-toggle').click();
+  assert.equal($('rules-dialog').open, true);
+  $('close-rules').click();
+  assert.equal($('rules-dialog').open, false);
+  $('zoom-board').click();
+  assert.equal($('zoom-board').getAttribute('aria-pressed'), 'true');
+  assert.equal(w.document.querySelector('.board-panel').classList.contains('zoomed'), true);
   $('play-mode').value = 'local';
   $('play-mode').dispatchEvent(new w.Event('change'));
   $('start-match').click();
@@ -145,13 +154,20 @@ test('game page supports local play, undo, pass scoring and device history', t =
     const step = (1000 - 2 * 67) / 12;
     $('board').dispatchEvent(new w.MouseEvent('click', { bubbles: true, clientX: 67 + x * step, clientY: 67 + y * step }));
   };
-  for (const [x, y] of [[2, 2], [10, 2], [2, 10], [10, 10]]) clickPoint(x, y);
+  $('board').focus();
+  for (let i = 0; i < 4; i++) $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  for (let i = 0; i < 4; i++) $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  assert.match($('board').getAttribute('aria-label'), /Focus C11/);
+  $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  for (const [x, y] of [[10, 2], [2, 10], [10, 10]]) clickPoint(x, y);
   assert.equal($('ply-label').textContent, '4 actions');
   assert.equal($('human-controls').hidden, false);
-  $('piece-select').value = 'banneret';
-  $('piece-select').dispatchEvent(new w.Event('change'));
+  $('piece-tray').querySelector('[data-rank="banneret"]').click();
+  assert.equal($('piece-select').value, 'banneret');
+  assert.equal($('piece-tray').querySelector('[data-rank="banneret"]').getAttribute('aria-pressed'), 'true');
   clickPoint(3, 2);
   assert.equal($('ply-label').textContent, '5 actions');
+  assert.equal(audioEvents.length, 5);
   $('undo-button').click();
   assert.equal($('ply-label').textContent, '4 actions');
   $('pass-button').click();
@@ -159,6 +175,20 @@ test('game page supports local play, undo, pass scoring and device history', t =
   assert.match($('reason').textContent, /Two consecutive passes/);
   assert.equal(w.SiteRecords.read().length, 1);
   assert.equal(w.SiteRecords.read()[0].game, 'shavari-go');
+});
+
+test('Shavari Go shares the collection sound and material controls', t => {
+  const dom = new JSDOM(read('shavari-go.html'), { url: 'http://localhost/shavari-go.html', runScripts: 'outside-only' });
+  t.after(() => dom.window.close());
+  const w = dom.window;
+  w.requestAnimationFrame = () => 0;
+  w.eval(read('site-audio.js'));
+  w.eval(read('collection-theme.js'));
+  w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+  assert.equal(w.document.getElementById('audio-track').textContent, 'First Light Particles');
+  assert.equal(w.document.getElementById('start-match').dataset.material, 'wood');
+  assert.equal(w.document.getElementById('rules-toggle').dataset.material, 'parchment');
+  assert.equal(w.document.querySelector('.piece-choice').classList.contains('material-control'), false);
 });
 
 test('collection replaces the old Bastion table with the 13×13 Shavari Go route', t => {
@@ -181,5 +211,9 @@ test('collection replaces the old Bastion table with the 13×13 Shavari Go route
   assert.match(w.document.getElementById('selected-table-art').getAttribute('src'), /shavari-go\.svg$/);
   assert.match(w.document.getElementById('setup-hint').textContent, /13 × 13.*friend.*bot/i);
   const preview = fs.readFileSync(path.join(__dirname, '../public/assets/collection/matches/shavari-go.svg'), 'utf8');
-  for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) assert.ok(fs.existsSync(path.join(__dirname, '../public/assets/collection/matches', asset)), asset);
+  assert.match(preview, /viewBox="0 0 760 760"/);
+  assert.match(preview, /data:image\/webp;base64,/);
+  assert.equal((preview.match(/M147 /g) || []).length, 13);
+  for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) assert.ok(asset.startsWith('#icon-') || asset.startsWith('data:image/webp;base64,'), asset.slice(0, 60));
 });
+
