@@ -1,5 +1,5 @@
 (() => {
- 'use strict';let socket,room,status;const titles={hikoro:'Hikoro',shodansho:'Sho Dan Sho',shavari:'Shavari',hikoruka:'Hikorüka',go:'Shield Go',academy:'Academy'};
+ 'use strict';let socket,room,status;const titles={hikoro:'Hikoro',shodansho:'Sho Dan Sho',shavari:'Shavari',hikoruka:'Hikorka',go:'Shield Go',bastion:'Bastion Marches',academy:'Academy'};
  function clearResumeIntent(gameId,store){if(!gameId)return false;try{if(store.getItem('hikoro-room-return')!==gameId)return false;store.removeItem('hikoro-room-return');store.removeItem('hikoro-room-type');return true;}catch{return false;}}
  function element(tag,text){const n=document.createElement(tag);if(text)n.textContent=text;return n;}
  function mount(){if(document.getElementById('table-companion'))return;const aside=element('aside');aside.id='table-companion';aside.className='table-companion';aside.hidden=true;aside.setAttribute('aria-label','Online table and invitation');const host=document.querySelector('main')||document.body;host.prepend(aside);}

@@ -1,7 +1,7 @@
 (() => {
     'use strict';
-    const titles = { hikoro: 'Hikoro Chess', shodansho: 'Sho Dan Sho', shavari: 'Shavari', hikoruka: 'Hikorüka', go: 'Shield Go', academy: 'Academy' };
-    const paths = { hikoro: '/', shodansho: '/shodansho.html', shavari: '/shavari.html', hikoruka: '/hikoruka.html', go: '/go.html', academy: '/academy.html' };
+    const titles = { hikoro: 'Hikoro Chess', shodansho: 'Sho Dan Sho', shavari: 'Shavari', hikoruka: 'Hikorka', go: 'Shield Go', bastion: 'Bastion Marches', academy: 'Academy' };
+    const paths = { hikoro: '/', shodansho: '/shodansho.html', shavari: '/shavari.html', hikoruka: '/hikoruka.html', go: '/go.html', bastion: '/bastion.html', academy: '/academy.html' };
     let config, client, session, profile, adapter, panel, busy = false;
     const sockets = new Set();
     const ready = (async () => {
