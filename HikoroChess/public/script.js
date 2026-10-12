@@ -130,13 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','bastion','academy','shodansho'].includes(gameType);
-            createGameBtn.disabled = !socket.connected || gameType === 'bastion';
-            const bastionSizeContainer = document.getElementById('bastion-size-container');
-            if (bastionSizeContainer) bastionSizeContainer.hidden = gameType !== 'bastion';
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho'].includes(gameType);
+            createGameBtn.disabled = !socket.connected || gameType === 'shavari-go';
             const setupHint = document.getElementById('setup-hint');
-            if (setupHint) setupHint.textContent = gameType === 'bastion'
-                ? 'Bastion Marches is a shared-device two-player game. Online rooms are not available yet.'
+            if (setupHint) setupHint.textContent = gameType === 'shavari-go'
+                ? 'Shavari Go is a shared-device two-player game. Online rooms are not available yet.'
                 : 'Online rooms need a second player. Local play shares this device.';
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
@@ -170,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        if (gameType === 'bastion') return;
+        if (gameType === 'shavari-go') return;
 
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
@@ -192,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     singlePlayerBtn.addEventListener('click', () => {
-        if (gameTypeSelect.value === 'bastion') { window.location.href = `/bastion.html?size=${document.getElementById('bastion-board-size').value}`; return; }
+        if (gameTypeSelect.value === 'shavari-go') { window.location.href = '/shavari-go.html?mode=black'; return; }
         if (gameTypeSelect.value === 'shodansho') {
             const players = Number(sdsPlayerCountSelect?.value || 2), bots = Number(sdsBotCountSelect?.value || 0);
             window.location.href = `/shodansho.html?players=${players}&bots=${bots}`; return;
@@ -215,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
         document.getElementById('connection-status').title = '';
-        createGameBtn.disabled = gameTypeSelect.value === 'bastion'; singlePlayerBtn.disabled = false;
+        createGameBtn.disabled = gameTypeSelect.value === 'shavari-go'; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
         }
@@ -225,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', () => {
         localCreationPending = false;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','bastion','academy','shodansho'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => { if (!switchingLocalMatch) announce(message); });
     socket.on('connect_error', (err) => {
@@ -1740,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
      if (rulesBtn) {
         rulesBtn.addEventListener('click', () => {
-            if (gameTypeSelect.value === 'bastion') { window.location.href = `/bastion.html?showRules=1&size=${document.getElementById('bastion-board-size').value}`; return; }
+            if (gameTypeSelect.value === 'shavari-go') { window.location.href = '/shavari-go.html?showRules=1'; return; }
             if (['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html?showRules=1`; return; }
             if (gameTypeSelect.value === 'shodansho') { window.location.href = '/shodansho.html?showRules=1'; return; }
             populateHikoroRules();
