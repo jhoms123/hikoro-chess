@@ -816,16 +816,49 @@ function handMobilityFactor(game) {
     return 0.42 + 0.3 * Math.min(1, empty / 30);
 }
 
-function mobilityForSide(game, color) {
-    let total = 0;
-    for (const {x, y} of validSquares) {
-        const piece = game.boardState[y]?.[x];
-        if (!piece || piece.color !== color) continue;
-        const moves = pieceMoves(game, color, x, y);
-        total += Math.min(10, moves.length);
-        if (total >= 100) return 100;
+// One Hikoro position evaluation needs the same board moves for mobility,
+// royal routes, sanctuary access, and last-royal capture threats. Generate
+// each relevant piece's rules-checked move list once and feed all four terms
+// from it. The old path regenerated almost every piece's moves two to four
+// times per leaf, which dominates search cost on Hikoro's wide board.
+function analyzeEvaluationMoves(game, royals, piecesByColor) {
+    const mobility = {white: 0, black: 0};
+    const sanctuaryTargets = {white: new Set(), black: new Set()};
+    const royalCaptureTargets = {white: new Set(), black: new Set()};
+    const royalMoves = new Map();
+
+    for (const color of ['white', 'black']) {
+        const victimColor = opposite(color);
+        const needsRoyalCaptureTargets = royals[victimColor].length === 1;
+        const soleRoyal = needsRoyalCaptureTargets ? royals[victimColor][0] : null;
+        for (const {piece, x, y} of piecesByColor[color]) {
+            const isRoyal = royalTypes.has(piece.type);
+            const needsMoves = mobility[color] < 100 || isRoyal || needsRoyalCaptureTargets;
+            if (!needsMoves) continue;
+
+            const moves = pieceMoves(game, color, x, y);
+            if (mobility[color] < 100) {
+                mobility[color] = Math.min(100, mobility[color] + Math.min(10, moves.length));
+            }
+
+            if (isRoyal) {
+                royalMoves.set(`${x},${y}`, moves);
+                for (const move of moves) {
+                    if (isSanctuary(move.x, move.y)) sanctuaryTargets[color].add(`${move.x},${move.y}`);
+                }
+            }
+
+            if (soleRoyal) {
+                for (const move of moves) {
+                    if (move.x === soleRoyal.x && move.y === soleRoyal.y) {
+                        royalCaptureTargets[victimColor].add(`${move.x},${move.y}`);
+                    }
+                }
+            }
+        }
     }
-    return total;
+
+    return {mobility, sanctuaryTargets, royalCaptureTargets, royalMoves};
 }
 
 function normalizeEvalWeights(weights = null) {
@@ -846,22 +879,19 @@ function evaluateFeatures(game) {
     if (!game?.boardState || game.gameOver) return features;
     const handFactor = handMobilityFactor(game);
     const royals = {white: [], black: []};
+    const piecesByColor = {white: [], black: []};
+    const royalOrder = [];
 
     for (const {x, y} of validSquares) {
             const piece = game.boardState[y]?.[x];
             if (!piece) continue;
+            piecesByColor[piece.color].push({piece, x, y});
             const side = piece.color === 'white' ? 1 : -1;
             const value = values[piece.type] || 100;
             features.material += side * value;
             if (royalTypes.has(piece.type)) {
                 royals[piece.color].push({piece, x, y});
-                const distance = distanceToSanctuary(x, y);
-                features.royalRoute += side * (260 / (distance + 1));
-                const moves = pieceMoves(game, piece.color, x, y);
-                const bestDistance = moves.reduce((best, move) => Math.min(best,
-                    distanceToSanctuary(move.x, move.y)), distance);
-                features.royalRoute += side * Math.max(0, distance - bestDistance) * 45;
-                if (moves.some(move => isSanctuary(move.x, move.y))) features.royalRoute += side * 1200;
+                royalOrder.push({piece, x, y});
                 if (rules.isProtected(piece, x, y, game.boardState)) features.protection += side * 110;
                 let nearbyFriends = 0;
                 for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -883,18 +913,32 @@ function evaluateFeatures(game) {
     features.castle = royalCastleValue(game, 'white', royals.white) -
         royalCastleValue(game, 'black', royals.black);
 
+    const moveAnalysis = analyzeEvaluationMoves(game, royals, piecesByColor);
+    // Preserve the incumbent's per-royal summation order as well as its
+    // feature values; this avoids changing search scores through float drift.
+    for (const royal of royalOrder) {
+        const sign = royal.piece.color === 'white' ? 1 : -1;
+        const moves = moveAnalysis.royalMoves.get(`${royal.x},${royal.y}`) || [];
+        const distance = distanceToSanctuary(royal.x, royal.y);
+        features.royalRoute += sign * (260 / (distance + 1));
+        const bestDistance = moves.reduce((best, move) => Math.min(best,
+            distanceToSanctuary(move.x, move.y)), distance);
+        features.royalRoute += sign * Math.max(0, distance - bestDistance) * 45;
+        if (moves.some(move => isSanctuary(move.x, move.y))) features.royalRoute += sign * 1200;
+    }
+
     for (const side of ['white', 'black']) {
         const sign = side === 'white' ? 1 : -1;
         for (const piece of game[`${side}Captured`] || []) features.reserve += sign * (values[piece.type] || 100) * handFactor;
     }
 
-    const whiteThreats = sanctuaryThreats(game, 'white').size;
-    const blackThreats = sanctuaryThreats(game, 'black').size;
+    const whiteThreats = moveAnalysis.sanctuaryTargets.white.size;
+    const blackThreats = moveAnalysis.sanctuaryTargets.black.size;
     features.sanctuaryThreat += (whiteThreats - blackThreats) * 850;
-    const whiteRoyalCaptureThreat = royalCaptureThreats(game, 'white').size;
-    const blackRoyalCaptureThreat = royalCaptureThreats(game, 'black').size;
+    const whiteRoyalCaptureThreat = moveAnalysis.royalCaptureTargets.white.size;
+    const blackRoyalCaptureThreat = moveAnalysis.royalCaptureTargets.black.size;
     features.royalAttack += (blackRoyalCaptureThreat - whiteRoyalCaptureThreat) * 2400;
-    features.mobility += (mobilityForSide(game, 'white') - mobilityForSide(game, 'black')) * 2;
+    features.mobility += (moveAnalysis.mobility.white - moveAnalysis.mobility.black) * 2;
 
     // A lone surviving royal is much closer to a capture-based loss.
     for (const side of ['white', 'black']) {
