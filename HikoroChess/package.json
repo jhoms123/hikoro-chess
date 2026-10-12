@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "build:bastion-spectator": "node tools/build-bastion-spectator.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
