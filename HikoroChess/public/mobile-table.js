@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  let viewport,surface,tools,fit,detail,pan,hint,status;
  if(board){
   viewport=document.createElement('div');viewport.className='mobile-board-viewport';viewport.tabIndex=0;viewport.setAttribute('aria-label','Game board');surface=document.createElement('div');surface.className='mobile-board-surface';board.before(viewport);viewport.append(surface);surface.append(board);
-  if(['lobby','shodansho','go','shavari','academy'].includes(theme)){
+  if(['lobby','shodansho','go','bastion','shavari','academy'].includes(theme)){
    tools=document.createElement('div');tools.className='mobile-board-tools';viewport.after(tools);
    fit=control('Fit board',()=>setView(false,false),tools);detail=control('Larger board',()=>setView(true,false),tools);pan=control('Move view',()=>setView(detailed,!navigating),tools);pan.setAttribute('aria-pressed','false');
    hint=document.createElement('p');hint.className='mobile-board-hint';tools.append(hint);
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Navigation is an explicit mode. Neither dragging nor tapping in that mode sends a game action.
   for(const type of ['pointerdown','mousedown','click','dblclick','contextmenu'])viewport.addEventListener(type,e=>{if(mobile&&navigating){e.preventDefault();e.stopImmediatePropagation();}},true);
  }
- function layout(){if(!board||!mobile)return;const available=viewport.clientWidth;if(!available)return;const minimum=theme==='lobby'?530:theme==='shodansho'?720:theme==='go'?640:theme==='shavari'?520:440;const width=detailed?Math.max(available*1.5,minimum):available;
+ function layout(){if(!board||!mobile)return;const available=viewport.clientWidth;if(!available)return;const boardSize=Math.sqrt(document.querySelectorAll('.intersection').length),minimum=theme==='lobby'?530:theme==='shodansho'?720:theme==='go'?640:theme==='bastion'?boardSize>=19?940:640:theme==='shavari'?520:440;const width=detailed?Math.max(available*1.5,minimum):available;
   surface.style.setProperty('--mobile-board-width',width+'px');viewport.classList.toggle('is-detailed',detailed);viewport.classList.toggle('is-navigating',navigating);
   if(tools){detail.setAttribute('aria-pressed',String(detailed));fit.setAttribute('aria-pressed',String(!detailed));pan.hidden=!detailed;pan.setAttribute('aria-pressed',String(navigating));pan.textContent=navigating?'Tap to play':'Move view';hint.textContent=detailed?(navigating?'Drag to explore the board. Choose Tap to play before making a move.':'Tap pieces and destinations. Choose Move view to drag the board safely.'):theme==='lobby'?'Tap a piece, then its destination. Enlarge for smaller targets.':theme==='shodansho'?'Choose a flower below, then tap a gate. Enlarge for precise placement.':'';hint.hidden=!hint.textContent;}
  }
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    }
    const audio=document.querySelector('.collection-audio');if(audio)move(audio,document.querySelector('main')||body);
    for(const box of disclosures)box.open=false;
-   if(theme==='go'){goSize=document.querySelectorAll('.intersection').length;detailed=goSize===169;}layout();
+   if(theme==='go'){goSize=document.querySelectorAll('.intersection').length;detailed=goSize===169;}if(theme==='bastion'){goSize=document.querySelectorAll('.intersection').length;detailed=true;}layout();
   }else{
    // Restore exact source nodes and their original order; no duplicate game controls.
    for(const {element,marker} of relocations.reverse()){marker.replaceWith(element);}relocations.length=0;
@@ -66,9 +66,8 @@ document.addEventListener('DOMContentLoaded',()=>{
  }
  // Listen to state changes without rebuilding a toolbar or mirroring buttons.
  let pending=false;
- const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;if(status){const text=document.getElementById('turn-indicator')?.textContent||'';if(status.textContent!==text)status.textContent=text;}if(mobile&&theme==='go'){const size=document.querySelectorAll('.intersection').length;if(size!==goSize){goSize=size;setView(size===169,false);}}if(mobile&&board&&surface.style.getPropertyValue('--mobile-board-width')==='')layout();});});observer.observe(body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
+ const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;if(status){const text=document.getElementById('turn-indicator')?.textContent||'';if(status.textContent!==text)status.textContent=text;}if(mobile&&['go','bastion'].includes(theme)){const size=document.querySelectorAll('.intersection').length;if(size!==goSize){goSize=size;setView(theme==='bastion'||size===169,false);}}if(mobile&&board&&surface.style.getPropertyValue('--mobile-board-width')==='')layout();});});observer.observe(body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
  media.addEventListener('change',()=>adapt(media.matches));window.addEventListener('resize',layout);if(viewport)new ResizeObserver(layout).observe(viewport);
  document.querySelectorAll('.game-choice').forEach(card=>card.addEventListener('click',()=>{if(media.matches)document.getElementById('game-setup')?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth',block:'start'});}));
  adapt(media.matches);
 });
-
