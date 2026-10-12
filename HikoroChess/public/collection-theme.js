@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded',()=>{
             else if(/pickup|shield/.test(id))icon=theme==='shodansho'?'seed':'crown';
             const primary=icon==='play'||b.classList.contains('primary-button');
             if(primary)b.dataset.primary='true';
-            let material={lobby:'wood',shodansho:'parchment',shavari:'jade',hikoruka:'wood',go:'stone',academy:'parchment'}[theme]||'wood';
+            let material={lobby:'wood',shodansho:'parchment',shavari:'jade',hikoruka:'wood',go:'stone',bastion:'wood',academy:'parchment'}[theme]||'wood';
             if(b.closest('#hikoro-game-wrapper,#turn-indicator-container')||body.classList.contains('game-active'))material='pearl';
             if(icon==='rules'||icon==='save'||b.classList.contains('atlas-secondary'))material='parchment';
             if(/resign|reset|accept-confirm/.test(id))material='seal';
@@ -35,13 +35,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         hikoro:{name:'Hikoro Chess',description:'An ocean kingdom of captures, promotions, and royal sanctuaries.',guide:'academy.html',guideLabel:'Learn the ocean pieces in Academy →'},
         shodansho:{name:'Sho Dan Sho',description:'Cultivate harmony with seven flower types on a circular garden board.',guide:'shodansho.html?showRules=1',guideLabel:'Explore the garden rules →'},
         shavari:{name:'Shavari chess',description:'Build formations, combine movements, and command the lotus court.',guide:'shavari.html?showRules=1',guideLabel:'Read the court’s rules →'},
-        hikoruka:{name:'Hikorüka chess',description:'Five heraldic roles. Eight pieces. Protect your Sovereign on a compact board.',guide:'hikoruka.html?showRules=1',guideLabel:'Meet the citadel’s company →'},
+        hikoruka:{name:'Hikorka chess',description:'Five heraldic roles. Eight pieces. Protect your Sovereign on a compact board.',guide:'hikoruka.html?showRules=1',guideLabel:'Meet the citadel’s company →'},
         go:{name:'Shield Go',description:'Place, leap, shield, and surround on a wooden 9 × 9 or 13 × 13 table.',guide:'go.html?showRules=1',guideLabel:'Learn stones, shields, and territory →'},
+        bastion:{name:'Bastion Marches',description:'Build a ranked army from corner Keeps, then maneuver and surround to claim territory.',guide:'bastion.html?showRules=1',guideLabel:'Learn the ranks, siege, and scoring →'},
         academy:{name:'Hikoro Academy',description:'Learn real Hikoro movements in guided practice, then teach a friend on 8 × 8.',guide:'academy.html',guideLabel:'Begin guided practice →'}
     };
     const selector=document.getElementById('game-type-select');
     function update(){const game=selector.value,w=worlds[game];if(!w)return;
-        document.getElementById('selected-table-art').src=`assets/collection/matches/${game}.webp`;
+        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='bastion'?'bastion.svg':game+'.webp'}`;
         document.getElementById('selected-table-name').textContent=w.name;
         document.getElementById('selected-table-description').textContent=w.description;
         const guide=document.getElementById('selected-table-guide');guide.href=w.guide;guide.textContent=w.guideLabel;
@@ -53,8 +54,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(matchMedia('(max-width:700px)').matches)document.getElementById('game-setup').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
     }));
     const resume=document.createElement('nav');resume.className='resume-table';resume.setAttribute('aria-label','Continue saved games');resume.hidden=true;
-    for(const [game,key]of [['academy','hikoro-academy-local-v3'],['hikoruka','hikoruka-local-v1'],['shavari','shavari-local-v3'],['go','shield-go-local-v1']]){
-        try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&Number.isInteger(saved.cursor)&&saved.cursor>0&&Array.isArray(saved.journal)&&saved.cursor<=saved.journal.length){const link=document.createElement('a');link.href=game+'.html';link.textContent='Continue '+worlds[game].name+' →';resume.append(link);resume.hidden=false;}}catch{}
+    for(const [game,key]of [['academy','hikoro-academy-local-v3'],['hikoruka','hikoruka-local-v1'],['shavari','shavari-local-v3'],['go','shield-go-local-v1'],['bastion','bastion-marches-local-v1']]){
+        try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&Number.isInteger(saved.cursor)&&saved.cursor>0&&Array.isArray(saved.journal)&&saved.cursor<=saved.journal.length){const link=document.createElement('a');link.href=game+'.html'+(game==='bastion'?'?size='+saved.size:'');link.textContent='Continue '+worlds[game].name+' →';resume.append(link);resume.hidden=false;}}catch{}
     }
     document.querySelector('.hero-copy').append(resume);
 });
