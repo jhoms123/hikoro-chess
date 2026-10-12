@@ -81,8 +81,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   moved=[];bar.remove();drawer.remove();bar=drawer=list=openButton=null;
   body.classList.remove('phone-game-shell','phone-options-open');body.style.removeProperty('--phone-top');
  }
- function placeDesktopStatus(){if(media.matches||theme==='lobby'||theme==='shodansho')return;const panel=document.querySelector('.match-panel'),play=document.querySelector('.play-area'),turn=panel?.querySelector('.turn-panel');if(turn&&play&&!turn.closest('.play-area'))relocateTo(turn,play,play.firstElementChild);}
- function refresh(){if(playing()){if(!bar)setup();placeDesktopStatus();}else teardown();}
+ // Only phones use the compact shell. Desktop keeps the source board/sidebar layout.
+ function refresh(){if(media.matches&&playing()){if(!bar)setup();}else teardown();}
  media.addEventListener('change',()=>requestAnimationFrame(refresh));
  window.addEventListener('resize',()=>{if(bar)body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');schedule();});
  observer=new MutationObserver(()=>{if(theme==='lobby'&&!bar&&playing())requestAnimationFrame(refresh);else if(theme==='lobby'&&bar&&!playing())requestAnimationFrame(refresh);else if(bar){if(theme==='lobby')relocate(document.querySelector('.table-companion'));schedule();}});
