@@ -13,3 +13,5 @@ All nine game-piece emblems use SVG artwork from [Game-icons.net](https://game-i
 - [Pikeman](https://game-icons.net/1x1/delapouite/pikeman.html) by Delapouite — Squire
 
 For each icon, the original solid background shape was removed and the foreground silhouette kept as a single-color SVG so the board renderer can tint it for each realm. The silhouettes remain the authors' original path geometry. The dark-SVG files are color variants for the ivory side; the game UI uses the matching shared silhouette when drawing both sides.
+
+The optional “Shavari Chess emblems” style in Shavari Go reuses four existing Shavari chess icons: Lotus for the Crownhold, Elephant Head for the High Marshal, Camel for the Cavalier, and Gold Scarab for the Squire. Their original files, artist names, and CC BY 3.0 credit are recorded in `../shavari/CREDITS.md`.

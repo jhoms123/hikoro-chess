@@ -301,6 +301,23 @@ test('game page supports local play, undo, pass scoring and device history', t =
   w.eval(read('record-library.js'));
   w.eval(read('shavari-go-ui.js'));
   const $ = id => w.document.getElementById(id);
+  assert.deepEqual([...$('icon-style').options].map(option => option.value), ['royal', 'chess']);
+  assert.equal($('icon-style').value, 'royal');
+  assert.match($('piece-tray').querySelector('[data-rank="keep"] img').getAttribute('src'), /assets\/shavari-go\/crownhold\.svg/);
+  for (const emblem of ['lotus', 'elephant-head', 'camel', 'gold-scarab']) {
+    assert.ok(fs.existsSync(path.join(root, `assets/shavari/${emblem}.svg`)), `${emblem} Shavari Chess emblem should exist`);
+  }
+  $('icon-style').value = 'chess';
+  $('icon-style').dispatchEvent(new w.Event('change'));
+  assert.equal(w.localStorage.getItem('shavari-go-icon-style-v1'), 'chess');
+  assert.match($('piece-tray').querySelector('[data-rank="keep"] img').getAttribute('src'), /assets\/shavari\/lotus\.svg/);
+  assert.match($('piece-tray').querySelector('[data-rank="marshal"] img').getAttribute('src'), /assets\/shavari\/elephant-head\.svg/);
+  assert.match($('piece-tray').querySelector('[data-rank="cavalier"] img').getAttribute('src'), /assets\/shavari\/camel\.svg/);
+  assert.match($('piece-tray').querySelector('[data-rank="levy"] img').getAttribute('src'), /assets\/shavari\/gold-scarab\.svg/);
+  assert.match($('piece-guide').querySelector('.roster-symbol.keep img').getAttribute('src'), /assets\/shavari\/lotus\.svg/);
+  $('icon-style').value = 'royal';
+  $('icon-style').dispatchEvent(new w.Event('change'));
+  assert.match($('piece-tray').querySelector('[data-rank="keep"] img').getAttribute('src'), /assets\/shavari-go\/crownhold\.svg/);
   const selectableRanks = [...$('piece-select').options].map(option => option.value);
   for (const rank of ['sapper', 'cavalier', 'sentry']) assert.ok(selectableRanks.includes(rank));
   for (const name of ['Sapper', 'Cavalier', 'Sentry']) assert.ok($('piece-guide').textContent.includes(name));
@@ -355,3 +372,4 @@ test('collection replaces the old Bastion table with the 13×13 Shavari Go route
   }
   for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) if (!asset.startsWith('data:') && !asset.startsWith('#')) assert.ok(fs.existsSync(path.join(__dirname, '../public/assets/collection/matches', asset)), asset);
 });
+

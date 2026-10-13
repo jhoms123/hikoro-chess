@@ -14,6 +14,9 @@ window.HikoroSpanish = Object.assign(window.HikoroSpanish || {}, {
   "Bot matchup": "Duelo de bots",
   "Opponent bot": "Bot rival",
   "Bot pace": "Ritmo del bot",
+  "Piece icon style": "Estilo de iconos de las piezas",
+  "Royal emblems": "Emblemas reales",
+  "Shavari Chess emblems": "Emblemas de Shavari Chess",
   "Slow · 1.6 sec": "Lento · 1,6 s",
   "Steady · 0.85 sec": "Normal · 0,85 s",
   "Fast · 0.3 sec": "Rápido · 0,3 s",
@@ -70,3 +73,4 @@ window.HikoroSpanish = Object.assign(window.HikoroSpanish || {}, {
   "Review the board": "Revisar tablero",
   "Artists & credits": "Artistas y créditos"
 });
+
