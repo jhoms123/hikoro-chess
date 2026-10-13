@@ -106,21 +106,22 @@
 .shavari-go-table .dialog-head .eyebrow{color:#79603b}
 .shavari-go-table .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:1000px){.shavari-go-table .arena{grid-template-columns:minmax(0,1fr) 315px;gap:12px}.shavari-go-table main{padding-left:14px;padding-right:14px}.shavari-go-table .panel{padding:13px}.shavari-go-table .player-name{font-size:15px}}
-@media(max-width:760px){
+/* Phones requesting a desktop viewport still need the board-led layout. */
+@media(max-width:1100px){
  .shavari-go-table main{padding:0 12px 26px}
  .shavari-go-table .table-intro{padding:12px 5px 15px}
  .shavari-go-table .table-intro h1{font-size:37px}
  .shavari-go-table .table-intro p:last-child{font-size:12px}
  .shavari-go-table .arena{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
  .shavari-go-table .sidebar{display:contents}
- .shavari-go-table .table-settings{order:1}
- .shavari-go-table .keep-setup{order:2}
- .shavari-go-table .human-controls{order:3}
- .shavari-go-table .board-area{order:4}
- .shavari-go-table .turn-panel{order:5}
- .shavari-go-table .match-actions-panel{order:6}
- .shavari-go-table .history-panel{order:7}
- .shavari-go-table .bot-notes{order:8}
+ .shavari-go-table .keep-setup{order:0}
+ .shavari-go-table .board-area{order:1}
+ .shavari-go-table .human-controls{order:2}
+ .shavari-go-table .turn-panel{order:3}
+ .shavari-go-table .table-settings{order:4}
+ .shavari-go-table .match-actions-panel{order:5}
+ .shavari-go-table .history-panel{order:6}
+ .shavari-go-table .bot-notes{order:7}
  .shavari-go-table .panel{padding:13px}
  .shavari-go-table .board-panel{padding:7px 7px 0;border-width:8px;border-image-width:8px}
  .shavari-go-table .board-wrap{border-width:5px}
@@ -140,7 +141,18 @@
  .shavari-go-table .roster-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  .shavari-go-table .army-roster summary{font-size:19px}
  .shavari-go-table .army-roster summary small{max-width:120px;text-align:right}
+ .shavari-go-table .table-intro{padding:2px 5px 9px}
+ .shavari-go-table .table-intro h1{font-size:25px;margin:0}
+ .shavari-go-table .table-intro .eyebrow,.shavari-go-table .table-intro p:last-child{display:none}
+ .shavari-go-table .human-controls{position:sticky;bottom:0;z-index:5;max-height:38vh;overflow:auto;border-color:#c6aa70;background:linear-gradient(#26342cf5,#18221ef7),url('assets/collection/materials/stone.webp') center/440px}
+ .shavari-go-table .human-controls .piece-tray{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .shavari-go-table .human-controls .piece-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;padding:5px 2px!important;text-align:center;font-size:10px!important;line-height:1.1}
+ .shavari-go-table .human-controls .piece-choice img{width:25px;height:25px}
+ .shavari-go-table .human-controls .piece-choice span{overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ .shavari-go-table .human-controls .piece-choice small{font-size:10px}
+ .shavari-go-table .human-controls .turn-line,.shavari-go-table .human-controls .subtle{margin:0}
+ .shavari-go-table .board-viewport{overscroll-behavior:auto}
 }
-@media(max-width:390px){.shavari-go-table .piece-tray{grid-template-columns:repeat(3,minmax(0,1fr))}.shavari-go-table .piece-choice{grid-template-columns:20px minmax(0,1fr);font-size:10px!important}.shavari-go-table .piece-choice img{width:19px;height:19px}.shavari-go-table .roster-grid{grid-template-columns:1fr}.shavari-go-table .board-tools>span{font-size:10px}}
+@media(max-width:390px){.shavari-go-table .human-controls .piece-choice img{width:21px;height:21px}.shavari-go-table .roster-grid{grid-template-columns:1fr}.shavari-go-table .board-tools>span{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.shavari-go-table *{scroll-behavior:auto!important;transition:none!important}}
 
