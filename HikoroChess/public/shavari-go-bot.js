@@ -16,16 +16,54 @@
   tactician:{name:'Slate · Tactician',influence:.83,liberties:1.3,attack:1.42,network:.82,security:1.18,rootBeam:6,replyBeam:5}
  };
  const EVAL_CACHE=new Map(),EVAL_CACHE_LIMIT=24000,
-  CROWNHOLD_CACHE=new Map(),CROWNHOLD_CACHE_LIMIT=6000;
+  CROWNHOLD_CACHE=new Map(),CROWNHOLD_CACHE_LIMIT=6000,
+  BOARD_ANALYSIS_CACHE=new WeakMap(),STATE_KEY_CACHE=new WeakMap();
  const other=p=>B.other(p),inside=(s,x,y)=>x>=0&&y>=0&&x<s&&y<s,key=(x,y)=>x+','+y,
   clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  function profileFor(config,owner){
   const p=config?.[owner]||config?.[String(owner)]||'builder';
   return typeof p==='string'?profiles[p]||profiles.builder:p;
  }
+ // Search states are immutable snapshots produced by engine.apply(). Cache
+ // derived data against their board arrays so evaluation, tactical checks,
+ // and move ordering share one analysis without retaining dead search nodes.
+ function boardAnalysis(board,size){
+  let analysis=BOARD_ANALYSIS_CACHE.get(board);
+  if(!analysis){analysis={size,territory:null,fields:new Map(),sourceOptions:new Map(),groups:new Map(),groupAt:new Map(),liberties:new WeakMap()};BOARD_ANALYSIS_CACHE.set(board,analysis);}
+  return analysis;
+ }
+ function groupsFor(board,size,owner){
+  const analysis=boardAnalysis(board,size);let groups=analysis.groups.get(owner);
+  if(!groups){
+   groups=B.groups(board,size,owner);analysis.groups.set(owner,groups);
+   for(const group of groups)for(const point of group)analysis.groupAt.set(key(point.x,point.y),group);
+  }
+  return groups;
+ }
+ function groupAtFor(board,size,point){
+  if(!point||!inside(size,point.x,point.y)||!board[point.y][point.x])return[];
+  const analysis=boardAnalysis(board,size),encoded=key(point.x,point.y);
+  if(analysis.groupAt.has(encoded))return analysis.groupAt.get(encoded);
+  const group=B.groupAt(board,size,point);
+  for(const cell of group)analysis.groupAt.set(key(cell.x,cell.y),group);
+  return group;
+ }
+ function libertiesFor(board,size,group){
+  if(!group||!group.length)return new Set();
+  const analysis=boardAnalysis(board,size);let liberties=analysis.liberties.get(group);
+  if(!liberties){liberties=B.liberties(board,size,group);analysis.liberties.set(group,liberties);}
+  return liberties;
+ }
+ function positionKey(state){
+  if(!state)return'';
+  if(STATE_KEY_CACHE.has(state))return STATE_KEY_CACHE.get(state);
+  const encoded=B.positionKey(state);STATE_KEY_CACHE.set(state,encoded);return encoded;
+ }
  // Return the owner of each empty region using the exact final scoring rule:
  // 0 means neutral, 1 or 2 means territory for that side. Stones never score.
  function territoryOwnerMap(state){
+  const analysis=boardAnalysis(state.board,state.size);
+  if(analysis.territory)return analysis.territory;
   const s=state.size,owners=Array.from({length:s},()=>Array(s).fill(0)),seen=new Set();
   for(let y=0;y<s;y++)for(let x=0;x<s;x++)if(!state.board[y][x]&&!seen.has(key(x,y))){
    const queue=[{x,y}],region=[],touch=new Set();seen.add(key(x,y));
@@ -40,9 +78,11 @@
    const owner=touch.size===1?touch.values().next().value:0;
    if(owner)for(const p of region)owners[p.y][p.x]=owner;
   }
-  return owners;
+  analysis.territory=owners;return owners;
  }
  function fieldFor(state,owner,territory=territoryOwnerMap(state)){
+  const analysis=boardAnalysis(state.board,state.size),cached=analysis.fields.get(owner);
+  if(cached&&analysis.territory===territory)return cached;
   const s=state.size,field=Array.from({length:s},()=>Array(s).fill(0));
   for(let y=0;y<s;y++)for(let x=0;x<s;x++){
    const unit=state.board[y][x];if(unit?.owner!==owner)continue;
@@ -58,9 +98,12 @@
     }
    }
   }
+  if(analysis.territory===territory)analysis.fields.set(owner,field);
   return field;
  }
  function sourceOptions(state,owner,territory=territoryOwnerMap(state)){
+  const analysis=boardAnalysis(state.board,state.size),cached=analysis.sourceOptions.get(owner);
+  if(cached!==undefined&&analysis.territory===territory)return cached;
   const options=new Map();
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
    const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist')||!B.lineActive(state,{x,y},owner))continue;
@@ -76,7 +119,15 @@
   }
   // Additional lines into the same open area have diminishing value.
   let total=0;for(const weight of options.values())total+=weight;
-  return Math.min(24,total);
+  const value=Math.min(24,total);
+  if(analysis.territory===territory)analysis.sourceOptions.set(owner,value);
+  return value;
+ }
+ function raveLevyTargets(node){
+  if(!node.raveLevyTargets){
+   node.raveLevyTargets=new Set(B.placementTargets(node.state,node.state.player,'levy').map(item=>key(item.to.x,item.to.y)));
+  }
+  return node.raveLevyTargets;
  }
  function hasPlacementRoute(state,target,owner){
   if(B.adjacent(target,state.size).some(q=>state.board[q.y][q.x]?.owner===owner))return true;
@@ -109,10 +160,10 @@
   const attacker=other(owner),ranks=['levy','marshal','warden','banneret','arbalist','sapper','cavalier','sentry'];
   if(!ranks.some(rank=>(state.reserves[attacker]?.[rank]||0)>0))return[];
   const threats=[],seen=new Set();
-  for(const group of B.groups(state.board,state.size,owner)){
+  for(const group of groupsFor(state.board,state.size,owner)){
    const keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
    if(!keeps.length)continue;
-   const liberties=B.liberties(state.board,state.size,group);
+   const liberties=libertiesFor(state.board,state.size,group);
    if(liberties.size<2||liberties.size>3||!keeps.every(p=>isMarshalBeside(state.board,state.size,p,attacker)))continue;
    for(const encoded of liberties){
     const [lx,ly]=encoded.split(',').map(Number),liberty={x:lx,y:ly};
@@ -146,19 +197,19 @@
   let bonus=keepApproachBonus(candidate,threats);
   const action=candidate?.action;
   if(action?.type!=='place'||!action.to||!candidate.next)return bonus;
-  const matching=(keepGroups||[]).filter(group=>B.liberties(state.board,state.size,group).has(key(action.to.x,action.to.y)));
+  const matching=(keepGroups||[]).filter(group=>libertiesFor(state.board,state.size,group).has(key(action.to.x,action.to.y)));
   if(!matching.length)return bonus;
-  const beforeLiberties=matching.reduce((sum,group)=>sum+B.liberties(state.board,state.size,group).size,0),
+  const beforeLiberties=matching.reduce((sum,group)=>sum+libertiesFor(state.board,state.size,group).size,0),
    afterLiberties=matching.reduce((sum,group)=>{
-    const anchor=group.find(p=>state.board[p.y][p.x]?.rank==='keep'),nextGroup=B.groupAt(candidate.next.board,candidate.next.size,anchor);
-    return sum+(nextGroup.length?B.liberties(candidate.next.board,candidate.next.size,nextGroup).size:0);
+    const anchor=group.find(p=>state.board[p.y][p.x]?.rank==='keep'),nextGroup=groupAtFor(candidate.next.board,candidate.next.size,anchor);
+    return sum+(nextGroup.length?libertiesFor(candidate.next.board,candidate.next.size,nextGroup).size:0);
    },0),afterThreats=keepApproachThreats(candidate.next,owner).length;
   bonus+=clamp((afterLiberties-beforeLiberties)*3+(threats.length-afterThreats)*2,-5,10);
   return clamp(bonus,-5,14);
  }
  function vulnerableByLegalReply(state,group,attacker){
   if(state.result)return false;
-  const libs=B.liberties(state.board,state.size,group);if(libs.size!==1)return false;
+  const libs=libertiesFor(state.board,state.size,group);if(libs.size!==1)return false;
   const [encoded]=libs, [x,y]=encoded.split(',').map(Number),target={x,y},position={...state,player:attacker};
   for(const rank of B.RANKS){
    if(rank==='keep'||(state.reserves[attacker]?.[rank]||0)<=0)continue;
@@ -172,7 +223,7 @@
  }
  function groupSecurity(state,group,owner,profile){
   const board=state.board,size=state.size,enemy=other(owner),unitRanks=group.map(p=>board[p.y][p.x].rank),
-   fortified=unitRanks.includes('keep'),warded=unitRanks.includes('warden'),libs=B.liberties(board,size,group).size;
+   fortified=unitRanks.includes('keep'),warded=unitRanks.includes('warden'),libs=libertiesFor(board,size,group).size;
   let value=0;
   const multiplier=1+Math.min(1.5,Math.sqrt(group.length)*.12);
   if(libs===1)value-=vulnerableByLegalReply(state,group,enemy)?8.4:2.15;
@@ -186,7 +237,7 @@
  }
  function siegePressure(state,owner){
   const board=state.board,size=state.size,enemy=other(owner);let pressure=0;
-  for(const group of B.groups(board,size,enemy)){
+  for(const group of groupsFor(board,size,enemy)){
    const keeps=group.filter(p=>board[p.y][p.x]?.rank==='keep');if(!keeps.length)continue;
    let touched=0,openSites=0;
    for(const k of keeps){
@@ -197,7 +248,7 @@
    if(touched===keeps.length)pressure+=3.8;
    else pressure+=Math.min(openSites,keeps.length-touched)*.5;
   }
-  for(const group of B.groups(board,size,enemy)){
+  for(const group of groupsFor(board,size,enemy)){
    if(!group.some(p=>board[p.y][p.x]?.rank==='warden'))continue;
    if(group.some(p=>isMarshalBeside(board,size,p,owner)))pressure+=1.05;
   }
@@ -208,7 +259,7 @@
  }
  function evaluate(state,perspective,config={}){
   if(!state)return 0;
-  const cacheKey=`${B.positionKey(state)}|${perspective}|${profileCacheKey(config)}`;
+  const cacheKey=`${positionKey(state)}|${perspective}|${profileCacheKey(config)}`;
   if(EVAL_CACHE.has(cacheKey)){
    const value=EVAL_CACHE.get(cacheKey);EVAL_CACHE.delete(cacheKey);EVAL_CACHE.set(cacheKey,value);return value;
   }
@@ -236,17 +287,17 @@
   }
   for(const [owner,sign]of [[perspective,1],[rival,-1]]){
    const profile=owner===perspective?ownProfile:enemyProfile;
-   for(const group of B.groups(state.board,state.size,owner))value+=sign*groupSecurity(state,group,owner,profile);
+   for(const group of groupsFor(state.board,state.size,owner))value+=sign*groupSecurity(state,group,owner,profile);
    value+=sign*reserveUtility(state,owner);
    value+=sign*sourceOptions(state,owner,territory)*.055*profile.network;
    value+=sign*siegePressure(state,owner)*profile.attack;
   }
-  const enemyKeepPoints=B.groups(state.board,state.size,rival).flat().filter(p=>state.board[p.y][p.x]?.rank==='keep');
+  const enemyKeepPoints=groupsFor(state.board,state.size,rival).flat().filter(p=>state.board[p.y][p.x]?.rank==='keep');
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
    const unit=state.board[y][x];if(!unit)continue;const sign=unit.owner===perspective?1:-1;
    value+=sign*MATERIAL[unit.rank];
    if(unit.rank==='marshal'){
-    const targets=unit.owner===perspective?enemyKeepPoints:B.groups(state.board,state.size,perspective).flat().filter(p=>state.board[p.y][p.x]?.rank==='keep');
+    const targets=unit.owner===perspective?enemyKeepPoints:groupsFor(state.board,state.size,perspective).flat().filter(p=>state.board[p.y][p.x]?.rank==='keep');
     for(const k of targets)if(Math.abs(k.x-x)+Math.abs(k.y-y)===1)value+=sign*.8;
    }
   }
@@ -402,7 +453,7 @@
   if(rank==='warden'){
    for(const q of B.adjacent(p,state.size)){
     const ally=state.board[q.y][q.x];if(ally?.owner!==owner)continue;
-    const g=B.groupAt(state.board,state.size,q),libs=B.liberties(state.board,state.size,g).size;
+    const g=groupAtFor(state.board,state.size,q),libs=libertiesFor(state.board,state.size,g).size;
     if(libs<=2)bias+=libs===1?1.4:.75;
    }
   }
@@ -431,12 +482,12 @@
    // Reward the Sapper for using its defining breach to reach contested ground,
    // not for consuming one of our already-scored points.
    if(targetOwner===owner)return 0;
-   const liberties=B.liberties(next.board,next.size,B.groupAt(next.board,next.size,at)).size;
+   const liberties=libertiesFor(next.board,next.size,groupAtFor(next.board,next.size,at)).size;
    return(targetOwner===enemy ? .78 : .46)+(liberties>=3 ? .24 : 0);
   }
   if(action.rank==='cavalier'&&action.via?.kind==='cavalier'){
    if(targetOwner===owner)return 0;
-   const group=B.groupAt(next.board,next.size,at),liberties=B.liberties(next.board,next.size,group).size;
+   const group=groupAtFor(next.board,next.size,at),liberties=libertiesFor(next.board,next.size,group).size;
    return(targetOwner===enemy ? .72 : .42)+(liberties>=3 ? .2 : 0);
   }
   if(action.rank==='sentry'){
@@ -457,21 +508,27 @@
   // temporary loss of board presence without valuing them as permanently dead.
   for(const piece of captured)value+=piece.rank==='keep'?1000:.38+(['banneret','arbalist','marshal','sentry'].includes(piece.rank)?.16:0);
   if(action.type==='place'){
-   const at=action.to,seen=new Set();
-   for(const q of B.adjacent(at,state.size)){
-    const before=state.board[q.y][q.x];if(before?.owner!==enemy)continue;
-    const group=B.groupAt(state.board,state.size,q),sig=group.map(t=>key(t.x,t.y)).sort().join(';');if(seen.has(sig))continue;seen.add(sig);
-    const oldLibs=B.liberties(state.board,state.size,group).size,newGroup=B.groupAt(next.board,next.size,q),newLibs=B.liberties(next.board,next.size,newGroup).size;
-    const capturable=B.captureReady(next.board,next.size,newGroup,mover);
-    if(newLibs===1&&capturable&&vulnerableByLegalReply(next,newGroup,mover))value+=(4.2+Math.min(2.4,newGroup.length*.3))*profile.attack;
-    else if(newLibs===2&&oldLibs>2)value+=(1.05+Math.min(1.2,newGroup.length*.12))*profile.attack;
-   }
-   const ownGroup=B.groupAt(next.board,next.size,at),ownLibs=B.liberties(next.board,next.size,ownGroup).size;
-   const adjoiningOwn=[];for(const q of B.adjacent(at,state.size))if(state.board[q.y][q.x]?.owner===mover){const g=B.groupAt(state.board,state.size,q);if(!adjoiningOwn.some(a=>a.key===g.map(t=>key(t.x,t.y)).sort().join(';')))adjoiningOwn.push({group:g,key:g.map(t=>key(t.x,t.y)).sort().join(';')});}
-   const mostThreatened=adjoiningOwn.reduce((m,a)=>Math.min(m,B.liberties(state.board,state.size,a.group).size),99);
-   if(mostThreatened<=2&&ownLibs>mostThreatened)value+=(mostThreatened===1?2.7:1.25)*profile.security;
-   if(ownLibs===1&&vulnerableByLegalReply(next,ownGroup,enemy))value-=7.5*profile.security;
-   if(action.rank==='warden'&&!adjoiningOwn.some(a=>B.liberties(state.board,state.size,a.group).size<=2))value+=.32;
+   const at=action.to,adjacentUnits=B.adjacent(at,state.size).some(q=>state.board[q.y][q.x]);
+   // A quiet placement cannot capture, connect, or put a neighboring group in
+   // atari. Avoid component/liberty scans here; retain the exact tactical path
+   // whenever any occupied neighbor can make those terms nonzero.
+   if(adjacentUnits){
+    const seen=new Set();
+    for(const q of B.adjacent(at,state.size)){
+     const before=state.board[q.y][q.x];if(before?.owner!==enemy)continue;
+     const group=groupAtFor(state.board,state.size,q),sig=group.map(t=>key(t.x,t.y)).sort().join(';');if(seen.has(sig))continue;seen.add(sig);
+     const oldLibs=libertiesFor(state.board,state.size,group).size,newGroup=groupAtFor(next.board,next.size,q),newLibs=libertiesFor(next.board,next.size,newGroup).size;
+     const capturable=B.captureReady(next.board,next.size,newGroup,mover);
+     if(newLibs===1&&capturable&&vulnerableByLegalReply(next,newGroup,mover))value+=(4.2+Math.min(2.4,newGroup.length*.3))*profile.attack;
+     else if(newLibs===2&&oldLibs>2)value+=(1.05+Math.min(1.2,newGroup.length*.12))*profile.attack;
+    }
+    const ownGroup=groupAtFor(next.board,next.size,at),ownLibs=libertiesFor(next.board,next.size,ownGroup).size;
+    const adjoiningOwn=[];for(const q of B.adjacent(at,state.size))if(state.board[q.y][q.x]?.owner===mover){const g=groupAtFor(state.board,state.size,q);if(!adjoiningOwn.some(a=>a.key===g.map(t=>key(t.x,t.y)).sort().join(';')))adjoiningOwn.push({group:g,key:g.map(t=>key(t.x,t.y)).sort().join(';')});}
+    const mostThreatened=adjoiningOwn.reduce((m,a)=>Math.min(m,libertiesFor(state.board,state.size,a.group).size),99);
+    if(mostThreatened<=2&&ownLibs>mostThreatened)value+=(mostThreatened===1?2.7:1.25)*profile.security;
+    if(ownLibs===1&&vulnerableByLegalReply(next,ownGroup,enemy))value-=7.5*profile.security;
+    if(action.rank==='warden'&&!adjoiningOwn.some(a=>libertiesFor(state.board,state.size,a.group).size<=2))value+=.32;
+   }else if(action.rank==='warden')value+=.32;
    if(action.rank==='marshal'){
     let siegeAdjacency=0;
     for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
@@ -494,7 +551,10 @@
   const actor=state.player,profile=profileFor(config,actor),base=exactRoot?evaluate(state,actor,config):0;
   const territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory};
   for(const c of candidates){
-   c.raw=(exactRoot?(evaluate(c.next,actor,config)-base)+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialistActionValue(state,c,context,profile):fastPrior(state,c,context,config))+keepSafetyBonus(state,c,approachThreats,actor,keepGroups);
+   const exactBase=exactRoot&&Number.isFinite(c.rootPriorBase)?c.rootPriorBase:
+    exactRoot?(evaluate(c.next,actor,config)-base)+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialistActionValue(state,c,context,profile):fastPrior(state,c,context,config),
+    safety=exactRoot&&Number.isFinite(c.rootKeepSafetyBonus)?c.rootKeepSafetyBonus:keepSafetyBonus(state,c,approachThreats,actor,keepGroups);
+   c.raw=exactBase+safety;
    c.tie=tieBreak(state,c.action);
   }
   candidates.sort((a,b)=>b.raw-a.raw||a.tie-b.tie);
@@ -539,7 +599,7 @@
   for(const c of pool)c.next=null;
   return pool;
  }
- function makeNode(state,parent=null,action=null,prior=1,depth=0){return{state,parent,action,prior,depth,visits:0,valueSum:0,children:[],pool:null,amaf:Object.create(null)};}
+ function makeNode(state,parent=null,action=null,prior=1,depth=0){return{state,parent,action,prior,depth,visits:0,valueSum:0,children:[],pool:null,amaf:Object.create(null),raveLevyTargets:null};}
  function nodePool(node,config,rootLimit,nodeLimit){
   if(node.pool)return node.pool;
   node.pool=searchPool(node.state,config,node.parent?nodeLimit:rootLimit,!node.parent);
@@ -596,7 +656,7 @@
     // A pass has no board location and its value is phase-specific; never share it as an AMAF placement.
     if((edge.state.last?.captured||[]).length)continue;
     if(!raveEnabled(node.state,edge.action))continue;
-    if(!B.routeOptions(node.state,edge.action.to,actor,'levy').length)continue;
+    if(!raveLevyTargets(node).has(key(edge.action.to.x,edge.action.to.y)))continue;
     const k=actionKey(edge.action);if(seen.has(k))continue;seen.add(k);
     let stat=node.amaf[k];if(!stat)stat=node.amaf[k]={visits:0,valueSum:0};
     stat.visits++;stat.valueSum+=result;updates++;
@@ -615,11 +675,11 @@
  function immediateCrownholdCapture(state,attacker){
   if(!state||state.result||state.keepOpening)return null;
   const defender=other(attacker),position=state.player===attacker?state:{...state,player:attacker};
-  for(const group of B.groups(position.board,position.size,defender)){
+  for(const group of groupsFor(position.board,position.size,defender)){
    if(!group.some(p=>position.board[p.y][p.x]?.rank==='keep'))continue;
    // The finishing Marshal may itself be placed on the last liberty, so the
    // siege requirement must be checked by apply() after the candidate lands.
-   const liberties=B.liberties(position.board,position.size,group);if(liberties.size!==1)continue;
+   const liberties=libertiesFor(position.board,position.size,group);if(liberties.size!==1)continue;
    const [encoded]=liberties,[x,y]=encoded.split(',').map(Number),to={x,y};
    for(const rank of B.RANKS){
     if(rank==='keep'||(position.reserves[attacker]?.[rank]||0)<=0)continue;
@@ -633,7 +693,7 @@
  }
  function localCrownholdResponses(state,defender,attacker,keepGroup){
   const position={...state,player:defender},targets=new Set(),sentryTargets=new Set(),
-   liberties=B.liberties(position.board,position.size,keepGroup);
+   liberties=libertiesFor(position.board,position.size,keepGroup);
   for(const encoded of liberties)targets.add(encoded);
   const attackPosition={...state,player:attacker};
   for(const encoded of liberties){
@@ -653,8 +713,8 @@
   // Capturing an attacker in atari can reopen the Keep's last liberty or remove
   // the Marshal that completes Crownhold. Only those capture points can change
   // this tactical verdict, so do not construct every unrelated board move.
-  for(const group of B.groups(position.board,position.size,attacker)){
-   const groupLiberties=B.liberties(position.board,position.size,group);
+  for(const group of groupsFor(position.board,position.size,attacker)){
+   const groupLiberties=libertiesFor(position.board,position.size,group);
    if(groupLiberties.size===1)for(const encoded of groupLiberties)targets.add(encoded);
   }
   const out=[],seen=new Set();
@@ -674,7 +734,7 @@
  }
  function forcedCrownholdThreat(state,attacker,maxLiberties=3){
   if(!state||state.result||state.keepOpening)return null;
-  const cacheKey=`${attacker}|${maxLiberties}|${B.positionKey({...state,player:attacker})}`;
+  const cacheKey=`${attacker}|${maxLiberties}|${positionKey({...state,player:attacker})}`;
   if(CROWNHOLD_CACHE.has(cacheKey))return CROWNHOLD_CACHE.get(cacheKey);
   const result=forcedCrownholdThreatUncached(state,attacker,maxLiberties);
   if(CROWNHOLD_CACHE.size>=CROWNHOLD_CACHE_LIMIT)CROWNHOLD_CACHE.delete(CROWNHOLD_CACHE.keys().next().value);
@@ -684,9 +744,9 @@
  function forcedCrownholdThreatUncached(state,attacker,maxLiberties=3){
   if(!state||state.result||state.keepOpening)return null;
   const defender=other(attacker),position=state.player===attacker?state:{...state,player:attacker};
-  for(const group of B.groups(position.board,position.size,defender)){
+  for(const group of groupsFor(position.board,position.size,defender)){
    if(!group.some(p=>position.board[p.y][p.x]?.rank==='keep'))continue;
-   const liberties=B.liberties(position.board,position.size,group);
+   const liberties=libertiesFor(position.board,position.size,group);
    const keepPoints=group.filter(p=>position.board[p.y][p.x]?.rank==='keep');
    const alreadySieged=keepPoints.every(p=>isMarshalBeside(position.board,position.size,p,attacker));
    if(liberties.size!==2&&!(maxLiberties>=3&&liberties.size===3&&alreadySieged))continue;
@@ -709,8 +769,8 @@
       // Also read the tactical line one turn earlier: when a covered Keep
       // group has three liberties, an attack may reduce it to two; after each
       // legal defense, test whether the attacker can force a terminal atari.
-      const afterGroup=B.groupAt(afterAttack.board,afterAttack.size,group.find(p=>position.board[p.y][p.x]?.rank==='keep')),
-       afterLiberties=B.liberties(afterAttack.board,afterAttack.size,afterGroup);
+      const afterGroup=groupAtFor(afterAttack.board,afterAttack.size,group.find(p=>position.board[p.y][p.x]?.rank==='keep')),
+       afterLiberties=libertiesFor(afterAttack.board,afterAttack.size,afterGroup);
       if(afterLiberties.size!==2)continue;
       const defenses=localCrownholdResponses(afterAttack,defender,attacker,afterGroup);let canSave=false,followUp=null;
       for(const reply of defenses){
@@ -728,8 +788,8 @@
  }
  function immediatelyCapturableGroups(state,owner){
   const attacker=other(owner),out=[];
-  for(const group of B.groups(state.board,state.size,owner)){
-   if(B.liberties(state.board,state.size,group).size===1&&vulnerableByLegalReply(state,group,attacker))out.push(group);
+  for(const group of groupsFor(state.board,state.size,owner)){
+   if(libertiesFor(state.board,state.size,group).size===1&&vulnerableByLegalReply(state,group,attacker))out.push(group);
   }
   return out;
  }
@@ -743,8 +803,8 @@
    let priority=-Infinity;
    if(ownThreats.length){
     const saves=ownThreats.some(group=>{
-     const anchor=group[0],saved=B.groupAt(next.board,next.size,anchor);
-     return saved.length&&B.liberties(next.board,next.size,saved).size>1&&!vulnerableByLegalReply(next,saved,enemy);
+     const anchor=group[0],saved=groupAtFor(next.board,next.size,anchor);
+     return saved.length&&libertiesFor(next.board,next.size,saved).size>1&&!vulnerableByLegalReply(next,saved,enemy);
     });
     if(saves)priority=45+fastPrior(state,candidate,context,config);
    }
@@ -777,12 +837,12 @@
   if((next.last?.captured||[]).length||next.result)return true;
   const profile=profileFor(config,owner),adjacentGroups=[],seen=new Set();
   for(const p of B.adjacent(action.to,state.size))if(state.board[p.y][p.x]?.owner===owner){
-   const group=B.groupAt(state.board,state.size,p),sig=group.map(q=>key(q.x,q.y)).sort().join(';');
+   const group=groupAtFor(state.board,state.size,p),sig=group.map(q=>key(q.x,q.y)).sort().join(';');
    if(!seen.has(sig)){seen.add(sig);adjacentGroups.push(group);}
   }
   if(adjacentGroups.length){
    const before=adjacentGroups.reduce((sum,group)=>sum+groupSecurity(state,group,owner,profile),0),
-    joined=B.groupAt(next.board,next.size,action.to),after=groupSecurity(next,joined,owner,profile);
+    joined=groupAtFor(next.board,next.size,action.to),after=groupSecurity(next,joined,owner,profile);
    if(after-before>1.35)return true;
   }
   const beforeOwners=territory||territoryOwnerMap(state);
@@ -822,7 +882,7 @@
  function chooseAction(state,options={}){
   if(!state||state.result)return null;
   const config=options.profiles||{},actor=state.player,profile=profileFor(config,actor),rootLimit=Infinity,nodeLimit=Infinity,
-   iterations=options.iterations??((state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0)),maxDepth=options.maxDepth??7;
+   baseIterations=(state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0),iterations=options.iterations??Math.ceil(baseIterations*1.25),maxDepth=options.maxDepth??7;
   if(state.keepOpening){
    const opening=openingKeepAction(state,options.seed||0);if(!opening)return null;
    const next=B.apply(state,opening.action,{speculative:true});
@@ -835,15 +895,15 @@
   let rootCandidates=allRootCandidates;
   // Check direct captures and the game's most important one-tempo setup:
   // an opponent move that puts a Keep group into an uncapturable-atari.
-  const unsafeRootCandidates=[],forcedUnsafeRootCandidates=[],enemy=other(actor),ownKeepGroups=B.groups(state.board,state.size,actor)
+  const unsafeRootCandidates=[],forcedUnsafeRootCandidates=[],enemy=other(actor),ownKeepGroups=groupsFor(state.board,state.size,actor)
    .filter(group=>group.some(p=>state.board[p.y][p.x]?.rank==='keep')),
    watchKeepGroups=ownKeepGroups.filter(group=>{
-    const liberties=B.liberties(state.board,state.size,group),keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
+    const liberties=libertiesFor(state.board,state.size,group),keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
     return liberties.size<=2||liberties.size===3&&keeps.every(p=>isMarshalBeside(state.board,state.size,p,enemy));
    }),watchOwnKeep=watchKeepGroups.length>0,
-   keepLibertyTargets=new Set(watchKeepGroups.flatMap(group=>[...B.liberties(state.board,state.size,group)])),
+   keepLibertyTargets=new Set(watchKeepGroups.flatMap(group=>[...libertiesFor(state.board,state.size,group)])),
    approachThreats=watchOwnKeep?keepApproachThreats(state,actor):[],preThreat=watchOwnKeep?forcedCrownholdThreat({...state,player:enemy},enemy):null,
-   plannedLiberties=preThreat?B.liberties(state.board,state.size,preThreat.group):new Set();
+   plannedLiberties=preThreat?libertiesFor(state.board,state.size,preThreat.group):new Set();
   function changesPlannedSiege(candidate){
    const action=candidate.action;if(action.type!=='place'||!action.to)return false;
    if(plannedLiberties.has(key(action.to.x,action.to.y)))return true;
@@ -856,7 +916,7 @@
   }
   for(const c of rootCandidates){
    if(c.next?.result?.winner===actor)continue;
-   if(immediateCrownholdCapture(c.next,enemy)){unsafeRootCandidates.push(c);continue;}
+   if(watchOwnKeep&&immediateCrownholdCapture(c.next,enemy)){unsafeRootCandidates.push(c);continue;}
    if(preThreat&&!changesPlannedSiege(c)){unsafeRootCandidates.push(c);forcedUnsafeRootCandidates.push(c);continue;}
    const action=c.action,keepSafetyChanged=action.type==='pass'||Boolean(c.next?.last?.captured?.length)||
     Boolean(action.to&&keepLibertyTargets.has(key(action.to.x,action.to.y)));
@@ -865,7 +925,7 @@
    }
   }
   const rootProtection=new Map(rootCandidates.map(c=>[actionKey(c.action),keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups)])),
-   urgentApproachDefense=!preThreat&&approachThreats.length>0&&watchKeepGroups.some(group=>B.liberties(state.board,state.size,group).size<=2),
+   urgentApproachDefense=!preThreat&&approachThreats.length>0&&watchKeepGroups.some(group=>libertiesFor(state.board,state.size,group).size<=2),
    bestProtection=urgentApproachDefense?Math.max(0,...rootProtection.values()):0;
   let approachFiltered=0;
   if(bestProtection>0){
@@ -882,8 +942,10 @@
   if(safeRootCandidates.length)rootCandidates=safeRootCandidates;
   const baseline=evaluate(state,actor,config),territory=territoryOwnerMap(state),rootContext={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory},
    rootExact=rootCandidates.map(c=>{
-    const approachBonus=keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups);
-    return{action:c.action,next:c.next,value:evaluate(c.next,actor,config)+specialistActionValue(state,c,rootContext,profile)+approachBonus,
+    const approachBonus=keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups),evalValue=evaluate(c.next,actor,config),specialist=specialistActionValue(state,c,rootContext,profile);
+    c.rootKeepSafetyBonus=approachBonus;
+    c.rootPriorBase=evalValue-baseline+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialist;
+    return{action:c.action,next:c.next,value:evalValue+specialist+approachBonus,
      wasteful:wastefulSelfFill(state,c,territory,config)&&approachBonus===0,approachBonus};
    });
   root.pool=diversePool(state,rootCandidates,rootLimit,config,true,approachThreats,watchKeepGroups);for(const c of root.pool)c.next=null;
@@ -935,5 +997,5 @@
   return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:allRootCandidates.length,searchable:rootCandidates.length,crownholdUnsafeRootActions:unsafeRootCandidates.length,crownholdForcedRootActions:forcedUnsafeRootCandidates.length,crownholdApproachTargets:approachThreats.length,crownholdApproachRootActions:rootExact.filter(c=>c.approachBonus>0).length,crownholdApproachFilteredActions:approachFiltered,iterations,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,rootActionsExpanded:root.children.length,legalRootActions:root.pool.length,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
  }
  function profileName(name){return profiles[name]?.name||profiles.builder.name;}
- return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.4.2-approach-aware-keep-safety"});
+ return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.4.4-time-budgeted-search"});
 });
