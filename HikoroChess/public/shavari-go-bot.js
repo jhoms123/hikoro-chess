@@ -15,6 +15,8 @@
   builder:{name:'Moss · Builder',influence:1.28,liberties:1,attack:.76,network:1.35,security:1.02,rootBeam:5,replyBeam:4},
   tactician:{name:'Slate · Tactician',influence:.83,liberties:1.3,attack:1.42,network:.82,security:1.18,rootBeam:6,replyBeam:5}
  };
+ const EVAL_CACHE=new Map(),EVAL_CACHE_LIMIT=24000,
+  CROWNHOLD_CACHE=new Map(),CROWNHOLD_CACHE_LIMIT=6000;
  const other=p=>B.other(p),inside=(s,x,y)=>x>=0&&y>=0&&x<s&&y<s,key=(x,y)=>x+','+y,
   clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  function profileFor(config,owner){
@@ -102,6 +104,58 @@
  function isMarshalBeside(board,size,point,owner){
   return B.adjacent(point,size).some(q=>board[q.y][q.x]?.owner===owner&&board[q.y][q.x]?.rank==='marshal');
  }
+ function keepApproachThreats(state,owner){
+  if(!state||state.result||state.keepOpening)return[];
+  const attacker=other(owner),ranks=['levy','marshal','warden','banneret','arbalist','sapper','cavalier','sentry'];
+  if(!ranks.some(rank=>(state.reserves[attacker]?.[rank]||0)>0))return[];
+  const threats=[],seen=new Set();
+  for(const group of B.groups(state.board,state.size,owner)){
+   const keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
+   if(!keeps.length)continue;
+   const liberties=B.liberties(state.board,state.size,group);
+   if(liberties.size<2||liberties.size>3||!keeps.every(p=>isMarshalBeside(state.board,state.size,p,attacker)))continue;
+   for(const encoded of liberties){
+    const [lx,ly]=encoded.split(',').map(Number),liberty={x:lx,y:ly};
+    for(const approach of B.adjacent(liberty,state.size)){
+     const targetKey=key(approach.x,approach.y),sig=`${encoded}|${targetKey}`;
+     if(state.board[approach.y][approach.x]||liberties.has(targetKey)||seen.has(sig))continue;
+     let accessible=false;
+     for(const rank of ranks){
+      if(!(state.reserves[attacker]?.[rank]>0))continue;
+      const routes=B.routeOptions(state,approach,attacker,rank);
+      for(const via of routes){
+       const setup=B.apply({...state,player:attacker},{type:'place',rank,to:approach,via},{speculative:true});
+       if(setup){accessible=true;break;}
+      }
+      if(accessible)break;
+     }
+     if(accessible){seen.add(sig);threats.push({to:approach,liberty,keep:keeps[0]});}
+    }
+   }
+  }
+  return threats;
+ }
+ function keepApproachBonus(candidate,threats){
+  const action=candidate?.action;
+  if(action?.type!=='place'||!action.to||!threats?.length)return 0;
+  let blocked=0;
+  for(const threat of threats)if(threat.to.x===action.to.x&&threat.to.y===action.to.y)blocked++;
+  return Math.min(12,blocked*6.5);
+ }
+ function keepSafetyBonus(state,candidate,threats,owner,keepGroups){
+  let bonus=keepApproachBonus(candidate,threats);
+  const action=candidate?.action;
+  if(action?.type!=='place'||!action.to||!candidate.next)return bonus;
+  const matching=(keepGroups||[]).filter(group=>B.liberties(state.board,state.size,group).has(key(action.to.x,action.to.y)));
+  if(!matching.length)return bonus;
+  const beforeLiberties=matching.reduce((sum,group)=>sum+B.liberties(state.board,state.size,group).size,0),
+   afterLiberties=matching.reduce((sum,group)=>{
+    const anchor=group.find(p=>state.board[p.y][p.x]?.rank==='keep'),nextGroup=B.groupAt(candidate.next.board,candidate.next.size,anchor);
+    return sum+(nextGroup.length?B.liberties(candidate.next.board,candidate.next.size,nextGroup).size:0);
+   },0),afterThreats=keepApproachThreats(candidate.next,owner).length;
+  bonus+=clamp((afterLiberties-beforeLiberties)*3+(threats.length-afterThreats)*2,-5,10);
+  return clamp(bonus,-5,14);
+ }
  function vulnerableByLegalReply(state,group,attacker){
   if(state.result)return false;
   const libs=B.liberties(state.board,state.size,group);if(libs.size!==1)return false;
@@ -149,7 +203,20 @@
   }
   return pressure;
  }
+ function profileCacheKey(config){
+  return[1,2].map(owner=>{const p=profileFor(config,owner);return[p.influence,p.liberties,p.attack,p.network,p.security].join(',');}).join('|');
+ }
  function evaluate(state,perspective,config={}){
+  if(!state)return 0;
+  const cacheKey=`${B.positionKey(state)}|${perspective}|${profileCacheKey(config)}`;
+  if(EVAL_CACHE.has(cacheKey)){
+   const value=EVAL_CACHE.get(cacheKey);EVAL_CACHE.delete(cacheKey);EVAL_CACHE.set(cacheKey,value);return value;
+  }
+  const value=evaluateUncached(state,perspective,config);
+  if(EVAL_CACHE.size>=EVAL_CACHE_LIMIT)EVAL_CACHE.delete(EVAL_CACHE.keys().next().value);
+  EVAL_CACHE.set(cacheKey,value);return value;
+ }
+ function evaluateUncached(state,perspective,config={}){
   if(state.result){
    if(state.result.by==='crownhold'||state.result.reason==='Resignation')return state.result.winner===perspective?1000:state.result.winner===other(perspective)?-1000:0;
    if(state.result.score)return state.result.score[perspective].total-state.result.score[other(perspective)].total;
@@ -216,33 +283,86 @@
   if(rank==='banneret'||rank==='arbalist')return`Places a ${rank==='banneret'?'Standard-Bearer':'Crossbowman'} at ${coord} to open a new placement line.`;
   return`Places a Squire at ${coord} to extend the boundary and claim territory.`;
  }
- function tieBreak(state,action){
-  const str=B.boardKey(state.board)+'|'+action.type+'|'+(action.rank||'')+'|'+(action.to?`${action.to.x},${action.to.y}`:'pass');
+ function tieBreak(state,action,seed=0){
+  const str=String(seed)+'|'+B.boardKey(state.board)+'|'+action.type+'|'+(action.rank||'')+'|'+(action.to?`${action.to.x},${action.to.y}`:'pass');
   let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0)/4294967295;
  }
- function openingKeepAction(state){
-  const choices=B.legalKeepPlacements(state);if(!choices.length)return null;
-  const owner=state.player,placed=state.keepPlacements?.[owner]||0,near=3,far=state.size-4;
-  // Begin from the familiar corner star points; each side's second Keep aims
-  // for the opposite diagonal. If a preferred point is occupied, use its
-  // nearest legal intersection instead.
-  const target=owner===1
-   ?(placed===0?{x:near,y:near}:{x:far,y:far})
-   :(placed===0?{x:far,y:near}:{x:near,y:far});
-  const own=[],enemy=[];
-  for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
-   const piece=state.board[y][x];if(piece?.rank!=='keep')continue;
-   (piece.owner===owner?own:enemy).push({x,y});
+ function legalKeepCandidates(state){
+  const candidates=[];if(!state?.keepOpening||state.result)return candidates;
+  for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(!state.board[y][x]){
+   const action={type:'place',rank:'keep',to:{x,y}},next=B.apply(state,action,{speculative:true});
+   if(next)candidates.push({action,next});
   }
+  return candidates;
+ }
+ function keepOpeningValue(state,perspective){
+  const rival=other(perspective),keeps={1:[],2:[]},size=state.size;
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+   const p=state.board[y][x];if(p?.rank==='keep')keeps[p.owner].push({x,y});
+  }
+  let value=0;
+  // A Keep supplies a compact placement foothold and a small local influence
+  // field. Unlike final territory, this remains meaningful before either side
+  // has built a boundary and does not award the whole empty board to one color.
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!state.board[y][x]){
+   let own=0,enemy=0;
+   for(const p of keeps[perspective]){const d=Math.abs(x-p.x)+Math.abs(y-p.y);if(d<=5)own+=.72*Math.exp(-d/2.55);}
+   for(const p of keeps[rival]){const d=Math.abs(x-p.x)+Math.abs(y-p.y);if(d<=5)enemy+=.72*Math.exp(-d/2.55);}
+   const total=own+enemy;
+   if(total>.025)value+=Math.tanh((own-enemy)*1.15)*(1-Math.exp(-total*.7))*.48;
+  }
+  for(const owner of [perspective,rival]){
+   const sign=owner===perspective?1:-1,own=keeps[owner],enemy=keeps[other(owner)];
+   for(const p of own){
+    const edge=Math.min(p.x,p.y,size-1-p.x,size-1-p.y),liberties=B.adjacent(p,size).filter(q=>!state.board[q.y][q.x]).length;
+    // The edge is tactically sensitive: fewer liberties make a Keep easier to
+    // surround, while a modest central bias preserves room to build outward.
+    value+=sign*(Math.min(edge,4)*.1+(liberties-3)*.13-(edge===0?1.1:edge===1?.4:0));
+    // Early Shavari territory is easiest to secure from the third-line corner
+    // anchors: they touch two board edges and leave room to build an enclosing
+    // boundary. The old influence-only score overvalued the centre, where a
+    // Keep expands into open space but has no cheap route to a corner.
+    const anchors=[{x:3,y:3},{x:size-4,y:3},{x:3,y:size-4},{x:size-4,y:size-4}],
+     anchorDistance=Math.min(...anchors.map(q=>Math.abs(p.x-q.x)+Math.abs(p.y-q.y)));
+    value+=sign*4.8*Math.exp(-anchorDistance/2.5);
+    if(enemy.length){
+     const nearest=Math.min(...enemy.map(q=>Math.abs(p.x-q.x)+Math.abs(p.y-q.y)));
+     // Keep groups need a Marshal at every Keep when captured. Starting too
+     // close to an enemy Keep makes a fast siege much easier, so safety weighs
+     // more than the small extra influence from contesting adjacent sites.
+     const siegeRisk=nearest<5?-.9*(5-nearest)*(5-nearest):Math.min(4,nearest-5)*.18;
+     value+=sign*siegeRisk;
+    }
+   }
+   for(let i=0;i<own.length;i++)for(let j=i+1;j<own.length;j++){
+    const d=Math.abs(own[i].x-own[j].x)+Math.abs(own[i].y-own[j].y);
+    value+=sign*(Math.min(d,8)*.3-Math.max(0,d-10)*.14);
+   }
+  }
+  return value;
+ }
+ function openingKeepAction(state,seed=0){
+  const owner=state.player,choices=legalKeepCandidates(state);if(!choices.length)return null;
   let best=null,bestValue=-Infinity;
-  for(const to of choices){
-   const anchorDistance=Math.abs(to.x-target.x)+Math.abs(to.y-target.y);
-   const ownDistance=own.length?Math.min(...own.map(p=>Math.abs(to.x-p.x)+Math.abs(to.y-p.y))):0;
-   const enemyDistance=enemy.length?Math.min(...enemy.map(p=>Math.abs(to.x-p.x)+Math.abs(to.y-p.y))):0;
-   const value=-anchorDistance*12+(own.length?Math.min(ownDistance,12)*.11:0)+(enemy.length?Math.min(enemyDistance,10)*.035:0)+tieBreak(state,{type:'place',rank:'keep',to})*.001;
-   if(value>bestValue){bestValue=value;best=to;}
+  for(const candidate of choices){
+   let value=keepOpeningValue(candidate.next,owner),responses=legalKeepCandidates(candidate.next);
+   if(responses.length){
+    let worst=Infinity;
+    for(const reply of responses)worst=Math.min(worst,keepOpeningValue(reply.next,owner));
+    value=worst;
+   }
+   const rivalKeeps=[];
+   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(candidate.next.board[y][x]?.owner===other(owner)&&candidate.next.board[y][x]?.rank==='keep')rivalKeeps.push({x,y});
+   if(rivalKeeps.length){
+    const nearest=Math.min(...rivalKeeps.map(p=>Math.abs(p.x-candidate.action.to.x)+Math.abs(p.y-candidate.action.to.y)));
+    // Keep positions are chosen before regular moves; a Keep placed in the
+    // enemy's immediate neighborhood can lose before its influence matures.
+    value-=nearest<5?1.2*(5-nearest)*(5-nearest):0;
+   }
+   value+=tieBreak(state,candidate.action,seed)*.0001;
+   if(value>bestValue){bestValue=value;best=candidate;}
   }
-  return best?{type:'place',rank:'keep',to:best}:null;
+  return best?{action:best.action,value:bestValue,examined:choices.length}:null;
  }
  function compare(a,b){return b.value-a.value||a.tie-b.tie;}
  const PIECE_SCORE={keep:9,marshal:2.8,warden:2.5,banneret:2.2,arbalist:2.2,sapper:2.8,cavalier:2.7,sentry:2.9,levy:1.6};
@@ -333,7 +453,9 @@
   const action=candidate.action,next=candidate.next,mover=state.player,profile=profileFor(config,mover),enemy=other(mover);
   if(action.type==='pass')return next.result?(evaluate(next,mover,config)-evaluate(state,mover,config)):-.68;
   let value=localInfluenceDelta(state,action,context,profile)+specialistActionValue(state,candidate,context,profile),captured=next.last?.captured||[];
-  for(const piece of captured)value+=2+((PIECE_SCORE[piece.rank]||1)*.72)+(piece.rank==='keep'?9:0);
+  // Non-Keep captures return to the defender's reserve, so count tempo and
+  // temporary loss of board presence without valuing them as permanently dead.
+  for(const piece of captured)value+=piece.rank==='keep'?1000:.38+(['banneret','arbalist','marshal','sentry'].includes(piece.rank)?.16:0);
   if(action.type==='place'){
    const at=action.to,seen=new Set();
    for(const q of B.adjacent(at,state.size)){
@@ -341,8 +463,8 @@
     const group=B.groupAt(state.board,state.size,q),sig=group.map(t=>key(t.x,t.y)).sort().join(';');if(seen.has(sig))continue;seen.add(sig);
     const oldLibs=B.liberties(state.board,state.size,group).size,newGroup=B.groupAt(next.board,next.size,q),newLibs=B.liberties(next.board,next.size,newGroup).size;
     const capturable=B.captureReady(next.board,next.size,newGroup,mover);
-    if(newLibs===1&&capturable)value+=(7.2+Math.min(4,newGroup.length*.45))*profile.attack;
-    else if(newLibs===2&&oldLibs>2)value+=(1.7+Math.min(2,newGroup.length*.18))*profile.attack;
+    if(newLibs===1&&capturable&&vulnerableByLegalReply(next,newGroup,mover))value+=(4.2+Math.min(2.4,newGroup.length*.3))*profile.attack;
+    else if(newLibs===2&&oldLibs>2)value+=(1.05+Math.min(1.2,newGroup.length*.12))*profile.attack;
    }
    const ownGroup=B.groupAt(next.board,next.size,at),ownLibs=B.liberties(next.board,next.size,ownGroup).size;
    const adjoiningOwn=[];for(const q of B.adjacent(at,state.size))if(state.board[q.y][q.x]?.owner===mover){const g=B.groupAt(state.board,state.size,q);if(!adjoiningOwn.some(a=>a.key===g.map(t=>key(t.x,t.y)).sort().join(';')))adjoiningOwn.push({group:g,key:g.map(t=>key(t.x,t.y)).sort().join(';')});}
@@ -365,29 +487,48 @@
  }
  function capturePrior(candidate){
   let value=0;
-  for(const piece of candidate.next?.last?.captured||[])value+=2+(PIECE_SCORE[piece.rank]||1)*.72+(piece.rank==='keep'?9:0);
+  for(const piece of candidate.next?.last?.captured||[])value+=piece.rank==='keep'?1000:.38+(['banneret','arbalist','marshal','sentry'].includes(piece.rank)?.16:0);
   return value;
  }
- function diversePool(state,candidates,limit,config,exactRoot=false){
+ function diversePool(state,candidates,limit,config,exactRoot=false,approachThreats=null,keepGroups=null){
   const actor=state.player,profile=profileFor(config,actor),base=exactRoot?evaluate(state,actor,config):0;
   const territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory};
   for(const c of candidates){
-   c.raw=exactRoot?(evaluate(c.next,actor,config)-base)+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialistActionValue(state,c,context,profile):fastPrior(state,c,context,config);
+   c.raw=(exactRoot?(evaluate(c.next,actor,config)-base)+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialistActionValue(state,c,context,profile):fastPrior(state,c,context,config))+keepSafetyBonus(state,c,approachThreats,actor,keepGroups);
    c.tie=tieBreak(state,c.action);
   }
   candidates.sort((a,b)=>b.raw-a.raw||a.tie-b.tie);
-  const chosen=[],ids=new Set(),add=c=>{if(c&&!ids.has(actionKey(c.action))){ids.add(actionKey(c.action));chosen.push(c);}};
-  // Preserve immediate captures, one strong option for every available rank, and pass.
-  for(const c of candidates)if((c.next.last?.captured?.length||0)>0&&chosen.length<Math.min(5,limit))add(c);
-  for(const rank of ['banneret','arbalist','marshal','warden','sapper','cavalier','sentry','levy'])add(candidates.find(c=>c.action.rank===rank));
-  const pass=candidates.find(c=>c.action.type==='pass');
-  for(const c of candidates){if(chosen.length>=limit-1)break;add(c);}
-  if(pass)add(pass);
-  for(const c of chosen)c.prior=0;
-  let max=-Infinity;for(const c of chosen)max=Math.max(max,c.raw);
-  let total=0;for(const c of chosen){c.prior=Math.exp(clamp((c.raw-max)/2.35,-18,0));total+=c.prior;}
-  for(const c of chosen)c.prior/=total||1;
-  return chosen.slice(0,limit);
+  // Factor the prior by piece rank so a rank with many legal placements
+  // (usually Levy) does not drown out rare, high-impact specialist actions.
+  // Every legal move remains available to later progressive widening.
+  const groups=new Map();
+  for(const c of candidates){const group=c.action.type==='pass'?'pass':c.action.rank;let list=groups.get(group);if(!list)groups.set(group,list=[]);list.push(c);}
+  const maxima=[...groups.entries()].map(([group,list])=>({group,list,best:list[0].raw})),top=Math.max(...maxima.map(x=>x.best));
+  let rankMass=0;for(const group of maxima){
+   // Passing is a real option, but it should not receive a full piece-rank
+   // prior simply because its action group contains one move. In late-game
+   // positions that normalization made pass absorb nearly half the search
+   // budget before any life-and-death or territory move was examined.
+   group.mass=Math.exp(clamp((group.best-top)/3.1,-18,0))*(group.group==='pass'?.04:1);rankMass+=group.mass;
+  }
+  for(const group of maxima){
+   group.mass/=rankMass||1;let moveMass=0;
+   for(const c of group.list){c.prior=Math.exp(clamp((c.raw-group.best)/2.5,-18,0));moveMass+=c.prior;}
+   for(const c of group.list)c.prior=group.mass*c.prior/(moveMass||1);
+  }
+  // Widening a single globally sorted list can spend the entire early budget
+  // on Levy placements and never consider a Marshal, Sentry, or line piece.
+  // Interleave each rank's ordered moves so the best move of several distinct
+  // Shavari mechanics is available before any rank gets a deep local slice.
+  const rankedGroups=maxima.filter(group=>group.group!=='pass').sort((a,b)=>b.mass-a.mass),
+   passGroup=maxima.find(group=>group.group==='pass'),ordered=[];
+  for(let offset=0;ordered.length<candidates.length;offset++){
+   let added=false;
+   for(const group of rankedGroups){if(group.list[offset]){ordered.push(group.list[offset]);added=true;}}
+   if(!added)break;
+  }
+  if(passGroup)ordered.push(...passGroup.list);
+  return ordered;
  }
  function actionKey(a){return a.type==='pass'?'pass':`${a.rank}:${a.to.x},${a.to.y}`;}
  function searchPool(state,config,limit,exactRoot=false){
@@ -404,23 +545,31 @@
   node.pool=searchPool(node.state,config,node.parent?nodeLimit:rootLimit,!node.parent);
   return node.pool;
  }
- const RAVE_K=180;
+ function wideningLimit(node,poolLength,profile){
+  const visits=Math.max(0,node.visits),coefficient=node.parent?(profile.attack>1?1.02:.9):(profile.attack>1?1.45:1.25);
+  return Math.min(poolLength,Math.max(1,1+Math.floor(coefficient*Math.sqrt(visits))));
+ }
+ const RAVE_K=18;
  function raveStat(node,action){return node.amaf[actionKey(action)]||null;}
- function raveEnabled(state,config,searchOwner){return state.size===13||profileFor(config,searchOwner).attack>1.3;}
+ function raveEnabled(state,action){
+  // AMAF is useful here only for interchangeable low-risk Squire placements.
+  // Keep, siege, line, breach, leap, and silence actions are too state-specific.
+  return Boolean(state&&!state.keepOpening&&state.ply>=4&&state.ply<=28&&action?.type==='place'&&action.rank==='levy');
+ }
  function raveBeta(amafVisits,mcVisits){
   if(!amafVisits)return 0;
   return amafVisits/(amafVisits+mcVisits+(amafVisits*mcVisits)/RAVE_K);
  }
  function blendedQ(node,action,mcVisits,mcValue,config,searchOwner){
   const stat=raveStat(node,action);if(!stat||!stat.visits)return mcValue;
-  const beta=raveEnabled(node.state,config,searchOwner)?raveBeta(stat.visits,mcVisits):0,amafValue=stat.valueSum/stat.visits;
+  const beta=raveEnabled(node.state,action)?raveBeta(stat.visits,mcVisits):0,amafValue=stat.valueSum/stat.visits;
   return mcValue*(1-beta)+amafValue*beta;
  }
  function puctChild(node,rootPlayer,config){
   const sign=node.state.player===rootPlayer?1:-1,scale=Math.sqrt(node.visits+1);let best=null,bestScore=-Infinity;
   for(const child of node.children){
    const mc=child.visits?child.valueSum/child.visits:0,q=blendedQ(node,child.action,child.visits,mc,config,rootPlayer);
-   const score=sign*q+.96*child.prior*scale/(1+child.visits);
+   const score=sign*q+1.25*child.prior*scale/(1+child.visits);
    if(score>bestScore){bestScore=score;best=child;}
   }
   return best;
@@ -429,10 +578,10 @@
   const sign=node.state.player===rootPlayer?1:-1,scale=Math.sqrt(node.visits+1),expanded=new Set(node.children.map(c=>actionKey(c.action)));
   let best=null,bestScore=-Infinity;
   for(let i=0;i<width;i++){
-   const c=pool[i];if(!c||expanded.has(actionKey(c.action)))continue;
+   const c=pool[i];if(!c||c.invalid||expanded.has(actionKey(c.action)))continue;
    const stat=raveStat(node,c.action),q=stat?.visits?stat.valueSum/stat.visits:0;
-   const beta=stat?.visits&&raveEnabled(node.state,config,rootPlayer)?raveBeta(stat.visits,0):0;
-   const score=sign*q*beta+.96*c.prior*scale;
+   const beta=stat?.visits&&raveEnabled(node.state,c.action)?raveBeta(stat.visits,0):0;
+   const score=sign*q*beta+1.25*c.prior*scale;
    if(score>bestScore){bestScore=score;best=c;}
   }
   return best;
@@ -443,9 +592,11 @@
    const node=path[i],actor=node.state.player,seen=new Set();
    for(let j=i+1;j<path.length;j++){
     const edge=path[j],moveActor=edge.parent.state.player;
-    if(moveActor!==actor||!edge.action)continue;
+    if(moveActor!==actor||!edge.action||edge.action.type!=='place'||edge.action.rank!=='levy')continue;
     // A pass has no board location and its value is phase-specific; never share it as an AMAF placement.
-    if(edge.action.type==='pass')continue;
+    if((edge.state.last?.captured||[]).length)continue;
+    if(!raveEnabled(node.state,edge.action))continue;
+    if(!B.routeOptions(node.state,edge.action.to,actor,'levy').length)continue;
     const k=actionKey(edge.action);if(seen.has(k))continue;seen.add(k);
     let stat=node.amaf[k];if(!stat)stat=node.amaf[k]={visits:0,valueSum:0};
     stat.visits++;stat.valueSum+=result;updates++;
@@ -454,8 +605,172 @@
   return updates;
  }
  function scaledValue(state,perspective,config){
+  if(state&&!state.result){
+   const win=immediateCrownholdCapture(state,state.player);
+   if(win)return state.player===perspective?.995:-.995;
+  }
   const raw=evaluate(state,perspective,config),scale=Math.max(11,state.size*.88);
   return Math.tanh(raw/scale);
+ }
+ function immediateCrownholdCapture(state,attacker){
+  if(!state||state.result||state.keepOpening)return null;
+  const defender=other(attacker),position=state.player===attacker?state:{...state,player:attacker};
+  for(const group of B.groups(position.board,position.size,defender)){
+   if(!group.some(p=>position.board[p.y][p.x]?.rank==='keep'))continue;
+   // The finishing Marshal may itself be placed on the last liberty, so the
+   // siege requirement must be checked by apply() after the candidate lands.
+   const liberties=B.liberties(position.board,position.size,group);if(liberties.size!==1)continue;
+   const [encoded]=liberties,[x,y]=encoded.split(',').map(Number),to={x,y};
+   for(const rank of B.RANKS){
+    if(rank==='keep'||(position.reserves[attacker]?.[rank]||0)<=0)continue;
+    for(const via of B.routeOptions(position,to,attacker,rank)){
+     const action={type:'place',rank,to,via},next=B.apply(position,action,{speculative:true});
+     if(next?.result?.by==='crownhold')return{action,next,group};
+    }
+   }
+  }
+  return null;
+ }
+ function localCrownholdResponses(state,defender,attacker,keepGroup){
+  const position={...state,player:defender},targets=new Set(),sentryTargets=new Set(),
+   liberties=B.liberties(position.board,position.size,keepGroup);
+  for(const encoded of liberties)targets.add(encoded);
+  const attackPosition={...state,player:attacker};
+  for(const encoded of liberties){
+   const [x,y]=encoded.split(',').map(Number),to={x,y};
+   const routes=[...B.routeOptions(attackPosition,to,attacker,'levy'),...B.routeOptions(attackPosition,to,attacker,'sapper'),...B.routeOptions(attackPosition,to,attacker,'cavalier')],seenRoutes=new Set();
+   for(const via of routes){
+    const routeKey=`${via.kind}:${via.at.x},${via.at.y}`;if(seenRoutes.has(routeKey))continue;seenRoutes.add(routeKey);
+    if(via.kind!=='banneret'&&via.kind!=='arbalist'&&via.kind!=='sapper')continue;
+    const dx=Math.sign(to.x-via.at.x),dy=Math.sign(to.y-via.at.y),steps=Math.max(Math.abs(to.x-via.at.x),Math.abs(to.y-via.at.y));
+    for(let n=1;n<steps;n++){
+     const point={x:via.at.x+dx*n,y:via.at.y+dy*n};
+     if(!position.board[point.y][point.x])targets.add(key(point.x,point.y));
+    }
+    for(const point of B.adjacent(via.at,position.size))if(!position.board[point.y][point.x])sentryTargets.add(key(point.x,point.y));
+   }
+  }
+  // Capturing an attacker in atari can reopen the Keep's last liberty or remove
+  // the Marshal that completes Crownhold. Only those capture points can change
+  // this tactical verdict, so do not construct every unrelated board move.
+  for(const group of B.groups(position.board,position.size,attacker)){
+   const groupLiberties=B.liberties(position.board,position.size,group);
+   if(groupLiberties.size===1)for(const encoded of groupLiberties)targets.add(encoded);
+  }
+  const out=[],seen=new Set();
+  for(const rank of B.RANKS){
+   if(rank==='keep'||!(position.reserves[defender]?.[rank]>0))continue;
+   for(const item of B.placementTargets(position,defender,rank)){
+    const encoded=key(item.to.x,item.to.y);
+    if(!targets.has(encoded)&&!(rank==='sentry'&&sentryTargets.has(encoded)))continue;
+    const action={type:'place',rank,to:item.to,via:item.via},next=B.apply(position,action,{speculative:true});
+    if(!next)continue;
+    const sig=actionKey(action);if(seen.has(sig))continue;seen.add(sig);out.push({action,next});
+   }
+  }
+  const pass=B.apply(position,{type:'pass'},{speculative:true});
+  if(pass)out.push({action:{type:'pass'},next:pass});
+  return out;
+ }
+ function forcedCrownholdThreat(state,attacker,maxLiberties=3){
+  if(!state||state.result||state.keepOpening)return null;
+  const cacheKey=`${attacker}|${maxLiberties}|${B.positionKey({...state,player:attacker})}`;
+  if(CROWNHOLD_CACHE.has(cacheKey))return CROWNHOLD_CACHE.get(cacheKey);
+  const result=forcedCrownholdThreatUncached(state,attacker,maxLiberties);
+  if(CROWNHOLD_CACHE.size>=CROWNHOLD_CACHE_LIMIT)CROWNHOLD_CACHE.delete(CROWNHOLD_CACHE.keys().next().value);
+  CROWNHOLD_CACHE.set(cacheKey,result);
+  return result;
+ }
+ function forcedCrownholdThreatUncached(state,attacker,maxLiberties=3){
+  if(!state||state.result||state.keepOpening)return null;
+  const defender=other(attacker),position=state.player===attacker?state:{...state,player:attacker};
+  for(const group of B.groups(position.board,position.size,defender)){
+   if(!group.some(p=>position.board[p.y][p.x]?.rank==='keep'))continue;
+   const liberties=B.liberties(position.board,position.size,group);
+   const keepPoints=group.filter(p=>position.board[p.y][p.x]?.rank==='keep');
+   const alreadySieged=keepPoints.every(p=>isMarshalBeside(position.board,position.size,p,attacker));
+   if(liberties.size!==2&&!(maxLiberties>=3&&liberties.size===3&&alreadySieged))continue;
+   for(const encoded of liberties){
+    const [x,y]=encoded.split(',').map(Number),to={x,y};
+    for(const rank of B.RANKS){
+     if(rank==='keep'||(position.reserves[attacker]?.[rank]||0)<=0)continue;
+     for(const via of B.routeOptions(position,to,attacker,rank)){
+      const action={type:'place',rank,to,via},afterAttack=B.apply(position,action,{speculative:true});
+      if(!afterAttack)continue;
+      if(liberties.size===2){
+       const winning=immediateCrownholdCapture(afterAttack,attacker);if(!winning)continue;
+       // A one-liberty threat is forced only if the defender has no legal
+       // reply that removes the immediate Crownhold capture.
+       const defenses=legalCandidates(afterAttack),canSave=defenses.some(reply=>
+        reply.next?.result?.winner===defender||!immediateCrownholdCapture(reply.next,attacker));
+       if(!canSave)return{action,winningReply:winning.action,group};
+       continue;
+      }
+      // Also read the tactical line one turn earlier: when a covered Keep
+      // group has three liberties, an attack may reduce it to two; after each
+      // legal defense, test whether the attacker can force a terminal atari.
+      const afterGroup=B.groupAt(afterAttack.board,afterAttack.size,group.find(p=>position.board[p.y][p.x]?.rank==='keep')),
+       afterLiberties=B.liberties(afterAttack.board,afterAttack.size,afterGroup);
+      if(afterLiberties.size!==2)continue;
+      const defenses=localCrownholdResponses(afterAttack,defender,attacker,afterGroup);let canSave=false,followUp=null;
+      for(const reply of defenses){
+       if(reply.next?.result?.winner===defender){canSave=true;break;}
+       const line=immediateCrownholdCapture(reply.next,attacker)||forcedCrownholdThreat(reply.next,attacker,2);
+       if(!line){canSave=true;break;}
+       followUp=followUp||line;
+      }
+      if(!canSave)return{action,winningReply:followUp?.winningReply,group};
+     }
+    }
+   }
+  }
+  return null;
+ }
+ function immediatelyCapturableGroups(state,owner){
+  const attacker=other(owner),out=[];
+  for(const group of B.groups(state.board,state.size,owner)){
+   if(B.liberties(state.board,state.size,group).size===1&&vulnerableByLegalReply(state,group,attacker))out.push(group);
+  }
+  return out;
+ }
+ function tacticalCandidateSet(state,candidates,config){
+  const actor=state.player,enemy=other(actor),ownThreats=immediatelyCapturableGroups(state,actor),
+   territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,enemy,territory),enemyProfile:profileFor(config,enemy),territory};
+  const ranked=[];
+  for(const candidate of candidates){
+   const action=candidate.action,next=candidate.next;
+   if((next.last?.captured||[]).length||next.result){ranked.push({candidate,priority:80+fastPrior(state,candidate,context,config)});continue;}
+   let priority=-Infinity;
+   if(ownThreats.length){
+    const saves=ownThreats.some(group=>{
+     const anchor=group[0],saved=B.groupAt(next.board,next.size,anchor);
+     return saved.length&&B.liberties(next.board,next.size,saved).size>1&&!vulnerableByLegalReply(next,saved,enemy);
+    });
+    if(saves)priority=45+fastPrior(state,candidate,context,config);
+   }
+   if(action.rank==='marshal'&&siegePressure(next,actor)-siegePressure(state,actor)>.6)priority=Math.max(priority,12+fastPrior(state,candidate,context,config));
+   if(action.rank==='sentry'&&sourceOptions(state,enemy,territory)-sourceOptions(next,enemy,territoryOwnerMap(next))>0)priority=Math.max(priority,8+fastPrior(state,candidate,context,config));
+   if(Number.isFinite(priority))ranked.push({candidate,priority});
+  }
+  ranked.sort((a,b)=>b.priority-a.priority);
+  return{moves:ranked.slice(0,6).map(x=>x.candidate),mustRespond:ownThreats.length>0};
+ }
+ function quiescenceValue(state,perspective,config,remaining=2,alpha=-1,beta=1){
+  const stand=scaledValue(state,perspective,config);
+  if(Math.abs(stand)>.98||remaining<=0)return stand;
+  const mover=state.player,ownThreats=immediatelyCapturableGroups(state,mover),
+   enemyThreats=immediatelyCapturableGroups(state,other(mover)),noisy=Boolean(state.last?.captured?.length||ownThreats.length||enemyThreats.length);
+  if(!noisy)return stand;
+  const legal=legalCandidates(state),{moves,mustRespond}=tacticalCandidateSet(state,legal,config);
+  if(!moves.length)return stand;
+  const maximizing=mover===perspective;
+  let best=mustRespond?(maximizing?-Infinity:Infinity):stand;
+  for(const candidate of moves){
+   const value=quiescenceValue(candidate.next,perspective,config,remaining-1,alpha,beta);
+   if(maximizing){best=Math.max(best,value);alpha=Math.max(alpha,best);}else{best=Math.min(best,value);beta=Math.min(beta,best);}
+   if(beta<=alpha)break;
+  }
+  return best;
  }
  function selfFillHasTacticalPurpose(state,candidate,territory,config={}){
   const action=candidate.action,next=candidate.next,owner=state.player,enemy=other(owner);
@@ -506,30 +821,85 @@
  }
  function chooseAction(state,options={}){
   if(!state||state.result)return null;
-  const config=options.profiles||{},actor=state.player,profile=profileFor(config,actor),rootLimit=options.rootWidth||26,nodeLimit=options.nodeWidth||12,
-   iterations=options.iterations||((state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0)),maxDepth=options.maxDepth||7;
+  const config=options.profiles||{},actor=state.player,profile=profileFor(config,actor),rootLimit=Infinity,nodeLimit=Infinity,
+   iterations=options.iterations??((state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0)),maxDepth=options.maxDepth??7;
   if(state.keepOpening){
-   const action=openingKeepAction(state);if(!action)return null;
-   const next=B.apply(state,action,{speculative:true});
-   return{action,reason:moveReason(state,action,next),score:next?evaluate(next,actor,config):0,examined:B.legalKeepPlacements(state).length,iterations:0,depth:0};
+   const opening=openingKeepAction(state,options.seed||0);if(!opening)return null;
+   const next=B.apply(state,opening.action,{speculative:true});
+   return{action:opening.action,reason:moveReason(state,opening.action,next),score:opening.value,examined:opening.examined,iterations:0,depth:2,openingSearch:true};
   }
-  const root=makeNode(state),rootCandidates=legalCandidates(state);
-  if(!rootCandidates.length)return{action:{type:'pass'},reason:'No legal placement remains.',score:evaluate(state,actor,config),examined:0,iterations:0,depth:0};
+  const root=makeNode(state),allRootCandidates=legalCandidates(state);
+  if(!allRootCandidates.length)return{action:{type:'pass'},reason:'No legal placement remains.',score:evaluate(state,actor,config),examined:0,iterations:0,depth:0};
+  const immediateWin=allRootCandidates.find(c=>c.next?.result?.by==='crownhold');
+  if(immediateWin)return{action:immediateWin.action,reason:moveReason(state,immediateWin.action,immediateWin.next),score:1000,staticScore:1000,examined:allRootCandidates.length,iterations:0,depth:1,forcedWin:true};
+  let rootCandidates=allRootCandidates;
+  // Check direct captures and the game's most important one-tempo setup:
+  // an opponent move that puts a Keep group into an uncapturable-atari.
+  const unsafeRootCandidates=[],forcedUnsafeRootCandidates=[],enemy=other(actor),ownKeepGroups=B.groups(state.board,state.size,actor)
+   .filter(group=>group.some(p=>state.board[p.y][p.x]?.rank==='keep')),
+   watchKeepGroups=ownKeepGroups.filter(group=>{
+    const liberties=B.liberties(state.board,state.size,group),keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
+    return liberties.size<=2||liberties.size===3&&keeps.every(p=>isMarshalBeside(state.board,state.size,p,enemy));
+   }),watchOwnKeep=watchKeepGroups.length>0,
+   keepLibertyTargets=new Set(watchKeepGroups.flatMap(group=>[...B.liberties(state.board,state.size,group)])),
+   approachThreats=watchOwnKeep?keepApproachThreats(state,actor):[],preThreat=watchOwnKeep?forcedCrownholdThreat({...state,player:enemy},enemy):null,
+   plannedLiberties=preThreat?B.liberties(state.board,state.size,preThreat.group):new Set();
+  function changesPlannedSiege(candidate){
+   const action=candidate.action;if(action.type!=='place'||!action.to)return false;
+   if(plannedLiberties.has(key(action.to.x,action.to.y)))return true;
+   if((candidate.next.last?.captured||[]).length||action.rank==='sentry')return true;
+   const attack=preThreat?.action,via=attack?.via;
+   if(!via||!['banneret','arbalist','sapper'].includes(via.kind))return false;
+   const dx=Math.sign(attack.to.x-via.at.x),dy=Math.sign(attack.to.y-via.at.y),steps=Math.max(Math.abs(attack.to.x-via.at.x),Math.abs(attack.to.y-via.at.y));
+   for(let n=1;n<steps;n++)if(action.to.x===via.at.x+dx*n&&action.to.y===via.at.y+dy*n)return true;
+   return false;
+  }
+  for(const c of rootCandidates){
+   if(c.next?.result?.winner===actor)continue;
+   if(immediateCrownholdCapture(c.next,enemy)){unsafeRootCandidates.push(c);continue;}
+   if(preThreat&&!changesPlannedSiege(c)){unsafeRootCandidates.push(c);forcedUnsafeRootCandidates.push(c);continue;}
+   const action=c.action,keepSafetyChanged=action.type==='pass'||Boolean(c.next?.last?.captured?.length)||
+    Boolean(action.to&&keepLibertyTargets.has(key(action.to.x,action.to.y)));
+   if(watchOwnKeep&&(preThreat?changesPlannedSiege(c):keepSafetyChanged)&&forcedCrownholdThreat(c.next,enemy)){
+    unsafeRootCandidates.push(c);forcedUnsafeRootCandidates.push(c);
+   }
+  }
+  const rootProtection=new Map(rootCandidates.map(c=>[actionKey(c.action),keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups)])),
+   urgentApproachDefense=!preThreat&&approachThreats.length>0&&watchKeepGroups.some(group=>B.liberties(state.board,state.size,group).size<=2),
+   bestProtection=urgentApproachDefense?Math.max(0,...rootProtection.values()):0;
+  let approachFiltered=0;
+  if(bestProtection>0){
+   const protective=rootCandidates.filter(c=>(rootProtection.get(actionKey(c.action))||0)>=bestProtection-.001);
+   if(protective.length&&protective.length<rootCandidates.length){
+    approachFiltered=rootCandidates.length-protective.length;
+    const kept=new Set(protective.map(c=>actionKey(c.action)));
+    for(const c of rootCandidates)if(!kept.has(actionKey(c.action)))unsafeRootCandidates.push(c);
+    rootCandidates=protective;
+   }
+  }
+  const unsafeKeys=new Set(unsafeRootCandidates.map(c=>actionKey(c.action))),
+   safeRootCandidates=rootCandidates.filter(c=>c.next?.result?.winner===actor||!unsafeKeys.has(actionKey(c.action)));
+  if(safeRootCandidates.length)rootCandidates=safeRootCandidates;
   const baseline=evaluate(state,actor,config),territory=territoryOwnerMap(state),rootContext={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory},
-   rootExact=rootCandidates.map(c=>({action:c.action,next:c.next,value:evaluate(c.next,actor,config)+specialistActionValue(state,c,rootContext,profile),wasteful:wastefulSelfFill(state,c,territory,config)}));
-  root.pool=diversePool(state,rootCandidates,rootLimit,config,true);for(const c of root.pool)c.next=null;
+   rootExact=rootCandidates.map(c=>{
+    const approachBonus=keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups);
+    return{action:c.action,next:c.next,value:evaluate(c.next,actor,config)+specialistActionValue(state,c,rootContext,profile)+approachBonus,
+     wasteful:wastefulSelfFill(state,c,territory,config)&&approachBonus===0,approachBonus};
+   });
+  root.pool=diversePool(state,rootCandidates,rootLimit,config,true,approachThreats,watchKeepGroups);for(const c of root.pool)c.next=null;
   if(!root.pool.length)return null;
   let deepest=0;
   for(let sim=0;sim<iterations;sim++){
    let node=root,depth=0;const path=[root];
    while(depth<maxDepth&&!node.state.result){
     const pool=nodePool(node,config,rootLimit,nodeLimit);if(!pool.length)break;
-    const width=Math.min(pool.length,Math.max(1,Math.floor(1+0.72*Math.sqrt(node.visits+1))));
+    const width=wideningLimit(node,pool.length,profile);
     let child;
     if(node.children.length<width){
-     const candidate=expansionCandidate(node,pool,width,actor,config)||pool[node.children.length];
+     const candidate=expansionCandidate(node,pool,width,actor,config);
+     if(!candidate)break;
      const next=B.apply(node.state,candidate.action,{speculative:true});
-     if(!next){candidate.prior=0;continue;}
+     if(!next){candidate.prior=0;candidate.invalid=true;continue;}
      child=makeNode(next,node,candidate.action,candidate.prior,node.depth+1);node.children.push(child);
      node=node.children[node.children.length-1];path.push(node);depth++;deepest=Math.max(deepest,depth);
      break;
@@ -537,8 +907,8 @@
     child=puctChild(node,actor,config);if(!child)break;
     node=child;path.push(node);depth++;deepest=Math.max(deepest,depth);
    }
-   const result=scaledValue(node.state,actor,config);
-   if(raveEnabled(state,config,actor))updateRave(path,result,actor);
+   const result=quiescenceValue(node.state,actor,config,options.tacticalDepth??2);
+   updateRave(path,result,actor);
    for(let i=path.length-1;i>=0;i--){path[i].visits++;path[i].valueSum+=result;}
   }
   let best=null;
@@ -562,8 +932,8 @@
   let passDeferred=false;
   if(chosenAction.type==='pass'&&bestLegal&&bestLegal.value>pass.value+.12&&opponentCanImproveAfterPass(state,actor,config)){chosenAction=bestLegal.action;passDeferred=true;}
   const next=B.apply(state,chosenAction,{speculative:true})||B.apply(state,{type:'pass'},{speculative:true});
-  return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:rootCandidates.length,iterations,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
+  return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:allRootCandidates.length,searchable:rootCandidates.length,crownholdUnsafeRootActions:unsafeRootCandidates.length,crownholdForcedRootActions:forcedUnsafeRootCandidates.length,crownholdApproachTargets:approachThreats.length,crownholdApproachRootActions:rootExact.filter(c=>c.approachBonus>0).length,crownholdApproachFilteredActions:approachFiltered,iterations,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,rootActionsExpanded:root.children.length,legalRootActions:root.pool.length,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
  }
  function profileName(name){return profiles[name]?.name||profiles.builder.name;}
- return Object.freeze({chooseAction,evaluate,legalCandidates,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.1-area-aware-specialists"});
+ return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.4.2-approach-aware-keep-safety"});
 });
