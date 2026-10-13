@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     };
     const selector=document.getElementById('game-type-select');
     function update(){const game=selector.value,w=worlds[game];if(!w)return;
-        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='shavari-go'?'shavari-go.svg':game+'.webp'}`;
+        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='shavari-go'?'shavari-go.svg?v=20261013-shavari-icons-v1':game+'.webp'}`;
         document.getElementById('selected-table-name').textContent=w.name;
         document.getElementById('selected-table-description').textContent=w.description;
         const guide=document.getElementById('selected-table-guide');guide.href=w.guide;guide.textContent=w.guideLabel;

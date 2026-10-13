@@ -304,6 +304,9 @@ test('game page supports local play, undo, pass scoring and device history', t =
   const selectableRanks = [...$('piece-select').options].map(option => option.value);
   for (const rank of ['sapper', 'cavalier', 'sentry']) assert.ok(selectableRanks.includes(rank));
   for (const name of ['Sapper', 'Cavalier', 'Sentry']) assert.ok($('piece-guide').textContent.includes(name));
+  for (const icon of ['crownhold', 'marshal', 'guard', 'standard', 'crossbow', 'sapper', 'cavalier', 'sentry', 'squire']) {
+    assert.ok(fs.existsSync(path.join(root, `assets/shavari-go/${icon}.svg`)), `${icon} token icon should exist`);
+  }
   $('play-mode').value = 'local';
   $('play-mode').dispatchEvent(new w.Event('change'));
   $('start-match').click();
@@ -347,5 +350,8 @@ test('collection replaces the old Bastion table with the 13×13 Shavari Go route
   assert.match(w.document.getElementById('selected-table-art').getAttribute('src'), /shavari-go\.svg$/);
   assert.match(w.document.getElementById('setup-hint').textContent, /13 × 13.*friend.*bot/i);
   const preview = fs.readFileSync(path.join(__dirname, '../public/assets/collection/matches/shavari-go.svg'), 'utf8');
+  for (const role of ['keep', 'marshal', 'warden', 'banneret', 'arbalist', 'levy', 'sapper', 'cavalier', 'sentry']) {
+    assert.match(preview, new RegExp(`<symbol id="icon-${role}"`), `${role} should be represented in the collection preview`);
+  }
   for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) if (!asset.startsWith('data:') && !asset.startsWith('#')) assert.ok(fs.existsSync(path.join(__dirname, '../public/assets/collection/matches', asset)), asset);
 });

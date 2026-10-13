@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="site-audio.css">
 <script src="site-audio.js?v=20261012-shavari-table" defer></script>
 <link rel="stylesheet" href="collection-theme.css?v=20261012-shavari-table">
-<script src="collection-theme.js?v=20261013-shavari-go-v62" defer></script>
+<script src="collection-theme.js?v=20261013-shavari-icons-v1" defer></script>
 <link rel="stylesheet" href="/accounts.css">
 <script src="/vendor/supabase.js"></script>
 <script src="/player-identity.js"></script>
@@ -87,15 +87,15 @@
     <label class="visually-hidden" for="piece-select">Piece to place</label>
     <select class="visually-hidden" id="piece-select"><option value="keep">Crownhold</option><option value="levy" selected>Squire</option><option value="marshal">High Marshal</option><option value="warden">Royal Guard</option><option value="banneret">Standard-Bearer</option><option value="arbalist">Crossbowman</option><option value="sapper">Sapper</option><option value="cavalier">Cavalier</option><option value="sentry">Sentry</option></select>
     <div class="piece-tray" id="piece-tray" role="group" aria-label="Choose a piece to place">
-     <button class="piece-choice" type="button" data-rank="keep"><img src="assets/shavari-go/crownhold.svg" alt=""><span>Crownhold</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="levy"><img src="assets/shavari-go/squire.svg" alt=""><span>Squire</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="marshal"><img src="assets/shavari-go/marshal.svg" alt=""><span>Marshal</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="warden"><img src="assets/shavari-go/guard.svg" alt=""><span>Guard</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="banneret"><img src="assets/shavari-go/standard.svg" alt=""><span>Standard</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="arbalist"><img src="assets/shavari-go/crossbow.svg" alt=""><span>Crossbow</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="sapper"><img src="assets/shavari-go/sapper.svg" alt=""><span>Sapper</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="cavalier"><img src="assets/shavari-go/cavalier.svg" alt=""><span>Cavalier</span><small></small></button>
-     <button class="piece-choice" type="button" data-rank="sentry"><img src="assets/shavari-go/sentry.svg" alt=""><span>Sentry</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="keep"><img src="assets/shavari-go/crownhold.svg?v=20261013-icons-v1" alt=""><span>Crownhold</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="levy"><img src="assets/shavari-go/squire.svg?v=20261013-icons-v1" alt=""><span>Squire</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="marshal"><img src="assets/shavari-go/marshal.svg?v=20261013-icons-v1" alt=""><span>Marshal</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="warden"><img src="assets/shavari-go/guard.svg?v=20261013-icons-v1" alt=""><span>Guard</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="banneret"><img src="assets/shavari-go/standard.svg?v=20261013-icons-v1" alt=""><span>Standard</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="arbalist"><img src="assets/shavari-go/crossbow.svg?v=20261013-icons-v1" alt=""><span>Crossbow</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="sapper"><img src="assets/shavari-go/sapper.svg?v=20261013-icons-v1" alt=""><span>Sapper</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="cavalier"><img src="assets/shavari-go/cavalier.svg?v=20261013-icons-v1" alt=""><span>Cavalier</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="sentry"><img src="assets/shavari-go/sentry.svg?v=20261013-icons-v1" alt=""><span>Sentry</span><small></small></button>
     </div>
     <p class="subtle" id="human-status" aria-live="polite"></p>
     <button id="pass-button" class="quiet-button" type="button">Pass turn</button>
@@ -117,15 +117,15 @@
  <details class="army-roster" id="piece-guide">
   <summary><span>Meet the royal court</span><small>Nine roles · placement, siege, and counterplay</small></summary>
   <div class="roster-grid">
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol keep"><img src="assets/shavari-go/crownhold.svg" alt=""></span><div><h3>Crownhold</h3><span>2 · opening strongholds</span></div></div><p>Choose two empty points. Its connected group needs an enemy Marshal beside every Crownhold to be captured. Capturing any Crownhold immediately wins the game.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol marshal"><img src="assets/shavari-go/marshal.svg" alt=""></span><div><h3>High Marshal</h3><span>4 · siege commander</span></div></div><p>Unlocks guarded captures. Touch any member of a Royal Guard group, or each Crownhold in a surrounded group.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol warden"><img src="assets/shavari-go/guard.svg" alt=""></span><div><h3>Royal Guard</h3><span>6 · guarded group</span></div></div><p>Its connected group resists a surround until an enemy Marshal touches any member of that group.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol banneret"><img src="assets/shavari-go/standard.svg" alt=""></span><div><h3>Standard-Bearer</h3><span>4 · orthogonal lines</span></div></div><p>Projects placement along open horizontal and vertical lines. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol arbalist"><img src="assets/shavari-go/crossbow.svg" alt=""></span><div><h3>Crossbowman</h3><span>4 · diagonal lines</span></div></div><p>Projects placement along open diagonals. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sapper"><img src="assets/shavari-go/sapper.svg" alt=""></span><div><h3>Sapper</h3><span>2 · breach placement</span></div></div><p>Place on the first empty point immediately beyond exactly one enemy on an active Standard-Bearer or Crossbowman line. Friendly pieces and a second enemy stop the breach.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol cavalier"><img src="assets/shavari-go/cavalier.svg" alt=""></span><div><h3>Cavalier</h3><span>2 · knight leap</span></div></div><p>May use any ordinary placement route or leap in a chess-knight L from any friendly piece, ignoring intervening pieces.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sentry"><img src="assets/shavari-go/sentry.svg" alt=""></span><div><h3>Sentry</h3><span>2 · silences lines</span></div></div><p>An enemy Standard-Bearer or Crossbowman orthogonally beside a Sentry loses its long placement lines. Those lines return if the Sentry is captured.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol levy"><img src="assets/shavari-go/squire.svg" alt=""></span><div><h3>Squire</h3><span id="levy-count">169 · basic pieces</span></div></div><p>The plentiful basic piece. It can use the same friendly adjacency or projected line as every other rank.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol keep"><img src="assets/shavari-go/crownhold.svg?v=20261013-icons-v1" alt=""></span><div><h3>Crownhold</h3><span>2 · opening strongholds</span></div></div><p>Choose two empty points. Its connected group needs an enemy Marshal beside every Crownhold to be captured. Capturing any Crownhold immediately wins the game.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol marshal"><img src="assets/shavari-go/marshal.svg?v=20261013-icons-v1" alt=""></span><div><h3>High Marshal</h3><span>4 · siege commander</span></div></div><p>Unlocks guarded captures. Touch any member of a Royal Guard group, or each Crownhold in a surrounded group.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol warden"><img src="assets/shavari-go/guard.svg?v=20261013-icons-v1" alt=""></span><div><h3>Royal Guard</h3><span>6 · guarded group</span></div></div><p>Its connected group resists a surround until an enemy Marshal touches any member of that group.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol banneret"><img src="assets/shavari-go/standard.svg?v=20261013-icons-v1" alt=""></span><div><h3>Standard-Bearer</h3><span>4 · orthogonal lines</span></div></div><p>Projects placement along open horizontal and vertical lines. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol arbalist"><img src="assets/shavari-go/crossbow.svg?v=20261013-icons-v1" alt=""></span><div><h3>Crossbowman</h3><span>4 · diagonal lines</span></div></div><p>Projects placement along open diagonals. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sapper"><img src="assets/shavari-go/sapper.svg?v=20261013-icons-v1" alt=""></span><div><h3>Sapper</h3><span>2 · breach placement</span></div></div><p>Place on the first empty point immediately beyond exactly one enemy on an active Standard-Bearer or Crossbowman line. Friendly pieces and a second enemy stop the breach.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol cavalier"><img src="assets/shavari-go/cavalier.svg?v=20261013-icons-v1" alt=""></span><div><h3>Cavalier</h3><span>2 · knight leap</span></div></div><p>May use any ordinary placement route or leap in a chess-knight L from any friendly piece, ignoring intervening pieces.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sentry"><img src="assets/shavari-go/sentry.svg?v=20261013-icons-v1" alt=""></span><div><h3>Sentry</h3><span>2 · silences lines</span></div></div><p>An enemy Standard-Bearer or Crossbowman orthogonally beside a Sentry loses its long placement lines. Those lines return if the Sentry is captured.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol levy"><img src="assets/shavari-go/squire.svg?v=20261013-icons-v1" alt=""></span><div><h3>Squire</h3><span id="levy-count">169 · basic pieces</span></div></div><p>The plentiful basic piece. It can use the same friendly adjacency or projected line as every other rank.</p></article>
   </div>
  </details>
 </main>
@@ -136,7 +136,7 @@
 <script src="match-record.js?v=20261013-shavari-go-v62"></script>
 <script src="record-library.js?v=20261012-shavari-go"></script>
 <script src="shavari-go-bot.js?v=20261013-v63"></script>
-<script src="shavari-go-ui.js?v=20261013-v62"></script>
+<script src="shavari-go-ui.js?v=20261013-icons-v1"></script>
 </body>
 </html>
 
