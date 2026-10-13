@@ -3,8 +3,8 @@
  else root.ShavariGo=factory();
 })(typeof globalThis!=='undefined'?globalThis:this,()=>{
  'use strict';
- const SIZES=[13],RANKS=['keep','marshal','warden','banneret','arbalist','levy'],
-  RESERVE={marshal:4,warden:6,banneret:4,arbalist:4},LINE_REACH=Infinity,KOMI=7.5,
+ const SIZES=[13],RANKS=['keep','marshal','warden','banneret','arbalist','sapper','cavalier','sentry','levy'],
+  RESERVE={marshal:4,warden:6,banneret:4,arbalist:4,sapper:2,cavalier:2,sentry:2},LINE_REACH=Infinity,KOMI=7.5,
   LETTERS='ABCDEFGHJKLMNOPQRSTUVWXYZ',ORTHO=[[-1,0],[1,0],[0,-1],[0,1]],
   DIAG=[[-1,-1],[1,-1],[-1,1],[1,1]];
  const other=p=>p===1?2:1,copy=p=>({x:p.x,y:p.y}),same=(a,b)=>a?.x===b?.x&&a?.y===b?.y,
@@ -33,7 +33,7 @@
   return out;
  }
  function boardKey(board){
-  const code={keep:'K',marshal:'M',warden:'W',banneret:'B',arbalist:'A',levy:'L'};
+  const code={keep:'K',marshal:'M',warden:'W',banneret:'B',arbalist:'A',sapper:'P',cavalier:'C',sentry:'T',levy:'L'};
   return board.map(row=>row.map(p=>p?(p.owner===1?'b':'w')+code[p.rank]:'.').join('')).join('/');
  }
  function makeState(size=13,keeps=null){
@@ -71,29 +71,62 @@
   }
   return out;
  }
+ function lineActive(state,from,owner){
+  const source=pieceAt(state,from);if(!source||source.owner!==owner||(source.rank!=='banneret'&&source.rank!=='arbalist'))return false;
+  return !adjacent(from,state.size).some(q=>{const p=pieceAt(state,q);return p?.owner!==owner&&p?.rank==='sentry';});
+ }
+ function lineGeometry(size,rank,from,to){
+  if(!inBounds(size,from)||!inBounds(size,to))return null;
+  const dx=to.x-from.x,dy=to.y-from.y,steps=Math.max(Math.abs(dx),Math.abs(dy));
+  if(steps<1||steps>LINE_REACH)return null;
+  if(rank==='banneret'&&!(dx===0||dy===0))return null;
+  if(rank==='arbalist'&&Math.abs(dx)!==Math.abs(dy))return null;
+  if(rank!=='banneret'&&rank!=='arbalist')return null;
+  return{steps,sx:Math.sign(dx),sy:Math.sign(dy)};
+ }
  function lineValid(board,size,rank,from,to){
   if(!inBounds(size,from)||!inBounds(size,to))return false;
   const source=board[from.y][from.x];if(!source||source.rank!==rank)return false;
-  const dx=to.x-from.x,dy=to.y-from.y,steps=Math.max(Math.abs(dx),Math.abs(dy));
-  if(steps<1||steps>LINE_REACH)return false;
-  if(rank==='banneret'&&!(dx===0||dy===0))return false;
-  if(rank==='arbalist'&&Math.abs(dx)!==Math.abs(dy))return false;
-  if(rank!=='banneret'&&rank!=='arbalist')return false;
-  const sx=Math.sign(dx),sy=Math.sign(dy);
-  for(let n=1;n<steps;n++)if(board[from.y+sy*n][from.x+sx*n])return false;
+  const path=lineGeometry(size,rank,from,to);if(!path)return false;
+  for(let n=1;n<path.steps;n++)if(board[from.y+path.sy*n][from.x+path.sx*n])return false;
   return true;
  }
- function routeOptions(state,to,owner=state?.player){
+ function sapperLineValid(state,from,to,owner){
+  const source=pieceAt(state,from);if(!source||source.owner!==owner||!lineActive(state,from,owner))return false;
+  const path=lineGeometry(state.size,source.rank,from,to);if(!path)return false;
+  let enemies=0;
+  for(let n=1;n<path.steps;n++){
+   const p=state.board[from.y+path.sy*n][from.x+path.sx*n];
+   if(!p)continue;
+   if(p.owner===owner||++enemies>1)return false;
+  }
+  const previous={x:to.x-path.sx,y:to.y-path.sy},blocker=pieceAt(state,previous);
+  return enemies===1&&Boolean(blocker)&&blocker.owner!==owner;
+ }
+ function cavalierJump(from,to){
+  const dx=Math.abs(to.x-from.x),dy=Math.abs(to.y-from.y);
+  return dx*dy===2&&(dx===1||dy===1);
+ }
+ function routeOptions(state,to,owner=state?.player,rank=null){
   if(!state||!inBounds(state.size,to)||state.board[to.y][to.x])return[];
   const found=[];
+  if(rank==='sapper'){
+   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
+    const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist')||!sapperLineValid(state,{x,y},to,owner))continue;
+    const path=lineGeometry(state.size,p.rank,{x,y},to);found.push({kind:'sapper',at:{x,y},over:{x:to.x-path.sx,y:to.y-path.sy}});
+   }
+   return found;
+  }
   for(const q of adjacent(to,state.size)){
    const p=state.board[q.y][q.x];if(p?.owner===owner)found.push({kind:'adjacent',at:q});
   }
   if(found.length)return found;
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
    const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist'))continue;
-   if(lineValid(state.board,state.size,p.rank,{x,y},to))found.push({kind:p.rank,at:{x,y}});
+   if(lineActive(state,{x,y},owner)&&lineValid(state.board,state.size,p.rank,{x,y},to))found.push({kind:p.rank,at:{x,y}});
   }
+  if(rank==='cavalier')for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)
+   if(state.board[y][x]?.owner===owner&&cavalierJump({x,y},to))found.push({kind:'cavalier',at:{x,y}});
   return found;
  }
  function canPlace(state,rank,to,owner=state?.player,via=null){
@@ -103,32 +136,50 @@
   if(state.reserves[owner]?.[rank]<=0)return false;
   if(via){
    if(via.kind==='adjacent'){
-    const p=pieceAt(state,via.at);return p?.owner===owner&&Math.abs(via.at.x-to.x)+Math.abs(via.at.y-to.y)===1;
+    const p=pieceAt(state,via.at);return rank!=='sapper'&&p?.owner===owner&&Math.abs(via.at.x-to.x)+Math.abs(via.at.y-to.y)===1;
    }
    if(via.kind==='banneret'||via.kind==='arbalist'){
-    const p=pieceAt(state,via.at);return p?.owner===owner&&p.rank===via.kind&&lineValid(state.board,state.size,via.kind,via.at,to);
+    const p=pieceAt(state,via.at);return rank!=='sapper'&&p?.owner===owner&&p.rank===via.kind&&lineActive(state,via.at,owner)&&lineValid(state.board,state.size,via.kind,via.at,to);
    }
+   if(via.kind==='sapper')return rank==='sapper'&&sapperLineValid(state,via.at,to,owner);
+   if(via.kind==='cavalier')return rank==='cavalier'&&pieceAt(state,via.at)?.owner===owner&&cavalierJump(via.at,to);
    return false;
   }
-  return routeOptions(state,to,owner).length>0;
+  return routeOptions(state,to,owner,rank).length>0;
  }
- function placementTargets(state,owner=state?.player){
+ function placementTargets(state,owner=state?.player,rank=null){
   if(!state||state.result||state.keepOpening)return[];
   const out=new Map(),add=(p,via)=>{
    if(!inBounds(state.size,p)||state.board[p.y][p.x])return;
    const k=p.x+','+p.y,prior=out.get(k);
-   if(!prior||via.kind==='adjacent'&&prior.kind!=='adjacent')out.set(k,{to:copy(p),via:{kind:via.kind,at:copy(via.at)}});
+   if(!prior||via.kind==='adjacent'&&prior.kind!=='adjacent')out.set(k,{to:copy(p),via:{kind:via.kind,at:copy(via.at),...(via.over?{over:copy(via.over)}:{})}});
   };
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
    const piece=state.board[y][x];if(piece?.owner!==owner)continue;
-   for(const p of adjacent({x,y},state.size))add(p,{kind:'adjacent',at:{x,y}});
-   if(piece.rank!=='banneret'&&piece.rank!=='arbalist')continue;
+   if(rank!=='sapper')for(const p of adjacent({x,y},state.size))add(p,{kind:'adjacent',at:{x,y}});
+   if(rank==='cavalier'){
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+     const p={x:x+dx,y:y+dy};if(cavalierJump({x,y},p))add(p,{kind:'cavalier',at:{x,y}});
+    }
+   }
+   if(piece.rank!=='banneret'&&piece.rank!=='arbalist'||!lineActive(state,{x,y},owner))continue;
    const dirs=piece.rank==='banneret'?ORTHO:DIAG;
-   for(const [dx,dy]of dirs)for(let n=1;n<=LINE_REACH;n++){
-    const p={x:x+dx*n,y:y+dy*n};if(!inBounds(state.size,p)||state.board[p.y][p.x])break;
-    add(p,{kind:piece.rank,at:{x,y}});
+   for(const [dx,dy]of dirs){let crossedEnemy=null;
+    for(let n=1;n<=LINE_REACH;n++){
+     const p={x:x+dx*n,y:y+dy*n};if(!inBounds(state.size,p))break;
+     const obstruction=state.board[p.y][p.x];
+     if(!obstruction){
+      if(rank!=='sapper'&&!crossedEnemy)add(p,{kind:piece.rank,at:{x,y}});
+      else if(rank==='sapper'&&crossedEnemy){add(p,{kind:'sapper',at:{x,y},over:crossedEnemy});break;}
+      continue;
+     }
+     if(rank==='sapper'&&!crossedEnemy&&obstruction.owner!==owner){crossedEnemy={x:p.x,y:p.y};continue;}
+     break;
+    }
    }
   }
+  if(rank==='sapper')return[...out.values()].filter(item=>item.via.kind==='sapper');
+  if(rank&&rank!=='cavalier')return[...out.values()].filter(item=>item.via.kind==='adjacent'||item.via.kind==='banneret'||item.via.kind==='arbalist');
   return[...out.values()];
  }
  function captureReady(board,size,group,attacker){
@@ -156,13 +207,20 @@
    }
    if(touch.size===1)score[touch.values().next().value].territory+=region.length;
   }
-  score[1].total=score[1].occupied+score[1].territory;
-  score[2].total=score[2].occupied+score[2].territory+KOMI;
+  // Territory scoring counts only empty, single-color regions. Occupied
+  // intersections are tracked for display but do not add points.
+  score[1].total=score[1].territory;
+  score[2].total=score[2].territory+KOMI;
   return score;
  }
  function finishByScore(state,reason){
   const score=scoreBoard(state),winner=score[1].total===score[2].total?0:score[1].total>score[2].total?1:2;
   state.result={winner,reason,score};return state;
+ }
+ function finishByCrownhold(state,winner){
+  const score=scoreBoard(state);
+  state.result={winner,reason:'Crownhold captured — immediate victory.',score,by:'crownhold'};
+  return state;
  }
  function cloneState(state,speculative){
   return{...state,board:cloneBoard(state.board),reserves:cloneReserves(state.reserves),
@@ -221,6 +279,7 @@
   next.consecutivePasses=0;next.koBan=beforeKey;next.player=other(actor);next.ply++;
   next.last={action:copyAction(action),captured};
   if(!options.speculative)next.history.push({player:actor,action:copyAction(action),captured});
+  if(captured.some(piece=>piece.rank==='keep'))finishByCrownhold(next,actor);
   return next;
  }
  function legalPlacements(state,rank){
@@ -229,7 +288,7 @@
   if(state.keepOpening)return[];
   if(!state.reserves[state.player][rank])return[];
   const out=[];
-  for(const item of placementTargets(state,state.player)){
+  for(const item of placementTargets(state,state.player,rank)){
    const action={type:'place',rank,to:item.to,via:item.via},next=apply(state,action);
    if(next)out.push({to:item.to,via:item.via});
   }
@@ -247,6 +306,6 @@
  return Object.freeze({SIZES,RANKS,RESERVE,LINE_REACH,KOMI,ORTHO,DIAG,
   levySupply,reservesForSize,standardKeeps,normalizeKeeps,initial:makeState,
   boardKey,positionKey:state=>JSON.stringify([boardKey(state.board),state.reserves[1],state.reserves[2],state.player,state.keepOpening,state.keepPlacements]),
-  adjacent,pieceAt,groupAt,liberties,groups,routeOptions,canPlace,placementTargets,
+  adjacent,pieceAt,groupAt,liberties,groups,lineActive,routeOptions,canPlace,placementTargets,
   captureReady,score:scoreBoard,apply,legalPlacements,legalKeepPlacements,coord,other,inBounds});
 });

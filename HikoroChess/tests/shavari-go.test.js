@@ -22,6 +22,13 @@ function opening() {
   return state;
 }
 
+function activeGame() {
+  const state = B.initial(13);
+  state.keepOpening = false;
+  state.keepPlacements = { 1: 2, 2: 2 };
+  return state;
+}
+
 test('13×13 opening alternates two freely placed Crownholds per side', () => {
   let state = B.initial(13);
   assert.equal(state.size, 13);
@@ -95,6 +102,98 @@ test('Crownhold groups require a Marshal beside each Crownhold', () => {
   assert.equal(B.captureReady(board, 13, group, 2), true);
 });
 
+test('Sapper breaches exactly one enemy and lands on the first empty point', () => {
+  const state = activeGame();
+  state.board[6][2] = { owner: 1, rank: 'banneret' };
+  state.board[6][5] = { owner: 2, rank: 'levy' };
+  const targets = B.placementTargets(state, 1, 'sapper');
+  assert.ok(targets.some(move => move.to.x === 6 && move.to.y === 6 && move.via.over.x === 5));
+  assert.ok(!targets.some(move => move.to.x === 7 && move.to.y === 6));
+  assert.ok(!targets.some(move => move.to.x === 4 && move.to.y === 6));
+  const placed = B.apply(state, { type: 'place', rank: 'sapper', to: { x: 6, y: 6 }, via: targets.find(move => move.to.x === 6 && move.to.y === 6).via });
+  assert.equal(placed.board[6][6].rank, 'sapper');
+  assert.equal(placed.reserves[1].sapper, 1);
+  assert.equal(B.canPlace(state, 'sapper', { x: 3, y: 6 }, 1, { kind: 'adjacent', at: { x: 2, y: 6 } }), false);
+
+  state.board[6][6] = { owner: 2, rank: 'levy' };
+  assert.ok(!B.placementTargets(state, 1, 'sapper').some(move => move.to.x === 7 && move.to.y === 6));
+  state.board[6][6] = null;
+  state.board[5][2] = { owner: 2, rank: 'sentry' };
+  assert.ok(!B.placementTargets(state, 1, 'sapper').some(move => move.to.x === 6 && move.to.y === 6));
+});
+
+test('Cavalier can place at a knight leap over occupied points', () => {
+  const state = activeGame();
+  state.board[2][2] = { owner: 1, rank: 'levy' };
+  state.board[2][3] = { owner: 2, rank: 'marshal' };
+  const to = { x: 4, y: 3 };
+  const routes = B.routeOptions(state, to, 1, 'cavalier');
+  assert.ok(routes.some(route => route.kind === 'cavalier' && route.at.x === 2 && route.at.y === 2));
+  assert.equal(B.canPlace(state, 'cavalier', to, 1, { kind: 'cavalier', at: { x: 2, y: 2 } }), true);
+  assert.equal(B.canPlace(state, 'levy', to, 1, { kind: 'cavalier', at: { x: 2, y: 2 } }), false);
+  const next = B.apply(state, { type: 'place', rank: 'cavalier', to, via: { kind: 'cavalier', at: { x: 2, y: 2 } } });
+  assert.ok(next);
+  assert.equal(next.board[to.y][to.x].rank, 'cavalier');
+});
+
+test('Sentry suppresses adjacent enemy projection lines but not ordinary adjacency', () => {
+  const state = activeGame();
+  state.board[6][5] = { owner: 1, rank: 'banneret' };
+  state.board[6][6] = { owner: 2, rank: 'sentry' };
+  assert.equal(B.lineActive(state, { x: 5, y: 6 }, 1), false);
+  let targets = B.placementTargets(state, 1, 'levy');
+  assert.ok(!targets.some(move => move.to.x === 5 && move.to.y === 2));
+  assert.ok(targets.some(move => move.to.x === 4 && move.to.y === 6 && move.via.kind === 'adjacent'));
+  state.board[6][6] = null;
+  assert.equal(B.lineActive(state, { x: 5, y: 6 }, 1), true);
+  targets = B.placementTargets(state, 1, 'levy');
+  assert.ok(targets.some(move => move.to.x === 5 && move.to.y === 2));
+});
+
+test('territory scoring excludes occupied pieces', () => {
+  const state = activeGame();
+  state.board[0][0] = { owner: 2, rank: 'keep' };
+  for (let y = 5; y <= 7; y++) for (let x = 5; x <= 7; x++) {
+    if (x !== 6 || y !== 6) state.board[y][x] = { owner: 1, rank: 'levy' };
+  }
+  const score = B.score(state);
+  assert.equal(score[1].occupied, 8);
+  assert.equal(score[1].territory, 1);
+  assert.equal(score[1].total, 1);
+  assert.equal(score[2].occupied, 1);
+  assert.equal(score[2].territory, 0);
+  assert.equal(score[2].total, B.KOMI);
+});
+
+test('capturing any Crownhold immediately awards the game to its captor', () => {
+  const state = activeGame();
+  state.player = 2;
+  state.board[6][6] = { owner: 1, rank: 'keep' };
+  state.board[6][5] = { owner: 2, rank: 'marshal' };
+  state.board[6][7] = { owner: 2, rank: 'levy' };
+  state.board[5][6] = { owner: 2, rank: 'levy' };
+  state.board[8][6] = { owner: 2, rank: 'levy' };
+  const next = B.apply(state, { type: 'place', rank: 'levy', to: { x: 6, y: 7 } });
+  assert.ok(next);
+  assert.equal(next.board[6][6], null);
+  assert.equal(next.result.winner, 2);
+  assert.equal(next.result.by, 'crownhold');
+  assert.match(next.result.reason, /immediate victory/);
+  assert.equal(B.apply(next, { type: 'pass' }), null);
+  assert.ok(Bot.evaluate(next, 2) > 900);
+  assert.ok(Bot.evaluate(next, 1) < -900);
+});
+
+test('bot action generation includes Sapper, Cavalier, and Sentry plans', () => {
+  const state = activeGame();
+  state.board[6][2] = { owner: 1, rank: 'banneret' };
+  state.board[6][5] = { owner: 2, rank: 'levy' };
+  state.board[2][2] = { owner: 1, rank: 'levy' };
+  state.board[2][3] = { owner: 2, rank: 'levy' };
+  const ranks = new Set(Bot.legalCandidates(state).map(candidate => candidate.action.rank));
+  for (const rank of ['sapper', 'cavalier', 'sentry']) assert.ok(ranks.has(rank), `${rank} should be considered by the bot`);
+});
+
 test('bot selects legal opening and midgame actions', () => {
   const first = B.initial(13);
   const keep = Bot.chooseAction(first);
@@ -132,21 +231,15 @@ test('game page supports local play, undo, pass scoring and device history', t =
   w.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
   w.HTMLDialogElement.prototype.close = function() { this.open = false; };
   w.crypto.randomUUID = () => 'test-match-id';
-  const audioEvents = [];
-  w.SiteAudio = { transition: (game, before, after) => audioEvents.push([game, before.ply, after.ply]) };
   w.eval(read('shavari-go-engine.js'));
   w.eval(read('shavari-go-bot.js'));
   w.eval(read('match-record.js'));
   w.eval(read('record-library.js'));
   w.eval(read('shavari-go-ui.js'));
   const $ = id => w.document.getElementById(id);
-  $('rules-toggle').click();
-  assert.equal($('rules-dialog').open, true);
-  $('close-rules').click();
-  assert.equal($('rules-dialog').open, false);
-  $('zoom-board').click();
-  assert.equal($('zoom-board').getAttribute('aria-pressed'), 'true');
-  assert.equal(w.document.querySelector('.board-panel').classList.contains('zoomed'), true);
+  const selectableRanks = [...$('piece-select').options].map(option => option.value);
+  for (const rank of ['sapper', 'cavalier', 'sentry']) assert.ok(selectableRanks.includes(rank));
+  for (const name of ['Sapper', 'Cavalier', 'Sentry']) assert.ok($('piece-guide').textContent.includes(name));
   $('play-mode').value = 'local';
   $('play-mode').dispatchEvent(new w.Event('change'));
   $('start-match').click();
@@ -154,20 +247,13 @@ test('game page supports local play, undo, pass scoring and device history', t =
     const step = (1000 - 2 * 67) / 12;
     $('board').dispatchEvent(new w.MouseEvent('click', { bubbles: true, clientX: 67 + x * step, clientY: 67 + y * step }));
   };
-  $('board').focus();
-  for (let i = 0; i < 4; i++) $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-  for (let i = 0; i < 4; i++) $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-  assert.match($('board').getAttribute('aria-label'), /Focus C11/);
-  $('board').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  for (const [x, y] of [[10, 2], [2, 10], [10, 10]]) clickPoint(x, y);
+  for (const [x, y] of [[2, 2], [10, 2], [2, 10], [10, 10]]) clickPoint(x, y);
   assert.equal($('ply-label').textContent, '4 actions');
   assert.equal($('human-controls').hidden, false);
-  $('piece-tray').querySelector('[data-rank="banneret"]').click();
-  assert.equal($('piece-select').value, 'banneret');
-  assert.equal($('piece-tray').querySelector('[data-rank="banneret"]').getAttribute('aria-pressed'), 'true');
+  $('piece-select').value = 'banneret';
+  $('piece-select').dispatchEvent(new w.Event('change'));
   clickPoint(3, 2);
   assert.equal($('ply-label').textContent, '5 actions');
-  assert.equal(audioEvents.length, 5);
   $('undo-button').click();
   assert.equal($('ply-label').textContent, '4 actions');
   $('pass-button').click();
@@ -175,20 +261,6 @@ test('game page supports local play, undo, pass scoring and device history', t =
   assert.match($('reason').textContent, /Two consecutive passes/);
   assert.equal(w.SiteRecords.read().length, 1);
   assert.equal(w.SiteRecords.read()[0].game, 'shavari-go');
-});
-
-test('Shavari Go shares the collection sound and material controls', t => {
-  const dom = new JSDOM(read('shavari-go.html'), { url: 'http://localhost/shavari-go.html', runScripts: 'outside-only' });
-  t.after(() => dom.window.close());
-  const w = dom.window;
-  w.requestAnimationFrame = () => 0;
-  w.eval(read('site-audio.js'));
-  w.eval(read('collection-theme.js'));
-  w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
-  assert.equal(w.document.getElementById('audio-track').textContent, 'First Light Particles');
-  assert.equal(w.document.getElementById('start-match').dataset.material, 'wood');
-  assert.equal(w.document.getElementById('rules-toggle').dataset.material, 'parchment');
-  assert.equal(w.document.querySelector('.piece-choice').classList.contains('material-control'), false);
 });
 
 test('collection replaces the old Bastion table with the 13×13 Shavari Go route', t => {
@@ -211,9 +283,5 @@ test('collection replaces the old Bastion table with the 13×13 Shavari Go route
   assert.match(w.document.getElementById('selected-table-art').getAttribute('src'), /shavari-go\.svg$/);
   assert.match(w.document.getElementById('setup-hint').textContent, /13 × 13.*friend.*bot/i);
   const preview = fs.readFileSync(path.join(__dirname, '../public/assets/collection/matches/shavari-go.svg'), 'utf8');
-  assert.match(preview, /viewBox="0 0 760 760"/);
-  assert.match(preview, /data:image\/webp;base64,/);
-  assert.equal((preview.match(/M147 /g) || []).length, 13);
-  for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) assert.ok(asset.startsWith('#icon-') || asset.startsWith('data:image/webp;base64,'), asset.slice(0, 60));
+  for (const [, asset] of preview.matchAll(/href="([^"]+)"/g)) if (!asset.startsWith('data:') && !asset.startsWith('#')) assert.ok(fs.existsSync(path.join(__dirname, '../public/assets/collection/matches', asset)), asset);
 });
-

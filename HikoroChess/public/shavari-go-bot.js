@@ -7,10 +7,10 @@
  'use strict';
  if(!B)throw new Error('ShavariGo must load before ShavariGoBot.');
  const ORTHO=[[-1,0],[1,0],[0,-1],[0,1]],
-  MATERIAL={marshal:.18,warden:.08,banneret:.08,arbalist:.08,levy:0,keep:0},
-  INFLUENCE={keep:.66,marshal:1.28,warden:1.05,banneret:.83,arbalist:.83,levy:.48},
-  RADIUS={keep:3.3,marshal:3.7,warden:3.25,banneret:2.7,arbalist:2.7,levy:2.45},
-  RESERVE_WEIGHT={marshal:.34,warden:.3,banneret:.28,arbalist:.28,levy:.025};
+  MATERIAL={marshal:.18,warden:.08,banneret:.08,arbalist:.08,sapper:.17,cavalier:.16,sentry:.18,levy:0,keep:0},
+  INFLUENCE={keep:.66,marshal:1.28,warden:1.05,banneret:.83,arbalist:.83,sapper:.7,cavalier:.95,sentry:.9,levy:.48},
+  RADIUS={keep:3.3,marshal:3.7,warden:3.25,banneret:2.7,arbalist:2.7,sapper:2.6,cavalier:3.05,sentry:2.9,levy:2.45},
+  RESERVE_WEIGHT={marshal:.34,warden:.3,banneret:.28,arbalist:.28,sapper:.28,cavalier:.28,sentry:.3,levy:.025};
  const profiles={
   builder:{name:'Moss · Builder',influence:1.28,liberties:1,attack:.76,network:1.35,security:1.02,rootBeam:5,replyBeam:4},
   tactician:{name:'Slate · Tactician',influence:.83,liberties:1.3,attack:1.42,network:.82,security:1.18,rootBeam:6,replyBeam:5}
@@ -36,7 +36,7 @@
  function sourceOptions(state,owner){
   let total=0;
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
-   const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist'))continue;
+   const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist')||!B.lineActive(state,{x,y},owner))continue;
    const dirs=p.rank==='banneret'?ORTHO:[[-1,-1],[1,-1],[-1,1],[1,1]];
    for(const [dx,dy]of dirs)for(let n=1;n<=B.LINE_REACH;n++){
     const nx=x+dx*n,ny=y+dy*n;if(!inside(state.size,nx,ny)||state.board[ny][nx])break;
@@ -49,7 +49,7 @@
  function hasPlacementRoute(state,target,owner){
   if(B.adjacent(target,state.size).some(q=>state.board[q.y][q.x]?.owner===owner))return true;
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
-   const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist'))continue;
+   const p=state.board[y][x];if(p?.owner!==owner||(p.rank!=='banneret'&&p.rank!=='arbalist')||!B.lineActive(state,{x,y},owner))continue;
    const dx=target.x-x,dy=target.y-y,steps=Math.max(Math.abs(dx),Math.abs(dy));
    if(steps<1||steps>B.LINE_REACH)continue;
    if(p.rank==='banneret'&&!(dx===0||dy===0))continue;
@@ -58,7 +58,7 @@
    for(let n=1;n<steps;n++)if(state.board[y+sy*n][x+sx*n]){clear=false;break;}
    if(clear)return true;
   }
-  return false;
+  return B.RANKS.some(rank=>rank!=='keep'&&(state.reserves[owner]?.[rank]||0)>0&&B.routeOptions(state,target,owner,rank).length>0);
  }
  function reserveUtility(state,owner){
   let value=0;
@@ -76,10 +76,10 @@
   if(state.result)return false;
   const libs=B.liberties(state.board,state.size,group);if(libs.size!==1)return false;
   const [encoded]=libs, [x,y]=encoded.split(',').map(Number),target={x,y},position={...state,player:attacker};
-  const routes=B.routeOptions(position,target,attacker);if(!routes.length)return false;
   for(const rank of B.RANKS){
    if(rank==='keep'||(state.reserves[attacker]?.[rank]||0)<=0)continue;
-   for(const via of routes){
+   for(const {kind,at,over} of B.routeOptions(position,target,attacker,rank)){
+    const via={kind,at,over};
     const next=B.apply(position,{type:'place',rank,to:target,via},{speculative:true});
     if(next?.last?.captured?.some(c=>group.some(p=>p.x===c.at.x&&p.y===c.at.y)))return true;
    }
@@ -120,7 +120,10 @@
   return pressure;
  }
  function evaluate(state,perspective,config={}){
-  if(state.result?.score)return state.result.score[perspective].total-state.result.score[other(perspective)].total;
+  if(state.result){
+   if(state.result.by==='crownhold'||state.result.reason==='Resignation')return state.result.winner===perspective?1000:state.result.winner===other(perspective)?-1000:0;
+   if(state.result.score)return state.result.score[perspective].total-state.result.score[other(perspective)].total;
+  }
   const rival=other(perspective),ownProfile=profileFor(config,perspective),enemyProfile=profileFor(config,rival),
    scores=B.score(state),ownField=fieldFor(state,perspective),enemyField=fieldFor(state,rival);
   let value=scores[perspective].total-scores[rival].total;
@@ -154,25 +157,30 @@
    const action={type:'place',rank:'keep',to},next=B.apply(state,action,{speculative:true});return{action,next};
   }).filter(candidate=>candidate.next);
   const owner=state.player,actions=[];
-  for(const {to,via}of B.placementTargets(state,owner))for(const rank of B.RANKS){
+  for(const rank of B.RANKS){
    if(rank==='keep'||!state.reserves[owner][rank])continue;
-   const action={type:'place',rank,to,via},next=B.apply(state,action,{speculative:true});
-   if(next)actions.push({action,next});
+   for(const {to,via}of B.placementTargets(state,owner,rank)){
+    const action={type:'place',rank,to,via},next=B.apply(state,action,{speculative:true});
+    if(next)actions.push({action,next});
+   }
   }
   const pass=B.apply(state,{type:'pass'},{speculative:true});if(pass)actions.push({action:{type:'pass'},next:pass});
   return actions;
  }
  function moveReason(state,action,next){
-  if(action.type==='pass')return'No placement is worth its cost in area or tactical position.';
+  if(action.type==='pass')return'No placement is worth its cost in territory or tactical position.';
   const rank=action.rank,coord=B.coord(state,action.to),captured=next.last?.captured||[];
   if(rank==='keep')return`Opens with a Crownhold at ${coord}; this stronghold anchors later placements.`;
   if(captured.some(p=>p.rank==='keep'))return`Siege succeeds at ${coord}; an enemy Crownhold group is captured.`;
   if(captured.length)return`Captures ${captured.length} piece${captured.length===1?'':'s'} at ${coord}.`;
-  if(action.via?.kind==='banneret'||action.via?.kind==='arbalist')return`Extends a ${action.via.kind==='banneret'?'Standard-Bearer':'Crossbowman'} line with ${({marshal:'High Marshal',warden:'Royal Guard',levy:'Squire',banneret:'Standard-Bearer',arbalist:'Crossbowman'})[rank]||rank} at ${coord}.`;
+  if(rank==='sapper')return`Saps through one enemy piece and places beyond it at ${coord}.`;
+  if(rank==='cavalier'&&action.via?.kind==='cavalier')return`Uses a Cavalier's knight leap to establish a foothold at ${coord}.`;
+  if(rank==='sentry')return`Places a Sentry at ${coord} to silence nearby enemy projection lines.`;
+  if(action.via?.kind==='banneret'||action.via?.kind==='arbalist')return`Extends a ${action.via.kind==='banneret'?'Standard-Bearer':'Crossbowman'} line with ${({marshal:'High Marshal',warden:'Royal Guard',levy:'Squire',banneret:'Standard-Bearer',arbalist:'Crossbowman',sapper:'Sapper',cavalier:'Cavalier',sentry:'Sentry'})[rank]||rank} at ${coord}.`;
   if(rank==='marshal')return`Places a High Marshal at ${coord} to threaten or complete a siege.`;
   if(rank==='warden')return`Places a Royal Guard at ${coord} to protect its connected group.`;
   if(rank==='banneret'||rank==='arbalist')return`Places a ${rank==='banneret'?'Standard-Bearer':'Crossbowman'} at ${coord} to open a new placement line.`;
-  return`Places a Squire at ${coord} to extend the boundary and claim space.`;
+  return`Places a Squire at ${coord} to extend the boundary and claim territory.`;
  }
  function tieBreak(state,action){
   const str=B.boardKey(state.board)+'|'+action.type+'|'+(action.rank||'')+'|'+(action.to?`${action.to.x},${action.to.y}`:'pass');
@@ -203,11 +211,12 @@
   return best?{type:'place',rank:'keep',to:best}:null;
  }
  function compare(a,b){return b.value-a.value||a.tie-b.tie;}
- const PIECE_SCORE={keep:9,marshal:2.8,warden:2.5,banneret:2.2,arbalist:2.2,levy:1.6};
+ const PIECE_SCORE={keep:9,marshal:2.8,warden:2.5,banneret:2.2,arbalist:2.2,sapper:2.8,cavalier:2.7,sentry:2.9,levy:1.6};
  const SOURCE_DIRS={banneret:ORTHO,arbalist:[[-1,-1],[1,-1],[-1,1],[1,1]]};
  function pieceCount(state,owner){let n=0;for(const row of state.board)for(const p of row)if(p?.owner===owner&&p.rank!=='keep')n++;return n;}
  function sourcePotential(board,size,at,rank,owner){
   let remote=0;const dirs=SOURCE_DIRS[rank]||[];
+  if(!B.lineActive({board,size},at,owner))return 0;
   for(const [dx,dy]of dirs)for(let n=1;n<=B.LINE_REACH;n++){
    const x=at.x+dx*n,y=at.y+dy*n;if(!inside(size,x,y)||board[y][x])break;
    const adjacentFriend=B.adjacent({x,y},size).some(q=>board[q.y][q.x]?.owner===owner);
@@ -222,6 +231,9 @@
   const edge=Math.min(p.x,p.y,state.size-1-p.x,state.size-1-p.y);
   let bias=edge===2?.72:edge===3?.52:edge===1?.28:edge===0?.08:edge===4?.18:0;
   if(action.via&&(action.via.kind==='banneret'||action.via.kind==='arbalist'))bias+=.32;
+  if(rank==='sapper')bias+=.75;
+  if(rank==='cavalier'&&action.via?.kind==='cavalier')bias+=.8;
+  if(rank==='sentry')bias+=.42;
   if(rank==='banneret'||rank==='arbalist'){
    const count=sourcePotential(next.board,next.size,p,rank,owner);
    bias+=2.45+Math.min(2.4,count*.22);
@@ -290,6 +302,9 @@
     const remote=sourcePotential(next.board,next.size,at,action.rank,mover);
     value+=Math.min(3.2,remote*.17)*profile.network;
    }
+   if(action.rank==='sapper')value+=1.1*profile.attack;
+   if(action.rank==='cavalier'&&action.via?.kind==='cavalier')value+=.85*profile.network;
+   if(action.rank==='sentry')value+=(sourceOptions(state,enemy)-sourceOptions(next,enemy))*.08*profile.attack;
    if(state.ply<2*state.size)value+=openingBias(state,action,next,profile);
   }
   return clamp(value,-24,24);
@@ -310,7 +325,7 @@
   const chosen=[],ids=new Set(),add=c=>{if(c&&!ids.has(actionKey(c.action))){ids.add(actionKey(c.action));chosen.push(c);}};
   // Preserve immediate captures, one strong option for every available rank, and pass.
   for(const c of candidates)if((c.next.last?.captured?.length||0)>0&&chosen.length<Math.min(5,limit))add(c);
-  for(const rank of ['banneret','arbalist','marshal','warden','levy'])add(candidates.find(c=>c.action.rank===rank));
+  for(const rank of ['banneret','arbalist','marshal','warden','sapper','cavalier','sentry','levy'])add(candidates.find(c=>c.action.rank===rank));
   const pass=candidates.find(c=>c.action.type==='pass');
   for(const c of candidates){if(chosen.length>=limit-1)break;add(c);}
   if(pass)add(pass);
@@ -390,9 +405,9 @@
  }
  function opponentCanImproveAfterPass(state,owner,config){
   const rival=other(owner),reply={...state,player:rival,koBan:null},before=B.score(state),start=before[rival].total-before[owner].total,
-   targets=B.placementTargets(reply,rival),ranks=['levy','marshal'].filter(rank=>(reply.reserves[rival]?.[rank]||0)>0),
+   ranks=B.RANKS.filter(rank=>rank!=='keep'&&(reply.reserves[rival]?.[rank]||0)>0),
    context={own:fieldFor(reply,rival),enemy:fieldFor(reply,owner),enemyProfile:profileFor(config,owner)};
-  for(const item of targets)for(const rank of ranks){
+  for(const rank of ranks)for(const item of B.placementTargets(reply,rival,rank)){
    const action={type:'place',rank,to:item.to,via:item.via},next=B.apply(reply,action,{speculative:true});if(!next)continue;
    const score=B.score(next),advantage=score[rival].total-score[owner].total;
    if(advantage>start+.001)return true;
@@ -447,7 +462,7 @@
   let chosenAction=best.action;
   if(best.action.type==='pass'&&bestLegal&&bestLegal.value>pass.value+passMargin)chosenAction=bestLegal.action;
   else if(pass&&bestLegal&&bestLegal.value<=pass.value+passMargin&&best.mean<Math.tanh((pass.value-baseline)/Math.max(11,state.size*.88))+0.09)chosenAction={type:'pass'};
-  // A pass is premature if the opponent can still increase its exact area score in one reply.
+  // A pass is premature if the opponent can still increase its exact territory score in one reply.
   let passDeferred=false;
   if(chosenAction.type==='pass'&&bestLegal&&opponentCanImproveAfterPass(state,actor,config)){chosenAction=bestLegal.action;passDeferred=true;}
   const next=B.apply(state,chosenAction,{speculative:true})||B.apply(state,{type:'pass'},{speculative:true});

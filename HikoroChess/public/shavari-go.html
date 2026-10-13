@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#251d15">
 <title>Shavari Go · Hikoro collection</title>
 <script src="/i18n-catalog.js?v=20261008-bot-cuban-translations"></script>
-<script src="/shavari-go-i18n.js?v=20261012-royal-table"></script>
+<script src="/shavari-go-i18n.js?v=20261013-v62"></script>
 <script src="/i18n.js?v=20261008-dashboard"></script>
 <link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
 <link rel="stylesheet" href="site-audio.css">
 <script src="site-audio.js?v=20261012-shavari-table" defer></script>
 <link rel="stylesheet" href="collection-theme.css?v=20261012-shavari-table">
-<script src="collection-theme.js?v=20261012-shavari-table" defer></script>
+<script src="collection-theme.js?v=20261013-shavari-go-v62" defer></script>
 <link rel="stylesheet" href="/accounts.css">
 <script src="/vendor/supabase.js"></script>
 <script src="/player-identity.js"></script>
@@ -22,7 +22,7 @@
 <script src="table-companion.js"></script>
 <script src="experience.js" defer></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
-<link rel="stylesheet" href="shavari-go.css?v=20261013-mobile-board">
+<link rel="stylesheet" href="shavari-go.css?v=20261013-v62">
 </head>
 <body class="shavari-go-table" data-audio-theme="shavari-go">
 <header class="site-header">
@@ -34,7 +34,7 @@
  <section class="table-intro" aria-labelledby="table-title">
   <p class="eyebrow">COURT · SIEGE · TERRITORY</p>
   <h1 id="table-title">Shavari Go</h1>
-  <p>Place your court. Extend its lines. Surround rival groups and claim the realm.</p>
+  <p>Place your court. Extend its lines, breach enemy lines, and silence rival standards. Win by claiming territory or capturing a Crownhold.</p>
  </section>
  <div class="arena">
   <section class="board-area" aria-label="Shavari Go table">
@@ -85,7 +85,7 @@
    <section class="panel human-controls" id="human-controls" hidden aria-label="Your move">
     <div class="turn-line"><h2 id="human-control-title">Your move</h2><span class="move-count">Place one piece</span></div>
     <label class="visually-hidden" for="piece-select">Piece to place</label>
-    <select class="visually-hidden" id="piece-select"><option value="keep">Crownhold</option><option value="levy" selected>Squire</option><option value="marshal">High Marshal</option><option value="warden">Royal Guard</option><option value="banneret">Standard-Bearer</option><option value="arbalist">Crossbowman</option></select>
+    <select class="visually-hidden" id="piece-select"><option value="keep">Crownhold</option><option value="levy" selected>Squire</option><option value="marshal">High Marshal</option><option value="warden">Royal Guard</option><option value="banneret">Standard-Bearer</option><option value="arbalist">Crossbowman</option><option value="sapper">Sapper</option><option value="cavalier">Cavalier</option><option value="sentry">Sentry</option></select>
     <div class="piece-tray" id="piece-tray" role="group" aria-label="Choose a piece to place">
      <button class="piece-choice" type="button" data-rank="keep"><img src="assets/shavari-go/crownhold.svg" alt=""><span>Crownhold</span><small></small></button>
      <button class="piece-choice" type="button" data-rank="levy"><img src="assets/shavari-go/squire.svg" alt=""><span>Squire</span><small></small></button>
@@ -93,6 +93,9 @@
      <button class="piece-choice" type="button" data-rank="warden"><img src="assets/shavari-go/guard.svg" alt=""><span>Guard</span><small></small></button>
      <button class="piece-choice" type="button" data-rank="banneret"><img src="assets/shavari-go/standard.svg" alt=""><span>Standard</span><small></small></button>
      <button class="piece-choice" type="button" data-rank="arbalist"><img src="assets/shavari-go/crossbow.svg" alt=""><span>Crossbow</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="sapper"><img src="assets/shavari-go/sapper.svg" alt=""><span>Sapper</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="cavalier"><img src="assets/shavari-go/cavalier.svg" alt=""><span>Cavalier</span><small></small></button>
+     <button class="piece-choice" type="button" data-rank="sentry"><img src="assets/shavari-go/sentry.svg" alt=""><span>Sentry</span><small></small></button>
     </div>
     <p class="subtle" id="human-status" aria-live="polite"></p>
     <button id="pass-button" class="quiet-button" type="button">Pass turn</button>
@@ -108,29 +111,32 @@
     </div>
    </section>
    <section class="panel history-panel"><div class="turn-line"><h2>Move chronicle</h2><span class="move-count" id="move-count">0 actions</span></div><ol id="move-list" class="move-list" aria-label="Recent moves"></ol></section>
-   <details class="panel bot-notes" id="rules-details"><summary>Full rules &amp; bot thinking</summary><p><strong>Object &amp; score.</strong> Take more area than your opponent. Each occupied intersection is one point. Empty connected regions touching only one side also score for that side; neutral regions score neither. White gets 7.5 komi. Two consecutive passes end the game. Repeating the immediately previous board position is forbidden.</p><p><strong>Opening.</strong> Black and White each place two Crownholds on any empty points, alternating Black–White–Black–White. Black takes the first regular turn after the four Crownholds are placed. Bots choose their own Crownhold positions.</p><p><strong>Placement &amp; capture.</strong> On each regular turn place one piece on an empty point orthogonally beside a friendly piece, or along any open ray from a friendly Standard-Bearer (orthogonal) or Crossbowman (diagonal). Rays pass across empty points and stop at the board edge or first occupied point. Same-side pieces connect orthogonally. A group with no adjacent empty points is surrounded and captured; suicide is illegal unless the move captures first.</p><p><strong>Siege.</strong> A group containing one or more Crownholds may only be captured when an attacking High Marshal is orthogonally next to every Crownhold in the group. A group containing a Royal Guard may only be captured when an attacking High Marshal is orthogonally next to any member of that group. If both conditions apply, both must be met. Captured non-Crownholds return to reserve; Crownholds are permanently lost.</p><p><strong>Turns &amp; end.</strong> Pieces never move or stack. You may pass after the Crownhold opening. Two consecutive passes score the position. Resignation ends the match. Area score plus komi decides the winner.</p><p><strong>Moss · Builder.</strong> Values broad influence, safe connections, and expanding placement networks. <strong>Slate · Tactician.</strong> Searches more deeply around captures, Marshal siege threats, and vulnerable groups.</p><p class="subtle">The influence overlay helps read the board; it does not affect scoring.</p></details>
+   <details class="panel bot-notes" id="rules-details"><summary>Full rules &amp; bot thinking</summary><p><strong>Object &amp; score.</strong> Claim more territory. Only empty connected regions touching pieces of one side score for that side; regions touching both sides are neutral. Occupied intersections do not score, and captured pieces returning to reserve are not prisoners for scoring. White gets 7.5 komi. Two consecutive passes end scoring. Capturing a Crownhold or resignation ends immediately. Repeating the immediately previous board position is forbidden.</p><p><strong>Opening.</strong> Black and White each place two Crownholds on any empty points, alternating Black–White–Black–White. Black takes the first regular turn after the four Crownholds are placed. Bots choose their own Crownhold positions.</p><p><strong>Ordinary placement.</strong> Place one reserve piece on an empty point orthogonally beside a friendly piece or along an active ray from a friendly Standard-Bearer (orthogonal) or Crossbowman (diagonal). Rays pass through empty points and stop at the first occupied point. An enemy Sentry orthogonally beside either ray piece silences all of that piece’s long lines; adjacent placement remains legal.</p><p><strong>Special placements.</strong> A Sapper may be placed only on the first empty point immediately beyond exactly one enemy piece on an active friendly ray. It cannot cross a friendly piece or a second enemy. A Cavalier may use a normal route or make a chess-knight L placement from any friendly piece, ignoring intervening pieces. Each side has two Sappers, two Cavaliers, and two Sentries.</p><p><strong>Capture &amp; siege.</strong> Same-side pieces joined orthogonally form a group with adjacent empty intersections as liberties. A group with no liberties is captured; suicide is illegal unless the move first captures an enemy group. A Royal Guard group needs an attacking High Marshal beside any member. A group containing Crownholds needs a High Marshal beside every Crownhold it contains. Capturing any Crownhold immediately ends the game and wins for the attacker. Captured non-Crownholds return to their owner’s reserve; Crownholds are permanently lost.</p><p><strong>Turns &amp; end.</strong> Pieces never move or stack. You may pass after the Crownhold opening. Two consecutive passes score the position; resignation ends the match.</p><p><strong>Moss · Builder.</strong> Values broad influence, safe connections, and expanding placement networks. <strong>Slate · Tactician.</strong> Searches for captures, siege threats, Sapper breaches, Cavalier jumps, and Sentry line denial.</p><p class="subtle">The influence overlay helps read the board; it does not affect scoring.</p></details>
   </aside>
  </div>
  <details class="army-roster" id="piece-guide">
-  <summary><span>Meet the royal court</span><small>Six pieces · placement and siege abilities</small></summary>
+  <summary><span>Meet the royal court</span><small>Nine roles · placement, siege, and counterplay</small></summary>
   <div class="roster-grid">
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol keep"><img src="assets/shavari-go/crownhold.svg" alt=""></span><div><h3>Crownhold</h3><span>2 · opening strongholds</span></div></div><p>Choose two empty points. A surrounded Crownhold group needs an enemy Marshal beside every Crownhold to fall.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol keep"><img src="assets/shavari-go/crownhold.svg" alt=""></span><div><h3>Crownhold</h3><span>2 · opening strongholds</span></div></div><p>Choose two empty points. Its connected group needs an enemy Marshal beside every Crownhold to be captured. Capturing any Crownhold immediately wins the game.</p></article>
    <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol marshal"><img src="assets/shavari-go/marshal.svg" alt=""></span><div><h3>High Marshal</h3><span>4 · siege commander</span></div></div><p>Unlocks guarded captures. Touch any member of a Royal Guard group, or each Crownhold in a surrounded group.</p></article>
    <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol warden"><img src="assets/shavari-go/guard.svg" alt=""></span><div><h3>Royal Guard</h3><span>6 · guarded group</span></div></div><p>Its connected group resists a surround until an enemy Marshal touches any member of that group.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol banneret"><img src="assets/shavari-go/standard.svg" alt=""></span><div><h3>Standard-Bearer</h3><span>4 · orthogonal lines</span></div></div><p>Projects placement along continuous empty horizontal and vertical lines, stopping at the first occupied point.</p></article>
-   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol arbalist"><img src="assets/shavari-go/crossbow.svg" alt=""></span><div><h3>Crossbowman</h3><span>4 · diagonal lines</span></div></div><p>Projects placement along continuous empty diagonals, stopping at the first occupied point.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol banneret"><img src="assets/shavari-go/standard.svg" alt=""></span><div><h3>Standard-Bearer</h3><span>4 · orthogonal lines</span></div></div><p>Projects placement along open horizontal and vertical lines. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol arbalist"><img src="assets/shavari-go/crossbow.svg" alt=""></span><div><h3>Crossbowman</h3><span>4 · diagonal lines</span></div></div><p>Projects placement along open diagonals. An orthogonally adjacent enemy Sentry silences its projected lines, but not ordinary adjacent placement.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sapper"><img src="assets/shavari-go/sapper.svg" alt=""></span><div><h3>Sapper</h3><span>2 · breach placement</span></div></div><p>Place on the first empty point immediately beyond exactly one enemy on an active Standard-Bearer or Crossbowman line. Friendly pieces and a second enemy stop the breach.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol cavalier"><img src="assets/shavari-go/cavalier.svg" alt=""></span><div><h3>Cavalier</h3><span>2 · knight leap</span></div></div><p>May use any ordinary placement route or leap in a chess-knight L from any friendly piece, ignoring intervening pieces.</p></article>
+   <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol sentry"><img src="assets/shavari-go/sentry.svg" alt=""></span><div><h3>Sentry</h3><span>2 · silences lines</span></div></div><p>An enemy Standard-Bearer or Crossbowman orthogonally beside a Sentry loses its long placement lines. Those lines return if the Sentry is captured.</p></article>
    <article class="roster-card"><div class="roster-card-head"><span class="roster-symbol levy"><img src="assets/shavari-go/squire.svg" alt=""></span><div><h3>Squire</h3><span id="levy-count">169 · basic pieces</span></div></div><p>The plentiful basic piece. It can use the same friendly adjacency or projected line as every other rank.</p></article>
   </div>
  </details>
 </main>
-<footer class="game-footer">SHAVARI GO · 13 × 13 · <a href="credits.html">Artists &amp; credits</a> · Royal piece emblems from <a href="https://game-icons.net" rel="license">Game-icons.net</a> under CC BY 3.0.</footer>
-<dialog id="rules-dialog" aria-labelledby="rules-title"><div class="dialog-head"><p class="eyebrow">THE ROYAL TERRITORY TABLE</p><button id="close-rules" class="quiet-button" type="button">Close ×</button></div><h2 id="rules-title">How to play</h2><ol><li><strong>Open your court.</strong> Each player places two Crownholds on any empty intersections, alternating turns.</li><li><strong>Place a piece.</strong> After the opening, place next to one of your pieces or along an open line from a Standard-Bearer or Crossbowman.</li><li><strong>Surround a group.</strong> Remove a connected enemy group when it has no empty orthogonal neighbors. A Guard group needs an adjacent attacking Marshal; each Crownhold in a surrounded group needs its own adjacent attacking Marshal.</li><li><strong>Claim area.</strong> Pieces and empty enclosed intersections score one point each. White receives 7.5 komi. Two passes end the match.</li></ol><p>Pieces stay where placed. Tap a highlighted intersection after choosing a piece. On a phone, use <strong>Enlarge board</strong> for more precise placement.</p></dialog>
+<footer class="game-footer">SHAVARI GO · 13 × 13 · <a href="credits.html">Artists &amp; credits</a> · Six royal piece emblems from <a href="https://game-icons.net" rel="license">Game-icons.net</a> under CC BY 3.0; Sapper, Cavalier, and Sentry symbols are original SVGs.</footer>
+<dialog id="rules-dialog" aria-labelledby="rules-title"><div class="dialog-head"><p class="eyebrow">THE ROYAL TERRITORY TABLE</p><button id="close-rules" class="quiet-button" type="button">Close ×</button></div><h2 id="rules-title">How to play</h2><ol><li><strong>Open your court.</strong> Each player places two Crownholds on any empty intersections, alternating turns.</li><li><strong>Place a piece.</strong> After the opening, place beside a friendly piece or along an active Standard-Bearer or Crossbowman line. A Sapper breaches exactly one enemy and lands in the first empty point beyond it. A Cavalier can leap in a knight’s L from a friendly piece.</li><li><strong>Use the Sentry.</strong> A Sentry orthogonally beside an enemy Standard-Bearer or Crossbowman silences that piece’s long placement lines. It can still place next to a friendly piece.</li><li><strong>Surround a group.</strong> A group with no liberties is captured. A Guard group needs an adjacent attacking Marshal; each Crownhold in a surrounded group needs its own adjacent attacking Marshal. Capturing any Crownhold immediately wins.</li><li><strong>Claim territory.</strong> Only empty regions bordered by one side score; stones do not. White receives 7.5 komi. Two passes end the scoring game.</li></ol><p>Pieces stay where placed. Tap a highlighted intersection after choosing a piece. On a phone, use <strong>Enlarge board</strong> for more precise placement.</p></dialog>
 <dialog id="result-dialog" aria-labelledby="result-title"><h2 id="result-title">Match complete</h2><p id="result-copy"></p><button id="close-result" class="primary-button" type="button">Review the board</button></dialog>
-<script src="shavari-go-engine.js?v=20261012-v61"></script>
-<script src="match-record.js?v=20261012-shavari-go"></script>
+<script src="shavari-go-engine.js?v=20261013-v62"></script>
+<script src="match-record.js?v=20261013-shavari-go-v62"></script>
 <script src="record-library.js?v=20261012-shavari-go"></script>
-<script src="shavari-go-bot.js?v=20261012-v61"></script>
-<script src="shavari-go-ui.js?v=20261012-table-redesign"></script>
+<script src="shavari-go-bot.js?v=20261013-v62"></script>
+<script src="shavari-go-ui.js?v=20261013-v62"></script>
 </body>
 </html>
 

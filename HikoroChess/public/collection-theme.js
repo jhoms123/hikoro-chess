@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         shavari:{name:'Shavari chess',description:'Build formations, combine movements, and command the lotus court.',guide:'shavari.html?showRules=1',guideLabel:'Read the court’s rules →'},
         hikoruka:{name:'Hikorka chess',description:'Five heraldic roles. Eight pieces. Protect your Sovereign on a compact board.',guide:'hikoruka.html?showRules=1',guideLabel:'Meet the citadel’s company →'},
         go:{name:'Shield Go',description:'Place, leap, shield, and surround on a wooden 9 × 9 or 13 × 13 table.',guide:'go.html?showRules=1',guideLabel:'Learn stones, shields, and territory →'},
-        'shavari-go':{name:'Shavari Go',description:'Place a royal court, project open lines, and surround rival groups to claim territory.',guide:'shavari-go.html?showRules=1',guideLabel:'Learn the royal ranks, placement, siege, and scoring →'},
+        'shavari-go':{name:'Shavari Go',description:'Breach lines, silence enemy standards, and win by territory or Crownhold capture on a 13 × 13 board.',guide:'shavari-go.html?showRules=1',guideLabel:'Learn the royal ranks, special placements, siege, and scoring →'},
         academy:{name:'Hikoro Academy',description:'Learn real Hikoro movements in guided practice, then teach a friend on 8 × 8.',guide:'academy.html',guideLabel:'Begin guided practice →'}
     };
     const selector=document.getElementById('game-type-select');
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(matchMedia('(max-width:700px)').matches)document.getElementById('game-setup').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
     }));
     const resume=document.createElement('nav');resume.className='resume-table';resume.setAttribute('aria-label','Continue saved games');resume.hidden=true;
-    for(const [game,key]of [['academy','hikoro-academy-local-v3'],['hikoruka','hikoruka-local-v1'],['shavari','shavari-local-v3'],['go','shield-go-local-v1'],['shavari-go','shavari-go-local-v1']]){
+    for(const [game,key]of [['academy','hikoro-academy-local-v3'],['hikoruka','hikoruka-local-v1'],['shavari','shavari-local-v3'],['go','shield-go-local-v1'],['shavari-go','shavari-go-local-v2']]){
         try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&Number.isInteger(saved.cursor)&&saved.cursor>0&&Array.isArray(saved.journal)&&saved.cursor<=saved.journal.length){const link=document.createElement('a');link.href=game+'.html'+(game==='shavari-go'?'?resume=1':'');link.textContent='Continue '+worlds[game].name+' →';resume.append(link);resume.hidden=false;}}catch{}
     }
     document.querySelector('.hero-copy').append(resume);
