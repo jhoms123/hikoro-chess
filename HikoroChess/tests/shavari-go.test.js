@@ -165,6 +165,17 @@ test('territory scoring excludes occupied pieces', () => {
   assert.equal(score[2].total, B.KOMI);
 });
 
+test('bot terminal evaluation uses empty territory plus komi, never board-piece count', () => {
+  const state = activeGame();
+  for (let y = 5; y <= 7; y++) for (let x = 5; x <= 7; x++) {
+    if (x !== 6 || y !== 6) state.board[y][x] = { owner: 1, rank: 'levy' };
+  }
+  const afterBlackPass = B.apply(state, { type: 'pass' });
+  const finished = B.apply(afterBlackPass, { type: 'pass' });
+  assert.equal(finished.result.reason, 'Two consecutive passes');
+  assert.equal(Bot.evaluate(finished, 1), finished.result.score[1].total - finished.result.score[2].total);
+});
+
 test('capturing any Crownhold immediately awards the game to its captor', () => {
   const state = activeGame();
   state.player = 2;
@@ -192,6 +203,59 @@ test('bot action generation includes Sapper, Cavalier, and Sentry plans', () => 
   state.board[2][3] = { owner: 2, rank: 'levy' };
   const ranks = new Set(Bot.legalCandidates(state).map(candidate => candidate.action.rank));
   for (const rank of ['sapper', 'cavalier', 'sentry']) assert.ok(ranks.has(rank), `${rank} should be considered by the bot`);
+});
+
+test('bot passes instead of spending a turn and a point filling its own settled territory', () => {
+  const state = activeGame();
+  state.player = 1;
+  state.ply = 60;
+  for (let y = 0; y < 13; y++) for (let x = 0; x < 13; x++) {
+    if (x < 5 || x > 7 || y < 5 || y > 7) state.board[y][x] = { owner: 1, rank: 'levy' };
+  }
+  state.reserves[1] = { marshal: 0, warden: 1, banneret: 0, arbalist: 0, sapper: 0, cavalier: 0, sentry: 0, levy: 0 };
+  assert.equal(B.score(state)[1].territory, 9);
+  const choice = Bot.chooseAction(state, { iterations: 24, maxDepth: 3, rootWidth: 12, nodeWidth: 4 });
+  assert.equal(choice.action.type, 'pass');
+  assert.equal(B.score(B.apply(state, choice.action))[1].territory, 9);
+});
+
+test('bot uses a Sapper breach to establish a foothold past one enemy', () => {
+  const state = activeGame();
+  state.ply = 30;
+  state.board[6][2] = { owner: 1, rank: 'banneret' };
+  state.board[6][5] = { owner: 2, rank: 'levy' };
+  state.reserves[1] = { marshal: 0, warden: 0, banneret: 0, arbalist: 0, sapper: 1, cavalier: 0, sentry: 0, levy: 0 };
+  const choice = Bot.chooseAction(state, { iterations: 24, maxDepth: 3, rootWidth: 16, nodeWidth: 8 });
+  assert.equal(choice.action.rank, 'sapper');
+  assert.equal(choice.action.via.kind, 'sapper');
+  assert.deepEqual(choice.action.to, { x: 6, y: 6 });
+});
+
+test('bot places a Sentry where it silences an active Crossbowman line', () => {
+  const state = activeGame();
+  state.ply = 30;
+  state.board[6][8] = { owner: 1, rank: 'levy' };
+  state.board[8][8] = { owner: 2, rank: 'arbalist' };
+  state.reserves[1] = { marshal: 0, warden: 0, banneret: 0, arbalist: 0, sapper: 0, cavalier: 0, sentry: 1, levy: 0 };
+  const choice = Bot.chooseAction(state, { iterations: 24, maxDepth: 3, rootWidth: 16, nodeWidth: 8 });
+  assert.equal(choice.action.rank, 'sentry');
+  assert.deepEqual(choice.action.to, { x: 8, y: 7 });
+  assert.equal(B.lineActive(B.apply(state, choice.action), { x: 8, y: 8 }, 2), false);
+});
+
+test('bot values a Cavalier leap that breaks enemy territory', () => {
+  const state = activeGame();
+  state.ply = 30;
+  for (let y = 4; y <= 8; y++) for (let x = 4; x <= 8; x++) {
+    if (x === 4 || x === 8 || y === 4 || y === 8) state.board[y][x] = { owner: 2, rank: 'levy' };
+  }
+  state.board[5][3] = { owner: 1, rank: 'levy' };
+  state.reserves[1] = { marshal: 0, warden: 0, banneret: 0, arbalist: 0, sapper: 0, cavalier: 1, sentry: 0, levy: 0 };
+  assert.equal(B.score(state)[2].territory, 9);
+  const choice = Bot.chooseAction(state, { iterations: 24, maxDepth: 3, rootWidth: 16, nodeWidth: 8 });
+  assert.equal(choice.action.rank, 'cavalier');
+  assert.equal(choice.action.via.kind, 'cavalier');
+  assert.deepEqual(choice.action.to, { x: 5, y: 6 });
 });
 
 test('bot selects legal opening and midgame actions', () => {
