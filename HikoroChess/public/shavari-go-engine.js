@@ -36,6 +36,18 @@
   const code={keep:'K',marshal:'M',warden:'W',banneret:'B',arbalist:'A',sapper:'P',cavalier:'C',sentry:'T',levy:'L'};
   return board.map(row=>row.map(p=>p?(p.owner===1?'b':'w')+code[p.rank]:'.').join('')).join('/');
  }
+ function positionKey(state){
+  if(!state)return'';
+  // Simple-ko legality and the two-pass end condition are part of the game
+  // state. Omitting either can make a search/evaluation cache reuse an
+  // impossible move or a non-terminal value for a finished position.
+  return JSON.stringify([
+   boardKey(state.board),state.reserves?.[1],state.reserves?.[2],state.player,
+   Boolean(state.keepOpening),state.keepPlacements,state.koBan||null,
+   state.consecutivePasses||0,state.result?.winner??null,state.result?.by||null,
+   state.result?.reason||null
+  ]);
+ }
  function makeState(size=13,keeps=null){
   size=Number(size);if(!SIZES.includes(size))return null;
   const setup=keeps?normalizeKeeps(size,keeps):null;if(keeps&&!setup)return null;
@@ -305,7 +317,7 @@
  function coord(state,p){return inBounds(state.size,p)?LETTERS[p.x]+(state.size-p.y):'';}
  return Object.freeze({SIZES,RANKS,RESERVE,LINE_REACH,KOMI,ORTHO,DIAG,
   levySupply,reservesForSize,standardKeeps,normalizeKeeps,initial:makeState,
-  boardKey,positionKey:state=>JSON.stringify([boardKey(state.board),state.reserves[1],state.reserves[2],state.player,state.keepOpening,state.keepPlacements]),
+  boardKey,positionKey,
   adjacent,pieceAt,groupAt,liberties,groups,lineActive,routeOptions,canPlace,placementTargets,
   captureReady,score:scoreBoard,apply,legalPlacements,legalKeepPlacements,coord,other,inBounds});
 });
