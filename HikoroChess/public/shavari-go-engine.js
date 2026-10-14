@@ -4,7 +4,7 @@
 })(typeof globalThis!=='undefined'?globalThis:this,()=>{
  'use strict';
  const SIZES=[13],RANKS=['keep','marshal','warden','banneret','arbalist','sapper','cavalier','sentry','levy'],
-  RESERVE={marshal:4,warden:6,banneret:4,arbalist:4,sapper:2,cavalier:2,sentry:2},LINE_REACH=Infinity,KOMI=3.5,
+  RESERVE={marshal:4,warden:6,banneret:4,arbalist:4,sapper:2,cavalier:4,sentry:2},LINE_REACH=Infinity,KOMI=3.5,
   LETTERS='ABCDEFGHJKLMNOPQRSTUVWXYZ',ORTHO=[[-1,0],[1,0],[0,-1],[0,1]],
   DIAG=[[-1,-1],[1,-1],[-1,1],[1,1]];
  const other=p=>p===1?2:1,copy=p=>({x:p.x,y:p.y}),same=(a,b)=>a?.x===b?.x&&a?.y===b?.y,

@@ -177,9 +177,17 @@ test('bot terminal evaluation uses empty territory plus komi, never board-piece 
   assert.equal(Bot.evaluate(finished, 1), finished.result.score[1].total - finished.result.score[2].total);
 });
 
-test('capturing any Crownhold immediately awards the game to its captor', () => {
+test('both players start with four Cavaliers', () => {
+  const state = B.initial(13);
+  assert.equal(B.RESERVE.cavalier, 4);
+  assert.equal(state.reserves[1].cavalier, 4);
+  assert.equal(state.reserves[2].cavalier, 4);
+});
+
+test('capturing one of two Crownholds immediately awards the game to its captor', () => {
   const state = activeGame();
   state.player = 2;
+  state.board[0][0] = { owner: 1, rank: 'keep' }; // the second Crownhold remains on the board
   state.board[6][6] = { owner: 1, rank: 'keep' };
   state.board[6][5] = { owner: 2, rank: 'marshal' };
   state.board[6][7] = { owner: 2, rank: 'levy' };
@@ -188,6 +196,7 @@ test('capturing any Crownhold immediately awards the game to its captor', () => 
   const next = B.apply(state, { type: 'place', rank: 'levy', to: { x: 6, y: 7 } });
   assert.ok(next);
   assert.equal(next.board[6][6], null);
+  assert.equal(next.board[0][0].rank, 'keep');
   assert.equal(next.result.winner, 2);
   assert.equal(next.result.by, 'crownhold');
   assert.match(next.result.reason, /immediate victory/);
