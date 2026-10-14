@@ -306,5 +306,261 @@
   [
     "Depth {0} complete",
     "Profundidad {0} completada"
+  ],
+  [
+    "{0} · basic pieces",
+    "{0} · piezas básicas"
+  ],
+  [
+    "{0} points",
+    "{0} puntos"
+  ],
+  [
+    "{0} actions",
+    "{0} jugadas"
+  ],
+  [
+    "{0} · {1} left",
+    "{0} · {1} restantes"
+  ],
+  [
+    "{0}, {1} left",
+    "{0}, {1} restantes"
+  ],
+  [
+    "{0} by {1} empty Shavari Go board. Start a match; Black places the first Crownhold.",
+    "Tablero vacío de Shavari Go de {0} × {1}. Inicia la partida; las negras colocan la primera fortaleza."
+  ],
+  [
+    "{0} by {1} Shavari Go board. {2} actions played. {3}",
+    "Tablero de Shavari Go de {0} × {1}. Jugadas realizadas: {2}. {3}"
+  ],
+  [
+    "Shavari Go board. Focus {0}. Use arrows and Enter to place.",
+    "Tablero de Shavari Go. Intersección enfocada: {0}. Usa las flechas y Enter para colocar."
+  ],
+  [
+    "{0} places Crownhold {1} of 2.",
+    "Turno de las {0}: fortaleza {1} de 2."
+  ],
+  [
+    "{0} to move.",
+    "Juegan las {0}."
+  ],
+  [
+    "Crownhold {0} of 2",
+    "Fortaleza {0} de 2"
+  ],
+  [
+    "Crownhold {0} of 2 · choose any empty point.",
+    "Fortaleza {0} de 2 · escoge una intersección vacía."
+  ],
+  [
+    "Crownhold opening · {0} placements",
+    "Apertura de fortalezas · {0} colocaciones"
+  ],
+  [
+    "{0} · Crownhold {1} of 2",
+    "{0} · fortaleza {1} de 2"
+  ],
+  [
+    "{0} · Your turn",
+    "{0} · te toca jugar"
+  ],
+  [
+    "{0} to move · {1}",
+    "Turno de las {0} · {1}"
+  ],
+  [
+    "{0} is choosing Crownhold {1} of 2.",
+    "El bot {0} está eligiendo la fortaleza {1} de 2."
+  ],
+  [
+    "{0} is choosing a Crownhold location.",
+    "El bot {0} está eligiendo dónde colocar una fortaleza."
+  ],
+  [
+    "{0} is considering the {1} × {2} board",
+    "El bot {0} está evaluando el tablero de {1} × {2}."
+  ],
+  [
+    "The {0} bot is playing.",
+    "El bot de las {0} está jugando."
+  ],
+  [
+    "Bot paused · press {0} to continue.",
+    "Bot en pausa · pulsa {0} para continuar."
+  ],
+  [
+    "{0} selected · click a ringed point, or pass.",
+    "{0} seleccionado · escoge un punto marcado o pasa."
+  ],
+  [
+    "{0} selected · choose a legal empty point, or pass.",
+    "{0} seleccionado · escoge una intersección vacía legal o pasa."
+  ],
+  [
+    "That is not a legal {0} placement. Choose a ringed point.",
+    "La colocación de {0} no es legal. Escoge un punto marcado."
+  ],
+  [
+    "You placed a {0} at {1}.",
+    "Colocaste {0} en {1}."
+  ],
+  [
+    " · {0} line from {1}",
+    " · línea de {0} desde {1}"
+  ],
+  [
+    " · over enemy at {0} from {1}",
+    " · sobre una pieza enemiga en {0} desde {1}"
+  ],
+  [
+    " · knight leap from {0}",
+    " · salto de caballo desde {0}"
+  ],
+  [
+    "{0}: {1} · {2} MCTS simulations, depth {3}",
+    "{0}: {1} · {2} simulaciones de MCTS, profundidad {3}"
+  ],
+  [
+    "{0} wins",
+    "Victoria de las {0}"
+  ],
+  [
+    "Undid {0}.",
+    "Se deshizo {0}."
+  ],
+  [
+    "Could not undo: {0}",
+    "No se pudo deshacer la jugada: {0}"
+  ],
+  [
+    "Could not save the record: {0}",
+    "No se pudo guardar la partida: {0}"
+  ],
+  [
+    "The match paused because the bot encountered an error: {0}",
+    "La partida se pausó porque el bot encontró un error: {0}"
+  ],
+  [
+    "Captures {0} piece at {1}.",
+    "Captura {0} pieza en {1}."
+  ],
+  [
+    "Captures {0} pieces at {1}.",
+    "Captura {0} piezas en {1}."
+  ],
+  [
+    "Opens with a Crownhold at {0}; this stronghold anchors later placements.",
+    "Abre con una fortaleza en {0}; este bastión apoya las colocaciones posteriores."
+  ],
+  [
+    "Siege succeeds at {0}; an enemy Crownhold group is captured.",
+    "El asedio tiene éxito en {0}; se captura un grupo enemigo que contiene una fortaleza."
+  ],
+  [
+    "Saps through one enemy piece and places beyond it at {0}.",
+    "El Zapador atraviesa una pieza enemiga y se coloca más allá, en {0}."
+  ],
+  [
+    "Uses a Cavalier's knight leap to establish a foothold at {0}.",
+    "Usa el salto de Caballero para establecer una posición en {0}."
+  ],
+  [
+    "Places a Sentry at {0} to silence nearby enemy projection lines.",
+    "Coloca un Centinela en {0} para bloquear las líneas enemigas cercanas."
+  ],
+  [
+    "Extends a {0} line with {1} at {2}.",
+    "Extiende la línea de {0} con {1} en {2}."
+  ],
+  [
+    "Places a High Marshal at {0} to threaten or complete a siege.",
+    "Coloca un Alto mariscal en {0} para amenazar o completar un asedio."
+  ],
+  [
+    "Places a Royal Guard at {0} to protect its connected group.",
+    "Coloca una Guardia real en {0} para proteger su grupo conectado."
+  ],
+  [
+    "Places a Standard-Bearer at {0} to open a new placement line.",
+    "Coloca un Portaestandarte en {0} para abrir una nueva línea de colocación."
+  ],
+  [
+    "Places a Crossbowman at {0} to open a new placement line.",
+    "Coloca un Ballestero en {0} para abrir una nueva línea de colocación."
+  ],
+  [
+    "Places a Squire at {0} to extend the boundary and claim territory.",
+    "Coloca un Escudero en {0} para ampliar el límite y reclamar territorio."
+  ],
+  [
+    "A Crownhold was captured after {0} actions, so the game ends immediately. Territory at that moment: {1} to {2}, plus White’s 3.5 komi.",
+    "Se capturó una fortaleza tras {0} jugadas, así que la partida termina de inmediato. El territorio en ese momento era de {1} a {2}, más 3,5 puntos de komi para las blancas."
+  ],
+  [
+    "{0} to {1} after {2} actions. Only empty territory scores; pieces on the board do not. White receives 3.5 komi.",
+    "El resultado fue {0} a {1} tras {2} jugadas. Solo puntúan los territorios vacíos; las piezas del tablero no suman puntos. Las blancas reciben 3,5 puntos de komi."
+  ],
+  [
+    "Crownhold at {0}",
+    "Fortaleza en {0}"
+  ],
+  [
+    "Squire at {0}",
+    "Escudero en {0}"
+  ],
+  [
+    "High Marshal at {0}",
+    "Alto mariscal en {0}"
+  ],
+  [
+    "Royal Guard at {0}",
+    "Guardia real en {0}"
+  ],
+  [
+    "Standard-Bearer at {0}",
+    "Portaestandarte en {0}"
+  ],
+  [
+    "Crossbowman at {0}",
+    "Ballestero en {0}"
+  ],
+  [
+    "Sapper at {0}",
+    "Zapador en {0}"
+  ],
+  [
+    "Cavalier at {0}",
+    "Caballero en {0}"
+  ],
+  [
+    "Sentry at {0}",
+    "Centinela en {0}"
+  ],
+  [
+    "Territory {0} + 3.5 komi · Court {1} · Squires {2} · Captures {3}",
+    "Territorio {0} + 3,5 puntos de komi · Corte {1} · Escuderos {2} · Capturas {3}"
+  ],
+  [
+    "Territory {0} · Court {1} · Squires {2} · Captures {3}",
+    "Territorio {0} · Corte {1} · Escuderos {2} · Capturas {3}"
+  ],
+  [
+    "Marshal at {0}",
+    "Mariscal en {0}"
+  ],
+  [
+    "Guard at {0}",
+    "Guardia en {0}"
+  ],
+  [
+    "Standard at {0}",
+    "Estandarte en {0}"
+  ],
+  [
+    "Crossbow at {0}",
+    "Ballesta en {0}"
   ]
 ]

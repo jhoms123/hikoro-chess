@@ -252,7 +252,7 @@
   "I · THE OCEAN KINGDOM": "I · EL REINO DEL MAR",
   "Command an ocean kingdom.": "Dirige un reino del mar.",
   "2 players · Captures & promotions": "2 jugadores · Capturas y promociones",
-  "Choose this table": "Escoger esta mesa",
+  "Choose this table": "Escoge esta mesa",
   "↗": "↗",
   "II · THE LIVING GARDEN": "II · EL JARDÍN VIVO",
   "Build harmony in the garden.": "Crea armonía en el jardín.",
@@ -1818,5 +1818,11 @@
   "Bot unavailable · change the local opponent to retry.": "Bot no disponible · cambia el oponente local para volver a intentarlo.",
   "Change local opponent?": "¿Cambiar el oponente local?",
   "Starting this setup replaces the current position. Save a record first if you want to keep it.": "Al iniciar esta configuración, se reemplazará la posición actual. Guarda el registro antes si quieres conservarla.",
-  "100 plies without a capture": "100 medias jugadas sin capturas"
+  "100 plies without a capture": "100 medias jugadas sin capturas",
+  "THE ROYAL TERRITORY GAME": "EL JUEGO DEL TERRITORIO REAL",
+  "Shavari Go royal pieces on a 13 by 13 territory board": "Piezas reales de Shavari Go en un tablero territorial de 13 × 13",
+  "Deploy specialists. Win by territory or Crownhold capture.": "Despliega especialistas. Gana por territorio o capturando una fortaleza.",
+  "13 × 13 · Two players": "13 × 13 · Dos jugadores",
+  "Breach lines, silence enemy standards, and win by territory or Crownhold capture on a 13 × 13 board.": "Rompe líneas, silencia estandartes enemigos y gana por territorio o capturando una fortaleza en un tablero de 13 × 13.",
+  "Learn the royal ranks, special placements, siege, and scoring →": "Conoce los rangos reales, las colocaciones especiales, el asedio y la puntuación →"
 }
