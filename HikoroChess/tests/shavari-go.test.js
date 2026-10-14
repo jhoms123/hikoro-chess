@@ -157,6 +157,7 @@ test('territory scoring excludes occupied pieces', () => {
     if (x !== 6 || y !== 6) state.board[y][x] = { owner: 1, rank: 'levy' };
   }
   const score = B.score(state);
+  assert.equal(B.KOMI, 3.5);
   assert.equal(score[1].occupied, 8);
   assert.equal(score[1].territory, 1);
   assert.equal(score[1].total, 1);
