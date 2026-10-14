@@ -464,7 +464,7 @@
   const rival=other(perspective),ownProfile=profileFor(config,perspective),enemyProfile=profileFor(config,rival),
    territory=territoryOwnerMap(state);
   // Exact score from the rules: count empty single-color regions only, then
-  // add White's 7.5 komi. Occupied intersections never score.
+  // add White's 3.5 komi. Occupied intersections never score.
   let value=(perspective===2?B.KOMI:-B.KOMI);
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(!state.board[y][x]){
    if(territory[y][x]===perspective)value++;
