@@ -65,7 +65,7 @@
 .shavari-go-table .human-controls[hidden]{display:none!important}
 .shavari-go-table .piece-tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .shavari-go-table .piece-choice{display:grid;grid-template-columns:25px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:0 4px;min-height:54px;width:100%;padding:5px!important;text-align:left;border:1px solid #9f906c!important;border-radius:3px!important;background:linear-gradient(#352a1e,#211c16)!important;color:#f0e1bf!important;box-shadow:inset 0 0 0 1px #e3cb8d22!important;font:11px/1.15 Georgia,serif!important;cursor:pointer}
-.shavari-go-table .piece-choice img{grid-row:1/3;width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 1px 1px #0009)}
+.shavari-go-table .piece-choice img{grid-row:1/3;width:26px;height:26px;padding:3px;box-sizing:border-box;object-fit:contain;border:1px solid #b69c68;border-radius:50%;background:radial-gradient(circle at 32% 26%,#646459,#292b25 58%,#121512);box-shadow:inset 0 1px 2px #fff4,0 2px 4px #0008}
 .shavari-go-table .piece-choice span{overflow:hidden;text-overflow:ellipsis}
 .shavari-go-table .piece-choice small{color:#c9b687;font:10px Georgia,serif}
 .shavari-go-table .piece-choice[aria-pressed=true]{border-color:#f0d18c!important;background:linear-gradient(#65513a,#3a2e20)!important;box-shadow:inset 0 0 0 2px #d1a95e,0 0 0 1px #302316!important}
@@ -90,9 +90,9 @@
 .shavari-go-table .roster-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:10px 14px 15px}
 .shavari-go-table .roster-card{min-width:0;padding:12px;border:1px solid #a78c5b6b;background:#201b15d8}
 .shavari-go-table .roster-card-head{display:flex;align-items:center;gap:10px}
-.shavari-go-table .roster-symbol{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:2px solid #d3b57d;background:#353125}
-.shavari-go-table .roster-symbol img{width:27px;height:27px;object-fit:contain}
-.shavari-go-table .roster-symbol.keep{border-radius:4px}.shavari-go-table .roster-symbol.marshal{clip-path:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%)}.shavari-go-table .roster-symbol.warden{border-radius:9px}.shavari-go-table .roster-symbol.levy{border-radius:50%}
+.shavari-go-table .roster-symbol{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border:1px solid #bca16c;border-radius:50%;background:radial-gradient(circle at 32% 26%,#66685d,#282a25 58%,#121512);box-shadow:inset 0 1px 3px #fff4,0 2px 5px #0009}
+.shavari-go-table .roster-symbol img{width:21px;height:21px;object-fit:contain;opacity:.92}
+.shavari-go-table .roster-symbol.keep,.shavari-go-table .roster-symbol.marshal,.shavari-go-table .roster-symbol.warden,.shavari-go-table .roster-symbol.banneret,.shavari-go-table .roster-symbol.arbalist,.shavari-go-table .roster-symbol.sapper,.shavari-go-table .roster-symbol.cavalier,.shavari-go-table .roster-symbol.sentry,.shavari-go-table .roster-symbol.levy{border-radius:50%;clip-path:none}
 .shavari-go-table .roster-card h3{margin:0;color:#ead8af;font:17px "Collection Serif",Georgia,serif}
 .shavari-go-table .roster-card span:not(.roster-symbol){color:#d4bd91;font:11px Georgia,serif}
 .shavari-go-table .roster-card p{margin:8px 0 0;color:#cdbf9e;font:12px/1.5 Georgia,serif}
