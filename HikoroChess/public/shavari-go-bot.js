@@ -19,7 +19,7 @@
   CROWNHOLD_CACHE=new Map(),CROWNHOLD_CACHE_LIMIT=6000,
   BOARD_ANALYSIS_CACHE=new WeakMap(),STATE_KEY_CACHE=new WeakMap();
  const other=p=>B.other(p),inside=(s,x,y)=>x>=0&&y>=0&&x<s&&y<s,key=(x,y)=>x+','+y,
-  clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),clockNow=()=>globalThis.performance?.now?globalThis.performance.now():Date.now();
  function profileFor(config,owner){
   const p=config?.[owner]||config?.[String(owner)]||'builder';
   return typeof p==='string'?profiles[p]||profiles.builder:p;
@@ -29,7 +29,7 @@
  // and move ordering share one analysis without retaining dead search nodes.
  function boardAnalysis(board,size){
   let analysis=BOARD_ANALYSIS_CACHE.get(board);
-  if(!analysis){analysis={size,territory:null,fields:new Map(),sourceOptions:new Map(),groups:new Map(),groupAt:new Map(),liberties:new WeakMap()};BOARD_ANALYSIS_CACHE.set(board,analysis);}
+  if(!analysis){analysis={size,territory:null,fields:new Map(),sourceOptions:new Map(),moyo:null,groups:new Map(),groupAt:new Map(),liberties:new WeakMap()};BOARD_ANALYSIS_CACHE.set(board,analysis);}
   return analysis;
  }
  function groupsFor(board,size,owner){
@@ -122,6 +122,118 @@
   const value=Math.min(24,total);
   if(analysis.territory===territory)analysis.sourceOptions.set(owner,value);
   return value;
+ }
+ // Estimate moyo as convertible, supported space rather than raw distance
+ // influence. Each connected group contributes once per point, with its
+ // contribution reduced when it is short on liberties. Reachable placements
+ // and independent supporting groups raise the conversion estimate; enemy
+ // access and unstable groups reduce it.
+ const MOYO_ROUTE_WEIGHT={marshal:.16,warden:.14,banneret:.3,arbalist:.3,sapper:.24,cavalier:.28,sentry:.2,levy:.12};
+ function groupMoyoStability(state,owner,group){
+  const libertyCount=libertiesFor(state.board,state.size,group).size;
+  let stability=libertyCount<=1?.36:libertyCount===2?.54:libertyCount===3?.7:Math.min(.96,.82+(libertyCount-4)*.035);
+  const keeps=group.filter(point=>state.board[point.y][point.x]?.rank==='keep');
+  if(keeps.length){
+   const fullyCovered=keeps.every(point=>isMarshalBeside(state.board,state.size,point,other(owner)));
+   if(fullyCovered&&libertyCount<=4)stability*=.62;
+   else stability=Math.min(1,stability+.04);
+  }
+  return stability;
+ }
+ function moyoFor(state,owner,territory=territoryOwnerMap(state)){
+  const analysis=boardAnalysis(state.board,state.size);
+  if(analysis.moyo)return analysis.moyo[owner];
+  const size=state.size,cells=size*size;
+  const data={
+   1:{influence:new Float32Array(cells),routes:new Float32Array(cells),anchors:new Uint8Array(cells)},
+   2:{influence:new Float32Array(cells),routes:new Float32Array(cells),anchors:new Uint8Array(cells)}
+  };
+  for(const side of [1,2]){
+   for(const group of groupsFor(state.board,size,side)){
+    const stability=groupMoyoStability(state,side,group),groupPower=new Float32Array(cells);
+    for(const point of group){
+     const unit=state.board[point.y][point.x],reach=RADIUS[unit.rank],strength=INFLUENCE[unit.rank],maxDistance=Math.ceil(reach);
+     const distances=new Uint8Array(cells);distances.fill(255);
+     const queue=new Int16Array(cells);let head=0,tail=0;
+     for(const [dx,dy] of ORTHO){
+      const x=point.x+dx,y=point.y+dy;
+      if(!inside(size,x,y)||state.board[y][x])continue;
+      const at=y*size+x;distances[at]=1;queue[tail++]=at;
+     }
+     while(head<tail){
+      const at=queue[head++],distance=distances[at];if(distance>reach)continue;
+      const x=at%size,y=(at/size)|0,
+       power=strength*Math.exp(-distance/(reach*.62));
+      if(power>groupPower[at])groupPower[at]=power;
+      if(distance>=maxDistance)continue;
+      for(const [dx,dy] of ORTHO){
+       const nx=x+dx,ny=y+dy;
+       if(!inside(size,nx,ny)||state.board[ny][nx])continue;
+       const next=ny*size+nx;if(distances[next]!==255)continue;
+       distances[next]=distance+1;queue[tail++]=next;
+      }
+     }
+    }
+    const cohesion=Math.min(1.18,1+.045*(group.length-1));
+    for(let at=0;at<cells;at++)if(groupPower[at]>0){
+     const stablePower=groupPower[at]*stability*cohesion;
+     data[side].influence[at]+=stablePower;
+     if(stablePower>=.18)data[side].anchors[at]=Math.min(255,data[side].anchors[at]+1);
+    }
+   }
+   const sideData=data[side];
+   if(state.keepOpening){
+    // Before the four-Keep setup is complete, score the foothold each Keep
+    // gives to the first legal placements that can grow its framework.
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+     const piece=state.board[y][x];if(piece?.owner!==side||piece.rank!=='keep')continue;
+     for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
+      const nx=x+dx,ny=y+dy,d=Math.abs(dx)+Math.abs(dy);
+      if(!inside(size,nx,ny)||state.board[ny][nx]||d>3)continue;
+      sideData.routes[ny*size+nx]=Math.min(1.25,sideData.routes[ny*size+nx]+.18*Math.exp(-d/2.1));
+     }
+    }
+   }else{
+    for(const rank of B.RANKS){
+     if(rank==='keep'||!(state.reserves[side]?.[rank]>0))continue;
+     const weight=MOYO_ROUTE_WEIGHT[rank]||.12;
+     for(const item of B.placementTargets(state,side,rank)){
+      const {x,y}=item.to,at=y*size+x;if(state.board[y][x]||territory[y][x]===side)continue;
+      let openNeighbors=0;
+      for(const q of B.adjacent(item.to,size))if(!state.board[q.y][q.x])openNeighbors++;
+      const openness=.55+.45*(openNeighbors/4);
+      sideData.routes[at]=Math.min(1.5,sideData.routes[at]+weight*openness);
+     }
+    }
+   }
+  }
+  analysis.moyo=data;
+  return data[owner];
+ }
+ function moyoPointPotential(map,at,extraInfluence=0,extraRoutes=0,extraAnchors=0){
+  const routes=map.routes[at]+extraRoutes,
+   anchors=map.anchors[at]+extraAnchors,
+   support=map.influence[at]+extraInfluence+routes*.42;
+  if(support<.025)return 0;
+  const activation=1-Math.exp(-support*.5),
+   framework=.62+.14*Math.min(2,anchors)+.12*Math.min(1,routes),
+   access=1-.2*Math.min(1.25,routes);
+  return activation*framework*access;
+ }
+ function moyoPotentialScore(state,perspective,territory=territoryOwnerMap(state),config={}){
+  if(state.result)return 0;
+  const own=moyoFor(state,perspective,territory),rivalOwner=other(perspective),enemy=moyoFor(state,rivalOwner,territory),
+   ownProfile=profileFor(config,perspective),enemyProfile=profileFor(config,rivalOwner),size=state.size;
+  let score=0;
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+   if(state.board[y][x]||(!state.keepOpening&&territory[y][x]))continue;
+   const at=y*size+x,ownPotential=moyoPointPotential(own,at),enemyPotential=moyoPointPotential(enemy,at);
+   // A supported framework is worth less where the opponent already has a
+   // direct route to invade or reduce it.
+   const ownRisk=1-.2*Math.min(1.25,enemy.routes[at]),enemyRisk=1-.2*Math.min(1.25,own.routes[at]);
+   score+=.34*(ownPotential*ownProfile.influence*ownRisk-enemyPotential*enemyProfile.influence*enemyRisk);
+  }
+  return score;
  }
  function raveLevyTargets(node){
   if(!node.raveLevyTargets){
@@ -267,24 +379,21 @@
   if(EVAL_CACHE.size>=EVAL_CACHE_LIMIT)EVAL_CACHE.delete(EVAL_CACHE.keys().next().value);
   EVAL_CACHE.set(cacheKey,value);return value;
  }
- function evaluateUncached(state,perspective,config={}){
+ function evaluateUncached(state,perspective,config={},includeMoyo=true){
   if(state.result){
    if(state.result.by==='crownhold'||state.result.reason==='Resignation')return state.result.winner===perspective?1000:state.result.winner===other(perspective)?-1000:0;
    if(state.result.score)return state.result.score[perspective].total-state.result.score[other(perspective)].total;
   }
   const rival=other(perspective),ownProfile=profileFor(config,perspective),enemyProfile=profileFor(config,rival),
-   territory=territoryOwnerMap(state),ownField=fieldFor(state,perspective,territory),enemyField=fieldFor(state,rival,territory);
+   territory=territoryOwnerMap(state);
   // Exact score from the rules: count empty single-color regions only, then
   // add White's 7.5 komi. Occupied intersections never score.
   let value=(perspective===2?B.KOMI:-B.KOMI);
   for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++)if(!state.board[y][x]){
    if(territory[y][x]===perspective)value++;
    else if(territory[y][x]===rival)value--;
-   const own=ownField[y][x],enemy=enemyField[y][x],total=own+enemy;
-   const lead=total<.08?0:Math.tanh((own-enemy)*.72);
-   const contested=1-Math.exp(-total*.5);
-   value+=lead*contested*.045*(ownProfile.influence+enemyProfile.influence);
   }
+  if(includeMoyo)value+=moyoPotentialScore(state,perspective,territory,config);
   for(const [owner,sign]of [[perspective,1],[rival,-1]]){
    const profile=owner===perspective?ownProfile:enemyProfile;
    for(const group of groupsFor(state.board,state.size,owner))value+=sign*groupSecurity(state,group,owner,profile);
@@ -353,8 +462,8 @@
   }
   let value=0;
   // A Keep supplies a compact placement foothold and a small local influence
-  // field. Unlike final territory, this remains meaningful before either side
-  // has built a boundary and does not award the whole empty board to one color.
+  // field. Keep setup remains on the established planner so the v6.4.4
+  // comparison isolates the expanded moyo evaluation after setup.
   for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!state.board[y][x]){
    let own=0,enemy=0;
    for(const p of keeps[perspective]){const d=Math.abs(x-p.x)+Math.abs(y-p.y);if(d<=5)own+=.72*Math.exp(-d/2.55);}
@@ -474,6 +583,37 @@
   }
   return delta;
  }
+ function localMoyoDelta(state,candidate,context,profile,afterTerritory=null){
+  const action=candidate.action,next=candidate.next,owner=state.player;
+  if(action.type!=='place'||!action.to||!context.moyoOwn||!context.moyoEnemy)return 0;
+  const point=action.to,rank=action.rank,reach=RADIUS[rank],radius=Math.ceil(reach),strength=INFLUENCE[rank],
+   group=groupAtFor(next.board,next.size,point),stability=groupMoyoStability(next,owner,group),
+   connected=B.adjacent(point,state.size).some(q=>state.board[q.y][q.x]?.owner===owner),
+   cohesion=Math.min(1.18,1+.045*(group.length-1)),anchor=connected?0:1,
+   enemyRiskAt=(x,y)=>1-.2*Math.min(1.25,context.moyoEnemy.routes[y*state.size+x]);
+  let delta=0;
+  if(!context.territory[point.y][point.x]){
+   const at=point.y*state.size+point.x,ownPotential=moyoPointPotential(context.moyoOwn,at),enemyPotential=moyoPointPotential(context.moyoEnemy,at),
+    ownRisk=1-.2*Math.min(1.25,context.moyoEnemy.routes[at]),enemyRisk=1-.2*Math.min(1.25,context.moyoOwn.routes[at]);
+   delta-=.34*(ownPotential*profile.influence*ownRisk-enemyPotential*context.enemyProfile.influence*enemyRisk);
+  }
+  if(afterTerritory)for(let y=0;y<state.size;y++)for(let x=0;x<state.size;x++){
+   if(state.board[y][x]||context.territory[y][x]||!(next.board[y][x]||afterTerritory[y][x]))continue;
+   const at=y*state.size+x,ownPotential=moyoPointPotential(context.moyoOwn,at),enemyPotential=moyoPointPotential(context.moyoEnemy,at),
+    ownRisk=1-.2*Math.min(1.25,context.moyoEnemy.routes[at]),enemyRisk=1-.2*Math.min(1.25,context.moyoOwn.routes[at]);
+   delta-=.34*(ownPotential*profile.influence*ownRisk-enemyPotential*context.enemyProfile.influence*enemyRisk);
+  }
+  for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+   const x=point.x+dx,y=point.y+dy,d=Math.abs(dx)+Math.abs(dy);
+   if(!inside(state.size,x,y)||next.board[y][x]||d>reach||context.territory[y][x]||afterTerritory?.[y]?.[x])continue;
+   const at=y*state.size+x,add=strength*stability*cohesion*Math.exp(-d/(reach*.62));
+   if(add<=0)continue;
+   const newAnchor=anchor&&add>=.18?1:0,
+    before=moyoPointPotential(context.moyoOwn,at),after=moyoPointPotential(context.moyoOwn,at,add,0,newAnchor);
+   delta+=(after-before)*.34*profile.influence*enemyRiskAt(x,y);
+  }
+  return delta;
+ }
  function specialistActionValue(state,candidate,context,profile){
   const action=candidate.action,next=candidate.next,owner=state.player,enemy=other(owner),at=action.to;
   if(action.type!=='place'||!at)return 0;
@@ -503,7 +643,7 @@
  function fastPrior(state,candidate,context,config){
   const action=candidate.action,next=candidate.next,mover=state.player,profile=profileFor(config,mover),enemy=other(mover);
   if(action.type==='pass')return next.result?(evaluate(next,mover,config)-evaluate(state,mover,config)):-.68;
-  let value=localInfluenceDelta(state,action,context,profile)+specialistActionValue(state,candidate,context,profile),captured=next.last?.captured||[];
+  let value=localInfluenceDelta(state,action,context,profile)+localMoyoDelta(state,candidate,context,profile)+specialistActionValue(state,candidate,context,profile),captured=next.last?.captured||[];
   // Non-Keep captures return to the defender's reserve, so count tempo and
   // temporary loss of board presence without valuing them as permanently dead.
   for(const piece of captured)value+=piece.rank==='keep'?1000:.38+(['banneret','arbalist','marshal','sentry'].includes(piece.rank)?.16:0);
@@ -549,7 +689,8 @@
  }
  function diversePool(state,candidates,limit,config,exactRoot=false,approachThreats=null,keepGroups=null){
   const actor=state.player,profile=profileFor(config,actor),base=exactRoot?evaluate(state,actor,config):0;
-  const territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory};
+  const territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory,
+   ...(!exactRoot?{moyoOwn:moyoFor(state,actor,territory),moyoEnemy:moyoFor(state,other(actor),territory)}:{})};
   for(const c of candidates){
    const exactBase=exactRoot&&Number.isFinite(c.rootPriorBase)?c.rootPriorBase:
     exactRoot?(evaluate(c.next,actor,config)-base)+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialistActionValue(state,c,context,profile):fastPrior(state,c,context,config),
@@ -880,9 +1021,12 @@
   return false;
  }
  function chooseAction(state,options={}){
+  const startedAt=clockNow();
   if(!state||state.result)return null;
   const config=options.profiles||{},actor=state.player,profile=profileFor(config,actor),rootLimit=Infinity,nodeLimit=Infinity,
-   baseIterations=(state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0),iterations=options.iterations??Math.ceil(baseIterations*1.25),maxDepth=options.maxDepth??7;
+   baseIterations=(state.size===13?144:132)+(profile.attack>1?(state.size===13?24:20):0),iterations=options.iterations??Math.ceil(baseIterations*1.25),maxDepth=options.maxDepth??7,
+   timeBudgetMs=Number.isFinite(options.timeBudgetMs)&&options.timeBudgetMs>0?options.timeBudgetMs:0,
+   deadline=timeBudgetMs?startedAt+timeBudgetMs:Infinity;
   if(state.keepOpening){
    const opening=openingKeepAction(state,options.seed||0);if(!opening)return null;
    const next=B.apply(state,opening.action,{speculative:true});
@@ -940,9 +1084,13 @@
   const unsafeKeys=new Set(unsafeRootCandidates.map(c=>actionKey(c.action))),
    safeRootCandidates=rootCandidates.filter(c=>c.next?.result?.winner===actor||!unsafeKeys.has(actionKey(c.action)));
   if(safeRootCandidates.length)rootCandidates=safeRootCandidates;
-  const baseline=evaluate(state,actor,config),territory=territoryOwnerMap(state),rootContext={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory},
+  const baseline=evaluate(state,actor,config),territory=territoryOwnerMap(state),rootMoyo=moyoPotentialScore(state,actor,territory,config),rootContext={own:fieldFor(state,actor,territory),enemy:fieldFor(state,other(actor),territory),enemyProfile:profileFor(config,other(actor)),territory,
+   moyoOwn:moyoFor(state,actor,territory),moyoEnemy:moyoFor(state,other(actor),territory)},
    rootExact=rootCandidates.map(c=>{
-    const approachBonus=keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups),evalValue=evaluate(c.next,actor,config),specialist=specialistActionValue(state,c,rootContext,profile);
+    const approachBonus=keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups),
+     exactMoyo=Boolean(c.next.last?.captured?.length||c.action.type!=='place'),
+     evalValue=exactMoyo?evaluate(c.next,actor,config):evaluateUncached(c.next,actor,config,false)+rootMoyo+localMoyoDelta(state,c,rootContext,profile,territoryOwnerMap(c.next)),
+     specialist=specialistActionValue(state,c,rootContext,profile);
     c.rootKeepSafetyBonus=approachBonus;
     c.rootPriorBase=evalValue-baseline+openingBias(state,c.action,c.next,profile)+capturePrior(c)+specialist;
     return{action:c.action,next:c.next,value:evalValue+specialist+approachBonus,
@@ -950,8 +1098,9 @@
    });
   root.pool=diversePool(state,rootCandidates,rootLimit,config,true,approachThreats,watchKeepGroups);for(const c of root.pool)c.next=null;
   if(!root.pool.length)return null;
-  let deepest=0;
+  let deepest=0,iterationsCompleted=0;
   for(let sim=0;sim<iterations;sim++){
+   if(timeBudgetMs&&clockNow()>=deadline)break;
    let node=root,depth=0;const path=[root];
    while(depth<maxDepth&&!node.state.result){
     const pool=nodePool(node,config,rootLimit,nodeLimit);if(!pool.length)break;
@@ -972,6 +1121,7 @@
    const result=quiescenceValue(node.state,actor,config,options.tacticalDepth??2);
    updateRave(path,result,actor);
    for(let i=path.length-1;i>=0;i--){path[i].visits++;path[i].valueSum+=result;}
+   iterationsCompleted++;
   }
   let best=null;
   for(const child of root.children){
@@ -994,8 +1144,8 @@
   let passDeferred=false;
   if(chosenAction.type==='pass'&&bestLegal&&bestLegal.value>pass.value+.12&&opponentCanImproveAfterPass(state,actor,config)){chosenAction=bestLegal.action;passDeferred=true;}
   const next=B.apply(state,chosenAction,{speculative:true})||B.apply(state,{type:'pass'},{speculative:true});
-  return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:allRootCandidates.length,searchable:rootCandidates.length,crownholdUnsafeRootActions:unsafeRootCandidates.length,crownholdForcedRootActions:forcedUnsafeRootCandidates.length,crownholdApproachTargets:approachThreats.length,crownholdApproachRootActions:rootExact.filter(c=>c.approachBonus>0).length,crownholdApproachFilteredActions:approachFiltered,iterations,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,rootActionsExpanded:root.children.length,legalRootActions:root.pool.length,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
+  return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:allRootCandidates.length,searchable:rootCandidates.length,crownholdUnsafeRootActions:unsafeRootCandidates.length,crownholdForcedRootActions:forcedUnsafeRootCandidates.length,crownholdApproachTargets:approachThreats.length,crownholdApproachRootActions:rootExact.filter(c=>c.approachBonus>0).length,crownholdApproachFilteredActions:approachFiltered,iterations,iterationsCompleted,elapsedMs:clockNow()-startedAt,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,rootActionsExpanded:root.children.length,legalRootActions:root.pool.length,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
  }
  function profileName(name){return profiles[name]?.name||profiles.builder.name;}
- return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.4.4-time-budgeted-search"});
+ return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,moyoPotentialScore,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.7.1-moyo-framework-root-delta"});
 });
