@@ -17,6 +17,7 @@
  };
  const EVAL_CACHE=new Map(),EVAL_CACHE_LIMIT=24000,
   CROWNHOLD_CACHE=new Map(),CROWNHOLD_CACHE_LIMIT=6000,
+  APPROACH_THREAT_CACHE=new WeakMap(),
   BOARD_ANALYSIS_CACHE=new WeakMap(),STATE_KEY_CACHE=new WeakMap();
  const other=p=>B.other(p),inside=(s,x,y)=>x>=0&&y>=0&&x<s&&y<s,key=(x,y)=>x+','+y,
   clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),clockNow=()=>globalThis.performance?.now?globalThis.performance.now():Date.now();
@@ -268,9 +269,13 @@
   return B.adjacent(point,size).some(q=>board[q.y][q.x]?.owner===owner&&board[q.y][q.x]?.rank==='marshal');
  }
  function keepApproachThreats(state,owner){
-  if(!state||state.result||state.keepOpening)return[];
+  if(!state)return[];
+  let cached=APPROACH_THREAT_CACHE.get(state);
+  if(cached?.has(owner))return cached.get(owner);
+  const remember=threats=>{if(!cached)APPROACH_THREAT_CACHE.set(state,cached=new Map());cached.set(owner,threats);return threats;};
+  if(state.result||state.keepOpening)return remember([]);
   const attacker=other(owner),ranks=['levy','marshal','warden','banneret','arbalist','sapper','cavalier','sentry'];
-  if(!ranks.some(rank=>(state.reserves[attacker]?.[rank]||0)>0))return[];
+  if(!ranks.some(rank=>(state.reserves[attacker]?.[rank]||0)>0))return remember([]);
   const threats=[],seen=new Set();
   for(const group of groupsFor(state.board,state.size,owner)){
    const keeps=group.filter(p=>state.board[p.y][p.x]?.rank==='keep');
@@ -281,7 +286,26 @@
     const [lx,ly]=encoded.split(',').map(Number),liberty={x:lx,y:ly};
     for(const approach of B.adjacent(liberty,state.size)){
      const targetKey=key(approach.x,approach.y),sig=`${encoded}|${targetKey}`;
-     if(state.board[approach.y][approach.x]||liberties.has(targetKey)||seen.has(sig))continue;
+     const occupant=state.board[approach.y][approach.x];
+     if(liberties.has(targetKey)||seen.has(sig))continue;
+     // Once an attacker has occupied an approach point, the threat is an
+     // already-established contact. Record the Keep liberty it can invade
+     // next; skipping occupied approach points made the warning disappear
+     // exactly when the opponent advanced from approach to attack.
+     if(occupant?.owner===attacker){
+      let accessible=false;
+      for(const rank of ranks){
+       if(!(state.reserves[attacker]?.[rank]>0))continue;
+       for(const via of B.routeOptions(state,liberty,attacker,rank)){
+        const setup=B.apply({...state,player:attacker},{type:'place',rank,to:liberty,via},{speculative:true});
+        if(setup){accessible=true;break;}
+       }
+       if(accessible)break;
+      }
+      if(accessible){seen.add(sig);threats.push({to:liberty,liberty,keep:keeps[0],occupiedApproach:approach});}
+      continue;
+     }
+     if(occupant||seen.has(sig))continue;
      let accessible=false;
      for(const rank of ranks){
       if(!(state.reserves[attacker]?.[rank]>0))continue;
@@ -296,28 +320,81 @@
     }
    }
   }
-  return threats;
+  return remember(threats);
  }
  function keepApproachBonus(candidate,threats){
   const action=candidate?.action;
   if(action?.type!=='place'||!action.to||!threats?.length)return 0;
   let blocked=0;
   for(const threat of threats)if(threat.to.x===action.to.x&&threat.to.y===action.to.y)blocked++;
-  return Math.min(12,blocked*6.5);
+  return Math.min(6,blocked*3);
+ }
+ function threatenedKeepAnchor(group,state){
+  const keep=group?.find(p=>state.board[p.y][p.x]?.rank==='keep');
+  return keep?key(keep.x,keep.y):null;
+ }
+ function keepApproachUrgent(state,group,threats){
+  const anchor=threatenedKeepAnchor(group,state);if(!anchor)return false;
+  const liberties=libertiesFor(state.board,state.size,group).size,
+   groupThreats=(threats||[]).filter(t=>key(t.keep.x,t.keep.y)===anchor),
+   attackedLiberties=new Set(groupThreats.map(t=>key(t.liberty.x,t.liberty.y)));
+  return liberties<=2||groupThreats.some(t=>t.occupiedApproach)||liberties===3&&attackedLiberties.size===2;
+ }
+ function siegeCounterattackBonus(state,candidate,threats,owner){
+  if(!threats?.length||!candidate?.next)return 0;
+  const enemy=other(owner),anchors=new Set(threats.map(t=>key(t.keep.x,t.keep.y))),marshalPoints=new Map();
+  for(const anchor of anchors){
+   const [x,y]=anchor.split(',').map(Number),group=groupAtFor(state.board,state.size,{x,y});
+   for(const keep of group)if(state.board[keep.y][keep.x]?.rank==='keep')for(const q of B.adjacent(keep,state.size)){
+    const piece=state.board[q.y][q.x];if(piece?.owner===enemy&&piece.rank==='marshal')marshalPoints.set(key(q.x,q.y),q);
+   }
+  }
+  if(!marshalPoints.size)return 0;
+  let score=0;
+  for(const [encoded,point] of marshalPoints){
+   const captured=(candidate.next.last?.captured||[]).some(piece=>piece.rank==='marshal'&&key(piece.at.x,piece.at.y)===encoded);
+   if(captured){score+=10;continue;}
+   if(candidate.action?.type!=='place'||!candidate.action.to||Math.abs(candidate.action.to.x-point.x)+Math.abs(candidate.action.to.y-point.y)>1)continue;
+   const before=groupAtFor(state.board,state.size,point),after=groupAtFor(candidate.next.board,candidate.next.size,point);
+   if(!after.length)continue;
+   const beforeLiberties=libertiesFor(state.board,state.size,before).size,afterLiberties=libertiesFor(candidate.next.board,candidate.next.size,after).size;
+   if(afterLiberties===1&&beforeLiberties>1&&vulnerableByLegalReply(candidate.next,after,owner))score+=7.5;
+   else if(afterLiberties===2&&beforeLiberties>2)score+=3.25;
+  }
+  return Math.min(12,score);
  }
  function keepSafetyBonus(state,candidate,threats,owner,keepGroups){
   let bonus=keepApproachBonus(candidate,threats);
   const action=candidate?.action;
   if(action?.type!=='place'||!action.to||!candidate.next)return bonus;
-  const matching=(keepGroups||[]).filter(group=>libertiesFor(state.board,state.size,group).has(key(action.to.x,action.to.y)));
-  if(!matching.length)return bonus;
-  const beforeLiberties=matching.reduce((sum,group)=>sum+libertiesFor(state.board,state.size,group).size,0),
-   afterLiberties=matching.reduce((sum,group)=>{
-    const anchor=group.find(p=>state.board[p.y][p.x]?.rank==='keep'),nextGroup=groupAtFor(candidate.next.board,candidate.next.size,anchor);
-    return sum+(nextGroup.length?libertiesFor(candidate.next.board,candidate.next.size,nextGroup).size:0);
-   },0),afterThreats=keepApproachThreats(candidate.next,owner).length;
-  bonus+=clamp((afterLiberties-beforeLiberties)*3+(threats.length-afterThreats)*2,-5,10);
-  return clamp(bonus,-5,14);
+  if(!keepGroups?.length)return bonus;
+  const actionPoint=key(action.to.x,action.to.y),afterThreats=threats?.length?keepApproachThreats(candidate.next,owner):[],
+   capturedThreatMarshal=(candidate.next.last?.captured||[]).some(piece=>piece.rank==='marshal');
+  for(const group of keepGroups){
+   const anchor=threatenedKeepAnchor(group,state);if(!anchor)continue;
+   const beforeLiberties=libertiesFor(state.board,state.size,group),beforeCount=beforeLiberties.size,
+    groupThreats=(threats||[]).filter(t=>key(t.keep.x,t.keep.y)===anchor),nextAnchor=group.find(p=>state.board[p.y][p.x]?.rank==='keep'),nextGroup=groupAtFor(candidate.next.board,candidate.next.size,nextAnchor);
+   if(!nextGroup.length)continue;
+   const afterCount=libertiesFor(candidate.next.board,candidate.next.size,nextGroup).size,
+    afterCountForGroup=afterThreats.filter(t=>key(t.keep.x,t.keep.y)===anchor).length,
+    threatReduction=Math.max(0,groupThreats.length-afterCountForGroup),delta=afterCount-beforeCount,
+    touchesLiberty=beforeLiberties.has(actionPoint);
+   if(groupThreats.length){
+    // Each eliminated approach is measured against this Keep's own group.
+    // This avoids rewarding a move that protects a different Keep elsewhere.
+    bonus+=threatReduction*7.5;
+    if(threatReduction&&afterCountForGroup===0)bonus+=2.5;
+    if(delta>0)bonus+=Math.min(4.5,delta*1.5);
+    if(touchesLiberty&&afterCount>=beforeCount)bonus+=1.25;
+   }
+   if(beforeCount<=2){
+    if(delta>0)bonus+=Math.min(8,delta*4);
+    else if(touchesLiberty&&afterCount>=beforeCount)bonus+=3.5;
+   }
+   if(capturedThreatMarshal&&groupThreats.length)bonus+=1.5;
+  }
+  if(threats?.length)bonus+=siegeCounterattackBonus(state,candidate,threats,owner);
+  return clamp(bonus,-5,28);
  }
  function vulnerableByLegalReply(state,group,attacker){
   if(state.result)return false;
@@ -935,7 +1012,9 @@
   return out;
  }
  function tacticalCandidateSet(state,candidates,config){
-  const actor=state.player,enemy=other(actor),ownThreats=immediatelyCapturableGroups(state,actor),
+  const actor=state.player,enemy=other(actor),ownThreats=immediatelyCapturableGroups(state,actor),approachThreats=keepApproachThreats(state,actor),
+   threatenedAnchors=new Set(approachThreats.map(t=>key(t.keep.x,t.keep.y))),approachGroups=groupsFor(state.board,state.size,actor)
+    .filter(group=>threatenedAnchors.has(threatenedKeepAnchor(group,state))),
    territory=territoryOwnerMap(state),context={own:fieldFor(state,actor,territory),enemy:fieldFor(state,enemy,territory),enemyProfile:profileFor(config,enemy),territory};
   const ranked=[];
   for(const candidate of candidates){
@@ -951,16 +1030,33 @@
    }
    if(action.rank==='marshal'&&siegePressure(next,actor)-siegePressure(state,actor)>.6)priority=Math.max(priority,12+fastPrior(state,candidate,context,config));
    if(action.rank==='sentry'&&sourceOptions(state,enemy,territory)-sourceOptions(next,enemy,territoryOwnerMap(next))>0)priority=Math.max(priority,8+fastPrior(state,candidate,context,config));
+   if(approachThreats.length){
+    const touchesDefensePoint=action.type==='place'&&action.to&&(
+     approachThreats.some(t=>key(t.to.x,t.to.y)===key(action.to.x,action.to.y)||key(t.liberty.x,t.liberty.y)===key(action.to.x,action.to.y))||
+     approachGroups.some(group=>libertiesFor(state.board,state.size,group).has(key(action.to.x,action.to.y)))||
+     [...threatenedAnchors].some(anchor=>{const [x,y]=anchor.split(',').map(Number);return B.adjacent({x,y},state.size).some(q=>state.board[q.y][q.x]?.owner===enemy&&state.board[q.y][q.x]?.rank==='marshal'&&Math.abs(q.x-action.to.x)+Math.abs(q.y-action.to.y)<=1);})
+    );
+    if(touchesDefensePoint){
+     const defense=keepSafetyBonus(state,candidate,approachThreats,actor,approachGroups);
+     if(defense>0)priority=Math.max(priority,28+defense+fastPrior(state,candidate,context,config));
+    }
+    if(action.rank==='marshal'){
+     const counterSiege=siegePressure(next,actor)-siegePressure(state,actor);
+     if(counterSiege>.6)priority=Math.max(priority,17+Math.min(3,counterSiege)+fastPrior(state,candidate,context,config));
+    }
+   }
    if(Number.isFinite(priority))ranked.push({candidate,priority});
   }
   ranked.sort((a,b)=>b.priority-a.priority);
-  return{moves:ranked.slice(0,6).map(x=>x.candidate),mustRespond:ownThreats.length>0};
+  const urgentApproach=approachGroups.some(group=>keepApproachUrgent(state,group,approachThreats));
+  return{moves:ranked.slice(0,6).map(x=>x.candidate),mustRespond:ownThreats.length>0||urgentApproach&&ranked.some(x=>x.priority>=28)};
  }
  function quiescenceValue(state,perspective,config,remaining=2,alpha=-1,beta=1){
   const stand=scaledValue(state,perspective,config);
   if(Math.abs(stand)>.98||remaining<=0)return stand;
   const mover=state.player,ownThreats=immediatelyCapturableGroups(state,mover),
-   enemyThreats=immediatelyCapturableGroups(state,other(mover)),noisy=Boolean(state.last?.captured?.length||ownThreats.length||enemyThreats.length);
+   enemyThreats=immediatelyCapturableGroups(state,other(mover)),approachThreats=keepApproachThreats(state,mover),
+   noisy=Boolean(state.last?.captured?.length||ownThreats.length||enemyThreats.length||approachThreats.length);
   if(!noisy)return stand;
   const legal=legalCandidates(state),{moves,mustRespond}=tacticalCandidateSet(state,legal,config);
   if(!moves.length)return stand;
@@ -1069,8 +1165,9 @@
    }
   }
   const rootProtection=new Map(rootCandidates.map(c=>[actionKey(c.action),keepSafetyBonus(state,c,approachThreats,actor,watchKeepGroups)])),
-   urgentApproachDefense=!preThreat&&approachThreats.length>0&&watchKeepGroups.some(group=>libertiesFor(state.board,state.size,group).size<=2),
-   bestProtection=urgentApproachDefense?Math.max(0,...rootProtection.values()):0;
+   urgentApproachDefense=!preThreat&&watchKeepGroups.some(group=>keepApproachUrgent(state,group,approachThreats)),
+   urgentLibertyDefense=!preThreat&&watchKeepGroups.some(group=>libertiesFor(state.board,state.size,group).size<=2),
+   bestProtection=urgentApproachDefense||urgentLibertyDefense?Math.max(0,...rootProtection.values()):0;
   let approachFiltered=0;
   if(bestProtection>0){
    const protective=rootCandidates.filter(c=>(rootProtection.get(actionKey(c.action))||0)>=bestProtection-.001);
@@ -1147,5 +1244,5 @@
   return{action:chosenAction,reason:moveReason(state,chosenAction,next),score:evaluate(next,actor,config),staticScore:evaluate(next,actor,config),examined:allRootCandidates.length,searchable:rootCandidates.length,crownholdUnsafeRootActions:unsafeRootCandidates.length,crownholdForcedRootActions:forcedUnsafeRootCandidates.length,crownholdApproachTargets:approachThreats.length,crownholdApproachRootActions:rootExact.filter(c=>c.approachBonus>0).length,crownholdApproachFilteredActions:approachFiltered,iterations,iterationsCompleted,elapsedMs:clockNow()-startedAt,depth:deepest,rootVisits:best.visits,rootPrior:best.prior||0,rootActionsExpanded:root.children.length,legalRootActions:root.pool.length,passDeferred,rootStats:root.children.map(c=>{const amaf=raveStat(root,c.action);return{action:c.action,visits:c.visits,value:c.visits?c.valueSum/c.visits:0,prior:c.prior,raveVisits:amaf?.visits||0,raveValue:amaf?.visits?amaf.valueSum/amaf.visits:0};}).sort((a,b)=>b.visits-a.visits)};
  }
  function profileName(name){return profiles[name]?.name||profiles.builder.name;}
- return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,moyoPotentialScore,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.7.1-moyo-framework-root-delta"});
+ return Object.freeze({chooseAction,evaluate,legalCandidates,forcedCrownholdThreat,keepApproachThreats,keepApproachBonus,keepSafetyBonus,siegeCounterattackBonus,moyoPotentialScore,profiles:Object.freeze(profiles),profileName,moveReason,searchVersion:"v6.8-siege-aware-keep-defense"});
 });
