@@ -1,5 +1,69 @@
 [
   [
+    "{0} ply",
+    "{0} media jugada"
+  ],
+  [
+    "{0} plies",
+    "{0} medias jugadas"
+  ],
+  [
+    "{0} piece",
+    "{0} pieza"
+  ],
+  [
+    "{0} pieces",
+    "{0} piezas"
+  ],
+  [
+    "{0}-piece formation",
+    "formación de {0} piezas"
+  ],
+  [
+    "{0} high",
+    "de {0} piezas de altura"
+  ],
+  [
+    "{0}: empty",
+    "{0}: casilla vacía"
+  ],
+  [
+    "{0}: empty; legal {1}",
+    "{0}: casilla vacía; acción legal: {1}"
+  ],
+  [
+    "{0}: {1} controls; {2}; {3} piece, base to top",
+    "{0}: {1} controla; {2}; {3} pieza, de abajo hacia arriba"
+  ],
+  [
+    "{0}: {1} controls; {2}; {3} piece, base to top; legal {4}",
+    "{0}: {1} controla; {2}; {3} pieza, de abajo hacia arriba; destino legal"
+  ],
+  [
+    "{0}: {1} controls; {2}; {3} pieces, base to top",
+    "{0}: {1} controla; {2}; {3} piezas, de abajo hacia arriba"
+  ],
+  [
+    "{0}: {1} controls; {2}; {3} pieces, base to top; legal {4}",
+    "{0}: {1} controla; {2}; {3} piezas, de abajo hacia arriba; destino legal"
+  ],
+  [
+    "{0} controls · combined moves · base → top",
+    "{0} controla · movimientos combinados · de abajo hacia arriba"
+  ],
+  [
+    "{0} controls · combined moves · select a highlighted path",
+    "{0} controla · movimientos combinados · selecciona una ruta resaltada"
+  ],
+  [
+    "{0} · two per court",
+    "{0} · dos por bando"
+  ],
+  [
+    "{0} · five per court",
+    "{0} · cinco por bando"
+  ],
+  [
     "{name} wins",
     "Gana {name}"
   ],
@@ -33,7 +97,7 @@
   ],
   [
     "{0} · {1} per court",
-    "{0} · {1} por corte"
+    "{0} · {1} por bando"
   ],
   [
     "Drop {0} at {1}",

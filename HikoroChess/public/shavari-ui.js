@@ -157,7 +157,7 @@ window.SiteRecords?.completed('shavari',recordPayload(),state.result,online?game
             const strip=document.querySelector(p===1?'.player-strip.carnelian':'.player-strip.turquoise');strip.classList.toggle('active',state.player===p&&!state.result);
             $(`court-${p}`).textContent=online ? mySeat===p?'Your court':'Opponent’s court' : p===1?'Southern army · moves first':'Northern army';
         }
-        $('move-count').textContent=state.ply+' plies';
+        $('move-count').textContent=state.ply+(state.ply===1?' ply':' plies');
         const history=$('move-history'),nearBottom=history.scrollHeight-history.scrollTop-history.clientHeight<35;history.replaceChildren();
         state.history.slice(-100).forEach((m,i)=>{
             const li=document.createElement('li'),number=document.createElement('span'),move=document.createElement('span');number.className='ply-no';
