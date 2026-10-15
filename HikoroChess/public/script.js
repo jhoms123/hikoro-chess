@@ -130,12 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho'].includes(gameType);
-            createGameBtn.disabled = !socket.connected || gameType === 'shavari-go';
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt'].includes(gameType);
+            createGameBtn.disabled = !socket.connected || gameType === 'shavari-go' || gameType === 'valley-hunt';
             const setupHint = document.getElementById('setup-hint');
             if (setupHint) setupHint.textContent = gameType === 'shavari-go'
                 ? 'Shavari Go is a shared-device two-player game. Online rooms are not available yet.'
-                : 'Online rooms need a second player. Local play shares this device.';
+                : gameType === 'valley-hunt'
+                    ? 'The Valley Hunt is a local game. Choose Play locally to start against the bot or share this device.'
+                    : 'Online rooms need a second player. Local play shares this device.';
             const sdsPlayerCountContainer = document.getElementById('sds-player-count-container');
             const sdsBotCountContainer = document.getElementById('sds-bot-count-container');
 
@@ -168,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        if (gameType === 'shavari-go') return;
+        if (gameType === 'shavari-go' || gameType === 'valley-hunt') return;
 
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
@@ -195,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const players = Number(sdsPlayerCountSelect?.value || 2), bots = Number(sdsBotCountSelect?.value || 0);
             window.location.href = `/shodansho.html?players=${players}&bots=${bots}`; return;
         }
-        if (['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html${gameTypeSelect.value === 'go' ? '?size=' + document.getElementById('go-board-size').value : ''}`; return; }
+        if (['shavari','hikoruka','go','academy','valley-hunt'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html${gameTypeSelect.value === 'go' ? '?size=' + document.getElementById('go-board-size').value : ''}`; return; }
         window.location.href = '/hikoro.html';
     });
 
@@ -213,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
         document.getElementById('connection-status').title = '';
-        createGameBtn.disabled = gameTypeSelect.value === 'shavari-go'; singlePlayerBtn.disabled = false;
+        createGameBtn.disabled = gameTypeSelect.value === 'shavari-go' || gameTypeSelect.value === 'valley-hunt'; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
         }
@@ -223,15 +225,15 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', () => {
         localCreationPending = false;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => { if (!switchingLocalMatch) announce(message); });
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         const status = document.getElementById('connection-status');
         if (status) { status.textContent = 'Connection failed · retrying…'; status.title = err.message || 'The game server is unavailable'; }
-        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho'].includes(gameTypeSelect.value);
-        announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho and Shavari.");
+        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho','valley-hunt'].includes(gameTypeSelect.value);
+        announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho, Shavari, and The Valley Hunt.");
     });
 
     rulesBtnIngame.addEventListener('click', () => {
