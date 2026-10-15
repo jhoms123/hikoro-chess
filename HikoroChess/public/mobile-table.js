@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded',()=>{
      move(document.querySelector('label[for=lesson-select]'),picker);move(document.getElementById('lesson-select'),picker);
      move(document.getElementById('lesson-tip'),selection);
     }
-    for(const item of [...panel.children]){if(item.matches('.chronicle'))fold(item,'Move history & save');else if(item.matches('.panel[data-mobile-title]'))fold(item,item.dataset.mobileTitle);else if(item.matches('#local-settings'))fold(item,'Game setup');else if(item.matches('#lesson-panel'))fold(item,'Lesson guidance');else if(item.matches('.panel'))fold(item,'Score details');else fold(item,'Match options');}
+    for(const item of [...panel.children]){if(theme==='valley-hunt'&&item.matches('.control-panel,.hunter-panel'))continue;if(item.matches('.chronicle'))fold(item,'Move history & save');else if(item.matches('.panel[data-mobile-title]'))fold(item,item.dataset.mobileTitle);else if(item.matches('#local-settings'))fold(item,'Game setup');else if(item.matches('#lesson-panel'))fold(item,'Lesson guidance');else if(item.matches('.panel'))fold(item,'Score details');else fold(item,'Match options');}
     fold(document.querySelector('.captures'),'Captured pieces');fold(document.querySelector('.piece-guide'),'Piece guide');fold(document.querySelector('.go-summary'),'Strategy & scoring');
    }
    if(theme==='shodansho'){
