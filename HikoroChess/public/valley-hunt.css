@@ -1,183 +1,81 @@
-body[data-audio-theme=valley-hunt]{--accent:#c7ba83;--surface:#26352d;--table-ui:#1c3028;--table-ui-2:#30483a;--table-line:#72856e;--table-ink:#f1ead2;--table-gold:#d5bd7d;background:radial-gradient(ellipse at 48% 0%,#3b5140 0%,#1b2922 48%,#111915 100%);font-family:Georgia,"Times New Roman",serif}
-body.valley-hunt-page{--vh-ink:#eee9d9;--vh-muted:#bdc3b2;--vh-moss:#a9c888;--vh-rust:#d99170;--vh-cell-w:clamp(47px,5vw,66px);--vh-cell-h:clamp(34px,3.25vw,43px);color:var(--vh-ink)}
-.valley-hunt-page .site-header{margin-bottom:0}
-.valley-hunt-page main{max-width:1320px;margin:0 auto;padding:0 clamp(14px,3vw,38px) 28px}
-.valley-hunt-page .introduction{padding:30px 16px 18px}
-.valley-hunt-page .introduction h1{font-size:clamp(38px,4vw,54px)}
-.valley-hunt-page .match-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(285px,345px);gap:18px;align-items:start;max-width:1240px;margin:0 auto}
-.valley-hunt-page .play-area{display:flex;flex-direction:column;gap:11px;min-width:0}
-.valley-hunt-page .match-panel{display:grid;gap:12px;min-width:0}
-.valley-hunt-page .panel{box-sizing:border-box;background:linear-gradient(160deg,#29382fec,#1c2922f5);border:1px solid #71816a60;border-radius:14px;padding:16px;box-shadow:0 8px 24px #0c141180;color:var(--vh-ink)}
-.valley-hunt-page .panel h2{font:normal 23px/1.15 Georgia,serif;margin:0 0 11px;color:#eee4c9}
-.valley-hunt-page .turn-panel{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 12px;margin:0}
-.valley-hunt-page .turn-panel .eyebrow{grid-column:1/-1;margin:0;font-size:9px}
-.valley-hunt-page .turn-panel h2{margin:0;font-size:20px}
-.valley-hunt-page .turn-panel .fine-print{margin:0}
-.valley-hunt-page .fine-print{font:13px/1.55 Georgia,serif;color:var(--vh-muted)}
-.valley-hunt-page .turn-label{display:flex;align-items:center;gap:9px;font:700 14px Georgia,serif}
-.valley-hunt-page .turn-dot{width:11px;height:11px;border-radius:50%;background:var(--vh-moss);box-shadow:0 0 0 4px #a9c88824}
-.valley-hunt-page .turn-dot.rust{background:var(--vh-rust);box-shadow:0 0 0 4px #d9917028}
-.valley-hunt-page .board-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.valley-hunt-page .board-meta{font:12px Georgia,serif;color:var(--vh-muted);text-align:right}
-.valley-hunt-page .player-strip{display:flex;align-items:center;gap:10px;min-height:42px;padding:7px 12px;background:#202d26;border:1px solid #586b55;border-radius:8px;color:#e8dfc4}
-.valley-hunt-page .player-strip.active{border-color:#d2bb7e;box-shadow:inset 4px 0 #d2bb7e,0 0 0 1px #d2bb7e26}
-.valley-hunt-page .player-strip strong{font-size:16px}.valley-hunt-page .player-strip small{font-size:12px;color:#bdc3b2}
-.valley-hunt-page .player-mark{width:13px;height:13px;border-radius:50%;flex:none}.valley-hunt-page .rust-mark{background:var(--vh-rust)}.valley-hunt-page .moss-mark{background:var(--vh-moss)}
-.valley-hunt-page .army-count{margin-left:auto;font:12px Georgia,serif;color:#bdc3b2;white-space:nowrap}
-.valley-hunt-page .board-shell{display:grid;grid-template-columns:22px auto 22px;gap:5px;align-items:start;width:max-content;max-width:100%;margin:0 auto}
-.valley-hunt-page .board-plate{min-width:0}.valley-hunt-page .ranks{display:grid;grid-template-rows:repeat(12,var(--vh-cell-h));align-items:center;text-align:center;color:#d5c9a8;font:700 11px Georgia,serif}
-.valley-hunt-page .files{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));margin-top:6px;text-align:center;color:#d5c9a8;font:700 11px Georgia,serif}
-.valley-hunt-page .board{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));grid-template-rows:repeat(12,var(--vh-cell-h));position:relative;overflow:hidden;border:5px solid #64573f;border-radius:7px;background:#aa9d7c;box-shadow:0 12px 26px #080d0a80}
-.valley-hunt-page .cell{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:0;border:0;cursor:pointer;background:#c8b995;transition:filter .12s,box-shadow .12s}
-.valley-hunt-page .cell.shade{background:#92866c}.valley-hunt-page .cell.in-valley{background-image:linear-gradient(#72865024,#72865024)}.valley-hunt-page .cell.in-valley.shade{background-color:#928a69}
-.valley-hunt-page .cell:hover{filter:brightness(1.12);z-index:2}.valley-hunt-page .cell:focus-visible{outline:3px solid #fff2b4;outline-offset:-3px;z-index:4}
-.valley-hunt-page .cell.last-from,.valley-hunt-page .cell.last-to{box-shadow:inset 0 0 0 3px #ecd67a9c}.valley-hunt-page .cell.selected{box-shadow:inset 0 0 0 3px #f8e4a1;z-index:3}
-.valley-hunt-page .cell.legal::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:#3c694acc;box-shadow:0 1px 4px #25251666;z-index:1}
-.valley-hunt-page .cell.legal.occupied-landing::after{width:78%;height:82%;background:transparent;border:3px solid #3c694acc}
-.valley-hunt-page .goal-line{position:absolute;left:0;right:0;height:2px;background:#b28d4b80;pointer-events:none;z-index:2}.valley-hunt-page .goal-line.top{top:25%}.valley-hunt-page .goal-line.bottom{bottom:25%}
-.valley-hunt-page .token{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;width:78%;height:84%;max-width:48px;max-height:43px;border:1px solid #312e27aa;border-radius:48% 48% 43% 43%;box-shadow:0 3px 3px #1217106b,inset 0 1px 2px #ffffff72;user-select:none;line-height:1}
-.valley-hunt-page .token.moss{background:linear-gradient(145deg,#d7e6bd,#8eae76)}.valley-hunt-page .token.rust{background:linear-gradient(145deg,#f0c09f,#bd795e)}.valley-hunt-page .token.dragon{border-radius:42% 42% 50% 50%;background:linear-gradient(145deg,#e6d8a8,#9d8655)}
-.valley-hunt-page .token .sigil{display:block;width:66%;height:61%;object-fit:contain;filter:brightness(.15) sepia(.25);flex:none}.valley-hunt-page .token.dragon .sigil{width:70%;height:66%}
-.valley-hunt-page .token .mini-name{margin-top:1px;font:900 clamp(6px,.62vw,8px)/1 Arial,sans-serif;text-transform:uppercase;letter-spacing:.03em;color:#302f22}
-.valley-hunt-page .stack-under{position:absolute;right:-8px;bottom:-6px;z-index:3;display:grid;place-items:center;width:21px;height:21px;border:2px solid #302c22;border-radius:50%;background:#f3e5bc;box-shadow:0 2px 4px #1417119c}
-.valley-hunt-page .stack-under img{width:14px;height:14px;object-fit:contain;filter:brightness(.15) sepia(.25)}.valley-hunt-page .pinned-ring{position:absolute;inset:2px;border:2px dashed #f6e4a6;border-radius:50%;pointer-events:none;z-index:3}
-.valley-hunt-page .board-foot{display:flex;justify-content:space-between;gap:8px;color:var(--vh-muted);font:11px Georgia,serif;padding:0 5px}
-.valley-hunt-page .legend{display:flex;align-items:center;gap:15px;color:var(--vh-muted);font:11px Georgia,serif;margin-top:-4px}.valley-hunt-page .legend span{display:flex;align-items:center;gap:6px}.valley-hunt-page .legend i{width:9px;height:9px;border-radius:50%;background:#76a36e}.valley-hunt-page .legend i.ring{width:12px;height:12px;border:2px solid #76a36e;border-radius:50%;background:transparent}
-.valley-hunt-page .control-panel .button-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.valley-hunt-page .control-panel .quiet-button{min-height:40px}
-.valley-hunt-page .control-panel .primary-button{background:linear-gradient(#8e7146,#6e5535)}
-.valley-hunt-page .control-label{display:block;margin:12px 0 5px;font:13px Georgia,serif;color:#e1d5b4}
-.valley-hunt-page select{display:block;width:100%;min-height:42px;padding:8px 10px!important;border:1px solid #788773!important;border-radius:7px!important;background:#19251f!important;color:#f1ead2!important;font:15px Georgia,serif!important}
-.valley-hunt-page .score-block{display:grid;grid-template-columns:1fr 1fr;gap:8px}.valley-hunt-page .score{padding:10px;background:#18241e;border:1px solid #53634f;border-radius:9px}
-.valley-hunt-page .score-head{display:flex;align-items:center;gap:8px;font:700 14px Georgia,serif}.valley-hunt-page .score-chip{width:10px;height:10px;border-radius:50%;background:var(--vh-moss)}.valley-hunt-page .score.rust .score-chip{background:var(--vh-rust)}
-.valley-hunt-page .score-numbers{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;font:11px/1.35 Georgia,serif;color:var(--vh-muted)}.valley-hunt-page .score-numbers b{display:block;margin-top:2px;font:700 16px Georgia,serif;color:var(--vh-ink)}
-.valley-hunt-page .chronicle .log{display:grid;gap:6px;max-height:220px;overflow:auto}.valley-hunt-page .log-item{border-left:2px solid #8192767a;padding:3px 0 3px 9px;font:12px/1.4 Georgia,serif;color:#c0c8bd}
-.valley-hunt-page .empty-log{font:13px Georgia,serif;color:var(--vh-muted)}.valley-hunt-page .move-note{min-height:0;margin:8px 0 0;font:12px/1.4 Georgia,serif;color:#e1d8bc}
-.valley-hunt-page .piece-list{display:grid;gap:11px}.valley-hunt-page .piece-row{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:center}
-.valley-hunt-page .piece-icon{width:34px;height:34px;padding:5px;object-fit:contain;border:1px solid #89784f;border-radius:8px;background:#ddcfaa;filter:brightness(0) saturate(100%) invert(22%) sepia(16%) saturate(879%) hue-rotate(45deg)}
-.valley-hunt-page .piece-row h3{margin:0 0 3px;font:700 15px Georgia,serif;color:#f1e7ca}.valley-hunt-page .piece-row p{margin:0;font:12px/1.45 Georgia,serif;color:var(--vh-muted)}
-.valley-hunt-page .artwork-credit-panel a,.valley-hunt-page .credit-line a{color:#dfc68a}.valley-hunt-page .artwork-credit-panel p{margin:0}
-.valley-hunt-page .rules-panel{max-width:1240px;margin:20px auto 0}.valley-hunt-page .rules-panel>h2{margin:4px 0 15px;font-size:30px}
-.valley-hunt-page .rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.valley-hunt-page .rules-grid article{padding:13px 14px;border:1px solid #63735b;background:#17251e;border-radius:9px}
-.valley-hunt-page .rules-grid h3{margin:0 0 6px;font:700 17px Georgia,serif;color:#e8ddb8}.valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{margin:0;font:13px/1.58 Georgia,serif;color:#c0c8bd}.valley-hunt-page .credit-line{margin-top:14px}
-.valley-hunt-page .collection-footer{padding:16px 10px}.valley-hunt-page .collection-footer a{color:#dfc68a}
-@media(max-width:1050px){body.valley-hunt-page{--vh-cell-w:clamp(47px,6vw,66px)}.valley-hunt-page .match-layout{grid-template-columns:minmax(0,1fr) minmax(260px,310px)}.valley-hunt-page .panel{padding:14px}}
-@media(max-width:760px){
- body.valley-hunt-page{--vh-cell-w:clamp(43px,11vw,57px);--vh-cell-h:clamp(31px,8vw,37px)}
- .valley-hunt-page main{padding:0 10px 18px}.valley-hunt-page .match-layout{display:block}.valley-hunt-page .play-area{gap:6px}.valley-hunt-page .board-heading{display:none}
- .valley-hunt-page .board-shell{gap:3px;grid-template-columns:18px auto 18px}.valley-hunt-page .board{border-width:4px}
- .valley-hunt-page .ranks,.valley-hunt-page .files{font-size:9px}.valley-hunt-page .token{width:82%;height:82%}.valley-hunt-page .token .mini-name{font-size:6px}
- .valley-hunt-page .stack-under{width:18px;height:18px;right:-6px;bottom:-5px}.valley-hunt-page .stack-under img{width:11px;height:11px}
- .valley-hunt-page .board-foot{font-size:10px}.valley-hunt-page .legend{margin:0}.valley-hunt-page .player-strip{min-height:35px;padding:4px 7px;gap:6px}
- .valley-hunt-page .player-strip strong{font-size:13px}.valley-hunt-page .player-strip small{font-size:10px}.valley-hunt-page .army-count{font-size:10px}
- .valley-hunt-page .match-panel{margin-top:12px;grid-template-columns:1fr}.valley-hunt-page .rules-panel{margin-top:14px;padding:13px}.valley-hunt-page .rules-grid{grid-template-columns:1fr}.valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font-size:12px}
- .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(43px,calc((var(--phone-fit-width,100vw) - 54px)/5),57px)}
- .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:0 auto}
- .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(50px,calc((var(--mobile-board-width) - 54px)/5),78px)}
-}
-@media(max-width:365px){body.valley-hunt-page{--vh-cell-w:43px;--vh-cell-h:30px}.valley-hunt-page .player-strip small{display:none}.valley-hunt-page .army-count{font-size:9px}}
-
+/* Valley Hunt uses the same timber, parchment and type as Sho Dan Sho.
+   Materials: assets/medieval/CREDITS.md; piece art: Lorc and Delapouite. */
+body[data-audio-theme=valley-hunt]{--accent:#b9c497;--surface:#293829;--theme-emblem:url('assets/collection/icons/compass.svg');--vh-ink:#efdfb7;--vh-muted:#cbbf91;--vh-moss:#a9c888;--vh-rust:#d99170;--vh-cell-w:clamp(76px,8vw,102px);--vh-cell-h:clamp(56px,5.8vw,74px);background:radial-gradient(ellipse at top,#5361438a,#111d15e8),var(--wood) center/900px repeat;color:var(--vh-ink);font-family:Georgia,serif}
 .valley-hunt-page [hidden]{display:none!important}
-
-/* Board-first layout: keep the whole game in one centered column. */
-body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,5.1vw,58px)}
-.valley-hunt-page main{max-width:1320px;padding:0 clamp(14px,3vw,38px) 34px}
-.valley-hunt-page .introduction{padding:22px 16px 16px}
-.valley-hunt-page .introduction h1{font-size:clamp(36px,4vw,50px);margin:8px 0 10px}
-.valley-hunt-page .introduction::after{margin:12px auto 0;width:110px;height:18px}
-.valley-hunt-page .match-layout{display:block;max-width:1040px;margin:0 auto}
-.valley-hunt-page .play-area{align-items:stretch;gap:10px}
-.valley-hunt-page .board-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;box-sizing:border-box;width:100%;max-width:780px;min-height:54px;margin:0 auto 2px;padding:10px 15px;border:1px solid #66785e;border-radius:10px;background:linear-gradient(110deg,#1b2922,#26372d);box-shadow:0 5px 16px #08110c55}
-.valley-hunt-page .turn-label{gap:10px;flex:none;font:700 18px/1.2 Georgia,serif}
-.valley-hunt-page .board-meta{flex:1;font:13px/1.4 Georgia,serif;color:var(--vh-muted);text-align:right}
-.valley-hunt-page .player-strip{box-sizing:border-box;width:100%;max-width:780px;margin:0 auto;min-height:46px;padding:8px 14px}
-.valley-hunt-page .player-strip strong{font-size:16px}
-.valley-hunt-page .board-shell{gap:6px;grid-template-columns:26px auto 26px}
-.valley-hunt-page .ranks{font-size:13px}
-.valley-hunt-page .files{font-size:13px;margin-top:8px}
-.valley-hunt-page .board{border-width:6px;border-radius:10px;box-shadow:0 16px 32px #080d0a88}
-.valley-hunt-page .token{display:grid;place-items:center;box-sizing:border-box;width:82%;height:88%;max-width:none;max-height:none;padding:2px;border-radius:50%;box-shadow:0 4px 7px #12171088,inset 0 1px 3px #ffffff8c}
-.valley-hunt-page .token .sigil{width:78%;height:78%;object-fit:contain;filter:brightness(.13) sepia(.24);flex:none}
-.valley-hunt-page .token.dragon .sigil{width:82%;height:82%}
-.valley-hunt-page .board-foot{max-width:730px;width:100%;box-sizing:border-box;margin:0 auto;font-size:12px}
-.valley-hunt-page .legend{max-width:730px;width:100%;box-sizing:border-box;justify-content:center;margin:0 auto 3px;font-size:12px}
-.valley-hunt-page .match-panel{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:1000px;max-height:none;margin:24px auto 0;overflow:visible;align-items:start}
-.valley-hunt-page .match-panel>.panel{min-width:0}
-.valley-hunt-page .control-panel{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px;align-items:end}
-.valley-hunt-page .control-panel>h2,.valley-hunt-page .control-panel>.button-row,.valley-hunt-page .control-panel>.fine-print{grid-column:1/-1}
-.valley-hunt-page .control-panel .control-label{margin:2px 0 6px}
-.valley-hunt-page .control-panel select{margin-bottom:4px}
-.valley-hunt-page .rules-panel{grid-column:1/-1;max-width:none;margin:0}
-.valley-hunt-page .rules-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.valley-hunt-page .piece-guide-card .piece-row{grid-template-columns:44px minmax(0,1fr)}
-.valley-hunt-page .piece-guide-card .piece-icon{width:40px;height:40px}
-@media(max-width:1050px){
- body.valley-hunt-page{--vh-cell-w:clamp(60px,9vw,90px);--vh-cell-h:clamp(43px,6vw,63px)}
- .valley-hunt-page .match-layout{display:block;max-width:920px}
- .valley-hunt-page .match-panel{max-width:920px}
-}
+body.valley-hunt-page .site-header{max-width:1320px;margin:auto;padding:18px 30px;min-height:82px;gap:20px}
+.valley-hunt-page .header-caption{font:italic 15px Georgia,serif;color:#c9b48b}
+.valley-hunt-page main{max-width:1200px;margin:auto;padding:0 28px 30px}
+body.valley-hunt-page .introduction{padding:12px 16px 18px}
+.valley-hunt-page .introduction h1{font:normal 36px/1.2 Georgia,serif;font-variant:small-caps;letter-spacing:2px;color:#efdfb7;margin:8px 0;text-shadow:0 3px 8px #0008}
+.valley-hunt-page .introduction>p,.valley-hunt-page .introduction::after{display:none}
+.valley-hunt-page .match-layout{max-width:1060px;margin:auto;display:block}
+.valley-hunt-page .play-area{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:0}
+.valley-hunt-page .board-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;max-width:720px;min-height:48px;margin:auto;padding:10px 14px;border-block:1px solid #b8915655;background:transparent}
+.valley-hunt-page .turn-label{display:flex;align-items:center;gap:10px;font:700 17px/1.3 Georgia,serif}
+.valley-hunt-page .turn-dot{width:11px;height:11px;flex:none;border-radius:50%;background:var(--vh-moss);box-shadow:0 0 0 3px #a9c88824}
+.valley-hunt-page .turn-dot.rust{background:var(--vh-rust)}
+.valley-hunt-page .board-meta{font:12px/1.5 Georgia,serif;color:#cbbf91;text-align:right;max-width:340px}
+body.valley-hunt-page .player-strip{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 14px;width:100%;max-width:720px;margin:auto;background:#e9d6a7;border:1px solid #b69b62;border-radius:0;color:#3e432c;box-shadow:0 3px 5px #0003}
+body.valley-hunt-page .player-strip.active{border-color:#e4d39d;box-shadow:inset 4px 0 #6b7f43,0 3px 5px #0003}
+.valley-hunt-page .player-strip strong{font-size:16px}.valley-hunt-page .player-strip small{font-size:12px;color:#62573d}
+.valley-hunt-page .player-mark{width:16px;height:16px;border:1px solid #695a3c;border-radius:50%;flex:none}.valley-hunt-page .rust-mark{background:var(--vh-rust)}.valley-hunt-page .moss-mark{background:var(--vh-moss)}
+body.valley-hunt-page .army-count{margin-left:auto;font:12px Georgia,serif;color:#62573d;white-space:nowrap}
+.valley-hunt-page .board-shell{display:grid;grid-template-columns:22px auto 22px;gap:5px;align-items:start;width:max-content;max-width:100%;margin:auto}
+.valley-hunt-page .board-plate{min-width:0}
+.valley-hunt-page .ranks{display:grid;grid-template-rows:repeat(12,var(--vh-cell-h));align-items:center;text-align:center;color:#d5c9a8;font:700 12px Georgia,serif;padding-top:10px}
+.valley-hunt-page .files{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));margin:7px 10px 0;text-align:center;color:#d5c9a8;font:700 12px Georgia,serif}
+.valley-hunt-page .board{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));grid-template-rows:repeat(12,var(--vh-cell-h));position:relative;overflow:hidden;border:10px solid transparent;border-image:url('assets/medieval/wood-panel.png') 24 / 10px / 0 stretch;border-radius:0;background:#ac9366;box-shadow:0 12px 28px #0008}
+/* Board buttons are game squares, so reset the shared button bevel and padding. */
+.valley-hunt-page .board .cell,.valley-hunt-page .board .cell.material-control{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:0;min-height:0!important;width:auto;padding:0!important;margin:0;border:1px solid #302f20ba!important;border-image:none!important;border-radius:0!important;background:linear-gradient(#d8bf8cba,#d8bf8cba),var(--wood) center/480px!important;box-shadow:none!important;filter:none;transform:none;cursor:pointer;transition:filter .12s}
+.valley-hunt-page .board .cell.shade{background:linear-gradient(#6b794abd,#6b794abd),var(--wood) center/480px!important}
+.valley-hunt-page .board .cell.in-valley{background:linear-gradient(#b6b17bcc,#b6b17bcc),var(--wood) center/480px!important}
+.valley-hunt-page .board .cell.in-valley.shade{background:linear-gradient(#677343cc,#677343cc),var(--wood) center/480px!important}
+.valley-hunt-page .board .cell:hover{filter:brightness(1.1);transform:none}
+.valley-hunt-page .board .cell:focus-visible{outline:3px solid #fff2b4;outline-offset:-3px;z-index:4}
+.valley-hunt-page .board .cell.last-from,.valley-hunt-page .board .cell.last-to{box-shadow:inset 0 0 0 3px #ecd67a9c!important}
+.valley-hunt-page .board .cell.selected{box-shadow:inset 0 0 0 3px #ffec9a!important;z-index:3}
+.valley-hunt-page .cell.legal::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#e4eab5;box-shadow:0 0 0 2px #2e452b;z-index:1}
+.valley-hunt-page .cell.legal.occupied-landing::after{width:82%;height:86%;background:transparent;border:3px solid #f1e79c;box-shadow:none}
+.valley-hunt-page .goal-line{position:absolute;left:0;right:0;height:2px;background:#e1c58870;pointer-events:none;z-index:2}.valley-hunt-page .goal-line.top{top:25%}.valley-hunt-page .goal-line.bottom{bottom:25%}
+.valley-hunt-page .token{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:calc(var(--vh-cell-w)*.87);height:calc(var(--vh-cell-h)*.9);padding:2px;border:1px solid #443923;border-radius:50%;box-shadow:0 4px 5px #15180f99,inset 0 1px 3px #fff9;user-select:none;line-height:1}
+.valley-hunt-page .token.moss{background:linear-gradient(145deg,#e2ebc4,#9eb983)}.valley-hunt-page .token.rust{background:linear-gradient(145deg,#f5d2ac,#c78462)}.valley-hunt-page .token.dragon{background:linear-gradient(145deg,#f2e4b7,#b3985c);border:2px solid #60502e}
+.valley-hunt-page .token .sigil,.valley-hunt-page .token.dragon .sigil{display:block;flex:none;width:86%;height:86%;object-fit:contain;filter:brightness(.12) sepia(.2);pointer-events:none}
+.valley-hunt-page .stack-under{position:absolute;right:0;bottom:0;z-index:4;display:grid;place-items:center;width:24px;height:24px;border:2px solid #443923;border-radius:50%;background:#f3e5bc;box-shadow:0 2px 4px #1417119c}
+.valley-hunt-page .stack-under img{width:18px;height:18px;object-fit:contain;filter:brightness(.15)}.valley-hunt-page .pinned-ring{position:absolute;inset:2px;border:2px dashed #f6e4a6;border-radius:50%;pointer-events:none;z-index:3}
+.valley-hunt-page .board-foot{display:flex;justify-content:space-between;max-width:720px;width:100%;margin:auto;color:#cbbf91;font:11px Georgia,serif}
+.valley-hunt-page .legend{display:flex;justify-content:center;gap:16px;color:#cbbf91;font:12px Georgia,serif}.valley-hunt-page .legend span{display:flex;align-items:center;gap:6px}.valley-hunt-page .legend i{width:9px;height:9px;border-radius:50%;background:#c3d394}.valley-hunt-page .legend i.ring{width:12px;height:12px;border:2px solid #c3d394;background:transparent}
+.valley-hunt-page .match-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;max-width:1000px;margin:24px auto 0;align-items:start}
+body.valley-hunt-page .match-panel .panel{min-width:0;box-sizing:border-box;background:var(--parchment) center/100% 100% no-repeat;border:0;border-image:none;border-radius:0;padding:30px;color:#3e432c;box-shadow:none;filter:drop-shadow(0 7px 5px #0005)}
+body.valley-hunt-page .match-panel .panel h2{font:normal 28px/1.2 Georgia,serif;font-variant:small-caps;color:#38442b;margin:0 0 16px}
+body.valley-hunt-page .match-panel .panel :is(p,.fine-print,.empty-log,.move-note,.log-item,.control-label,.score-numbers){color:#62573d}
+.valley-hunt-page .fine-print{font:13px/1.6 Georgia,serif}
+.valley-hunt-page .control-panel{grid-column:1/-1}.valley-hunt-page .control-panel .button-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.valley-hunt-page .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.valley-hunt-page .control-label{display:block;margin:0 0 7px;font:14px Georgia,serif}
+body.valley-hunt-page .match-panel select{display:block;width:100%;min-height:44px;padding:10px!important;background:#f4e9cd!important;color:#3e432c!important;border:1px solid #8d7b50!important;border-radius:0!important;font:15px Georgia,serif!important}
+/* The garden's paper controls, kept local so other tables are unaffected. */
+body.valley-hunt-page :is(.match-panel,.site-header,.collection-audio) .material-control{background:var(--parchment) center/100% 100% no-repeat!important;border:0!important;border-image:none!important;border-radius:0!important;padding:13px 20px!important;color:#493724!important;text-shadow:none!important;box-shadow:none!important;filter:drop-shadow(0 3px 2px #0004);min-height:44px}
+.valley-hunt-page .score-block{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.valley-hunt-page .score{padding:12px;background:#f8edcf55;border:1px solid #8b88515c;border-radius:0;color:#3e432c}
+.valley-hunt-page .score-head{display:flex;align-items:center;gap:8px;font:700 16px Georgia,serif}.valley-hunt-page .score-chip{width:12px;height:12px;border:1px solid #6d654b;border-radius:50%;background:var(--vh-moss)}.valley-hunt-page .score.rust .score-chip{background:var(--vh-rust)}
+.valley-hunt-page .score-numbers{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;font:12px/1.4 Georgia,serif}.valley-hunt-page .score-numbers b{display:block;font:700 20px Georgia,serif;color:#38442b}
+.valley-hunt-page .chronicle .log{display:grid;gap:8px;max-height:260px;overflow:auto}.valley-hunt-page .log-item{border-left:2px solid #8d855c;padding:4px 0 4px 10px;font:13px/1.5 Georgia,serif}.valley-hunt-page .empty-log,.valley-hunt-page .move-note{font:13px/1.5 Georgia,serif}
+.valley-hunt-page .piece-list{display:grid;gap:16px}.valley-hunt-page .piece-row{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center}.valley-hunt-page .piece-icon{width:46px;height:46px;padding:5px;object-fit:contain;background:#e7d9af;border:1px solid #9f8c5c;border-radius:50%}
+.valley-hunt-page .piece-row h3{margin:0 0 4px;font:700 16px Georgia,serif;color:#38442b}.valley-hunt-page .piece-row p{margin:0;font:13px/1.55 Georgia,serif}
+.valley-hunt-page .artwork-credit-panel a,.valley-hunt-page .credit-line a{color:#5d542d}
+.valley-hunt-page .rules-panel{grid-column:1/-1;scroll-margin-top:16px}.valley-hunt-page .rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.valley-hunt-page .rules-grid article{padding:0;border:0;border-top:1px solid #8b88515c;padding-top:12px;background:none}.valley-hunt-page .rules-grid h3{margin:0 0 8px;font:normal 20px Georgia,serif;color:#38442b}.valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font:13px/1.65 Georgia,serif;margin:0}.valley-hunt-page .credit-line{margin-top:20px}
+.valley-hunt-page .collection-footer{max-width:1200px;margin:20px auto 0;padding:20px;border-top:1px solid #b8915655;text-align:center;font:12px Georgia,serif;color:#cbbf91}
+@media(max-width:1050px){body.valley-hunt-page{--vh-cell-w:clamp(78px,11vw,112px);--vh-cell-h:clamp(56px,7.7vw,76px)}}
 @media(max-width:760px){
- body.valley-hunt-page{--vh-cell-w:clamp(48px,11vw,76px);--vh-cell-h:clamp(35px,7.9vw,54px)}
- .valley-hunt-page .site-header{min-height:52px!important;padding:8px 12px!important;gap:8px!important}
- .valley-hunt-page .site-header .edition{display:none}
- .valley-hunt-page .site-header .collection-link,.valley-hunt-page .site-header .header-rules{font-size:12px!important;padding:8px 9px!important}
- .valley-hunt-page main{padding:0 8px 24px}
- .valley-hunt-page .introduction{padding:8px 8px 10px}
- .valley-hunt-page .introduction .eyebrow,.valley-hunt-page .introduction>p:last-child,.valley-hunt-page .introduction::after{display:none}
- .valley-hunt-page .introduction h1{font-size:27px;margin:4px 0 8px}
- .valley-hunt-page .match-layout{display:block;width:100%;max-width:560px}
- .valley-hunt-page .play-area{gap:8px}
- .valley-hunt-page .board-heading{display:flex;min-height:0;gap:8px;padding:9px 11px;border-radius:9px}
- .valley-hunt-page .turn-label{font-size:16px;gap:8px}
- .valley-hunt-page .turn-dot{width:10px;height:10px}
- .valley-hunt-page .board-meta{font-size:11px}
- .valley-hunt-page .player-strip{min-height:40px;padding:6px 10px;gap:8px}
- .valley-hunt-page .player-strip small{display:none}
- .valley-hunt-page .player-strip strong{font-size:14px}
- .valley-hunt-page .army-count{font-size:11px}
- .valley-hunt-page .board-shell{gap:3px;grid-template-columns:18px auto 18px}
- .valley-hunt-page .ranks,.valley-hunt-page .files{font-size:10px}
- .valley-hunt-page .board{border-width:4px;border-radius:7px}
- .valley-hunt-page .token{width:84%;height:88%;padding:1px}
- .valley-hunt-page .board-foot{display:none}
- .valley-hunt-page .legend{justify-content:center;gap:16px;font-size:11px}
- .valley-hunt-page .match-panel{grid-template-columns:1fr;gap:10px;margin-top:14px}
- .valley-hunt-page .match-panel>.panel{padding:14px}
- .valley-hunt-page .control-panel{display:block}
- .valley-hunt-page .control-panel .button-row{margin-bottom:8px}
- .valley-hunt-page .control-panel .button-row button{flex:1}
- .valley-hunt-page .control-panel .control-label{margin-top:10px}
- .valley-hunt-page .hunter-panel{margin:0}
- .valley-hunt-page .score-block{grid-template-columns:repeat(2,minmax(0,1fr))}
- .valley-hunt-page .rules-panel{margin:0;padding:14px}
- .valley-hunt-page .rules-panel>h2{font-size:24px}
- .valley-hunt-page .rules-grid{grid-template-columns:1fr}
- .valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font-size:12px}
- .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(44px,calc((var(--mobile-board-width,100vw) - 60px)/5),76px);--vh-cell-h:clamp(32px,12.7vw,54px)}
- .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:0 auto}
- .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(58px,calc((var(--mobile-board-width) - 60px)/5),90px);--vh-cell-h:clamp(42px,16vw,64px)}
+ body.valley-hunt-page{--vh-cell-w:clamp(44px,calc((100vw - 60px)/5),86px);--vh-cell-h:clamp(39px,12vw,62px)}
+ body.valley-hunt-page .site-header{padding:12px;min-height:68px;gap:12px}.valley-hunt-page .collection-brand{font-size:18px;letter-spacing:2px}.valley-hunt-page .collection-brand img{width:30px;height:30px}.valley-hunt-page .header-caption{display:none}
+ body.valley-hunt-page .site-header .material-control{padding:12px!important;font-size:12px!important}
+ .valley-hunt-page main{padding:0 8px 24px}.valley-hunt-page .introduction h1{font-size:28px}.valley-hunt-page .board-heading{padding:8px;gap:8px;min-height:0}.valley-hunt-page .turn-label{font-size:15px}.valley-hunt-page .board-meta{font-size:11px;max-width:50%}
+ body.valley-hunt-page .player-strip{min-height:42px;padding:6px 9px;gap:7px}.valley-hunt-page .player-strip small{display:none}.valley-hunt-page .player-strip strong{font-size:14px}body.valley-hunt-page .army-count{font-size:11px}
+ .valley-hunt-page .board-shell{grid-template-columns:14px auto;gap:4px}.valley-hunt-page .board-shell>.ranks:last-child{display:none}.valley-hunt-page .board{border-width:8px;border-image-width:8px}.valley-hunt-page .ranks{font-size:10px;padding-top:8px}.valley-hunt-page .files{font-size:11px;margin-inline:8px}
+ .valley-hunt-page .token{width:calc(var(--vh-cell-w)*.91);height:calc(var(--vh-cell-h)*.92);padding:1px}.valley-hunt-page .token .sigil{width:90%;height:90%}.valley-hunt-page .board-foot{display:none}.valley-hunt-page .legend{font-size:11px}
+ .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(44px,calc((var(--mobile-board-width,100vw) - 50px)/5),86px);--vh-cell-h:clamp(39px,12vw,62px)}
+ .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:auto}.valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(62px,calc((var(--mobile-board-width) - 50px)/5),104px);--vh-cell-h:clamp(48px,16vw,76px)}
+ .valley-hunt-page .match-panel{grid-template-columns:1fr;gap:14px;margin-top:18px}body.valley-hunt-page .match-panel .panel{padding:25px 23px}.valley-hunt-page .settings-grid{grid-template-columns:1fr;gap:14px}.valley-hunt-page .control-panel .button-row>*{flex:1 1 auto}.valley-hunt-page .rules-grid{grid-template-columns:1fr}.valley-hunt-page .piece-row{grid-template-columns:42px 1fr}.valley-hunt-page .piece-icon{width:40px;height:40px}
 }
-@media(max-width:365px){
- .valley-hunt-page .board-heading{align-items:flex-start;flex-direction:column}
- .valley-hunt-page .board-meta{text-align:left}
- .valley-hunt-page .player-strip{padding-inline:7px;gap:6px}
- .valley-hunt-page .army-count{font-size:10px}
-}
-
-/* Larger phone board and piece artwork, tuned for touch screens. */
-@media(max-width:1050px){
- body.valley-hunt-page{--vh-cell-w:clamp(78px,11vw,112px);--vh-cell-h:clamp(56px,7.7vw,76px)}
-}
-@media(max-width:760px){
- body.valley-hunt-page{--vh-cell-w:clamp(40px,calc((100vw - 84px)/5),76px);--vh-cell-h:clamp(36px,11vw,54px)}
- .valley-hunt-page .token{width:94%;height:94%;padding:0}
- .valley-hunt-page .token .sigil{width:100%;height:100%}
- .valley-hunt-page .token.dragon .sigil{width:100%;height:100%}
- .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(40px,calc((var(--mobile-board-width,100vw) - 84px)/5),76px);--vh-cell-h:clamp(36px,11vw,54px)}
- .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(50px,calc((var(--mobile-board-width) - 84px)/5),90px);--vh-cell-h:clamp(40px,13vw,64px)}
-}
-
-/* Keep the shared wood-button skin from shrinking interactive board cells. */
-.valley-hunt-page .board .cell.material-control{box-sizing:border-box;min-width:0;min-height:0!important;padding:0!important;border:1px solid #796a4d!important;border-image:none!important;border-radius:0!important;background-color:#c8b995!important;background-image:none!important;box-shadow:none!important;filter:none;transform:none}
-.valley-hunt-page .board .cell.shade.material-control{background-color:#92866c!important}
-.valley-hunt-page .board .cell.in-valley.material-control{background-image:linear-gradient(#72865024,#72865024)!important}
-.valley-hunt-page .board .cell.in-valley.shade.material-control{background-color:#928a69!important}
+@media(max-width:365px){.valley-hunt-page .board-heading{align-items:flex-start;flex-direction:column}.valley-hunt-page .board-meta{max-width:none;text-align:left}.valley-hunt-page .score{padding:9px}.valley-hunt-page .score-numbers{font-size:11px}}
