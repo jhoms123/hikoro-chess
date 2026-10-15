@@ -23,6 +23,14 @@
         const position = setup.position || {};
         const rules = setup.settings || {};
         const stackRules = rules.stacking || {};
+        const movementRankRules = rules.movementRanks || {};
+        const movementScoreWeights = {
+            step: Number.isFinite(Number(movementRankRules.weights?.step)) ? Number(movementRankRules.weights.step) : 1,
+            jump: Number.isFinite(Number(movementRankRules.weights?.jump)) ? Number(movementRankRules.weights.jump) : 2,
+            line: Number.isFinite(Number(movementRankRules.weights?.line)) ? Number(movementRankRules.weights.line) : 5
+        };
+        const rank2MinScore = Number(movementRankRules.rank2MinScore) || 9;
+        const rank3MinScore = Number(movementRankRules.rank3MinScore) || 20;
         const transform = setup.orientation?.oppositeCourtTransform || rules.orientationTransform || 'rank-flip';
         const maxHeight = Math.max(1, Math.min(8, Number(stackRules.maxHeight) || 3));
         const hasStackGroupRules = [...types.values()].some(piece => Object.prototype.hasOwnProperty.call(piece, 'stackGroup'));
@@ -88,6 +96,22 @@
             return Boolean(group && pieces.every(piece => stackGroupByType.get(piece.typeId) === group));
         };
         const canStack = pieces => stackRules.enabled !== false && pieces.length <= maxHeight && !ownsGeneral(pieces) && stackGroupsMatch(pieces);
+
+        function movementScoreForType(typeId) {
+            const movement = types.get(typeId)?.movement || {};
+            return (movement.steps || []).length * movementScoreWeights.step
+                + (movement.jumps || []).length * movementScoreWeights.jump
+                + (movement.rays || []).length * movementScoreWeights.line;
+        }
+
+        function rankForType(typeId) {
+            const score = movementScoreForType(typeId);
+            return score >= rank3MinScore ? 3 : score >= rank2MinScore ? 2 : 1;
+        }
+
+        function formationRank(pieces) {
+            return (pieces || []).reduce((total, piece) => total + rankForType(piece.typeId), 0);
+        }
 
         function initial() {
             const cells = Array.from({ length: COLS * ROWS }, () => []);
@@ -181,8 +205,9 @@
             const targetSide = target[target.length - 1].owner;
             if (targetSide === movingSide) return canStack([...target, ...moving]) ? ['stack'] : [];
             const options = [];
-            if (captureAllowed) options.push('capture');
-            if (captureAllowed && stackRules.enabled !== false && stackRules.tallerCanCoverShorter !== false && moving.length > target.length && canStack([...target, ...moving])) options.push('cover');
+            const rankIsEnough = formationRank(moving) >= formationRank(target);
+            if (captureAllowed && rankIsEnough) options.push('capture');
+            if (captureAllowed && rankIsEnough && stackRules.enabled !== false && stackRules.tallerCanCoverShorter !== false && moving.length > target.length && canStack([...target, ...moving])) options.push('cover');
             return options;
         }
 
@@ -297,7 +322,7 @@
             return state;
         }
 
-        return Object.freeze({ COLS, ROWS, FILES, maxHeight, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide, hashCell, hashPosition, hashKey, turnHash });
+        return Object.freeze({ COLS, ROWS, FILES, maxHeight, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide, movementScoreForType, rankForType, formationRank, hashCell, hashPosition, hashKey, turnHash });
     }
 
     return Object.freeze({ create, SIDES });

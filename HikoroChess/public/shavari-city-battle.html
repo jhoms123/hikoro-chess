@@ -14,9 +14,9 @@
 <script src="/mobile-table.js?v=20261015-city-battle-v1" defer></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
 <link rel="stylesheet" href="/shavari-city-battle.css?v=20261015-city-stacks-hanzi-v1">
-<script src="/shavari-city-battle-engine.js?v=20261015-city-bot-strategy-v3" defer></script>
+<script src="/shavari-city-battle-engine.js?v=20261015-rank-captures-v1" defer></script>
 <script src="/bot-difficulty.js?v=20261009-v133" defer></script>
-<script src="/shavari-city-battle.js?v=20261015-city-bot-strategy-v3" defer></script>
+<script src="/shavari-city-battle.js?v=20261015-rank-captures-v1" defer></script>
 </head>
 <body data-audio-theme="shavari" class="city-battle-page">
 <a class="skip-link" href="#city-board">Skip to the board</a>
@@ -55,7 +55,7 @@
   <section class="panel city-rules" id="rules-panel"><p class="eyebrow">RULES &amp; MOVEMENT</p><h2>How to play</h2><div class="rules-grid">
     <article><h3>Take a turn</h3><p>Carnelian moves first. Select a piece or formation whose top piece belongs to the active court, then choose a highlighted square. The full formation moves together; its pieces combine their movement rules. Tap an enemy destination to capture when that rule allows it.</p></article>
     <article><h3>City blocks &amp; paths</h3><p>Buildings cannot be occupied. A step needs a clear route through every intermediate square. A jump may pass over pieces and buildings but cannot land on a building. Sliding lines stop at buildings. A taller formation can pass over a shorter formation when the path uses a sliding line.</p></article>
-    <article><h3>Stack and capture</h3><p>Formations are at most two pieces high. Only these families may stack: Camel Lancer with Lancer Knight or Lancer Pawn; Elephant Cannon with Elephant Soldier; Cart Runner with Cannon Cart; and Scarab Pawn, City Pawn, Fighting Dog, or City Soldier. Other pieces stay alone. Capturing removes the whole enemy formation. The top piece controls the formation and all members contribute moves.</p></article>
+    <article><h3>Stack and capture</h3><p>Movement capacity sets each piece’s rank: each step is worth 1 point, each jump 2, and each line direction 5. Rank 1 covers scores 0–8, Rank 2 scores 9–19, and Rank 3 scores 20 or more; Rank 3 is strongest. A formation’s rank is the sum of its pieces’ ranks. You can capture or cover an enemy formation only when your formation’s total rank is at least as high as its total. For example, Rank 2 plus Rank 1 can take Rank 3, while Rank 3 plus Rank 1 counts as Rank 4. Formations are at most two pieces high. Only these families may stack: Camel Lancer with Lancer Knight or Lancer Pawn; Elephant Cannon with Elephant Soldier; Cart Runner with Cannon Cart; and Scarab Pawn, City Pawn, Fighting Dog, or City Soldier. Other pieces stay alone. Capturing removes the whole enemy formation. The top piece controls the formation and all members contribute moves.</p></article>
     <article><h3>Victory &amp; draws</h3><p>Capture a Lotus General to win. A court that has no legal move loses. Threefold repetition, 100 plies without a capture, and the 4,000-ply safety limit are draws. Captures reset the 100-ply count.</p></article>
   </div><p class="city-rules-note">Rows run from 1 at the north edge to 17 at the south edge. Turquoise movement is mirrored across the ranks. The opening position, piece rules, and 30 building squares come from the supplied City Battle setup.</p></section>
 </main>

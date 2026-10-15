@@ -146,6 +146,49 @@ test('capture flags govern enemy landings', () => {
     assert.deepEqual(at(moves(capture, capture.initial(), 1, 2), 2, 2).options, ['capture']);
 });
 
+test('movement ranks score steps, jumps, and line directions with Rank 3 strongest', () => {
+    const game = create(setup);
+    const pieces = new Map(setup.pieceTypes.map(piece => [piece.name, piece]));
+    assert.equal(game.movementScoreForType(pieces.get('Scarab Pawn').id), 3);
+    assert.equal(game.rankForType(pieces.get('Scarab Pawn').id), 1);
+    assert.equal(game.movementScoreForType(pieces.get('City Soldier').id), 9);
+    assert.equal(game.rankForType(pieces.get('Cart Runner').id), 2);
+    assert.equal(game.movementScoreForType(pieces.get('Cannon General').id), 48);
+    assert.equal(game.rankForType(pieces.get('Cannon General').id), 3);
+});
+
+test('captures require equal-or-higher summed formation rank, including stacked targets', () => {
+    const rankTwoMoves = Array.from({ length: 9 }, (_, i) => ({ dx: i + 1, dy: 0, capture: true }));
+    const rankOne = { id: 'rank-one', name: 'Rank One', stackGroup: 'test-group', movement: { steps: [{ dx: 1, dy: 0, capture: true }], jumps: [], rays: [] } };
+    const rankThree = { id: 'rank-three', name: 'Rank Three', stackGroup: 'test-group', movement: { steps: [], jumps: [], rays: [
+        { dx: 1, dy: 0, capture: true }, { dx: -1, dy: 0, capture: true },
+        { dx: 0, dy: 1, capture: true }, { dx: 0, dy: -1, capture: true }
+    ] } };
+    const rules = { columns: 10, rows: 5, movement: { steps: rankTwoMoves, jumps: [], rays: [] }, stackGroup: 'test-group', extraTypes: [rankOne, rankThree], stacking: { maxHeight: 2 } };
+    const fight = (attacking, defending) => create(scenario({
+        ...rules,
+        units: [
+            ...attacking.map((typeId, i) => unit(`a${i}`, typeId, 'carnelian', 1, 2)),
+            ...defending.map((typeId, i) => unit(`d${i}`, typeId, 'turquoise', 2, 2))
+        ]
+    }));
+
+    const rankTwoAlone = fight(['scout'], ['rank-three']);
+    assert.equal(at(moves(rankTwoAlone, rankTwoAlone.initial(), 1, 2), 2, 2), undefined, 'Rank 2 cannot take Rank 3');
+
+    const rankTwoPlusOne = fight(['scout', 'rank-one'], ['rank-three']);
+    const supportedTarget = at(moves(rankTwoPlusOne, rankTwoPlusOne.initial(), 1, 2), 2, 2);
+    assert.ok(supportedTarget?.options.includes('capture'), 'Rank 2 + Rank 1 can take Rank 3');
+    assert.equal(rankTwoPlusOne.formationRank(rankTwoPlusOne.initial().board[1 + 2 * rankTwoPlusOne.COLS]), 3);
+
+    const lowerAttacker = fight(['scout', 'rank-one'], ['rank-three', 'rank-one']);
+    assert.equal(at(moves(lowerAttacker, lowerAttacker.initial(), 1, 2), 2, 2), undefined, 'a Rank 3 + Rank 1 target is Rank 4');
+
+    const equalFormations = fight(['rank-three', 'rank-one'], ['rank-three', 'rank-one']);
+    const equalTarget = at(moves(equalFormations, equalFormations.initial(), 1, 2), 2, 2);
+    assert.ok(equalTarget?.options.includes('capture'), 'equal Rank 4 formations can capture each other');
+});
+
 test('sliding rays stop at equal stacks and taller formations may pass a shorter stack', () => {
     const movement = { steps: [], jumps: [], rays: [{ dx: 1, dy: 0, capture: true, maxDistance: 0 }] };
     const single = create(scenario({

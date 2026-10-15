@@ -27,7 +27,7 @@
       ],
       "rankNumbering": "1 is north/top; 17 is south/bottom"
     },
-    "updatedAt": "2026-10-15T17:30:00.000Z"
+    "updatedAt": "2026-10-15T17:39:00.000Z"
   },
   "orientation": {
     "north": "turquoise",
@@ -37,6 +37,17 @@
   },
   "settings": {
     "orientationTransform": "rank-flip",
+    "movementRanks": {
+      "weights": {
+        "step": 1,
+        "jump": 2,
+        "line": 5
+      },
+      "rank2MinScore": 9,
+      "rank3MinScore": 20,
+      "stackRanksAdd": true,
+      "captureRequiresEqualOrHigherRank": true
+    },
     "mirrorUnits": true,
     "mirrorBuildings": true,
     "stacking": {

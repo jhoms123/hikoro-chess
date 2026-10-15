@@ -60,7 +60,7 @@
         render();
         try {
             if (!botWorker) {
-                botWorker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-bot-strategy-v3');
+                botWorker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-rank-captures-v1');
                 const worker = botWorker;
                 worker.onmessage = event => {
                     if (event.data?.id !== botGeneration) return;
@@ -336,9 +336,9 @@
                 marker.textContent = move.options.includes('capture') ? '×' : move.options.includes('cover') ? '⊕' : move.options.includes('stack') ? '+' : '';
                 cell.append(marker);
             }
-            const names = stack.map(piece => `${courts[piece.owner]} ${engine.types.get(piece.typeId)?.name || piece.typeId}`);
+            const names = stack.map(piece => `${courts[piece.owner]} ${engine.types.get(piece.typeId)?.name || piece.typeId} (Rank ${engine.rankForType(piece.typeId)})`);
             const place = engine.coord({ x, y });
-            const occupant = names.length ? `${names.join(', ')}; ${stack.length} high` : isBuilding ? 'building' : 'empty';
+            const occupant = names.length ? `${names.join(', ')}; formation rank ${engine.formationRank(stack)}; ${stack.length} high` : isBuilding ? 'building' : 'empty';
             const action = move ? `; legal ${move.options.join(' or ')}` : '';
             cell.setAttribute('aria-label', `${place}: ${occupant}${action}`);
             cell.setAttribute('aria-pressed', String(isSelected));
@@ -365,7 +365,9 @@
         const heading = document.createElement('strong');
         const description = document.createElement('small');
         heading.textContent = `${engine.coord(selected)} · ${stack.length === 1 ? 'Single piece' : `${stack.length}-piece formation`}`;
-        description.textContent = `${courts[stack[stack.length - 1].owner]} controls · ${new Set(moves.map(move => `${move.x},${move.y}`)).size} legal destinations · whole formation moves`;
+        const ranks = stack.map(piece => engine.rankForType(piece.typeId));
+        const rankBreakdown = stack.length > 1 ? ` (${ranks.join(' + ')})` : '';
+        description.textContent = `${courts[stack[stack.length - 1].owner]} controls · formation rank ${engine.formationRank(stack)}${rankBreakdown} · ${new Set(moves.map(move => `${move.x},${move.y}`)).size} legal destinations · whole formation moves`;
         text.append(heading, description);
         box.append(icons, text);
     }
@@ -437,7 +439,7 @@
             const copy = document.createElement('div');
             const title = document.createElement('h3');
             const moves = document.createElement('p');
-            title.textContent = piece.name;
+            title.textContent = `${piece.name} · Rank ${engine.rankForType(piece.id)}`;
             moves.textContent = ruleSummary(piece);
             copy.append(title, moves);
             card.append(badge, copy);
