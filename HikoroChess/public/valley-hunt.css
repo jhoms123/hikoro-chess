@@ -1,0 +1,77 @@
+body[data-audio-theme=valley-hunt]{--accent:#c7ba83;--surface:#26352d;--table-ui:#1c3028;--table-ui-2:#30483a;--table-line:#72856e;--table-ink:#f1ead2;--table-gold:#d5bd7d;background:radial-gradient(ellipse at 48% 0%,#3b5140 0%,#1b2922 48%,#111915 100%);font-family:Georgia,"Times New Roman",serif}
+body.valley-hunt-page{--vh-ink:#eee9d9;--vh-muted:#bdc3b2;--vh-moss:#a9c888;--vh-rust:#d99170;--vh-cell-w:clamp(47px,5vw,66px);--vh-cell-h:clamp(34px,3.25vw,43px);color:var(--vh-ink)}
+.valley-hunt-page .site-header{margin-bottom:0}
+.valley-hunt-page main{max-width:1320px;margin:0 auto;padding:0 clamp(14px,3vw,38px) 28px}
+.valley-hunt-page .introduction{padding:30px 16px 18px}
+.valley-hunt-page .introduction h1{font-size:clamp(38px,4vw,54px)}
+.valley-hunt-page .match-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(285px,345px);gap:18px;align-items:start;max-width:1240px;margin:0 auto}
+.valley-hunt-page .play-area{display:flex;flex-direction:column;gap:11px;min-width:0}
+.valley-hunt-page .match-panel{display:grid;gap:12px;min-width:0}
+.valley-hunt-page .panel{box-sizing:border-box;background:linear-gradient(160deg,#29382fec,#1c2922f5);border:1px solid #71816a60;border-radius:14px;padding:16px;box-shadow:0 8px 24px #0c141180;color:var(--vh-ink)}
+.valley-hunt-page .panel h2{font:normal 23px/1.15 Georgia,serif;margin:0 0 11px;color:#eee4c9}
+.valley-hunt-page .turn-panel{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 12px;margin:0}
+.valley-hunt-page .turn-panel .eyebrow{grid-column:1/-1;margin:0;font-size:9px}
+.valley-hunt-page .turn-panel h2{margin:0;font-size:20px}
+.valley-hunt-page .turn-panel .fine-print{margin:0}
+.valley-hunt-page .fine-print{font:13px/1.55 Georgia,serif;color:var(--vh-muted)}
+.valley-hunt-page .turn-label{display:flex;align-items:center;gap:9px;font:700 14px Georgia,serif}
+.valley-hunt-page .turn-dot{width:11px;height:11px;border-radius:50%;background:var(--vh-moss);box-shadow:0 0 0 4px #a9c88824}
+.valley-hunt-page .turn-dot.rust{background:var(--vh-rust);box-shadow:0 0 0 4px #d9917028}
+.valley-hunt-page .board-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.valley-hunt-page .board-meta{font:12px Georgia,serif;color:var(--vh-muted);text-align:right}
+.valley-hunt-page .player-strip{display:flex;align-items:center;gap:10px;min-height:42px;padding:7px 12px;background:#202d26;border:1px solid #586b55;border-radius:8px;color:#e8dfc4}
+.valley-hunt-page .player-strip.active{border-color:#d2bb7e;box-shadow:inset 4px 0 #d2bb7e,0 0 0 1px #d2bb7e26}
+.valley-hunt-page .player-strip strong{font-size:16px}.valley-hunt-page .player-strip small{font-size:12px;color:#bdc3b2}
+.valley-hunt-page .player-mark{width:13px;height:13px;border-radius:50%;flex:none}.valley-hunt-page .rust-mark{background:var(--vh-rust)}.valley-hunt-page .moss-mark{background:var(--vh-moss)}
+.valley-hunt-page .army-count{margin-left:auto;font:12px Georgia,serif;color:#bdc3b2;white-space:nowrap}
+.valley-hunt-page .board-shell{display:grid;grid-template-columns:22px auto 22px;gap:5px;align-items:start;width:max-content;max-width:100%;margin:0 auto}
+.valley-hunt-page .board-plate{min-width:0}.valley-hunt-page .ranks{display:grid;grid-template-rows:repeat(12,var(--vh-cell-h));align-items:center;text-align:center;color:#d5c9a8;font:700 11px Georgia,serif}
+.valley-hunt-page .files{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));margin-top:6px;text-align:center;color:#d5c9a8;font:700 11px Georgia,serif}
+.valley-hunt-page .board{display:grid;grid-template-columns:repeat(5,var(--vh-cell-w));grid-template-rows:repeat(12,var(--vh-cell-h));position:relative;overflow:hidden;border:5px solid #64573f;border-radius:7px;background:#aa9d7c;box-shadow:0 12px 26px #080d0a80}
+.valley-hunt-page .cell{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:0;border:0;cursor:pointer;background:#c8b995;transition:filter .12s,box-shadow .12s}
+.valley-hunt-page .cell.shade{background:#92866c}.valley-hunt-page .cell.in-valley{background-image:linear-gradient(#72865024,#72865024)}.valley-hunt-page .cell.in-valley.shade{background-color:#928a69}
+.valley-hunt-page .cell:hover{filter:brightness(1.12);z-index:2}.valley-hunt-page .cell:focus-visible{outline:3px solid #fff2b4;outline-offset:-3px;z-index:4}
+.valley-hunt-page .cell.last-from,.valley-hunt-page .cell.last-to{box-shadow:inset 0 0 0 3px #ecd67a9c}.valley-hunt-page .cell.selected{box-shadow:inset 0 0 0 3px #f8e4a1;z-index:3}
+.valley-hunt-page .cell.legal::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:#3c694acc;box-shadow:0 1px 4px #25251666;z-index:1}
+.valley-hunt-page .cell.legal.occupied-landing::after{width:78%;height:82%;background:transparent;border:3px solid #3c694acc}
+.valley-hunt-page .goal-line{position:absolute;left:0;right:0;height:2px;background:#b28d4b80;pointer-events:none;z-index:2}.valley-hunt-page .goal-line.top{top:25%}.valley-hunt-page .goal-line.bottom{bottom:25%}
+.valley-hunt-page .token{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;width:78%;height:84%;max-width:48px;max-height:43px;border:1px solid #312e27aa;border-radius:48% 48% 43% 43%;box-shadow:0 3px 3px #1217106b,inset 0 1px 2px #ffffff72;user-select:none;line-height:1}
+.valley-hunt-page .token.moss{background:linear-gradient(145deg,#d7e6bd,#8eae76)}.valley-hunt-page .token.rust{background:linear-gradient(145deg,#f0c09f,#bd795e)}.valley-hunt-page .token.dragon{border-radius:42% 42% 50% 50%;background:linear-gradient(145deg,#e6d8a8,#9d8655)}
+.valley-hunt-page .token .sigil{display:block;width:66%;height:61%;object-fit:contain;filter:brightness(.15) sepia(.25);flex:none}.valley-hunt-page .token.dragon .sigil{width:70%;height:66%}
+.valley-hunt-page .token .mini-name{margin-top:1px;font:900 clamp(6px,.62vw,8px)/1 Arial,sans-serif;text-transform:uppercase;letter-spacing:.03em;color:#302f22}
+.valley-hunt-page .stack-under{position:absolute;right:-8px;bottom:-6px;z-index:3;display:grid;place-items:center;width:21px;height:21px;border:2px solid #302c22;border-radius:50%;background:#f3e5bc;box-shadow:0 2px 4px #1417119c}
+.valley-hunt-page .stack-under img{width:14px;height:14px;object-fit:contain;filter:brightness(.15) sepia(.25)}.valley-hunt-page .pinned-ring{position:absolute;inset:2px;border:2px dashed #f6e4a6;border-radius:50%;pointer-events:none;z-index:3}
+.valley-hunt-page .board-foot{display:flex;justify-content:space-between;gap:8px;color:var(--vh-muted);font:11px Georgia,serif;padding:0 5px}
+.valley-hunt-page .legend{display:flex;align-items:center;gap:15px;color:var(--vh-muted);font:11px Georgia,serif;margin-top:-4px}.valley-hunt-page .legend span{display:flex;align-items:center;gap:6px}.valley-hunt-page .legend i{width:9px;height:9px;border-radius:50%;background:#76a36e}.valley-hunt-page .legend i.ring{width:12px;height:12px;border:2px solid #76a36e;border-radius:50%;background:transparent}
+.valley-hunt-page .control-panel .button-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.valley-hunt-page .control-panel .quiet-button{min-height:40px}
+.valley-hunt-page .control-panel .primary-button{background:linear-gradient(#8e7146,#6e5535)}
+.valley-hunt-page .control-label{display:block;margin:12px 0 5px;font:13px Georgia,serif;color:#e1d5b4}
+.valley-hunt-page select{display:block;width:100%;min-height:42px;padding:8px 10px!important;border:1px solid #788773!important;border-radius:7px!important;background:#19251f!important;color:#f1ead2!important;font:15px Georgia,serif!important}
+.valley-hunt-page .score-block{display:grid;grid-template-columns:1fr 1fr;gap:8px}.valley-hunt-page .score{padding:10px;background:#18241e;border:1px solid #53634f;border-radius:9px}
+.valley-hunt-page .score-head{display:flex;align-items:center;gap:8px;font:700 14px Georgia,serif}.valley-hunt-page .score-chip{width:10px;height:10px;border-radius:50%;background:var(--vh-moss)}.valley-hunt-page .score.rust .score-chip{background:var(--vh-rust)}
+.valley-hunt-page .score-numbers{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;font:11px/1.35 Georgia,serif;color:var(--vh-muted)}.valley-hunt-page .score-numbers b{display:block;margin-top:2px;font:700 16px Georgia,serif;color:var(--vh-ink)}
+.valley-hunt-page .chronicle .log{display:grid;gap:6px;max-height:220px;overflow:auto}.valley-hunt-page .log-item{border-left:2px solid #8192767a;padding:3px 0 3px 9px;font:12px/1.4 Georgia,serif;color:#c0c8bd}
+.valley-hunt-page .empty-log{font:13px Georgia,serif;color:var(--vh-muted)}.valley-hunt-page .move-note{min-height:0;margin:8px 0 0;font:12px/1.4 Georgia,serif;color:#e1d8bc}
+.valley-hunt-page .piece-list{display:grid;gap:11px}.valley-hunt-page .piece-row{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:center}
+.valley-hunt-page .piece-icon{width:34px;height:34px;padding:5px;object-fit:contain;border:1px solid #89784f;border-radius:8px;background:#ddcfaa;filter:brightness(0) saturate(100%) invert(22%) sepia(16%) saturate(879%) hue-rotate(45deg)}
+.valley-hunt-page .piece-row h3{margin:0 0 3px;font:700 15px Georgia,serif;color:#f1e7ca}.valley-hunt-page .piece-row p{margin:0;font:12px/1.45 Georgia,serif;color:var(--vh-muted)}
+.valley-hunt-page .artwork-credit-panel a,.valley-hunt-page .credit-line a{color:#dfc68a}.valley-hunt-page .artwork-credit-panel p{margin:0}
+.valley-hunt-page .rules-panel{max-width:1240px;margin:20px auto 0}.valley-hunt-page .rules-panel>h2{margin:4px 0 15px;font-size:30px}
+.valley-hunt-page .rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.valley-hunt-page .rules-grid article{padding:13px 14px;border:1px solid #63735b;background:#17251e;border-radius:9px}
+.valley-hunt-page .rules-grid h3{margin:0 0 6px;font:700 17px Georgia,serif;color:#e8ddb8}.valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{margin:0;font:13px/1.58 Georgia,serif;color:#c0c8bd}.valley-hunt-page .credit-line{margin-top:14px}
+.valley-hunt-page .collection-footer{padding:16px 10px}.valley-hunt-page .collection-footer a{color:#dfc68a}
+@media(max-width:1050px){body.valley-hunt-page{--vh-cell-w:clamp(47px,6vw,66px)}.valley-hunt-page .match-layout{grid-template-columns:minmax(0,1fr) minmax(260px,310px)}.valley-hunt-page .panel{padding:14px}}
+@media(max-width:760px){
+ body.valley-hunt-page{--vh-cell-w:clamp(43px,11vw,57px);--vh-cell-h:clamp(31px,8vw,37px)}
+ .valley-hunt-page main{padding:0 10px 18px}.valley-hunt-page .match-layout{display:block}.valley-hunt-page .play-area{gap:6px}.valley-hunt-page .board-heading{display:none}
+ .valley-hunt-page .board-shell{gap:3px;grid-template-columns:18px auto 18px}.valley-hunt-page .board{border-width:4px}
+ .valley-hunt-page .ranks,.valley-hunt-page .files{font-size:9px}.valley-hunt-page .token{width:82%;height:82%}.valley-hunt-page .token .mini-name{font-size:6px}
+ .valley-hunt-page .stack-under{width:18px;height:18px;right:-6px;bottom:-5px}.valley-hunt-page .stack-under img{width:11px;height:11px}
+ .valley-hunt-page .board-foot{font-size:10px}.valley-hunt-page .legend{margin:0}.valley-hunt-page .player-strip{min-height:35px;padding:4px 7px;gap:6px}
+ .valley-hunt-page .player-strip strong{font-size:13px}.valley-hunt-page .player-strip small{font-size:10px}.valley-hunt-page .army-count{font-size:10px}
+ .valley-hunt-page .match-panel{margin-top:12px;grid-template-columns:1fr}.valley-hunt-page .rules-panel{margin-top:14px;padding:13px}.valley-hunt-page .rules-grid{grid-template-columns:1fr}.valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font-size:12px}
+ .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(43px,calc((var(--phone-fit-width,100vw) - 54px)/5),57px)}
+ .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:0 auto}
+ .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(50px,calc((var(--mobile-board-width) - 54px)/5),78px)}
+}
+@media(max-width:365px){body.valley-hunt-page{--vh-cell-w:43px;--vh-cell-h:30px}.valley-hunt-page .player-strip small{display:none}.valley-hunt-page .army-count{font-size:9px}}
