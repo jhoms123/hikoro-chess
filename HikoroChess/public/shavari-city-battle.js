@@ -59,7 +59,7 @@
         selected = null;
         render();
         try {
-            const worker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-stacks-hanzi-v1');
+            const worker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-bot-search-v2');
             botWorker = worker;
             worker.onmessage = event => {
                 if (ticket !== botGeneration) return;
@@ -85,7 +85,20 @@
                 announce('The Shavari bot worker could not start. Change the opponent setting or reload the match to retry.');
                 render();
             };
-            worker.postMessage({ id: ticket, setup, journal: journal.slice(0, cursor), cursor, ms: window.BotDifficulty?.get('shavari-city-battle') || 1000 });
+            worker.postMessage({
+                id: ticket,
+                setup,
+                state: {
+                    board: state.board,
+                    buildings: state.buildings,
+                    turn: state.turn,
+                    ply: state.ply,
+                    noCapturePlies: state.noCapturePlies,
+                    positionHash: state.positionHash,
+                    positionHashCounts: state.positionHashCounts
+                },
+                ms: window.BotDifficulty?.get('shavari-city-battle') || 1000
+            });
         } catch {
             botThinking = false;
             botWorker = null;

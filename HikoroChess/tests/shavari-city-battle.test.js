@@ -206,3 +206,31 @@ test('journals replay and reject illegal actions', () => {
     assert.equal(replayed.board[2 * game.COLS + 2][0].id, 'mover');
     assert.equal(game.replay([{ ...action, to: { x: 4, y: 4 } }], 1), null);
 });
+
+test('incremental position hashes stay exact across moves, replay, and repetition', () => {
+    const game = create(scenario({
+        columns: 5,
+        rows: 1,
+        movement: { steps: [{ dx: 1, dy: 0, capture: false }, { dx: -1, dy: 0, capture: false }], jumps: [], rays: [] },
+        units: [unit('red', 'scout', 'carnelian', 1, 0), unit('blue', 'scout', 'turquoise', 3, 0)]
+    }));
+    let state = game.initial();
+    const cycle = [
+        { from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, kind: 'move' },
+        { from: { x: 3, y: 0 }, to: { x: 4, y: 0 }, kind: 'move' },
+        { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, kind: 'move' },
+        { from: { x: 4, y: 0 }, to: { x: 3, y: 0 }, kind: 'move' }
+    ];
+    assert.deepEqual(state.positionHash, game.hashPosition(state));
+    for (let repeat = 0; repeat < 2; repeat++) {
+        for (const action of cycle) {
+            state = game.apply(state, action);
+            assert.ok(state, 'cycle action remains legal');
+            assert.deepEqual(state.positionHash, game.hashPosition(state));
+        }
+    }
+    const key = game.hashKey(state.positionHash);
+    assert.equal(state.positionHashCounts[key], 3);
+    assert.equal(state.result?.reason, 'Threefold repetition');
+    assert.deepEqual(game.replay(cycle.concat(cycle)).positionHash, state.positionHash);
+});

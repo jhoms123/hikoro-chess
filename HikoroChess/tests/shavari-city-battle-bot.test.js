@@ -56,3 +56,21 @@ test('bot loads the supplied city opening and returns an engine-legal action', (
     assert.ok(result.action, 'bot should provide a fallback move within a short budget');
     assert.ok(engine.apply(state, result.action), 'opening move must pass the game engine');
 });
+
+test('bot accepts the live position directly without replaying the move journal', () => {
+    const engine = createEngine(setup), state = engine.initial();
+    const first = createBot(setup).choose([], 0, 120);
+    const afterFirst = engine.apply(state, first.action);
+    const snapshot = {
+        board: afterFirst.board,
+        buildings: afterFirst.buildings,
+        turn: afterFirst.turn,
+        ply: afterFirst.ply,
+        noCapturePlies: afterFirst.noCapturePlies,
+        positionHash: afterFirst.positionHash,
+        positionHashCounts: afterFirst.positionHashCounts
+    };
+    const result = createBot(setup).choose(null, 0, 120, snapshot);
+    assert.ok(result.action, 'a worker snapshot should be enough to choose a reply');
+    assert.ok(engine.apply(afterFirst, result.action), 'the direct-state reply must be legal');
+});

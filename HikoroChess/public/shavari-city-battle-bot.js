@@ -43,13 +43,22 @@
         }
 
         function makeState(restored) {
+            const positionHash = Array.isArray(restored.positionHash) ? restored.positionHash.slice() : engine.hashPosition(restored);
+            const positionHashKey = engine.hashKey(positionHash);
+            const positionHashCounts = { ...(restored.positionHashCounts || {}) };
+            if (!positionHashCounts[positionHashKey]) {
+                const oldKey = signature(restored);
+                positionHashCounts[positionHashKey] = restored.positionCounts?.[oldKey] || 1;
+            }
             return {
                 board: restored.board.map(stack => stack.slice()),
                 buildings: restored.buildings,
                 turn: restored.turn,
                 ply: restored.ply,
                 noCapturePlies: restored.noCapturePlies,
-                positionCounts: { ...restored.positionCounts }
+                positionHash,
+                positionHashKey,
+                positionHashCounts
             };
         }
 
@@ -100,34 +109,43 @@
             const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
             const moving = state.board[fromAt], target = state.board[toAt];
             const capturedGeneral = action.kind === 'capture' && target.some(piece => engine.generalTypes.has(piece.typeId));
-            const old = { from: moving, to: target, turn: state.turn, ply: state.ply, noCapturePlies: state.noCapturePlies, capturedGeneral };
+            const old = { from: moving, to: target, turn: state.turn, ply: state.ply, noCapturePlies: state.noCapturePlies, positionHash: state.positionHash, positionHashKey: state.positionHashKey, capturedGeneral };
+            const nextHash = state.positionHash.slice();
+            const fromBefore = engine.hashCell(fromAt, moving), toBefore = engine.hashCell(toAt, target);
+            for (let word = 0; word < nextHash.length; word++) nextHash[word] ^= fromBefore[word] ^ toBefore[word];
             state.board[fromAt] = [];
             if (action.kind === 'capture' || action.kind === 'move') state.board[toAt] = moving;
             else state.board[toAt] = target.concat(moving);
+            const fromAfter = engine.hashCell(fromAt, state.board[fromAt]), toAfter = engine.hashCell(toAt, state.board[toAt]);
             state.turn = engine.otherSide(state.turn);
+            const oldTurnHash = engine.turnHash(old.turn), newTurnHash = engine.turnHash(state.turn);
+            for (let word = 0; word < nextHash.length; word++) nextHash[word] ^= fromAfter[word] ^ toAfter[word] ^ oldTurnHash[word] ^ newTurnHash[word];
+            state.positionHash = nextHash;
+            state.positionHashKey = engine.hashKey(nextHash);
             state.ply++;
             state.noCapturePlies = action.kind === 'capture' ? 0 : state.noCapturePlies + 1;
-            const key = signature(state);
-            state.positionCounts[key] = (state.positionCounts[key] || 0) + 1;
-            old.key = key;
+            state.positionHashCounts[state.positionHashKey] = (state.positionHashCounts[state.positionHashKey] || 0) + 1;
+            old.key = state.positionHashKey;
             return old;
         }
 
         function unmake(state, action, old) {
             const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
-            const count = state.positionCounts[old.key] || 0;
-            if (count <= 1) delete state.positionCounts[old.key];
-            else state.positionCounts[old.key] = count - 1;
+            const count = state.positionHashCounts[old.key] || 0;
+            if (count <= 1) delete state.positionHashCounts[old.key];
+            else state.positionHashCounts[old.key] = count - 1;
             state.board[fromAt] = old.from;
             state.board[toAt] = old.to;
             state.turn = old.turn;
             state.ply = old.ply;
             state.noCapturePlies = old.noCapturePlies;
+            state.positionHash = old.positionHash;
+            state.positionHashKey = old.positionHashKey;
         }
 
         function isDraw(state) {
             if (state.noCapturePlies >= 100 || state.ply >= 4000) return true;
-            return (state.positionCounts[signature(state)] || 0) >= 3;
+            return (state.positionHashCounts[state.positionHashKey] || 0) >= 3;
         }
 
         function evaluate(state) {
@@ -158,18 +176,46 @@
             return stopped;
         }
 
+        function quiescence(state, alpha, beta, ply, remaining, legalActions) {
+            if (checkTime()) return evaluate(state);
+            if (isDraw(state)) return 0;
+            if (remaining <= 0) {
+                if (!engine.hasLegalMove(state, state.turn)) return noMoveLoses ? -MATE + ply : 0;
+                return evaluate(state);
+            }
+
+            const actions = legalActions || generate(state);
+            if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
+            let best = evaluate(state);
+            if (best >= beta) return best;
+            if (best > alpha) alpha = best;
+
+            const captures = ordered(state, actions.filter(action => action.kind === 'capture'), null, ply);
+            for (const action of captures) {
+                const old = make(state, action);
+                let score;
+                if (captureGeneralWins && old.capturedGeneral) score = MATE - (ply + 1);
+                else if (isDraw(state)) score = 0;
+                else score = -quiescence(state, -beta, -alpha, ply + 1, remaining - 1);
+                unmake(state, action, old);
+                if (score > best) best = score;
+                if (score > alpha) alpha = score;
+                if (alpha >= beta || stopped) break;
+            }
+            return best;
+        }
+
         function negamax(state, depth, alpha, beta, ply) {
             if (checkTime()) return evaluate(state);
             if (depth <= 0) {
-                if (!engine.hasLegalMove(state, state.turn)) return noMoveLoses ? -MATE + ply : 0;
                 if (isDraw(state)) return 0;
-                return evaluate(state);
+                return quiescence(state, alpha, beta, ply, 2);
             }
             const actions = generate(state);
             if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
             if (isDraw(state)) return 0;
 
-            const key = `${signature(state)}#${state.noCapturePlies}#${state.positionCounts[signature(state)] || 0}`;
+            const key = `${state.positionHashKey}#${state.noCapturePlies}#${state.positionHashCounts[state.positionHashKey] || 0}`;
             const entry = table.get(key);
             const originalAlpha = alpha;
             if (entry && entry.depth >= depth) {
@@ -205,9 +251,9 @@
             return bestScore;
         }
 
-        function choose(journal, cursor = journal?.length, thinkingMs = 1000) {
-            const restored = engine.replay(journal, cursor);
-            if (!restored || restored.result || !Array.isArray(journal)) return { action: null, depth: 0, nodes: 0, score: null };
+        function choose(journal, cursor = journal?.length, thinkingMs = 1000, suppliedState = null) {
+            const restored = suppliedState || (Array.isArray(journal) ? engine.replay(journal, cursor) : null);
+            if (!restored || restored.result || !Array.isArray(restored.board) || restored.board.length !== size || !Array.isArray(restored.buildings)) return { action: null, depth: 0, nodes: 0, score: null };
             const root = makeState(restored), rootActions = generate(root);
             if (!rootActions.length) return { action: null, depth: 0, nodes: 0, score: -MATE };
             const budget = Math.max(100, Math.min(4000, Number(thinkingMs) || 1000));
@@ -224,7 +270,7 @@
                 const alpha = depth > 1 ? bestScore - 80 : -Infinity;
                 const beta = depth > 1 ? bestScore + 80 : Infinity;
                 let windowScore = -Infinity, windowAction = null, a = alpha;
-                for (const action of ordered(root, rootActions, table.get(`${signature(root)}#${root.noCapturePlies}#${root.positionCounts[signature(root)] || 0}`)?.action, 0)) {
+                for (const action of ordered(root, rootActions, table.get(`${root.positionHashKey}#${root.noCapturePlies}#${root.positionHashCounts[root.positionHashKey] || 0}`)?.action, 0)) {
                     const old = make(root, action);
                     let score;
                     if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;

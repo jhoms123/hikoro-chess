@@ -17,6 +17,9 @@
         const FILES = Array.isArray(board.files) ? board.files.slice(0, COLS) : 'ABCDEFGHIJKLMNOP'.split('').slice(0, COLS);
         const types = new Map((setup?.pieceTypes || []).map(piece => [piece.id, piece]));
         if (!types.size) throw new Error('The setup has no piece types.');
+        const typeOrdinals = new Map([...types.keys()].map((id, index) => [id, index + 1]));
+        const hashSeeds = [0x4f1bbcdc, 0x87a3d2e1, 0x19c6e5a7, 0xd3b84f29];
+        const turnHashValue = hashSeeds.map((seed, index) => mixHashWord((0x71a20001 + index * 0x10203) >>> 0, seed));
         const position = setup.position || {};
         const rules = setup.settings || {};
         const stackRules = rules.stacking || {};
@@ -32,6 +35,47 @@
         const repetitionLimit = 3;
         const noCaptureLimit = 100;
         const plyLimit = 4000;
+
+        function mixHashWord(value, seed) {
+            let word = (value ^ seed) >>> 0;
+            word = Math.imul(word ^ (word >>> 16), 0x7feb352d);
+            word = Math.imul(word ^ (word >>> 15), 0x846ca68b);
+            return (word ^ (word >>> 16)) >>> 0;
+        }
+
+        function hashCell(at, pieces) {
+            const hash = [0, 0, 0, 0];
+            for (let layer = 0; layer < pieces.length; layer++) {
+                const piece = pieces[layer];
+                const owner = piece.owner === 'turquoise' ? 1 : 0;
+                const type = typeOrdinals.get(piece.typeId) || 0;
+                const code = (((at * 8 + layer) * 2 + owner) * (types.size + 1) + type) >>> 0;
+                for (let word = 0; word < hash.length; word++) hash[word] ^= mixHashWord(code, hashSeeds[word]);
+            }
+            return hash;
+        }
+
+        function hashPosition(state) {
+            const hash = [0, 0, 0, 0];
+            for (let at = 0; at < state.board.length; at++) {
+                const cell = state.board[at];
+                if (!cell.length) continue;
+                const cellHash = hashCell(at, cell);
+                for (let word = 0; word < hash.length; word++) hash[word] ^= cellHash[word];
+            }
+            if (state.turn === 'turquoise') {
+                for (let word = 0; word < hash.length; word++) hash[word] ^= turnHashValue[word];
+            }
+            return hash;
+        }
+
+        function hashKey(hash) {
+            return hash.map(word => word.toString(16).padStart(8, '0')).join('');
+        }
+
+        function turnHash(side) {
+            return side === 'turquoise' ? turnHashValue : [0, 0, 0, 0];
+        }
 
         const inside = (x, y) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && x < COLS && y >= 0 && y < ROWS;
         const index = (x, y) => y * COLS + x;
@@ -72,6 +116,8 @@
                 positionCounts: {}
             };
             state.positionCounts[signature(state)] = 1;
+            state.positionHash = hashPosition(state);
+            state.positionHashCounts = { [hashKey(state.positionHash)]: 1 };
             return state;
         }
 
@@ -85,7 +131,9 @@
                 result: state.result ? { ...state.result } : null,
                 lastMove: state.lastMove ? { ...state.lastMove, from: { ...state.lastMove.from }, to: { ...state.lastMove.to } } : null,
                 history: state.history.map(move => ({ ...move, from: { ...move.from }, to: { ...move.to }, types: move.types.slice(), captured: move.captured.slice() })),
-                positionCounts: { ...state.positionCounts }
+                positionCounts: { ...state.positionCounts },
+                positionHash: state.positionHash.slice(),
+                positionHashCounts: { ...state.positionHashCounts }
             };
         }
 
@@ -229,6 +277,9 @@
             if (tookGeneral) next.result = { winner: state.turn, reason: 'Lotus General captured' };
             const sig = signature(next);
             next.positionCounts[sig] = (next.positionCounts[sig] || 0) + 1;
+            next.positionHash = hashPosition(next);
+            const positionHashKey = hashKey(next.positionHash);
+            next.positionHashCounts[positionHashKey] = (next.positionHashCounts[positionHashKey] || 0) + 1;
             if (!next.result && next.positionCounts[sig] >= repetitionLimit) next.result = { winner: null, reason: 'Threefold repetition' };
             if (!next.result && noMoveLoses && !hasLegalMove(next, next.turn)) next.result = { winner: state.turn, reason: 'No legal moves' };
             if (!next.result && next.noCapturePlies >= noCaptureLimit) next.result = { winner: null, reason: '100 plies without a capture' };
@@ -246,7 +297,7 @@
             return state;
         }
 
-        return Object.freeze({ COLS, ROWS, FILES, maxHeight, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide });
+        return Object.freeze({ COLS, ROWS, FILES, maxHeight, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide, hashCell, hashPosition, hashKey, turnHash });
     }
 
     return Object.freeze({ create, SIDES });
