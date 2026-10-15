@@ -96,7 +96,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "lotus"
     },
     {
       "id": "caravan-lance",
@@ -141,7 +142,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "camel"
     },
     {
       "id": "elephant-cannon",
@@ -186,7 +188,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "elephant-head"
     },
     {
       "id": "scarab-pawn",
@@ -220,7 +223,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "gold-scarab"
     },
     {
       "id": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
@@ -283,7 +287,8 @@
           }
         ],
         "rays": []
-      }
+      },
+      "icon": "lancer-pawn"
     },
     {
       "id": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
@@ -446,7 +451,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "lancer-knight"
     },
     {
       "id": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
@@ -605,7 +611,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "cannon-general"
     },
     {
       "id": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
@@ -780,7 +787,8 @@
           }
         ],
         "rays": []
-      }
+      },
+      "icon": "camel-lancer"
     },
     {
       "id": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
@@ -856,7 +864,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "city-soldier"
     },
     {
       "id": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
@@ -919,7 +928,8 @@
           }
         ],
         "rays": []
-      }
+      },
+      "icon": "city-pawn"
     },
     {
       "id": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
@@ -1016,7 +1026,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "lotus-bud"
     },
     {
       "id": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
@@ -1066,7 +1077,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "cart-runner"
     },
     {
       "id": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
@@ -1125,7 +1137,8 @@
             "stopsAtFirstOccupiedSquare": true
           }
         ]
-      }
+      },
+      "icon": "cannon-cart"
     },
     {
       "id": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
@@ -1159,7 +1172,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "fighting-dog"
     },
     {
       "id": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
@@ -1263,7 +1277,8 @@
         ],
         "jumps": [],
         "rays": []
-      }
+      },
+      "icon": "elephant-soldier"
     }
   ],
   "position": {
@@ -1550,7 +1565,7 @@
       },
       {
         "id": "unit-4228fc1a-22e4-40bc-8391-6a732f493c98",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "F",
         "row": 12,
@@ -1560,7 +1575,7 @@
       },
       {
         "id": "unit-5407906b-2ba7-46db-9a38-ba0b40f9de95",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "F",
         "row": 6,
@@ -1570,7 +1585,7 @@
       },
       {
         "id": "unit-c28f0949-c69a-4d88-bbe3-711de855e4de",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "K",
         "row": 12,
@@ -1580,7 +1595,7 @@
       },
       {
         "id": "unit-5e9e3157-4785-42b4-bca5-41ac2357f73a",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "K",
         "row": 6,
@@ -1590,7 +1605,7 @@
       },
       {
         "id": "unit-323c31e2-f782-4f44-bd5e-99934e544a4a",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "H",
         "row": 12,
@@ -1600,7 +1615,7 @@
       },
       {
         "id": "unit-612351f7-4311-43af-819e-6cd793144c3c",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "H",
         "row": 6,
@@ -1610,7 +1625,7 @@
       },
       {
         "id": "unit-d6366cd3-a72b-4359-8bf3-32f15d20f581",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "I",
         "row": 12,
@@ -1620,7 +1635,7 @@
       },
       {
         "id": "unit-33fd80cb-0186-4fa3-85b3-2de5bb2d1026",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "I",
         "row": 6,
@@ -1630,7 +1645,7 @@
       },
       {
         "id": "unit-2dea8ab7-b917-4889-9945-d6d462b926ca",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "B",
         "row": 12,
@@ -1640,7 +1655,7 @@
       },
       {
         "id": "unit-e7de9446-70d0-418b-b704-8fa4f4981128",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "B",
         "row": 6,
@@ -1650,7 +1665,7 @@
       },
       {
         "id": "unit-772c011c-df2b-4e5d-aa04-5023a3a1e9cb",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "O",
         "row": 12,
@@ -1660,7 +1675,7 @@
       },
       {
         "id": "unit-67d30def-04af-4363-ac44-3b069c56e332",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "O",
         "row": 6,
@@ -1670,7 +1685,7 @@
       },
       {
         "id": "unit-21e57e30-1e75-434d-b500-b77c6b52b89a",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "D",
         "row": 11,
@@ -1680,7 +1695,7 @@
       },
       {
         "id": "unit-658ace04-936b-4dd8-847d-81d064cdb782",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "D",
         "row": 7,
@@ -1690,7 +1705,7 @@
       },
       {
         "id": "unit-3f53b252-5041-44fd-9fa6-454b4cd097d9",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "carnelian",
         "file": "M",
         "row": 11,
@@ -1700,7 +1715,7 @@
       },
       {
         "id": "unit-3e68d4c7-76b7-4212-b234-47f52a372bbf",
-        "typeId": "lotus-general",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
         "side": "turquoise",
         "file": "M",
         "row": 7,

@@ -243,6 +243,22 @@
         $('building-count').textContent = `${state.buildings.filter(Boolean).length} city buildings block the lanes.`;
     }
 
+    function pieceSymbol(type, className) {
+        if (type?.icon) {
+            const image = document.createElement('img');
+            image.className = className;
+            image.src = `/assets/shavari/${type.icon}.svg`;
+            image.alt = '';
+            image.setAttribute('aria-hidden', 'true');
+            return image;
+        }
+        const mark = document.createElement('span');
+        mark.className = className;
+        mark.textContent = type?.mark || type?.name?.slice(0, 2).toUpperCase() || '?';
+        mark.setAttribute('aria-hidden', 'true');
+        return mark;
+    }
+
     function drawPiece(cell, stack) {
         const top = stack[stack.length - 1];
         const type = engine.types.get(top.typeId);
@@ -250,10 +266,7 @@
         const token = document.createElement('span');
         token.className = `city-piece ${top.owner}`;
         token.style.setProperty('--piece-accent', type.accent || '#c6a465');
-        const mark = document.createElement('span');
-        mark.className = 'city-piece-mark';
-        mark.textContent = type.mark || type.name.slice(0, 2).toUpperCase();
-        token.append(mark);
+        token.append(pieceSymbol(type, 'city-piece-symbol'));
         if (stack.length > 1) {
             const badge = document.createElement('span');
             badge.className = 'city-stack-badge';
@@ -321,10 +334,8 @@
         icons.className = 'selection-pieces';
         stack.forEach(piece => {
             const type = engine.types.get(piece.typeId);
-            const mark = document.createElement('span');
-            mark.className = `selection-mark ${piece.owner}`;
+            const mark = pieceSymbol(type, `selection-mark ${piece.owner}`);
             mark.style.setProperty('--piece-accent', type?.accent || '#c6a465');
-            mark.textContent = type?.mark || type?.name?.slice(0, 2).toUpperCase() || '?';
             mark.title = `${courts[piece.owner]} · ${type?.name || piece.typeId}`;
             icons.append(mark);
         });
@@ -397,7 +408,7 @@
             const badge = document.createElement('span');
             badge.className = 'guide-mark';
             badge.style.setProperty('--piece-accent', piece.accent || '#c6a465');
-            badge.textContent = piece.mark || piece.name.slice(0, 2).toUpperCase();
+            badge.append(pieceSymbol(piece, 'guide-piece-symbol'));
             const copy = document.createElement('div');
             const title = document.createElement('h3');
             const moves = document.createElement('p');

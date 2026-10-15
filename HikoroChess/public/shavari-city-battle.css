@@ -39,7 +39,7 @@
 .city-piece{position:absolute;z-index:2;display:grid;place-items:center;width:82%;height:82%;border-radius:50%;font-weight:700;line-height:1;box-shadow:0 2px 3px #14130f99,inset 0 1px 1px #ffffff55;border:1px solid var(--piece-accent,#d2b779)}
 .city-piece.carnelian{color:#f7dfae;background:radial-gradient(circle at 32% 28%,#b7613a,#713820 80%)}
 .city-piece.turquoise{color:#e0eee0;background:radial-gradient(circle at 32% 28%,#4e9a8e,#1b514e 80%)}
-.city-piece-mark{max-width:100%;padding:1px;font:700 clamp(6px,1.55vw,14px)/1 Arial,sans-serif;letter-spacing:-.3px;text-shadow:0 1px 2px #0009;overflow:hidden}
+.city-piece-mark{max-width:100%;padding:1px;font:700 clamp(6px,1.55vw,14px)/1 Arial,sans-serif;letter-spacing:-.3px;text-shadow:0 1px 2px #0009;overflow:hidden}.city-piece-symbol{width:74%;height:74%;object-fit:contain;filter:drop-shadow(0 1px 1px #0009);pointer-events:none}
 .city-stack-badge{position:absolute;right:-17%;bottom:-17%;min-width:12px;height:12px;padding:0 2px;border:1px solid #e4ce96;border-radius:10px;background:#31271b;color:#ffedbd;font:700 8px/10px Arial,sans-serif}
 .city-stack-ribbon{position:absolute;z-index:1;left:50%;bottom:-12%;display:flex;gap:1px;justify-content:center;width:75%;transform:translateX(-50%)}
 .city-stack-ribbon i{width:5px;height:3px;border:1px solid #d1b977;border-radius:2px;background:#9e5233}
@@ -70,8 +70,10 @@
 .selected-detail>div:last-child{display:grid;gap:4px;min-width:0}
 .selected-detail small{color:#c9b895;font:10px/1.4 Georgia,serif}
 .selection-pieces{display:flex;flex:none;gap:2px;max-width:100px;overflow:auto}
-.selection-mark,.guide-mark{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--piece-accent,#d2b779);border-radius:50%;font:700 9px Arial,sans-serif;color:#f4e6c7;background:#75432e}
+.selection-mark,.guide-mark{display:grid;place-items:center;flex:none;width:34px;height:34px;padding:4px;border:1px solid var(--piece-accent,#d2b779);border-radius:50%;color:#f4e6c7;background:#75432e;object-fit:contain}
 .selection-mark.turquoise{background:#23645f}
+.guide-mark{padding:4px}.guide-piece-symbol{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 1px 1px #0009)}
+.selection-mark.city-piece-mark,.guide-piece-symbol.city-piece-mark{font:700 9px Arial,sans-serif}
 .city-piece-counts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .count-chip{display:grid;grid-template-columns:13px 1fr;align-items:center;column-gap:6px;padding:8px;border-radius:4px;background:#142b29aa}
 .count-chip i{width:11px;height:11px;border-radius:50%;background:#a85c3a;grid-row:span 2}
@@ -91,7 +93,7 @@
 .city-piece-guide>summary strong{font:normal 19px Georgia,serif}
 .city-guide-list{display:grid;gap:7px;padding:0 12px 14px}
 .city-guide-card{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:start;padding:8px;border-radius:5px;background:#101f1e88}
-.guide-mark{width:30px;height:30px;color:#f8e8c0;background:linear-gradient(140deg,#9b5734,#57321f)}
+.guide-mark{width:34px;height:34px;color:#f8e8c0;background:linear-gradient(140deg,#9b5734,#57321f)}
 .city-guide-card:nth-child(even) .guide-mark{background:linear-gradient(140deg,#448e80,#1c4e4a)}
 .city-guide-card h3{margin:0;color:#f1e3c5;font:14px Georgia,serif}
 .city-guide-card p{margin:4px 0 0;color:#cbbc9b;font:10px/1.45 Georgia,serif}
