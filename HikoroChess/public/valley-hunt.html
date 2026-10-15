@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#17221e">
 <meta name="description" content="Play The Valley Hunt, a strategy game of dogs, hunters, children, and Dragons on a 5 by 12 board.">
 <title>The Valley Hunt · Hikoro</title>
+<script src="/i18n-catalog.js?v=20261014-shavari-go-es-v2"></script>
+<script src="/i18n.js?v=20261008-dashboard"></script>
 <link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
 <link rel="stylesheet" href="/site-audio.css?v=20261015-valley-hunt-v1">
 <script src="/site-audio.js?v=20261015-valley-hunt-v1" defer></script>
@@ -15,13 +17,21 @@
 <script src="/mobile-table.js?v=20261015-valley-hunt-v2" defer></script>
 <link rel="stylesheet" href="/phone-game-shell.css?v=20261015-valley-hunt-v1">
 <script src="/phone-game-shell.js?v=20261015-valley-hunt-v3" defer></script>
-<link rel="stylesheet" href="/valley-hunt.css?v=20261015-valley-hunt-v6">
+<link rel="stylesheet" href="/accounts.css?v=20261012-shavari-go">
+<script src="/vendor/supabase.js?v=20261008-dashboard"></script>
+<script src="/player-identity.js?v=20261008-dashboard"></script>
+<script src="/review-client.js?v=20261008-dashboard"></script>
+<script src="/accounts.js?v=20261012-shavari-go"></script>
+<link rel="stylesheet" href="/experience.css?v=20261012-shavari-go">
+<script src="/experience.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
+<link rel="stylesheet" href="/valley-hunt.css?v=20261015-valley-hunt-v7">
 <script src="/valley-hunt.js?v=20261015-valley-hunt-v2" defer></script>
 </head>
 <body data-audio-theme="valley-hunt" class="valley-hunt-page">
 <header class="site-header">
-  <a class="collection-link quiet-button" id="lobby-link" href="/">← Hikoro collection</a>
-  <span class="edition">THE VALLEY HUNT · 5 × 12</span>
+  <a class="collection-brand" href="/" aria-label="Hikoro collection home"><img src="/assets/harmony-seal.svg" alt="" width="42" height="42"><span>HIKORO<small>THE GAME COLLECTION</small></span></a>
+  <span class="header-caption">A garden of strategy &amp; harmony</span>
   <a class="quiet-button header-rules" href="#rules-panel">How to play</a>
 </header>
 <main>
@@ -42,11 +52,11 @@
     <aside class="match-panel" aria-label="Game controls and details">
       <section class="panel control-panel" data-mobile-title="Play controls">
         <h2>Play</h2>
-        <div class="button-row"><button class="quiet-button primary-button" id="newGame" type="button">New game</button><button class="quiet-button" id="undoMove" type="button">Undo</button><button class="quiet-button" id="toggleBots" type="button" hidden>Pause bots</button></div>
-        <label class="control-label" for="gameMode">Game mode</label>
+        <div class="button-row"><button class="quiet-button primary-button" id="newGame" type="button">New game</button><button class="quiet-button" id="undoMove" type="button">Undo</button><button class="quiet-button" id="toggleBots" type="button" hidden>Pause bots</button><a class="quiet-button" id="main-menu-btn" href="/">Leave game</a></div>
+        <div class="settings-grid"><div class="setting-field"><label class="control-label" for="gameMode">Game mode</label>
         <select id="gameMode" aria-label="Choose game mode"><option value="human-bot" selected>You vs Strong Bot</option><option value="bot-bot">Strong Bot vs Strong Bot</option><option value="local">Two players</option></select>
-        <label class="control-label" for="botThinkingTime">Bot thinking time per move</label>
-        <select id="botThinkingTime" aria-label="Choose bot thinking time"><option value="200">0.2 seconds</option><option value="500">0.5 seconds</option><option value="1000">1 second</option><option value="2000">2 seconds</option><option value="3000" selected>3 seconds</option><option value="4000">4 seconds</option><option value="5000">5 seconds</option></select>
+        </div><div class="setting-field"><label class="control-label" for="botThinkingTime">Bot thinking time per move</label>
+        <select id="botThinkingTime" aria-label="Choose bot thinking time"><option value="200">0.2 seconds</option><option value="500">0.5 seconds</option><option value="1000">1 second</option><option value="2000">2 seconds</option><option value="3000" selected>3 seconds</option><option value="4000">4 seconds</option><option value="5000">5 seconds</option></select></div></div>
         <p class="fine-print">One shared engine plays either color. In bot versus bot mode, pause any time to inspect the board.</p>
       </section>
       <section class="panel hunter-panel" data-mobile-title="Hunter count"><h2>Hunter count</h2><div class="score-block" id="scoreBlock"></div><p class="fine-print">Capture two of the other side’s three hunters to win.</p></section>
