@@ -1,4 +1,4 @@
-importScripts('/shavari-city-battle-engine.js?v=20261015-rank-captures-v1', '/shavari-city-battle-bot.js?v=20261015-general-threat-v4');
+importScripts('/shavari-city-battle-engine.js?v=20261015-rank-captures-v1', '/shavari-city-battle-bot.js?v=20261016-bot-root60-v1');
 
 let bot = null;
 
