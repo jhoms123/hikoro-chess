@@ -1,6 +1,6 @@
 # Collection material artwork credits
 
-No AI-generated artwork is used. The home cards and hero show screenshots of the actual game boards with original game pieces. Engine-validated example positions are recorded in matches/positions.json. Hikoro and Academy now use the user-supplied wooden piece set. Full Hikoro uses the supplied wooden board. See ../hikoro-wood/CREDITS.md for provenance.
+No AI-generated artwork is used. The home cards and hero use game-board artwork; the Valley Hunt card is a faithful vector rendering of its exact mirrored 5 × 12 starting position. Engine-validated example positions are recorded in matches/positions.json. Hikoro and Academy now use the user-supplied wooden piece set. Full Hikoro uses the supplied wooden board. See ../hikoro-wood/CREDITS.md for provenance.
 
 ## Photographic materials — Poly Haven, CC0
 
@@ -33,6 +33,17 @@ License: https://creativecommons.org/licenses/by/3.0/
 - seed: **seedling**, by **Delapouite** — https://game-icons.net/1x1/delapouite/seedling.html
 - wave: **waves**, by **Lorc** — https://game-icons.net/1x1/lorc/waves.html
 - crown: **crown**, by **Lorc** — https://game-icons.net/1x1/lorc/crown.html
+
+## The Valley Hunt piece emblems
+
+Game-icons.net, CC BY 3.0. Opaque square backgrounds were removed; the original silhouette paths are retained.
+
+- Dog — **Hound**, by **Lorc**: https://game-icons.net/1x1/lorc/hound.html
+- Hunter — **Archer**, by **Delapouite**: https://game-icons.net/1x1/delapouite/archer.html
+- Child — **Baby Face**, by **Delapouite**: https://game-icons.net/1x1/delapouite/baby-face.html
+- Dragon — **Dragon Head**, by **Lorc**: https://game-icons.net/1x1/lorc/dragon-head.html
+
+The opening-position preview at matches/valley-hunt.svg uses those same credited icons over the game’s actual starting arrangement.
 
 ## Existing game artwork
 
