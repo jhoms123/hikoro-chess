@@ -27,6 +27,7 @@
         const values = new Map([...engine.types].map(([id, type]) => [id, MATERIAL[id] || valueFromMovement(type)]));
         let deadline = Infinity, nodes = 0, tableHits = 0, stopped = false, table = new Map(), killers = new Map(), rootDefenseBonuses = new Map();
         const generalCaptureCache = new Map(), evaluationCache = new Map();
+        const safeGeneralMoveCache = new Map();
         const engineTransform = setup.orientation?.oppositeCourtTransform || setup.settings?.orientationTransform || 'rank-flip';
 
         const movementProfiles = new Map([...engine.types].map(([id, type]) => {
@@ -385,7 +386,8 @@
                     }
                     if (enemyAdjacent) {
                         const exposed = piece.stack.reduce((sum, unit) => sum + (values.get(unit.typeId) || 100), 0);
-                        score -= sign * exposed * (friendAdjacent ? 0.035 : 0.085);
+                        const safetyWeight = side === state.turn ? 1.9 : 0.55;
+                        score -= sign * exposed * (friendAdjacent ? 0.035 : 0.085) * safetyWeight;
                     }
                 }
 
@@ -402,9 +404,15 @@
                     const neighbor = state.board[engine.index(x, y)];
                     if (neighbor.length && neighbor[neighbor.length - 1].owner === side) nearbyFriends++;
                 }
-                const danger = nearestEnemy <= 4 ? [0, 125, 78, 38, 14][nearestEnemy] : 0;
+                const danger = nearestEnemy <= 4 ? [0, 420, 270, 150, 72][nearestEnemy] : 0;
                 const cover = Math.min(30, nearbyFriends * 7);
-                score += sign * (cover - danger);
+                const ownSafetyWeight = side === state.turn ? 2.0 : 0.55;
+                const coverWeight = side === state.turn ? 1.5 : 0.65;
+                score += sign * (cover * coverWeight - danger * ownSafetyWeight);
+                if (side === state.turn) {
+                    const safeMoves = safeGeneralMoveCount(state, side, general.at);
+                    score += safeMoves ? Math.min(4, safeMoves) * 16 : -90;
+                }
             }
             if (cacheKey) {
                 if (evaluationCache.size > 50_000) evaluationCache.clear();
@@ -482,6 +490,39 @@
                 generalCaptureCache.set(key, value);
             }
             return value;
+        }
+
+        function safeGeneralMoveCount(state, side, fromAt) {
+            const key = `${state.positionHashKey}:safe-general:${side}:${fromAt}`;
+            if (safeGeneralMoveCache.has(key)) return safeGeneralMoveCache.get(key);
+            const from = { x: fromAt % engine.COLS, y: Math.floor(fromAt / engine.COLS) };
+            const generalStack = state.board[fromAt];
+            let safe = 0;
+            for (const destination of engine.legalMoves(state, from, side)) {
+                const toAt = engine.index(destination.x, destination.y);
+                const displaced = state.board[toAt];
+                state.board[fromAt] = [];
+                state.board[toAt] = generalStack;
+                let threatened = false;
+                for (let at = 0; at < size && !threatened; at++) {
+                    const stack = state.board[at];
+                    if (!stack.length || stack[stack.length - 1].owner !== engine.otherSide(side)) continue;
+                    const attacker = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+                    if (!canReachGeneral(attacker, stack, destination)) continue;
+                    for (const move of engine.legalMoves(state, attacker, engine.otherSide(side))) {
+                        if (move.x === destination.x && move.y === destination.y && move.options.includes('capture')) {
+                            threatened = true;
+                            break;
+                        }
+                    }
+                }
+                state.board[fromAt] = generalStack;
+                state.board[toAt] = displaced;
+                if (!threatened) safe++;
+            }
+            if (safeGeneralMoveCache.size > 40_000) safeGeneralMoveCache.clear();
+            safeGeneralMoveCache.set(key, safe);
+            return safe;
         }
 
         function allowsImmediateGeneralCapture(state, action) {
@@ -603,13 +644,25 @@
                 if (alpha >= beta) return entryScore;
             }
             let bestScore = -Infinity, bestAction = null;
+            let actionIndex = 0;
             for (const action of ordered(state, actions, entry?.action, ply)) {
                 const old = make(state, action);
                 let score;
                 if (captureGeneralWins && old.capturedGeneral) score = MATE - (ply + 1);
                 else if (isDraw(state)) score = 0;
-                else score = -negamax(state, depth - 1, -beta, -alpha, ply + 1);
+                else if (actionIndex === 0) {
+                    score = -negamax(state, depth - 1, -beta, -alpha, ply + 1);
+                } else {
+                    // Principal-variation search: most ordered moves are
+                    // expected to fail low, so test them with a null window
+                    // and spend a full window only when one improves alpha.
+                    score = -negamax(state, depth - 1, -alpha - 1, -alpha, ply + 1);
+                    if (!stopped && score > alpha && score < beta) {
+                        score = -negamax(state, depth - 1, -beta, -alpha, ply + 1);
+                    }
+                }
                 unmake(state, action, old);
+                actionIndex++;
                 if (score > bestScore) { bestScore = score; bestAction = action; }
                 if (score > alpha) alpha = score;
                 if (alpha >= beta) {
@@ -656,9 +709,16 @@
                 const alpha = depth > 1 ? bestScore - 80 : -Infinity;
                 const beta = depth > 1 ? bestScore + 80 : Infinity;
                 let windowScore = -Infinity, windowAction = null, a = alpha;
-                const iterationOrder = prioritizeMove(rootOrder, table.get(transpositionKey(root))?.action);
+                const pvOrder = prioritizeMove(rootOrder, table.get(transpositionKey(root))?.action);
+                const iterationOrder = prioritizeMove(pvOrder, bestAction);
+                // At deeper iterations, search the best ordered root moves
+                // first. Keep the previous iteration's best move in the
+                // window, and search every legal defense when the General is
+                // already under direct attack.
+                const rootMoveLimit = depth >= 3 && !generalThreat ? 60 : iterationOrder.length;
+                const rootSearchOrder = iterationOrder.slice(0, rootMoveLimit);
                 let rootIndex = 0;
-                for (const action of iterationOrder) {
+                for (const action of rootSearchOrder) {
                     const targetBefore = root.board[engine.index(action.to.x, action.to.y)];
                     const targetGeneral = targetBefore.some(piece => engine.generalTypes.has(piece.typeId));
                     const old = make(root, action);
@@ -668,9 +728,21 @@
                     else {
                         const reduce = depth >= 2 && !generalThreat && rootIndex >= 4 && !targetGeneral;
                         if (reduce) {
-                            score = -negamax(root, depth - 2, -beta, -a, 1);
-                            if (!stopped && score > a) score = -negamax(root, depth - 1, -beta, -a, 1);
-                        } else score = -negamax(root, depth - 1, -beta, -a, 1);
+                            score = -negamax(root, depth - 2, -a - 1, -a, 1);
+                            if (!stopped && score > a) {
+                                score = -negamax(root, depth - 1, -a - 1, -a, 1);
+                                if (!stopped && score > a && score < beta) {
+                                    score = -negamax(root, depth - 1, -beta, -a, 1);
+                                }
+                            }
+                        } else if (rootIndex === 0) {
+                            score = -negamax(root, depth - 1, -beta, -a, 1);
+                        } else {
+                            score = -negamax(root, depth - 1, -a - 1, -a, 1);
+                            if (!stopped && score > a && score < beta) {
+                                score = -negamax(root, depth - 1, -beta, -a, 1);
+                            }
+                        }
                     }
                     unmake(root, action, old);
                     rootIndex++;
@@ -682,7 +754,7 @@
                 // Keep the last fully completed iteration's result.
                 if (stopped) break;
                 if (windowScore <= alpha || windowScore >= beta) {
-                    const full = searchRootWindow(root, rootActions, depth, -Infinity, Infinity, rootOrder);
+                    const full = searchRootWindow(root, rootSearchOrder, depth, -Infinity, Infinity, rootSearchOrder);
                     if (!full || stopped) break;
                     windowScore = full.score; windowAction = full.action;
                 }
@@ -729,13 +801,21 @@
 
         function searchRootWindow(root, actions, depth, alpha, beta, rootOrder) {
             let best = -Infinity, bestAction = null, a = alpha;
+            let actionIndex = 0;
             for (const action of rootOrder) {
                 const old = make(root, action);
                 let score;
                 if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;
                 else if (isDraw(root)) score = 0;
-                else score = -negamax(root, depth - 1, -beta, -a, 1);
+                else if (actionIndex === 0) score = -negamax(root, depth - 1, -beta, -a, 1);
+                else {
+                    score = -negamax(root, depth - 1, -a - 1, -a, 1);
+                    if (!stopped && score > a && score < beta) {
+                        score = -negamax(root, depth - 1, -beta, -a, 1);
+                    }
+                }
                 unmake(root, action, old);
+                actionIndex++;
                 if (score > best) { best = score; bestAction = action; }
                 if (score > a) a = score;
                 if (stopped) return null;
