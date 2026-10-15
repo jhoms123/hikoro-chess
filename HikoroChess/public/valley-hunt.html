@@ -12,11 +12,11 @@
 <link rel="stylesheet" href="/collection-theme.css?v=20261015-valley-hunt-v1">
 <script src="/collection-theme.js?v=20261015-valley-hunt-v1" defer></script>
 <link rel="stylesheet" href="/mobile-table.css?v=20261015-valley-hunt-v1">
-<script src="/mobile-table.js?v=20261015-valley-hunt-v1" defer></script>
+<script src="/mobile-table.js?v=20261015-valley-hunt-v2" defer></script>
 <link rel="stylesheet" href="/phone-game-shell.css?v=20261015-valley-hunt-v1">
-<script src="/phone-game-shell.js?v=20261015-valley-hunt-v1" defer></script>
-<link rel="stylesheet" href="/valley-hunt.css?v=20261015-valley-hunt-v2">
-<script src="/valley-hunt.js?v=20261015-valley-hunt-v1" defer></script>
+<script src="/phone-game-shell.js?v=20261015-valley-hunt-v2" defer></script>
+<link rel="stylesheet" href="/valley-hunt.css?v=20261015-valley-hunt-v3">
+<script src="/valley-hunt.js?v=20261015-valley-hunt-v2" defer></script>
 </head>
 <body data-audio-theme="valley-hunt" class="valley-hunt-page">
 <header class="site-header">
@@ -28,7 +28,7 @@
   <section class="introduction"><p class="eyebrow">A GAME OF TRAPS, TACTICS &amp; TERRAINS</p><h1>The Valley Hunt</h1><p>Set the pack, spring the trap, and keep your hunters safe.</p></section>
   <div class="match-layout">
     <section class="play-area" aria-label="The Valley Hunt board and current position">
-      <div class="board-heading"><div class="turn-label"><span class="turn-dot" id="turnDot"></span><span id="turnName">Moss to move</span></div><div class="board-meta">Select a piece, then choose a highlighted square</div></div>
+      <div class="board-heading" aria-live="polite"><div class="turn-label"><span class="turn-dot" id="turnDot"></span><strong id="statusMain">Moss to move</strong></div><div class="board-meta" id="statusSub">Select a piece, then choose a highlighted square.</div></div>
       <div class="player-strip rust" id="strip-rust"><span class="player-mark rust-mark" aria-hidden="true"></span><strong>Rust</strong><small>Upper ridge</small><span class="army-count">3 hunters · 1 Dragon</span></div>
       <div class="board-shell" aria-label="5 by 12 Valley Hunt board">
         <div class="ranks" id="ranksLeft" aria-hidden="true"></div>
@@ -40,7 +40,6 @@
       <div class="player-strip moss" id="strip-moss"><span class="player-mark moss-mark" aria-hidden="true"></span><strong>Moss</strong><small>Lower ridge · moves first</small><span class="army-count">3 hunters · 1 Dragon</span></div>
     </section>
     <aside class="match-panel" aria-label="Game controls and details">
-      <section class="panel turn-panel" aria-live="polite"><p class="eyebrow">THE VALLEY HUNT</p><h2 id="statusMain">Moss moves first.</h2><p class="fine-print" id="statusSub">Select one of your pieces to see its legal moves.</p></section>
       <section class="panel control-panel" data-mobile-title="Play controls">
         <h2>Play</h2>
         <div class="button-row"><button class="quiet-button primary-button" id="newGame" type="button">New game</button><button class="quiet-button" id="undoMove" type="button">Undo</button><button class="quiet-button" id="toggleBots" type="button" hidden>Pause bots</button></div>
