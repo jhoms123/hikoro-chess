@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  let viewport,surface,tools,fit,detail,pan,hint,status;
  if(board){
   viewport=document.createElement('div');viewport.className='mobile-board-viewport';viewport.tabIndex=0;viewport.setAttribute('aria-label','Game board');surface=document.createElement('div');surface.className='mobile-board-surface';board.before(viewport);viewport.append(surface);surface.append(board);
-  if(['lobby','shodansho','go','bastion','shavari','academy'].includes(theme)){
+  if(['lobby','shodansho','go','bastion','shavari','academy','valley-hunt'].includes(theme)){
    tools=document.createElement('div');tools.className='mobile-board-tools';viewport.after(tools);
    fit=control('Fit board',()=>setView(false,false),tools);detail=control('Larger board',()=>setView(true,false),tools);pan=control('Move view',()=>setView(detailed,!navigating),tools);pan.setAttribute('aria-pressed','false');
    hint=document.createElement('p');hint.className='mobile-board-hint';tools.append(hint);
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded',()=>{
      move(document.querySelector('label[for=lesson-select]'),picker);move(document.getElementById('lesson-select'),picker);
      move(document.getElementById('lesson-tip'),selection);
     }
-    for(const item of [...panel.children]){if(item.matches('.chronicle'))fold(item,'Move history & save');else if(item.matches('#local-settings'))fold(item,'Game setup');else if(item.matches('#lesson-panel'))fold(item,'Lesson guidance');else if(item.matches('.panel'))fold(item,'Score details');else fold(item,'Match options');}
+    for(const item of [...panel.children]){if(item.matches('.chronicle'))fold(item,'Move history & save');else if(item.matches('.panel[data-mobile-title]'))fold(item,item.dataset.mobileTitle);else if(item.matches('#local-settings'))fold(item,'Game setup');else if(item.matches('#lesson-panel'))fold(item,'Lesson guidance');else if(item.matches('.panel'))fold(item,'Score details');else fold(item,'Match options');}
     fold(document.querySelector('.captures'),'Captured pieces');fold(document.querySelector('.piece-guide'),'Piece guide');fold(document.querySelector('.go-summary'),'Strategy & scoring');
    }
    if(theme==='shodansho'){
