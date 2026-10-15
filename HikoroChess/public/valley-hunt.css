@@ -77,3 +77,88 @@ body.valley-hunt-page{--vh-ink:#eee9d9;--vh-muted:#bdc3b2;--vh-moss:#a9c888;--vh
 @media(max-width:365px){body.valley-hunt-page{--vh-cell-w:43px;--vh-cell-h:30px}.valley-hunt-page .player-strip small{display:none}.valley-hunt-page .army-count{font-size:9px}}
 
 .valley-hunt-page [hidden]{display:none!important}
+
+/* Board-first layout: keep the whole game in one centered column. */
+body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,5.1vw,58px)}
+.valley-hunt-page main{max-width:1320px;padding:0 clamp(14px,3vw,38px) 34px}
+.valley-hunt-page .introduction{padding:22px 16px 16px}
+.valley-hunt-page .introduction h1{font-size:clamp(36px,4vw,50px);margin:8px 0 10px}
+.valley-hunt-page .introduction::after{margin:12px auto 0;width:110px;height:18px}
+.valley-hunt-page .match-layout{display:block;max-width:1040px;margin:0 auto}
+.valley-hunt-page .play-area{align-items:stretch;gap:10px}
+.valley-hunt-page .board-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;box-sizing:border-box;width:100%;max-width:780px;min-height:54px;margin:0 auto 2px;padding:10px 15px;border:1px solid #66785e;border-radius:10px;background:linear-gradient(110deg,#1b2922,#26372d);box-shadow:0 5px 16px #08110c55}
+.valley-hunt-page .turn-label{gap:10px;flex:none;font:700 18px/1.2 Georgia,serif}
+.valley-hunt-page .board-meta{flex:1;font:13px/1.4 Georgia,serif;color:var(--vh-muted);text-align:right}
+.valley-hunt-page .player-strip{box-sizing:border-box;width:100%;max-width:780px;margin:0 auto;min-height:46px;padding:8px 14px}
+.valley-hunt-page .player-strip strong{font-size:16px}
+.valley-hunt-page .board-shell{gap:6px;grid-template-columns:26px auto 26px}
+.valley-hunt-page .ranks{font-size:13px}
+.valley-hunt-page .files{font-size:13px;margin-top:8px}
+.valley-hunt-page .board{border-width:6px;border-radius:10px;box-shadow:0 16px 32px #080d0a88}
+.valley-hunt-page .token{display:grid;place-items:center;box-sizing:border-box;width:82%;height:88%;max-width:none;max-height:none;padding:2px;border-radius:50%;box-shadow:0 4px 7px #12171088,inset 0 1px 3px #ffffff8c}
+.valley-hunt-page .token .sigil{width:78%;height:78%;object-fit:contain;filter:brightness(.13) sepia(.24);flex:none}
+.valley-hunt-page .token.dragon .sigil{width:82%;height:82%}
+.valley-hunt-page .board-foot{max-width:730px;width:100%;box-sizing:border-box;margin:0 auto;font-size:12px}
+.valley-hunt-page .legend{max-width:730px;width:100%;box-sizing:border-box;justify-content:center;margin:0 auto 3px;font-size:12px}
+.valley-hunt-page .match-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:1000px;margin:24px auto 0;align-items:start}
+.valley-hunt-page .match-panel>.panel{min-width:0}
+.valley-hunt-page .control-panel{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px;align-items:end}
+.valley-hunt-page .control-panel>h2,.valley-hunt-page .control-panel>.button-row,.valley-hunt-page .control-panel>.fine-print{grid-column:1/-1}
+.valley-hunt-page .control-panel .control-label{margin:2px 0 6px}
+.valley-hunt-page .control-panel select{margin-bottom:4px}
+.valley-hunt-page .rules-panel{grid-column:1/-1;max-width:none;margin:0}
+.valley-hunt-page .rules-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.valley-hunt-page .piece-guide-card .piece-row{grid-template-columns:44px minmax(0,1fr)}
+.valley-hunt-page .piece-guide-card .piece-icon{width:40px;height:40px}
+@media(max-width:1050px){
+ body.valley-hunt-page{--vh-cell-w:clamp(60px,7.6vw,82px);--vh-cell-h:clamp(43px,5.55vw,58px)}
+ .valley-hunt-page .match-layout{display:block;max-width:920px}
+ .valley-hunt-page .match-panel{max-width:920px}
+}
+@media(max-width:760px){
+ body.valley-hunt-page{--vh-cell-w:clamp(48px,11vw,76px);--vh-cell-h:clamp(35px,7.9vw,54px)}
+ .valley-hunt-page .site-header{min-height:52px!important;padding:8px 12px!important;gap:8px!important}
+ .valley-hunt-page .site-header .edition{display:none}
+ .valley-hunt-page .site-header .collection-link,.valley-hunt-page .site-header .header-rules{font-size:12px!important;padding:8px 9px!important}
+ .valley-hunt-page main{padding:0 8px 24px}
+ .valley-hunt-page .introduction{padding:8px 8px 10px}
+ .valley-hunt-page .introduction .eyebrow,.valley-hunt-page .introduction>p:last-child,.valley-hunt-page .introduction::after{display:none}
+ .valley-hunt-page .introduction h1{font-size:27px;margin:4px 0 8px}
+ .valley-hunt-page .match-layout{display:block;width:100%;max-width:560px}
+ .valley-hunt-page .play-area{gap:8px}
+ .valley-hunt-page .board-heading{display:flex;min-height:0;gap:8px;padding:9px 11px;border-radius:9px}
+ .valley-hunt-page .turn-label{font-size:16px;gap:8px}
+ .valley-hunt-page .turn-dot{width:10px;height:10px}
+ .valley-hunt-page .board-meta{font-size:11px}
+ .valley-hunt-page .player-strip{min-height:40px;padding:6px 10px;gap:8px}
+ .valley-hunt-page .player-strip small{display:none}
+ .valley-hunt-page .player-strip strong{font-size:14px}
+ .valley-hunt-page .army-count{font-size:11px}
+ .valley-hunt-page .board-shell{gap:3px;grid-template-columns:18px auto 18px}
+ .valley-hunt-page .ranks,.valley-hunt-page .files{font-size:10px}
+ .valley-hunt-page .board{border-width:4px;border-radius:7px}
+ .valley-hunt-page .token{width:84%;height:88%;padding:1px}
+ .valley-hunt-page .board-foot{display:none}
+ .valley-hunt-page .legend{justify-content:center;gap:16px;font-size:11px}
+ .valley-hunt-page .match-panel{grid-template-columns:1fr;gap:10px;margin-top:14px}
+ .valley-hunt-page .match-panel>.panel{padding:14px}
+ .valley-hunt-page .control-panel{display:block}
+ .valley-hunt-page .control-panel .button-row{margin-bottom:8px}
+ .valley-hunt-page .control-panel .button-row button{flex:1}
+ .valley-hunt-page .control-panel .control-label{margin-top:10px}
+ .valley-hunt-page .hunter-panel{margin:0}
+ .valley-hunt-page .score-block{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .valley-hunt-page .rules-panel{margin:0;padding:14px}
+ .valley-hunt-page .rules-panel>h2{font-size:24px}
+ .valley-hunt-page .rules-grid{grid-template-columns:1fr}
+ .valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font-size:12px}
+ .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(44px,calc((var(--mobile-board-width,100vw) - 60px)/5),76px);--vh-cell-h:clamp(32px,calc(var(--vh-cell-w)*.72),54px)}
+ .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:0 auto}
+ .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(58px,calc((var(--mobile-board-width) - 60px)/5),90px);--vh-cell-h:clamp(42px,calc(var(--vh-cell-w)*.72),64px)}
+}
+@media(max-width:365px){
+ .valley-hunt-page .board-heading{align-items:flex-start;flex-direction:column}
+ .valley-hunt-page .board-meta{text-align:left}
+ .valley-hunt-page .player-strip{padding-inline:7px;gap:6px}
+ .valley-hunt-page .army-count{font-size:10px}
+}
