@@ -5,7 +5,7 @@
     const STORAGE_KEY = 'shavari-city-battle-local-v1';
     const courts = { carnelian: 'Carnelian court', turquoise: 'Turquoise court' };
     let engine, setup, state, journal = [], cursor = 0, flipped = false, selected = null, pendingLanding = null;
-    let botSeat = null, botThinking = false, botGeneration = 0, botWorker = null, botErrorPly = -1;
+    let botSeat = null, botPaused = false, botThinking = false, botGeneration = 0, botWorker = null, botErrorPly = -1;
     let cells = [];
 
     function announce(message) {
@@ -16,7 +16,7 @@
 
     function saveLocal() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, journal, cursor, flipped, botSeat }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, journal, cursor, flipped, botSeat, botPaused }));
         } catch {
             announce('Browser storage is unavailable. Save a game record before leaving this page.');
         }
@@ -25,13 +25,14 @@
     function restoreLocal() {
         try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (![1, 2].includes(saved?.version) || !Array.isArray(saved.journal) || !Number.isInteger(saved.cursor)) return false;
+            if (![1, 2, 3].includes(saved?.version) || !Array.isArray(saved.journal) || !Number.isInteger(saved.cursor)) return false;
             const restored = engine.replay(saved.journal, saved.cursor);
             if (!restored || !engine.replay(saved.journal)) return false;
             journal = saved.journal;
             cursor = saved.cursor;
             flipped = Boolean(saved.flipped);
-            botSeat = saved.version === 2 && ['carnelian', 'turquoise'].includes(saved.botSeat) ? saved.botSeat : null;
+            botSeat = saved.version >= 2 && ['carnelian', 'turquoise', 'both'].includes(saved.botSeat) ? saved.botSeat : null;
+            botPaused = botSeat === 'both' && saved.version >= 3 && Boolean(saved.botPaused);
             $('local-opponent').value = botSeat || 'none';
             window.BotDifficulty?.show('shavari-city-battle', Boolean(botSeat));
             state = restored;
@@ -41,7 +42,7 @@
         }
     }
 
-    function isBotTurn() { return Boolean(botSeat && state && state.turn === botSeat); }
+    function isBotTurn() { return Boolean(state && botSeat && (botSeat === 'both' || state.turn === botSeat)); }
 
     function cancelBot() {
         botGeneration++;
@@ -51,7 +52,7 @@
     }
 
     function scheduleBot() {
-        if (!isBotTurn() || state.result || botThinking || botErrorPly === state.ply) return;
+        if (!isBotTurn() || botPaused || state.result || botThinking || botErrorPly === state.ply) return;
         const ticket = ++botGeneration;
         botThinking = true;
         selected = null;
@@ -368,9 +369,14 @@
             $('statusMain').textContent = state.result.winner ? `${courts[state.result.winner]} wins` : 'Draw';
             $('statusSub').textContent = state.result.reason;
         } else {
-            $('statusMain').textContent = botThinking ? 'Shavari bot is thinking…' : isBotTurn() ? 'Shavari bot to move' : `${courts[state.turn]} to move`;
-            $('statusSub').textContent = botThinking ? 'Searching legal moves for the 16 × 17 city board…' : isBotTurn() ? 'The bot is choosing a move using the supplied City Battle rules.' : selected ? `${new Set(moves.map(move => `${move.x},${move.y}`)).size} legal destinations · tap a highlighted square.` : 'Select a piece, then tap one of its highlighted destinations.';
+            const botMatch = botSeat === 'both';
+            const movingLabel = botMatch ? `${courts[state.turn]} bot` : 'Shavari bot';
+            $('statusMain').textContent = botPaused ? 'Bot match paused' : botThinking ? `${movingLabel} is thinking…` : isBotTurn() ? `${movingLabel} to move` : `${courts[state.turn]} to move`;
+            $('statusSub').textContent = botPaused ? 'Resume the bot match when you are ready.' : botThinking ? 'Searching legal moves for the 16 × 17 city board…' : isBotTurn() ? 'The bot is choosing a move using the supplied City Battle rules.' : selected ? `${new Set(moves.map(move => `${move.x},${move.y}`)).size} legal destinations · tap a highlighted square.` : 'Select a piece, then tap one of its highlighted destinations.';
         }
+        $('toggle-bot-match').hidden = botSeat !== 'both';
+        $('toggle-bot-match').disabled = Boolean(state.result);
+        $('toggle-bot-match').textContent = botPaused ? 'Resume bot match' : 'Pause bot match';
     }
 
     function render() {
@@ -434,6 +440,7 @@
 
     function resetMatch() {
         cancelBot();
+        botPaused = false;
         journal = [];
         cursor = 0;
         selected = null;
@@ -469,6 +476,12 @@
         if (!cursor) return;
         cancelBot();
         cursor--;
+        if (botSeat === 'both') {
+            botPaused = true;
+            announce('Bot match paused at the previous move.');
+            rebuild();
+            return;
+        }
         let restored = engine.replay(journal, cursor);
         while (botSeat && cursor > 0 && restored?.turn === botSeat) { cursor--; restored = engine.replay(journal, cursor); }
         announce('Undid the last turn.');
@@ -478,6 +491,12 @@
         if (cursor >= journal.length) return;
         cancelBot();
         cursor++;
+        if (botSeat === 'both') {
+            botPaused = true;
+            announce('Bot match paused at the restored move.');
+            rebuild();
+            return;
+        }
         let restored = engine.replay(journal, cursor);
         while (botSeat && cursor < journal.length && restored?.turn === botSeat) { cursor++; restored = engine.replay(journal, cursor); }
         announce('Restored the next turn.');
@@ -494,12 +513,22 @@
     $('cancel-landing').addEventListener('click', () => { pendingLanding = null; $('landing-dialog').close(); });
     $('capture-landing').addEventListener('click', () => { const action = pendingLanding; $('landing-dialog').close(); if (action) playMove({ ...action, kind: 'capture' }); });
     $('cover-landing').addEventListener('click', () => { const action = pendingLanding; $('landing-dialog').close(); if (action) playMove({ ...action, kind: 'cover' }); });
+    $('toggle-bot-match').addEventListener('click', () => {
+        if (botSeat !== 'both' || state.result) return;
+        botPaused = !botPaused;
+        if (botPaused) cancelBot();
+        announce(botPaused ? 'Bot match paused.' : 'Bot match resumed.');
+        saveLocal();
+        render();
+        if (!botPaused) scheduleBot();
+    });
     $('local-opponent').addEventListener('change', () => {
         cancelBot();
-        botSeat = ['carnelian', 'turquoise'].includes($('local-opponent').value) ? $('local-opponent').value : null;
+        botSeat = ['carnelian', 'turquoise', 'both'].includes($('local-opponent').value) ? $('local-opponent').value : null;
+        botPaused = false;
         window.BotDifficulty?.show('shavari-city-battle', Boolean(botSeat));
         selected = null;
-        announce(botSeat ? `${courts[botSeat]} is controlled by the Shavari bot.` : 'Two-player pass-and-play selected.');
+        announce(botSeat === 'both' ? 'Bot vs Bot match started.' : botSeat ? `${courts[botSeat]} is controlled by the Shavari bot.` : 'Two-player pass-and-play selected.');
         saveLocal();
         render();
         if (isBotTurn()) scheduleBot();
