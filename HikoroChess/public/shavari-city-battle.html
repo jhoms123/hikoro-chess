@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123c3a">
+<meta name="description" content="Play Shavari City Battle, a 16 by 17 Shavari chess game through a city of blocked squares and custom piece movements.">
+<title>Shavari City Battle · Hikoro</title>
+<link rel="stylesheet" href="/site-audio.css?v=20261015-valley-hunt-v1">
+<script src="/site-audio.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261015-valley-hunt-v1">
+<script src="/collection-theme.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/mobile-table.css?v=20261009-mobile-scroll">
+<script src="/mobile-table.js?v=20261015-city-battle-v1" defer></script>
+<link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
+<link rel="stylesheet" href="/shavari-city-battle.css?v=20261015-city-battle-v1">
+<script src="/shavari-city-battle-engine.js?v=20261015-city-battle-v1" defer></script>
+<script src="/shavari-city-battle.js?v=20261015-city-battle-v1" defer></script>
+</head>
+<body data-audio-theme="shavari" class="city-battle-page">
+<a class="skip-link" href="#city-board">Skip to the board</a>
+<header class="site-header">
+  <a class="collection-brand" href="/" aria-label="Hikoro collection home"><img src="/assets/harmony-seal.svg" alt="" width="42" height="42"><span>HIKORO<small>THE GAME COLLECTION</small></span></a>
+  <span class="header-caption">THE SHAVARI CITY TABLE · 16 × 17</span>
+  <a class="quiet-button header-rules" href="#rules-panel">How to play</a>
+</header>
+<main>
+  <section class="introduction city-introduction"><p class="eyebrow">SHAVARI CHESS · CITY BATTLE</p><h1>Shavari City Battle</h1><p>Lead your formations through a city of walls, lanes, and crossing movement paths.</p></section>
+  <div class="city-layout">
+    <section class="city-play-area" aria-label="Shavari City Battle board">
+      <div class="city-status panel" aria-live="polite"><div class="city-turn-label"><span class="turn-dot" id="turnDot"></span><strong id="statusMain">Carnelian to move</strong></div><p id="statusSub">Select a piece, then tap one of its highlighted destinations.</p><p id="notice" class="city-notice" role="status" hidden></p></div>
+      <div class="player-strip city-player-strip" id="top-strip"><span class="city-side-mark" aria-hidden="true"></span><div><strong id="top-name">Turquoise court</strong><small id="top-caption">Northern army</small></div><span class="army-count" id="top-count">75 pieces</span></div>
+      <div class="city-board-frame board-shell" aria-label="16 by 17 city battlefield">
+        <div class="coordinate-corner"></div><div class="city-files" id="files-top" aria-hidden="true"></div><div class="coordinate-corner"></div>
+        <div class="city-ranks" id="ranks-left" aria-hidden="true"></div>
+        <div id="city-board" class="city-board" role="grid" aria-label="16 by 17 board. Use arrow keys to navigate, then Enter to select or move."></div>
+        <div class="city-ranks" id="ranks-right" aria-hidden="true"></div>
+        <div class="coordinate-corner"></div><div class="city-files" id="files-bottom" aria-hidden="true"></div><div class="coordinate-corner"></div>
+      </div>
+      <div class="city-board-tools">
+        <button id="flip-board" class="quiet-button" type="button">Flip board</button>
+        <span class="city-legend"><i class="legend-move"></i> Move <i class="legend-capture"></i> Capture <i class="legend-cover"></i> Cover <i class="legend-building"></i> Building</span>
+      </div>
+      <div class="player-strip city-player-strip" id="bottom-strip"><span class="city-side-mark" aria-hidden="true"></span><div><strong id="bottom-name">Carnelian court</strong><small id="bottom-caption">Southern army · moves first</small></div><span class="army-count" id="bottom-count">75 pieces</span></div>
+    </section>
+    <aside class="city-sidebar" aria-label="Game controls and details">
+      <section class="panel control-panel" data-mobile-title="Play controls"><h2>Play</h2><div class="city-controls"><button id="new-game" class="primary-button" type="button">New match</button><button id="undo-move" class="quiet-button" type="button" disabled>Undo</button><button id="redo-move" class="quiet-button" type="button" disabled>Redo</button><button id="save-record" class="quiet-button" type="button">Save record</button></div><p class="fine-print">Two players share this device. The board saves your current match on this browser.</p><div id="selected-detail" class="selected-detail">Choose one of the active court’s pieces.</div><p class="fine-print">The top piece controls a formation. All pieces in it contribute their moves.</p></section>
+      <section class="panel city-count-panel" data-mobile-title="Army count"><h2>Army count</h2><div id="piece-counts" class="city-piece-counts"></div><p id="building-count" class="fine-print">30 city buildings block the lanes.</p></section>
+      <section class="panel chronicle" data-mobile-title="Move record"><div class="city-panel-title"><h2>Move record</h2><span id="move-count">0 plies</span></div><ol id="move-log" class="city-move-log" aria-live="polite"><li class="empty-history">The city is quiet. Make the first move.</li></ol></section>
+      <details class="panel city-piece-guide" data-mobile-title="Piece guide"><summary><span class="eyebrow">THE ARMY</span><strong>Piece movements</strong></summary><div id="piece-guide" class="city-guide-list"></div></details>
+    </aside>
+  </div>
+  <section class="panel city-rules" id="rules-panel"><p class="eyebrow">RULES &amp; MOVEMENT</p><h2>How to play</h2><div class="rules-grid">
+    <article><h3>Take a turn</h3><p>Carnelian moves first. Select a piece or formation whose top piece belongs to the active court, then choose a highlighted square. The full formation moves together; its pieces combine their movement rules. Tap an enemy destination to capture when that rule allows it.</p></article>
+    <article><h3>City blocks &amp; paths</h3><p>Buildings cannot be occupied. A step needs a clear route through every intermediate square. A jump may pass over pieces and buildings but cannot land on a building. Sliding lines stop at buildings. A taller formation can pass over a shorter formation when the path uses a sliding line.</p></article>
+    <article><h3>Stack, cover, capture</h3><p>A friendly formation may be joined up to three pieces high. A taller formation can cover a shorter enemy formation when the combined height fits; choose Cover or Capture when both are legal. Capturing removes the whole enemy formation. The top piece controls the formation and all members contribute moves. Lotus Generals always stay alone.</p></article>
+    <article><h3>Victory &amp; draws</h3><p>Capture a Lotus General to win. A court that has no legal move loses. Threefold repetition, 100 plies without a capture, and the 4,000-ply safety limit are draws. Captures reset the 100-ply count.</p></article>
+  </div><p class="city-rules-note">Rows run from 1 at the north edge to 17 at the south edge. Turquoise movement is mirrored across the ranks. The opening position, piece rules, and 30 building squares come from the supplied City Battle setup.</p></section>
+</main>
+<dialog id="landing-dialog" class="city-dialog" aria-labelledby="landing-title"><p class="eyebrow">ENEMY FORMATION</p><h2 id="landing-title">Capture or cover?</h2><p>Capture removes the enemy formation. Cover keeps it underneath yours and adds its moves.</p><div class="dialog-actions"><button id="cancel-landing" class="quiet-button" type="button">Cancel</button><button id="capture-landing" class="quiet-button" type="button">Capture</button><button id="cover-landing" class="primary-button" type="button">Cover stack</button></div></dialog>
+<dialog id="confirm-dialog" class="city-dialog" aria-labelledby="confirm-title"><p class="eyebrow">THE SHAVARI CITY TABLE</p><h2 id="confirm-title">Start a new match?</h2><p>Your current position will be replaced. Save a record first if you want to keep it.</p><div class="dialog-actions"><button id="cancel-new" class="quiet-button" type="button">Keep playing</button><button id="accept-new" class="primary-button" type="button">Start new match</button></div></dialog>
+<footer class="collection-footer city-footer">Shavari City Battle · <a href="/">Return to the Hikoro collection</a> · <a href="/credits.html">Artists &amp; licenses</a></footer>
+</body>
+</html>

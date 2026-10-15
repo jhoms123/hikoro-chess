@@ -1,0 +1,3026 @@
+{
+  "format": "shavari-city-battle-setup",
+  "schemaVersion": 1,
+  "metadata": {
+    "title": "Shavari City Battle",
+    "sourceGame": "Shavari Chess on the Hikoro website",
+    "board": {
+      "columns": 16,
+      "rows": 17,
+      "files": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P"
+      ],
+      "rankNumbering": "1 is north/top; 17 is south/bottom"
+    },
+    "updatedAt": "2026-10-15T13:52:27.017Z"
+  },
+  "orientation": {
+    "north": "turquoise",
+    "south": "carnelian",
+    "movementVectorsDefinedFor": "carnelian-south",
+    "oppositeCourtTransform": "rank-flip"
+  },
+  "settings": {
+    "orientationTransform": "rank-flip",
+    "mirrorUnits": true,
+    "mirrorBuildings": true,
+    "stacking": {
+      "enabled": true,
+      "maxHeight": 3,
+      "moveModes": [
+        "whole-stack"
+      ],
+      "generalCannotStack": true,
+      "allMembersContributeMoves": true,
+      "tallerCanJumpShorter": true,
+      "tallerCanCoverShorter": true,
+      "captureRemovesWholeStack": true
+    },
+    "victory": {
+      "captureGeneral": true,
+      "noLegalMoveLoses": true
+    }
+  },
+  "pieceTypes": [
+    {
+      "id": "lotus-general",
+      "name": "Lotus General",
+      "mark": "LG",
+      "accent": "#dfbd76",
+      "basePiece": true,
+      "movement": {
+        "steps": [
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    },
+    {
+      "id": "caravan-lance",
+      "name": "Caravan Lance",
+      "mark": "CL",
+      "accent": "#b58d54",
+      "basePiece": true,
+      "movement": {
+        "steps": [],
+        "jumps": [],
+        "rays": [
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "elephant-cannon",
+      "name": "Elephant Cannon",
+      "mark": "EC",
+      "accent": "#77998d",
+      "basePiece": true,
+      "movement": {
+        "steps": [],
+        "jumps": [],
+        "rays": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "scarab-pawn",
+      "name": "Scarab Pawn",
+      "mark": "SP",
+      "accent": "#8b6d9a",
+      "basePiece": true,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": false,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+      "name": "Lancer Pawn",
+      "mark": "LP",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [
+          {
+            "dx": -1,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          }
+        ],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+      "name": "Lancer Knight",
+      "mark": "LK",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [
+          {
+            "dx": -1,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -2,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -2,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 2,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 2,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -1,
+            "dy": 2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": 2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          }
+        ],
+        "rays": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+      "name": "Cannon General",
+      "mark": "CG",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [
+          {
+            "dx": 2,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -2,
+            "dy": -2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -2,
+            "dy": 2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 2,
+            "dy": 2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -3,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -3,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 3,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 3,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": 3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -1,
+            "dy": 3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          }
+        ],
+        "rays": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+      "name": "Camel Lancer",
+      "mark": "CL",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -3,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -4,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 3,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 4,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -3,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -4,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 3,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [
+          {
+            "dx": -1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 1,
+            "dy": -3,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 3,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": 3,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -3,
+            "dy": 1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          },
+          {
+            "dx": -3,
+            "dy": -1,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          }
+        ],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+      "name": "City Soldier",
+      "mark": "CS",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -2,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 2,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+      "name": "City Pawn",
+      "mark": "CP",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [
+          {
+            "dx": 0,
+            "dy": 2,
+            "capture": true,
+            "kind": "jump",
+            "ignoresInterveningPieces": true
+          }
+        ],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+      "name": "Lotus Pawn",
+      "mark": "LP",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 2,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+      "name": "Cart Runner",
+      "mark": "CR",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
+      "name": "Cannon Cart",
+      "mark": "CC",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "maxDistance": 0,
+            "kind": "ray",
+            "stopsAtFirstOccupiedSquare": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+      "name": "Fighting Dog",
+      "mark": "FD",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    },
+    {
+      "id": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
+      "name": "Elephant Soldier",
+      "mark": "ES",
+      "accent": "#c39a57",
+      "basePiece": false,
+      "movement": {
+        "steps": [
+          {
+            "dx": 0,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": -3,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": -1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 0,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": -1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 1,
+            "dy": 1,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          },
+          {
+            "dx": 0,
+            "dy": 2,
+            "capture": true,
+            "kind": "step",
+            "pathMustBeClear": true
+          }
+        ],
+        "jumps": [],
+        "rays": []
+      }
+    }
+  ],
+  "position": {
+    "units": [
+      {
+        "id": "unit-6d0c7658-2fd6-4845-b482-6b2d251fcccc",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "I",
+        "row": 17,
+        "x": 8,
+        "y": 16,
+        "mirrorPair": "pair-f1eb4266-c838-44eb-be92-cce1f61b824f"
+      },
+      {
+        "id": "unit-8bff8020-818e-456b-a592-eaa13693a40e",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "I",
+        "row": 1,
+        "x": 8,
+        "y": 0,
+        "mirrorPair": "pair-f1eb4266-c838-44eb-be92-cce1f61b824f"
+      },
+      {
+        "id": "unit-7ede73fb-b66a-406f-a49e-9757ec23f7a4",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "carnelian",
+        "file": "H",
+        "row": 17,
+        "x": 7,
+        "y": 16,
+        "mirrorPair": "pair-cb41bf4c-fd49-4a54-b9fa-f2d4c5e89f4d"
+      },
+      {
+        "id": "unit-b8535b17-aa64-4f87-9d43-8b76a912d1f5",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "turquoise",
+        "file": "H",
+        "row": 1,
+        "x": 7,
+        "y": 0,
+        "mirrorPair": "pair-cb41bf4c-fd49-4a54-b9fa-f2d4c5e89f4d"
+      },
+      {
+        "id": "unit-df1ca763-6c78-41cf-a962-0f4d382aa0ad",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "A",
+        "row": 12,
+        "x": 0,
+        "y": 11,
+        "mirrorPair": "pair-b95a4f19-e231-4a05-993f-e8198b079c90"
+      },
+      {
+        "id": "unit-01e2331f-98ff-4989-9501-e8673d641f00",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "A",
+        "row": 6,
+        "x": 0,
+        "y": 5,
+        "mirrorPair": "pair-b95a4f19-e231-4a05-993f-e8198b079c90"
+      },
+      {
+        "id": "unit-43def60e-a5d0-4357-8d80-f10145818b10",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "C",
+        "row": 11,
+        "x": 2,
+        "y": 10,
+        "mirrorPair": "pair-52942ecd-f799-48ca-a3d5-819e707f544d"
+      },
+      {
+        "id": "unit-b40c4a58-b1da-451e-a912-8a2e5469de9a",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "C",
+        "row": 7,
+        "x": 2,
+        "y": 6,
+        "mirrorPair": "pair-52942ecd-f799-48ca-a3d5-819e707f544d"
+      },
+      {
+        "id": "unit-e3d7aac2-eabe-4129-ad1d-26e372edc8c4",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "E",
+        "row": 12,
+        "x": 4,
+        "y": 11,
+        "mirrorPair": "pair-599a99f0-77a1-4fec-86d7-92403f228d88"
+      },
+      {
+        "id": "unit-0285c67a-2069-4df6-acc3-20aa79bbd0d5",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "E",
+        "row": 6,
+        "x": 4,
+        "y": 5,
+        "mirrorPair": "pair-599a99f0-77a1-4fec-86d7-92403f228d88"
+      },
+      {
+        "id": "unit-11069f15-79b6-4bbc-a303-683350fba451",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "H",
+        "row": 11,
+        "x": 7,
+        "y": 10,
+        "mirrorPair": "pair-ac874720-6777-4cfe-9af4-142b1b94c499"
+      },
+      {
+        "id": "unit-6c31278a-a3fb-47d3-960c-30192ead5a6b",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "H",
+        "row": 7,
+        "x": 7,
+        "y": 6,
+        "mirrorPair": "pair-ac874720-6777-4cfe-9af4-142b1b94c499"
+      },
+      {
+        "id": "unit-6abf9928-17cc-450e-8b4f-3fee732022ee",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "I",
+        "row": 11,
+        "x": 8,
+        "y": 10,
+        "mirrorPair": "pair-55210c1d-73ca-4698-998d-f315ba8e276c"
+      },
+      {
+        "id": "unit-ce673541-da53-40da-a14a-ed689fd3d680",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "I",
+        "row": 7,
+        "x": 8,
+        "y": 6,
+        "mirrorPair": "pair-55210c1d-73ca-4698-998d-f315ba8e276c"
+      },
+      {
+        "id": "unit-b30fd69f-90ad-469d-b1e2-46d1d6b997be",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "L",
+        "row": 12,
+        "x": 11,
+        "y": 11,
+        "mirrorPair": "pair-647e441f-4faf-4845-94cb-20caab840384"
+      },
+      {
+        "id": "unit-88d801f8-163a-4a6f-961a-9e5058085c23",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "L",
+        "row": 6,
+        "x": 11,
+        "y": 5,
+        "mirrorPair": "pair-647e441f-4faf-4845-94cb-20caab840384"
+      },
+      {
+        "id": "unit-3c849e1b-d21c-4530-a454-f2482029e0d8",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "N",
+        "row": 11,
+        "x": 13,
+        "y": 10,
+        "mirrorPair": "pair-618ac9a6-3086-42b3-94bb-11507c2d032d"
+      },
+      {
+        "id": "unit-8ed41292-4fe4-43c9-a340-e8c784dc2301",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "N",
+        "row": 7,
+        "x": 13,
+        "y": 6,
+        "mirrorPair": "pair-618ac9a6-3086-42b3-94bb-11507c2d032d"
+      },
+      {
+        "id": "unit-3182067e-098b-4dd3-8a54-d626b95505ab",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "P",
+        "row": 12,
+        "x": 15,
+        "y": 11,
+        "mirrorPair": "pair-42eaf09f-b776-449f-b91e-441c9b9ee410"
+      },
+      {
+        "id": "unit-ce6b525d-a8dd-4cb1-8dd8-00f9d9425f80",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "P",
+        "row": 6,
+        "x": 15,
+        "y": 5,
+        "mirrorPair": "pair-42eaf09f-b776-449f-b91e-441c9b9ee410"
+      },
+      {
+        "id": "unit-622a2fde-8f82-42f5-9831-9c5488733cb0",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "F",
+        "row": 11,
+        "x": 5,
+        "y": 10,
+        "mirrorPair": "pair-b89851a3-69a0-45cc-a7e7-a68a1bef6c5d"
+      },
+      {
+        "id": "unit-c416a356-7696-4766-b783-20f970237463",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "F",
+        "row": 7,
+        "x": 5,
+        "y": 6,
+        "mirrorPair": "pair-b89851a3-69a0-45cc-a7e7-a68a1bef6c5d"
+      },
+      {
+        "id": "unit-0ec711a3-ff9f-45ad-b2d3-90a752f8857a",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "K",
+        "row": 11,
+        "x": 10,
+        "y": 10,
+        "mirrorPair": "pair-2dc992f9-bc49-477b-8532-fcfa1f223609"
+      },
+      {
+        "id": "unit-7989317c-3a0d-48cb-b5cb-3482376e1ccc",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "K",
+        "row": 7,
+        "x": 10,
+        "y": 6,
+        "mirrorPair": "pair-2dc992f9-bc49-477b-8532-fcfa1f223609"
+      },
+      {
+        "id": "unit-f66715a5-5938-46a4-ab22-abcf792f6167",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "D",
+        "row": 14,
+        "x": 3,
+        "y": 13,
+        "mirrorPair": "pair-b4b912ae-dddc-4edd-a465-65b81d22e70a"
+      },
+      {
+        "id": "unit-49bd6384-1c8c-4440-9b7b-90e3ac8db74d",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "D",
+        "row": 4,
+        "x": 3,
+        "y": 3,
+        "mirrorPair": "pair-b4b912ae-dddc-4edd-a465-65b81d22e70a"
+      },
+      {
+        "id": "unit-ba5583bf-84d1-434e-bf67-c9bc45390b4f",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "carnelian",
+        "file": "M",
+        "row": 14,
+        "x": 12,
+        "y": 13,
+        "mirrorPair": "pair-bdb25b4c-7fa2-41db-b652-447a91206478"
+      },
+      {
+        "id": "unit-bff6d57c-ffa5-446c-89ee-c2494e374d8d",
+        "typeId": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
+        "side": "turquoise",
+        "file": "M",
+        "row": 4,
+        "x": 12,
+        "y": 3,
+        "mirrorPair": "pair-bdb25b4c-7fa2-41db-b652-447a91206478"
+      },
+      {
+        "id": "unit-4228fc1a-22e4-40bc-8391-6a732f493c98",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "F",
+        "row": 12,
+        "x": 5,
+        "y": 11,
+        "mirrorPair": "pair-096af6b9-09d2-4923-855a-1dff9d060712"
+      },
+      {
+        "id": "unit-5407906b-2ba7-46db-9a38-ba0b40f9de95",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "F",
+        "row": 6,
+        "x": 5,
+        "y": 5,
+        "mirrorPair": "pair-096af6b9-09d2-4923-855a-1dff9d060712"
+      },
+      {
+        "id": "unit-c28f0949-c69a-4d88-bbe3-711de855e4de",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "K",
+        "row": 12,
+        "x": 10,
+        "y": 11,
+        "mirrorPair": "pair-eebb4668-0eaa-40d8-ab91-6cbb90c50572"
+      },
+      {
+        "id": "unit-5e9e3157-4785-42b4-bca5-41ac2357f73a",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "K",
+        "row": 6,
+        "x": 10,
+        "y": 5,
+        "mirrorPair": "pair-eebb4668-0eaa-40d8-ab91-6cbb90c50572"
+      },
+      {
+        "id": "unit-323c31e2-f782-4f44-bd5e-99934e544a4a",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "H",
+        "row": 12,
+        "x": 7,
+        "y": 11,
+        "mirrorPair": "pair-5d8b0c31-c4b3-4ce3-9250-02a888800c8c"
+      },
+      {
+        "id": "unit-612351f7-4311-43af-819e-6cd793144c3c",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "H",
+        "row": 6,
+        "x": 7,
+        "y": 5,
+        "mirrorPair": "pair-5d8b0c31-c4b3-4ce3-9250-02a888800c8c"
+      },
+      {
+        "id": "unit-d6366cd3-a72b-4359-8bf3-32f15d20f581",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "I",
+        "row": 12,
+        "x": 8,
+        "y": 11,
+        "mirrorPair": "pair-c8711a0c-e1d1-4035-82e1-29b95b6f259f"
+      },
+      {
+        "id": "unit-33fd80cb-0186-4fa3-85b3-2de5bb2d1026",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "I",
+        "row": 6,
+        "x": 8,
+        "y": 5,
+        "mirrorPair": "pair-c8711a0c-e1d1-4035-82e1-29b95b6f259f"
+      },
+      {
+        "id": "unit-2dea8ab7-b917-4889-9945-d6d462b926ca",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "B",
+        "row": 12,
+        "x": 1,
+        "y": 11,
+        "mirrorPair": "pair-836d7ad1-4929-4409-8a08-ef29a8f693be"
+      },
+      {
+        "id": "unit-e7de9446-70d0-418b-b704-8fa4f4981128",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "B",
+        "row": 6,
+        "x": 1,
+        "y": 5,
+        "mirrorPair": "pair-836d7ad1-4929-4409-8a08-ef29a8f693be"
+      },
+      {
+        "id": "unit-772c011c-df2b-4e5d-aa04-5023a3a1e9cb",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "O",
+        "row": 12,
+        "x": 14,
+        "y": 11,
+        "mirrorPair": "pair-033e7e32-5f2a-4d3e-b16c-4ca5508315d3"
+      },
+      {
+        "id": "unit-67d30def-04af-4363-ac44-3b069c56e332",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "O",
+        "row": 6,
+        "x": 14,
+        "y": 5,
+        "mirrorPair": "pair-033e7e32-5f2a-4d3e-b16c-4ca5508315d3"
+      },
+      {
+        "id": "unit-21e57e30-1e75-434d-b500-b77c6b52b89a",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "D",
+        "row": 11,
+        "x": 3,
+        "y": 10,
+        "mirrorPair": "pair-db3b998f-cad3-42ca-a242-43b5ed09dd09"
+      },
+      {
+        "id": "unit-658ace04-936b-4dd8-847d-81d064cdb782",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "D",
+        "row": 7,
+        "x": 3,
+        "y": 6,
+        "mirrorPair": "pair-db3b998f-cad3-42ca-a242-43b5ed09dd09"
+      },
+      {
+        "id": "unit-3f53b252-5041-44fd-9fa6-454b4cd097d9",
+        "typeId": "lotus-general",
+        "side": "carnelian",
+        "file": "M",
+        "row": 11,
+        "x": 12,
+        "y": 10,
+        "mirrorPair": "pair-0cc8da45-33f0-4b7c-89ee-adf5c622084e"
+      },
+      {
+        "id": "unit-3e68d4c7-76b7-4212-b234-47f52a372bbf",
+        "typeId": "lotus-general",
+        "side": "turquoise",
+        "file": "M",
+        "row": 7,
+        "x": 12,
+        "y": 6,
+        "mirrorPair": "pair-0cc8da45-33f0-4b7c-89ee-adf5c622084e"
+      },
+      {
+        "id": "unit-77b316fb-644c-41c2-b32a-20aa14da3396",
+        "typeId": "caravan-lance",
+        "side": "carnelian",
+        "file": "C",
+        "row": 12,
+        "x": 2,
+        "y": 11,
+        "mirrorPair": "pair-0fd0389f-969f-46c5-a768-afbe333a48e4"
+      },
+      {
+        "id": "unit-e42295c7-d5eb-47fb-80a0-3b2682234901",
+        "typeId": "caravan-lance",
+        "side": "turquoise",
+        "file": "C",
+        "row": 6,
+        "x": 2,
+        "y": 5,
+        "mirrorPair": "pair-0fd0389f-969f-46c5-a768-afbe333a48e4"
+      },
+      {
+        "id": "unit-79651179-a1ae-46f9-960e-3baa1b3faee1",
+        "typeId": "caravan-lance",
+        "side": "carnelian",
+        "file": "N",
+        "row": 12,
+        "x": 13,
+        "y": 11,
+        "mirrorPair": "pair-f97a5242-2eef-42ba-a1f9-cf87c2a3a2d5"
+      },
+      {
+        "id": "unit-e3a18669-b2ec-488f-944a-7ef466193a82",
+        "typeId": "caravan-lance",
+        "side": "turquoise",
+        "file": "N",
+        "row": 6,
+        "x": 13,
+        "y": 5,
+        "mirrorPair": "pair-f97a5242-2eef-42ba-a1f9-cf87c2a3a2d5"
+      },
+      {
+        "id": "unit-6e277f1e-ecf6-42fa-9940-e3f7105d8d2c",
+        "typeId": "caravan-lance",
+        "side": "carnelian",
+        "file": "G",
+        "row": 13,
+        "x": 6,
+        "y": 12,
+        "mirrorPair": "pair-8e3bf9f4-f62f-4f22-84c2-eff3597ffc48"
+      },
+      {
+        "id": "unit-cd34db69-ddec-4238-8ddb-2cc9815f2ee7",
+        "typeId": "caravan-lance",
+        "side": "turquoise",
+        "file": "G",
+        "row": 5,
+        "x": 6,
+        "y": 4,
+        "mirrorPair": "pair-8e3bf9f4-f62f-4f22-84c2-eff3597ffc48"
+      },
+      {
+        "id": "unit-037401ec-e231-45f2-b565-3e523fa4868d",
+        "typeId": "caravan-lance",
+        "side": "carnelian",
+        "file": "J",
+        "row": 13,
+        "x": 9,
+        "y": 12,
+        "mirrorPair": "pair-c1a952d7-042e-4f90-a312-f6adafff8c6b"
+      },
+      {
+        "id": "unit-69e6f946-8d9f-42d2-b96a-39d68490642a",
+        "typeId": "caravan-lance",
+        "side": "turquoise",
+        "file": "J",
+        "row": 5,
+        "x": 9,
+        "y": 4,
+        "mirrorPair": "pair-c1a952d7-042e-4f90-a312-f6adafff8c6b"
+      },
+      {
+        "id": "unit-a5770e68-7d43-410a-91bf-08a94175210c",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "A",
+        "row": 14,
+        "x": 0,
+        "y": 13,
+        "mirrorPair": "pair-da5e61d4-19ea-4259-872a-21415804606e"
+      },
+      {
+        "id": "unit-9415e686-9738-4f77-a299-d61a598db744",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "A",
+        "row": 4,
+        "x": 0,
+        "y": 3,
+        "mirrorPair": "pair-da5e61d4-19ea-4259-872a-21415804606e"
+      },
+      {
+        "id": "unit-10688857-6c86-44c6-abf8-c7f1197a3a46",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "P",
+        "row": 14,
+        "x": 15,
+        "y": 13,
+        "mirrorPair": "pair-cb1cb31d-b109-4e97-bcae-df67ecd00108"
+      },
+      {
+        "id": "unit-a09a5e3b-bc22-468e-8498-8ae5c8c219db",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "P",
+        "row": 4,
+        "x": 15,
+        "y": 3,
+        "mirrorPair": "pair-cb1cb31d-b109-4e97-bcae-df67ecd00108"
+      },
+      {
+        "id": "unit-2cb5e019-45cd-4424-98b7-959eba3b9bb7",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "C",
+        "row": 15,
+        "x": 2,
+        "y": 14,
+        "mirrorPair": "pair-4439804e-90d9-4d94-b2d8-5dd525650ad3"
+      },
+      {
+        "id": "unit-5ad5d726-d526-4243-8461-c6bbc6883461",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "C",
+        "row": 3,
+        "x": 2,
+        "y": 2,
+        "mirrorPair": "pair-4439804e-90d9-4d94-b2d8-5dd525650ad3"
+      },
+      {
+        "id": "unit-6c11e210-96a2-4ebb-ae72-82fc6e36dafa",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "N",
+        "row": 15,
+        "x": 13,
+        "y": 14,
+        "mirrorPair": "pair-b6042d03-4cdf-4de6-8939-3377236e50ca"
+      },
+      {
+        "id": "unit-4f583ef4-d454-4434-88a7-e60810564e39",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "N",
+        "row": 3,
+        "x": 13,
+        "y": 2,
+        "mirrorPair": "pair-b6042d03-4cdf-4de6-8939-3377236e50ca"
+      },
+      {
+        "id": "unit-44225966-1656-4ad7-a5f5-68642fcce2cd",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "E",
+        "row": 16,
+        "x": 4,
+        "y": 15,
+        "mirrorPair": "pair-f8877c39-1d98-4fa0-b217-84fd003e33b9"
+      },
+      {
+        "id": "unit-35776b38-9e35-40bb-b8e3-76940c6754a4",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "E",
+        "row": 2,
+        "x": 4,
+        "y": 1,
+        "mirrorPair": "pair-f8877c39-1d98-4fa0-b217-84fd003e33b9"
+      },
+      {
+        "id": "unit-404dbaf6-6254-436c-829f-8625b51c0395",
+        "typeId": "elephant-cannon",
+        "side": "carnelian",
+        "file": "L",
+        "row": 16,
+        "x": 11,
+        "y": 15,
+        "mirrorPair": "pair-7d44b657-9ae8-4e22-a9e4-4abf5eec2788"
+      },
+      {
+        "id": "unit-1bc8aeeb-bf44-418d-857e-0dea1805274a",
+        "typeId": "elephant-cannon",
+        "side": "turquoise",
+        "file": "L",
+        "row": 2,
+        "x": 11,
+        "y": 1,
+        "mirrorPair": "pair-7d44b657-9ae8-4e22-a9e4-4abf5eec2788"
+      },
+      {
+        "id": "unit-95b46995-3d19-4e7f-af1e-ee11d0c1d37e",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "B",
+        "row": 11,
+        "x": 1,
+        "y": 10,
+        "mirrorPair": "pair-de3dad9a-0680-4f76-9948-e1e5795b05d9"
+      },
+      {
+        "id": "unit-d9825724-8265-4a42-bc96-20bf7a88b326",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "B",
+        "row": 7,
+        "x": 1,
+        "y": 6,
+        "mirrorPair": "pair-de3dad9a-0680-4f76-9948-e1e5795b05d9"
+      },
+      {
+        "id": "unit-4b6ecf42-21f6-4f31-98c4-c68397366091",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "O",
+        "row": 11,
+        "x": 14,
+        "y": 10,
+        "mirrorPair": "pair-b3393229-51fc-4e3d-bf99-f057c699116d"
+      },
+      {
+        "id": "unit-ee581237-0276-4157-9c5e-869600ee3271",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "O",
+        "row": 7,
+        "x": 14,
+        "y": 6,
+        "mirrorPair": "pair-b3393229-51fc-4e3d-bf99-f057c699116d"
+      },
+      {
+        "id": "unit-b8a84940-86d0-43b6-b900-5140fcafdd78",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "G",
+        "row": 12,
+        "x": 6,
+        "y": 11,
+        "mirrorPair": "pair-1a66317c-a1e2-4f01-b924-04ef89f2ced0"
+      },
+      {
+        "id": "unit-c386a631-b698-4e3c-865c-a483ca67ae12",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "G",
+        "row": 6,
+        "x": 6,
+        "y": 5,
+        "mirrorPair": "pair-1a66317c-a1e2-4f01-b924-04ef89f2ced0"
+      },
+      {
+        "id": "unit-1f803981-7cf8-43ee-bec3-3cfc4bcba4b0",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "J",
+        "row": 12,
+        "x": 9,
+        "y": 11,
+        "mirrorPair": "pair-950e19d6-dd92-4660-a1f8-38618a791c24"
+      },
+      {
+        "id": "unit-c54ab3a4-3cf8-453a-87af-f3ad6d1d4ebd",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "J",
+        "row": 6,
+        "x": 9,
+        "y": 5,
+        "mirrorPair": "pair-950e19d6-dd92-4660-a1f8-38618a791c24"
+      },
+      {
+        "id": "unit-79dca640-db03-47cb-b69d-0abbc486d8fa",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "F",
+        "row": 13,
+        "x": 5,
+        "y": 12,
+        "mirrorPair": "pair-f2d269c6-5fb9-4655-8343-caa50d9de4a2"
+      },
+      {
+        "id": "unit-1134a558-e7cb-40ae-99b3-8d2a65c88442",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "F",
+        "row": 5,
+        "x": 5,
+        "y": 4,
+        "mirrorPair": "pair-f2d269c6-5fb9-4655-8343-caa50d9de4a2"
+      },
+      {
+        "id": "unit-6c773a72-90ce-422d-9635-cc8e3537fdd1",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "K",
+        "row": 13,
+        "x": 10,
+        "y": 12,
+        "mirrorPair": "pair-8c5b7656-80da-4e86-ae5b-ca783b2f48af"
+      },
+      {
+        "id": "unit-174dbe0b-8b4b-4b69-b89a-6abeb184d7a6",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "K",
+        "row": 5,
+        "x": 10,
+        "y": 4,
+        "mirrorPair": "pair-8c5b7656-80da-4e86-ae5b-ca783b2f48af"
+      },
+      {
+        "id": "unit-cd7a0728-cb63-47a9-96c6-972b9efee5ec",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "H",
+        "row": 14,
+        "x": 7,
+        "y": 13,
+        "mirrorPair": "pair-58234fd5-3f00-41f1-8410-d3825b6b929f"
+      },
+      {
+        "id": "unit-16df82eb-6b71-4118-822e-2a9a140c2887",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "H",
+        "row": 4,
+        "x": 7,
+        "y": 3,
+        "mirrorPair": "pair-58234fd5-3f00-41f1-8410-d3825b6b929f"
+      },
+      {
+        "id": "unit-da19c7e1-be0f-4eab-b847-7aeab8eb844b",
+        "typeId": "scarab-pawn",
+        "side": "carnelian",
+        "file": "I",
+        "row": 14,
+        "x": 8,
+        "y": 13,
+        "mirrorPair": "pair-874d57fc-1f43-48a8-b8ef-a1840003d979"
+      },
+      {
+        "id": "unit-05240976-7931-4992-8778-768443712ff2",
+        "typeId": "scarab-pawn",
+        "side": "turquoise",
+        "file": "I",
+        "row": 4,
+        "x": 8,
+        "y": 3,
+        "mirrorPair": "pair-874d57fc-1f43-48a8-b8ef-a1840003d979"
+      },
+      {
+        "id": "unit-5e82f532-896e-4a84-a44f-60de5fb36192",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "D",
+        "row": 13,
+        "x": 3,
+        "y": 12,
+        "mirrorPair": "pair-7051b2f7-ae53-468e-9565-6d983631d0cd"
+      },
+      {
+        "id": "unit-9d5ba227-c8b9-4ee7-92cf-ba8014dcbc08",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "D",
+        "row": 5,
+        "x": 3,
+        "y": 4,
+        "mirrorPair": "pair-7051b2f7-ae53-468e-9565-6d983631d0cd"
+      },
+      {
+        "id": "unit-f1fc7f0e-9542-4fd8-a9a7-e2fe6e360cfd",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "B",
+        "row": 16,
+        "x": 1,
+        "y": 15,
+        "mirrorPair": "pair-3b96e0f9-455b-4905-b592-37379191d654"
+      },
+      {
+        "id": "unit-e8d6f2b3-dce1-470d-b594-7ea20dc853c0",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "B",
+        "row": 2,
+        "x": 1,
+        "y": 1,
+        "mirrorPair": "pair-3b96e0f9-455b-4905-b592-37379191d654"
+      },
+      {
+        "id": "unit-f376a652-50f1-409f-ad6f-1f45025a47ab",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "O",
+        "row": 16,
+        "x": 14,
+        "y": 15,
+        "mirrorPair": "pair-9570357a-e735-4b60-810d-5148a7b8f589"
+      },
+      {
+        "id": "unit-0fb39ee1-1d5b-47ea-8ba2-dd25f3594285",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "O",
+        "row": 2,
+        "x": 14,
+        "y": 1,
+        "mirrorPair": "pair-9570357a-e735-4b60-810d-5148a7b8f589"
+      },
+      {
+        "id": "unit-f0f64fcd-7d10-4554-af15-0c605e43d301",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "M",
+        "row": 15,
+        "x": 12,
+        "y": 14,
+        "mirrorPair": "pair-1c1bfcc1-5578-4638-be33-e7e8dcbca9af"
+      },
+      {
+        "id": "unit-08dff38f-4840-47fd-90b2-9b1f25299f5f",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "M",
+        "row": 3,
+        "x": 12,
+        "y": 2,
+        "mirrorPair": "pair-1c1bfcc1-5578-4638-be33-e7e8dcbca9af"
+      },
+      {
+        "id": "unit-70809897-20aa-4d6f-9b3f-d22efaac5721",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "D",
+        "row": 15,
+        "x": 3,
+        "y": 14,
+        "mirrorPair": "pair-9b1befac-f0e6-4708-9fe3-39bef2ea51ff"
+      },
+      {
+        "id": "unit-022e0957-7574-4208-bc71-8b8461037d9d",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "D",
+        "row": 3,
+        "x": 3,
+        "y": 2,
+        "mirrorPair": "pair-9b1befac-f0e6-4708-9fe3-39bef2ea51ff"
+      },
+      {
+        "id": "unit-3ab6eaf7-4362-48ce-9e07-b0f5ba06f25e",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "A",
+        "row": 17,
+        "x": 0,
+        "y": 16,
+        "mirrorPair": "pair-c68fe27c-4fec-46fc-86c5-4bf2b92eec5f"
+      },
+      {
+        "id": "unit-47447a04-8845-4250-9731-ee3107795e24",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "A",
+        "row": 1,
+        "x": 0,
+        "y": 0,
+        "mirrorPair": "pair-c68fe27c-4fec-46fc-86c5-4bf2b92eec5f"
+      },
+      {
+        "id": "unit-55118246-b482-4e07-b50c-85c74da6996d",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "carnelian",
+        "file": "P",
+        "row": 17,
+        "x": 15,
+        "y": 16,
+        "mirrorPair": "pair-5ecb58e7-b07f-476a-a3de-7ed6d5ba796f"
+      },
+      {
+        "id": "unit-95f25375-0374-4bf3-af8a-82bd99eba3b9",
+        "typeId": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
+        "side": "turquoise",
+        "file": "P",
+        "row": 1,
+        "x": 15,
+        "y": 0,
+        "mirrorPair": "pair-5ecb58e7-b07f-476a-a3de-7ed6d5ba796f"
+      },
+      {
+        "id": "unit-91e432a4-0c38-460e-83ed-bc152d314d0f",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "carnelian",
+        "file": "E",
+        "row": 15,
+        "x": 4,
+        "y": 14,
+        "mirrorPair": "pair-9b27f56f-78f4-45c2-9559-51ae28a542e6"
+      },
+      {
+        "id": "unit-5bea4f5c-29f2-4e72-8f02-304c749f8e35",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "turquoise",
+        "file": "E",
+        "row": 3,
+        "x": 4,
+        "y": 2,
+        "mirrorPair": "pair-9b27f56f-78f4-45c2-9559-51ae28a542e6"
+      },
+      {
+        "id": "unit-071360fd-ee30-4e1e-bb5c-51b152ce75f8",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "carnelian",
+        "file": "L",
+        "row": 15,
+        "x": 11,
+        "y": 14,
+        "mirrorPair": "pair-03fce944-0035-464b-aff6-b64639135437"
+      },
+      {
+        "id": "unit-4774baa7-c309-46d7-8c9c-4db4dd03d918",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "turquoise",
+        "file": "L",
+        "row": 3,
+        "x": 11,
+        "y": 2,
+        "mirrorPair": "pair-03fce944-0035-464b-aff6-b64639135437"
+      },
+      {
+        "id": "unit-c54b4351-cb9c-407e-ad06-94eecd153a31",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "carnelian",
+        "file": "G",
+        "row": 16,
+        "x": 6,
+        "y": 15,
+        "mirrorPair": "pair-83cc27d3-84b0-4700-a20a-fdd70bb9246e"
+      },
+      {
+        "id": "unit-40998c21-7ab8-4444-8724-8c1e2e26aad4",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "turquoise",
+        "file": "G",
+        "row": 2,
+        "x": 6,
+        "y": 1,
+        "mirrorPair": "pair-83cc27d3-84b0-4700-a20a-fdd70bb9246e"
+      },
+      {
+        "id": "unit-1a71bfcd-2587-4d4a-8c20-29c64f958f10",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "carnelian",
+        "file": "J",
+        "row": 16,
+        "x": 9,
+        "y": 15,
+        "mirrorPair": "pair-b69c53a5-904c-418d-9944-980909e606d2"
+      },
+      {
+        "id": "unit-5cb623dc-ee94-4671-aefd-43a48e472d59",
+        "typeId": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
+        "side": "turquoise",
+        "file": "J",
+        "row": 2,
+        "x": 9,
+        "y": 1,
+        "mirrorPair": "pair-b69c53a5-904c-418d-9944-980909e606d2"
+      },
+      {
+        "id": "unit-0516b745-5f83-4955-a5b3-35f8350676a9",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "carnelian",
+        "file": "A",
+        "row": 13,
+        "x": 0,
+        "y": 12,
+        "mirrorPair": "pair-4d7f3404-9197-47d2-9257-9c0aa188ac2f"
+      },
+      {
+        "id": "unit-6a5aecbf-f490-4599-8505-8c7e530f8d90",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "turquoise",
+        "file": "A",
+        "row": 5,
+        "x": 0,
+        "y": 4,
+        "mirrorPair": "pair-4d7f3404-9197-47d2-9257-9c0aa188ac2f"
+      },
+      {
+        "id": "unit-0160f5ea-bf6c-49ae-95f5-7e52521ab14d",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "carnelian",
+        "file": "P",
+        "row": 13,
+        "x": 15,
+        "y": 12,
+        "mirrorPair": "pair-8a008277-4bfb-4c0c-ae56-c888214ba960"
+      },
+      {
+        "id": "unit-da3db109-3c48-4693-8bf6-f776a60e6205",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "turquoise",
+        "file": "P",
+        "row": 5,
+        "x": 15,
+        "y": 4,
+        "mirrorPair": "pair-8a008277-4bfb-4c0c-ae56-c888214ba960"
+      },
+      {
+        "id": "unit-c39281b9-dd34-42e6-9dbf-16e4d4075648",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "carnelian",
+        "file": "H",
+        "row": 16,
+        "x": 7,
+        "y": 15,
+        "mirrorPair": "pair-afda10f6-eba9-4118-a8d7-7a79aae8adb5"
+      },
+      {
+        "id": "unit-f3d25858-2d01-4177-a56b-55122946017c",
+        "typeId": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
+        "side": "turquoise",
+        "file": "H",
+        "row": 2,
+        "x": 7,
+        "y": 1,
+        "mirrorPair": "pair-afda10f6-eba9-4118-a8d7-7a79aae8adb5"
+      },
+      {
+        "id": "unit-266a9783-7a12-4779-bfb5-5afd5375b5c8",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "carnelian",
+        "file": "C",
+        "row": 17,
+        "x": 2,
+        "y": 16,
+        "mirrorPair": "pair-56d91c01-ae65-4756-8d5b-699fad5c60ec"
+      },
+      {
+        "id": "unit-7d3889d5-4a6b-4bb9-b886-39d46c05ea44",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "turquoise",
+        "file": "C",
+        "row": 1,
+        "x": 2,
+        "y": 0,
+        "mirrorPair": "pair-56d91c01-ae65-4756-8d5b-699fad5c60ec"
+      },
+      {
+        "id": "unit-54369106-a65f-4efd-aacd-ae0238eff10e",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "carnelian",
+        "file": "D",
+        "row": 17,
+        "x": 3,
+        "y": 16,
+        "mirrorPair": "pair-fac8c3ac-91ab-4383-a2b2-a8e7ec541d39"
+      },
+      {
+        "id": "unit-fec1f424-b84c-41d5-a563-767ed4e1b320",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "turquoise",
+        "file": "D",
+        "row": 1,
+        "x": 3,
+        "y": 0,
+        "mirrorPair": "pair-fac8c3ac-91ab-4383-a2b2-a8e7ec541d39"
+      },
+      {
+        "id": "unit-9fe320a2-e1cc-4a44-a1c7-c7542c08e68c",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "carnelian",
+        "file": "M",
+        "row": 17,
+        "x": 12,
+        "y": 16,
+        "mirrorPair": "pair-83fb6f4e-6fb7-4cd3-a85e-cc80b31c361a"
+      },
+      {
+        "id": "unit-88aad997-05bd-4861-bb6d-a8bed258add9",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "turquoise",
+        "file": "M",
+        "row": 1,
+        "x": 12,
+        "y": 0,
+        "mirrorPair": "pair-83fb6f4e-6fb7-4cd3-a85e-cc80b31c361a"
+      },
+      {
+        "id": "unit-2a9e8146-3125-4b6a-a95c-8651a00c1ca2",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "carnelian",
+        "file": "N",
+        "row": 17,
+        "x": 13,
+        "y": 16,
+        "mirrorPair": "pair-34b95889-3821-4881-a88b-3db2a11149b0"
+      },
+      {
+        "id": "unit-9d90652d-fe0e-4c16-8955-a0f4a8c75f52",
+        "typeId": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
+        "side": "turquoise",
+        "file": "N",
+        "row": 1,
+        "x": 13,
+        "y": 0,
+        "mirrorPair": "pair-34b95889-3821-4881-a88b-3db2a11149b0"
+      },
+      {
+        "id": "unit-b289dba3-0655-4bcf-b0f1-c4e889a991bf",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "E",
+        "row": 10,
+        "x": 4,
+        "y": 9,
+        "mirrorPair": "pair-26163ae3-5af7-499a-9527-6d1194e4d26c"
+      },
+      {
+        "id": "unit-f580cca9-782f-45fd-b934-347557586110",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "E",
+        "row": 8,
+        "x": 4,
+        "y": 7,
+        "mirrorPair": "pair-26163ae3-5af7-499a-9527-6d1194e4d26c"
+      },
+      {
+        "id": "unit-5c5c1890-7864-4c5b-8ab9-d8e189f066b7",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "L",
+        "row": 10,
+        "x": 11,
+        "y": 9,
+        "mirrorPair": "pair-20ac8b73-8f27-4ace-bc66-1e027c99d45f"
+      },
+      {
+        "id": "unit-c4911885-5cde-44b1-82e8-31f53b58240f",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "L",
+        "row": 8,
+        "x": 11,
+        "y": 7,
+        "mirrorPair": "pair-20ac8b73-8f27-4ace-bc66-1e027c99d45f"
+      },
+      {
+        "id": "unit-f13cad85-fe78-4377-a4d8-c3f6b4ac839b",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "H",
+        "row": 15,
+        "x": 7,
+        "y": 14,
+        "mirrorPair": "pair-b8a681e3-f23a-4168-ba57-9d4755d46cfc"
+      },
+      {
+        "id": "unit-13b43c23-90db-4bb0-9358-3eb502fbc004",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "H",
+        "row": 3,
+        "x": 7,
+        "y": 2,
+        "mirrorPair": "pair-b8a681e3-f23a-4168-ba57-9d4755d46cfc"
+      },
+      {
+        "id": "unit-01634ab2-7a36-41d4-ac05-3ebe7f0c400e",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "I",
+        "row": 16,
+        "x": 8,
+        "y": 15,
+        "mirrorPair": "pair-24dbde3c-4bbc-4596-8ce0-af0b2510ea07"
+      },
+      {
+        "id": "unit-6e1c26d2-3669-4d32-90cd-6b92225a5601",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "I",
+        "row": 2,
+        "x": 8,
+        "y": 1,
+        "mirrorPair": "pair-24dbde3c-4bbc-4596-8ce0-af0b2510ea07"
+      },
+      {
+        "id": "unit-b4f77246-b4e6-4f77-8479-e1ac984cdc0c",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "I",
+        "row": 15,
+        "x": 8,
+        "y": 14,
+        "mirrorPair": "pair-64d4acb2-28ae-4483-8c55-a9616e81092f"
+      },
+      {
+        "id": "unit-d8afd4df-da51-4929-ab4f-ce893ed9c3d1",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "I",
+        "row": 3,
+        "x": 8,
+        "y": 2,
+        "mirrorPair": "pair-64d4acb2-28ae-4483-8c55-a9616e81092f"
+      },
+      {
+        "id": "unit-7f5dfac8-3410-4ed3-b5da-159429d3d864",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "K",
+        "row": 17,
+        "x": 10,
+        "y": 16,
+        "mirrorPair": "pair-af142477-c89e-4954-9cd1-217e34c842c4"
+      },
+      {
+        "id": "unit-8a6fdbe9-3824-4941-96b2-e54819fe7702",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "K",
+        "row": 1,
+        "x": 10,
+        "y": 0,
+        "mirrorPair": "pair-af142477-c89e-4954-9cd1-217e34c842c4"
+      },
+      {
+        "id": "unit-71ff2cdb-6da4-4c02-80dc-fb72de3445fb",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "carnelian",
+        "file": "F",
+        "row": 17,
+        "x": 5,
+        "y": 16,
+        "mirrorPair": "pair-e4e49696-ca17-4b9b-a6c5-5a3db2a95f7d"
+      },
+      {
+        "id": "unit-99a8c49c-9249-4cdb-abe7-71fe4716e9aa",
+        "typeId": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
+        "side": "turquoise",
+        "file": "F",
+        "row": 1,
+        "x": 5,
+        "y": 0,
+        "mirrorPair": "pair-e4e49696-ca17-4b9b-a6c5-5a3db2a95f7d"
+      },
+      {
+        "id": "unit-e4cbb89f-cd40-426d-8e35-764ac524d318",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "carnelian",
+        "file": "O",
+        "row": 17,
+        "x": 14,
+        "y": 16,
+        "mirrorPair": "pair-43fc6d09-a7f2-44ab-bfc5-c42d4b484c9c"
+      },
+      {
+        "id": "unit-5bcc284e-0476-405f-a234-ab0c8d27c951",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "turquoise",
+        "file": "O",
+        "row": 1,
+        "x": 14,
+        "y": 0,
+        "mirrorPair": "pair-43fc6d09-a7f2-44ab-bfc5-c42d4b484c9c"
+      },
+      {
+        "id": "unit-dc17c78c-557a-4c22-9ce9-8ab53fd5c44e",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "carnelian",
+        "file": "B",
+        "row": 17,
+        "x": 1,
+        "y": 16,
+        "mirrorPair": "pair-1ae17772-9f61-43ce-b2b4-b5e58f936dd2"
+      },
+      {
+        "id": "unit-2c0e87bf-15af-4eea-b3a7-c58c379904c9",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "turquoise",
+        "file": "B",
+        "row": 1,
+        "x": 1,
+        "y": 0,
+        "mirrorPair": "pair-1ae17772-9f61-43ce-b2b4-b5e58f936dd2"
+      },
+      {
+        "id": "unit-0503beb7-910d-41e0-8765-2d496e60123e",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "carnelian",
+        "file": "B",
+        "row": 13,
+        "x": 1,
+        "y": 12,
+        "mirrorPair": "pair-e2be15f6-6cb4-47f6-ae9b-ff772f2492c7"
+      },
+      {
+        "id": "unit-8853d2c1-12fc-40ed-a133-5fd3ef9dc01f",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "turquoise",
+        "file": "B",
+        "row": 5,
+        "x": 1,
+        "y": 4,
+        "mirrorPair": "pair-e2be15f6-6cb4-47f6-ae9b-ff772f2492c7"
+      },
+      {
+        "id": "unit-f5891440-f906-4c80-8496-ea494058d6a0",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "carnelian",
+        "file": "O",
+        "row": 13,
+        "x": 14,
+        "y": 12,
+        "mirrorPair": "pair-02edf351-aed0-425c-a61d-744674e2d83f"
+      },
+      {
+        "id": "unit-2b711910-2387-405c-8bd4-ba875cfc0fa1",
+        "typeId": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
+        "side": "turquoise",
+        "file": "O",
+        "row": 5,
+        "x": 14,
+        "y": 4,
+        "mirrorPair": "pair-02edf351-aed0-425c-a61d-744674e2d83f"
+      },
+      {
+        "id": "unit-0471778e-6802-4dd6-869c-1e6658678f02",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "carnelian",
+        "file": "E",
+        "row": 14,
+        "x": 4,
+        "y": 13,
+        "mirrorPair": "pair-06805828-79cf-4c19-b9b4-eeef54e1d9bf"
+      },
+      {
+        "id": "unit-5ef956fb-dba7-46a3-a3fc-0319ebef719b",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "turquoise",
+        "file": "E",
+        "row": 4,
+        "x": 4,
+        "y": 3,
+        "mirrorPair": "pair-06805828-79cf-4c19-b9b4-eeef54e1d9bf"
+      },
+      {
+        "id": "unit-5815ee54-dab9-422b-870f-d60585374efa",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "carnelian",
+        "file": "L",
+        "row": 14,
+        "x": 11,
+        "y": 13,
+        "mirrorPair": "pair-b213daf7-2b34-4c9d-98e4-5c1ed8052f8c"
+      },
+      {
+        "id": "unit-321fce2c-0112-4259-afa2-0de5e40d1596",
+        "typeId": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
+        "side": "turquoise",
+        "file": "L",
+        "row": 4,
+        "x": 11,
+        "y": 3,
+        "mirrorPair": "pair-b213daf7-2b34-4c9d-98e4-5c1ed8052f8c"
+      },
+      {
+        "id": "unit-2b3b0555-c33a-4701-8845-82da53e68636",
+        "typeId": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
+        "side": "carnelian",
+        "file": "B",
+        "row": 15,
+        "x": 1,
+        "y": 14,
+        "mirrorPair": "pair-5625f150-bc3a-4877-b690-772f6e59e983"
+      },
+      {
+        "id": "unit-d5f4e566-fb56-413a-b2e4-019a7fd9e69c",
+        "typeId": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
+        "side": "turquoise",
+        "file": "B",
+        "row": 3,
+        "x": 1,
+        "y": 2,
+        "mirrorPair": "pair-5625f150-bc3a-4877-b690-772f6e59e983"
+      },
+      {
+        "id": "unit-51ff97f2-b2ba-41ce-8786-f5e7f0324b6f",
+        "typeId": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
+        "side": "carnelian",
+        "file": "O",
+        "row": 15,
+        "x": 14,
+        "y": 14,
+        "mirrorPair": "pair-7913c12b-cdda-4656-aa76-8e6cdf50e019"
+      },
+      {
+        "id": "unit-66d52686-d45f-44ef-8339-329a00aa3d82",
+        "typeId": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
+        "side": "turquoise",
+        "file": "O",
+        "row": 3,
+        "x": 14,
+        "y": 2,
+        "mirrorPair": "pair-7913c12b-cdda-4656-aa76-8e6cdf50e019"
+      },
+      {
+        "id": "unit-0df13854-760d-4035-a2db-668b0a5919f2",
+        "typeId": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
+        "side": "carnelian",
+        "file": "D",
+        "row": 16,
+        "x": 3,
+        "y": 15,
+        "mirrorPair": "pair-e1f6eb93-91b0-4ca9-b4f0-3b16999150c0"
+      },
+      {
+        "id": "unit-eac4418e-e1f7-42b2-ba60-a2335f3783f1",
+        "typeId": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
+        "side": "turquoise",
+        "file": "D",
+        "row": 2,
+        "x": 3,
+        "y": 1,
+        "mirrorPair": "pair-e1f6eb93-91b0-4ca9-b4f0-3b16999150c0"
+      },
+      {
+        "id": "unit-e33b64ea-838b-4c28-bb77-f9f032ecf414",
+        "typeId": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
+        "side": "carnelian",
+        "file": "M",
+        "row": 16,
+        "x": 12,
+        "y": 15,
+        "mirrorPair": "pair-51d3da60-07c9-42b1-8267-a1ba0f7e18ed"
+      },
+      {
+        "id": "unit-c040b26f-c7dc-4a91-aa4a-f32121815c6d",
+        "typeId": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
+        "side": "turquoise",
+        "file": "M",
+        "row": 2,
+        "x": 12,
+        "y": 1,
+        "mirrorPair": "pair-51d3da60-07c9-42b1-8267-a1ba0f7e18ed"
+      }
+    ],
+    "blockedSquares": [
+      {
+        "file": "B",
+        "row": 14,
+        "x": 1,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-0caf9ef5-5423-44ea-a49d-9b1dabf77712"
+      },
+      {
+        "file": "B",
+        "row": 4,
+        "x": 1,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-0caf9ef5-5423-44ea-a49d-9b1dabf77712"
+      },
+      {
+        "file": "O",
+        "row": 14,
+        "x": 14,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-e16dfc61-183f-4a69-bc57-a556f27d0d11"
+      },
+      {
+        "file": "O",
+        "row": 4,
+        "x": 14,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-e16dfc61-183f-4a69-bc57-a556f27d0d11"
+      },
+      {
+        "file": "E",
+        "row": 9,
+        "x": 4,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "L",
+        "row": 9,
+        "x": 11,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "G",
+        "row": 11,
+        "x": 6,
+        "y": 10,
+        "kind": "building",
+        "mirrorPair": "blockpair-936cd422-caa8-47b5-8a1a-0217f0e6a305"
+      },
+      {
+        "file": "G",
+        "row": 7,
+        "x": 6,
+        "y": 6,
+        "kind": "building",
+        "mirrorPair": "blockpair-936cd422-caa8-47b5-8a1a-0217f0e6a305"
+      },
+      {
+        "file": "J",
+        "row": 11,
+        "x": 9,
+        "y": 10,
+        "kind": "building",
+        "mirrorPair": "blockpair-7dd34238-8280-433f-a69a-39d8d9734844"
+      },
+      {
+        "file": "J",
+        "row": 7,
+        "x": 9,
+        "y": 6,
+        "kind": "building",
+        "mirrorPair": "blockpair-7dd34238-8280-433f-a69a-39d8d9734844"
+      },
+      {
+        "file": "A",
+        "row": 9,
+        "x": 0,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "B",
+        "row": 9,
+        "x": 1,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "H",
+        "row": 9,
+        "x": 7,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "I",
+        "row": 9,
+        "x": 8,
+        "y": 8,
+        "kind": "building",
+        "mirrorPair": null
+      },
+      {
+        "file": "F",
+        "row": 14,
+        "x": 5,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-b7059c87-9f39-4349-b017-aee2ec459c7c"
+      },
+      {
+        "file": "F",
+        "row": 4,
+        "x": 5,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-b7059c87-9f39-4349-b017-aee2ec459c7c"
+      },
+      {
+        "file": "G",
+        "row": 15,
+        "x": 6,
+        "y": 14,
+        "kind": "building",
+        "mirrorPair": "blockpair-a2f423da-03ed-4216-89e7-665a94f149d6"
+      },
+      {
+        "file": "G",
+        "row": 3,
+        "x": 6,
+        "y": 2,
+        "kind": "building",
+        "mirrorPair": "blockpair-a2f423da-03ed-4216-89e7-665a94f149d6"
+      },
+      {
+        "file": "G",
+        "row": 14,
+        "x": 6,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-eaefe6dc-d4b6-4286-8fbe-01e49122a971"
+      },
+      {
+        "file": "G",
+        "row": 4,
+        "x": 6,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-eaefe6dc-d4b6-4286-8fbe-01e49122a971"
+      },
+      {
+        "file": "F",
+        "row": 15,
+        "x": 5,
+        "y": 14,
+        "kind": "building",
+        "mirrorPair": "blockpair-6f898118-402b-4e60-9346-195016c1350b"
+      },
+      {
+        "file": "F",
+        "row": 3,
+        "x": 5,
+        "y": 2,
+        "kind": "building",
+        "mirrorPair": "blockpair-6f898118-402b-4e60-9346-195016c1350b"
+      },
+      {
+        "file": "J",
+        "row": 14,
+        "x": 9,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-f7c3d81e-562b-44d6-98e6-2c10c1f18bfe"
+      },
+      {
+        "file": "J",
+        "row": 4,
+        "x": 9,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-f7c3d81e-562b-44d6-98e6-2c10c1f18bfe"
+      },
+      {
+        "file": "J",
+        "row": 15,
+        "x": 9,
+        "y": 14,
+        "kind": "building",
+        "mirrorPair": "blockpair-8cc694f6-916a-4f48-a6bf-787fe10e3fbb"
+      },
+      {
+        "file": "J",
+        "row": 3,
+        "x": 9,
+        "y": 2,
+        "kind": "building",
+        "mirrorPair": "blockpair-8cc694f6-916a-4f48-a6bf-787fe10e3fbb"
+      },
+      {
+        "file": "K",
+        "row": 15,
+        "x": 10,
+        "y": 14,
+        "kind": "building",
+        "mirrorPair": "blockpair-58684351-297a-4380-a99e-a4d5d9218763"
+      },
+      {
+        "file": "K",
+        "row": 3,
+        "x": 10,
+        "y": 2,
+        "kind": "building",
+        "mirrorPair": "blockpair-58684351-297a-4380-a99e-a4d5d9218763"
+      },
+      {
+        "file": "K",
+        "row": 14,
+        "x": 10,
+        "y": 13,
+        "kind": "building",
+        "mirrorPair": "blockpair-52f412af-d502-42e1-8be8-71c009504881"
+      },
+      {
+        "file": "K",
+        "row": 4,
+        "x": 10,
+        "y": 3,
+        "kind": "building",
+        "mirrorPair": "blockpair-52f412af-d502-42e1-8be8-71c009504881"
+      }
+    ]
+  },
+  "notes": {
+    "map": "",
+    "specialRules": ""
+  },
+  "movementSemantics": {
+    "step": "The destination and every intermediate square must be clear; a building or unit blocks the path.",
+    "jump": "Intermediate squares may contain units; the destination cannot be a building. Capture is allowed only when that rule's capture flag is true.",
+    "ray": "Moves one square at a time in the listed direction; buildings and units stop the ray. A capturable enemy at the first occupied square may be captured, then the ray ends.",
+    "captureFlag": "Each step, jump, or ray has its own capture boolean. Friendly units cannot be captured.",
+    "opponentVectors": "Apply orientation.oppositeCourtTransform to movement vectors for Turquoise."
+  }
+}

@@ -1,0 +1,107 @@
+.city-battle-page main{width:min(100% - 36px,1380px);margin:0 auto 42px}
+.city-introduction{text-align:center;padding:18px 0 14px}
+.city-introduction h1{font:normal clamp(32px,4vw,54px)/1.08 Georgia,serif;margin:8px 0 10px;color:var(--paper)}
+.city-introduction>p:last-child{max-width:680px;margin:0 auto;color:var(--muted);font:14px/1.65 Georgia,serif}
+.city-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,340px);gap:24px;align-items:start}
+.city-play-area,.city-sidebar{min-width:0}
+.city-status.panel,.city-sidebar>.panel{border:1px solid #c5a66d4d;background:linear-gradient(145deg,#243f3ceF,#172a29f5);box-shadow:0 9px 22px #0005;border-radius:8px;color:var(--ink)}
+.city-status{padding:12px 16px;margin-bottom:12px}
+.city-turn-label{display:flex;align-items:center;gap:9px;font:16px/1.3 Georgia,serif;color:#f3e5c5}
+.turn-dot{width:12px;height:12px;flex:none;border-radius:50%;background:#bd8d59;box-shadow:0 0 0 3px #bd8d5930}
+.turn-dot.turquoise{background:#55b6a7;box-shadow:0 0 0 3px #55b6a730}
+.city-status p{margin:5px 0 0;color:#cbbd9b;font:12px/1.5 Georgia,serif}
+.city-status .city-notice{color:#f3d28e}
+.city-player-strip{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid #c2a36b62;background:#3c281c;border-radius:6px;color:#eed9b0;min-height:50px}
+.city-player-strip.turquoise{background:linear-gradient(110deg,#123c3b,#1b514b);border-color:#68b5a55c}
+.city-player-strip.carnelian{background:linear-gradient(110deg,#4a281d,#653b26);border-color:#d9a66162}
+.city-player-strip.active{box-shadow:0 0 0 2px #e4c273,0 0 18px #e4c27322}
+.city-side-mark{width:19px;height:19px;flex:none;border:2px solid #e1c37d;border-radius:50%;box-shadow:inset 0 0 0 4px #152f2b}
+.turquoise .city-side-mark{background:#40998e;border-color:#b1d5c4}
+.carnelian .city-side-mark{background:#a55837;border-color:#edc17d}
+.city-player-strip>div{min-width:0;display:grid;gap:2px}
+.city-player-strip strong{font:14px Georgia,serif}
+.city-player-strip small{font:10px Georgia,serif;color:#cdbf9f}
+.city-player-strip .army-count{margin-left:auto;font:10px Georgia,serif;color:#e5d1aa;white-space:nowrap}
+.city-board-frame{width:min(100%,930px);margin:6px auto;padding:7px;background:linear-gradient(140deg,#9b7449,#54391f 55%,#bd9560);border:1px solid #d2b77b;border-radius:8px;box-shadow:0 14px 25px #0008;display:grid;grid-template-columns:19px minmax(0,1fr) 19px;grid-template-rows:16px auto 16px;gap:2px;touch-action:pan-y}
+.coordinate-corner{min-width:0}
+.city-files{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));align-items:center;text-align:center;color:#f1dfb8;font:9px/1 Georgia,serif;text-shadow:0 1px 3px #000}
+.city-ranks{display:grid;grid-template-rows:repeat(17,minmax(0,1fr));align-items:center;text-align:center;color:#f1dfb8;font:9px/1 Georgia,serif;text-shadow:0 1px 3px #000}
+.city-board{width:100%;aspect-ratio:16/17;display:grid;grid-template-columns:repeat(16,minmax(0,1fr));grid-template-rows:repeat(17,minmax(0,1fr));overflow:hidden;border:1px solid #4d4937;background:#cbb98e;position:relative;isolation:isolate}
+.city-square{position:relative;display:flex;min-width:0;min-height:0;align-items:center;justify-content:center;padding:0;border:0;border-radius:0;overflow:visible;cursor:pointer;touch-action:pan-y;user-select:none;-webkit-tap-highlight-color:transparent}
+.city-square.stone-light{background:linear-gradient(140deg,#e2d4ad,#c8b58c)}
+.city-square.stone-dark{background:linear-gradient(140deg,#b6a078,#95805b)}
+.city-square.building-square{background:repeating-linear-gradient(135deg,#514d43 0 3px,#6b6350 3px 6px);box-shadow:inset 0 0 0 1px #a88c5c}
+.city-square.building-square::after{content:'▦';color:#d2b779;font:clamp(8px,1.3vw,15px)/1 Georgia,serif;text-shadow:0 1px 2px #000;opacity:.88}
+.city-square:focus-visible{z-index:4;outline:2px solid #fff2b0;outline-offset:-2px}
+.city-square.selected{z-index:3;background:#e5bd67!important;box-shadow:inset 0 0 0 2px #6d4c22}
+.city-square.last-move{box-shadow:inset 0 0 0 2px #77b1a47a}
+.city-square.selected.last-move{box-shadow:inset 0 0 0 2px #6d4c22, inset 0 0 0 4px #77b1a47a}
+.city-piece{position:absolute;z-index:2;display:grid;place-items:center;width:82%;height:82%;border-radius:50%;font-weight:700;line-height:1;box-shadow:0 2px 3px #14130f99,inset 0 1px 1px #ffffff55;border:1px solid var(--piece-accent,#d2b779)}
+.city-piece.carnelian{color:#f7dfae;background:radial-gradient(circle at 32% 28%,#b7613a,#713820 80%)}
+.city-piece.turquoise{color:#e0eee0;background:radial-gradient(circle at 32% 28%,#4e9a8e,#1b514e 80%)}
+.city-piece-mark{max-width:100%;padding:1px;font:700 clamp(6px,1.55vw,14px)/1 Arial,sans-serif;letter-spacing:-.3px;text-shadow:0 1px 2px #0009;overflow:hidden}
+.city-stack-badge{position:absolute;right:-17%;bottom:-17%;min-width:12px;height:12px;padding:0 2px;border:1px solid #e4ce96;border-radius:10px;background:#31271b;color:#ffedbd;font:700 8px/10px Arial,sans-serif}
+.city-stack-ribbon{position:absolute;z-index:1;left:50%;bottom:-12%;display:flex;gap:1px;justify-content:center;width:75%;transform:translateX(-50%)}
+.city-stack-ribbon i{width:5px;height:3px;border:1px solid #d1b977;border-radius:2px;background:#9e5233}
+.city-stack-ribbon i.turquoise{background:#287b73}
+.city-square.legal-move::before,.city-square.legal-stack::before,.city-square.legal-capture::before,.city-square.legal-cover::before{content:'';position:absolute;z-index:3;pointer-events:none}
+.city-square.legal-move::before{width:25%;height:25%;border-radius:50%;background:#245a42b5}
+.city-square.legal-stack::before{width:42%;height:42%;border:2px solid #317763;border-radius:50%;background:#e7cf6270}
+.city-square.legal-capture::before{width:70%;height:70%;border:2px solid #a64230;border-radius:50%;background:#a6423022}
+.city-square.legal-cover::before{width:78%;height:78%;border:3px double #705198;border-radius:50%;background:#70519822}
+.city-target-mark{position:absolute;z-index:4;top:0;right:0;color:#fff1c4;font:700 clamp(7px,1.5vw,12px)/1 Arial,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.city-board-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:930px;margin:9px auto 12px}
+.city-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:#d4c4a2;font:10px Georgia,serif}
+.city-legend i{width:9px;height:9px;display:inline-block;border-radius:50%;vertical-align:middle;margin-right:-6px}
+.legend-move{background:#65987a}.legend-capture{border:2px solid #d26c56}.legend-cover{border:2px double #b092d0}.legend-building{border:1px solid #d2b779;background:repeating-linear-gradient(135deg,#514d43 0 2px,#8c7958 2px 4px)}
+.city-sidebar{display:grid;gap:12px}
+.city-sidebar>.panel{padding:15px}
+.city-sidebar h2{margin:0 0 11px;font:normal 20px Georgia,serif;color:#f1e3c5}
+.city-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.city-controls button{min-height:40px}
+.city-sidebar .fine-print{margin:10px 0 0;color:#c8b998;font:11px/1.55 Georgia,serif}
+.selected-detail{display:flex;align-items:center;gap:10px;min-height:58px;margin-top:13px;padding:9px;border-radius:5px;background:#101f1e99;color:#eedcb6;font:12px/1.35 Georgia,serif}
+.selected-detail>div:last-child{display:grid;gap:4px;min-width:0}
+.selected-detail small{color:#c9b895;font:10px/1.4 Georgia,serif}
+.selection-pieces{display:flex;flex:none;gap:2px;max-width:100px;overflow:auto}
+.selection-mark,.guide-mark{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--piece-accent,#d2b779);border-radius:50%;font:700 9px Arial,sans-serif;color:#f4e6c7;background:#75432e}
+.selection-mark.turquoise{background:#23645f}
+.city-piece-counts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.count-chip{display:grid;grid-template-columns:13px 1fr;align-items:center;column-gap:6px;padding:8px;border-radius:4px;background:#142b29aa}
+.count-chip i{width:11px;height:11px;border-radius:50%;background:#a85c3a;grid-row:span 2}
+.count-chip.turquoise i{background:#348c81}
+.count-chip strong{font:11px Georgia,serif}
+.count-chip small{font:9px Georgia,serif;color:#c8b998}
+.city-panel-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.city-panel-title h2{margin-bottom:0}
+.city-panel-title span{font:10px Georgia,serif;color:#c8b998}
+.city-move-log{max-height:260px;overflow-y:auto;display:grid;gap:6px;list-style:none;margin:12px 0 0;padding:0}
+.city-move-log li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:5px;color:#e5d6b7;font:10px/1.45 Georgia,serif;padding:5px 0;border-bottom:1px solid #d0b68120}
+.city-move-log .ply-no{color:#cbad72;font-variant-numeric:tabular-nums}
+.city-move-log .empty-history{display:block;color:#c5b28d;font-style:italic}
+.city-piece-guide{padding:0!important;overflow:hidden}
+.city-piece-guide>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;list-style:none;padding:15px;cursor:pointer;color:#f1e3c5}
+.city-piece-guide>summary::-webkit-details-marker{display:none}
+.city-piece-guide>summary strong{font:normal 19px Georgia,serif}
+.city-guide-list{display:grid;gap:7px;padding:0 12px 14px}
+.city-guide-card{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:start;padding:8px;border-radius:5px;background:#101f1e88}
+.guide-mark{width:30px;height:30px;color:#f8e8c0;background:linear-gradient(140deg,#9b5734,#57321f)}
+.city-guide-card:nth-child(even) .guide-mark{background:linear-gradient(140deg,#448e80,#1c4e4a)}
+.city-guide-card h3{margin:0;color:#f1e3c5;font:14px Georgia,serif}
+.city-guide-card p{margin:4px 0 0;color:#cbbc9b;font:10px/1.45 Georgia,serif}
+.city-rules{margin:26px 0 0;padding:20px;border:1px solid #c5a66d4d;border-radius:8px;background:linear-gradient(145deg,#243f3ceF,#172a29f5);box-shadow:0 9px 22px #0005}
+.city-rules h2{margin:3px 0 14px;font:normal 25px Georgia,serif;color:#f1e3c5}
+.rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rules-grid article{padding:13px;border:1px solid #cfb47b28;border-radius:5px;background:#10252377}
+.rules-grid h3{margin:0 0 7px;font:normal 15px Georgia,serif;color:#e8ce94}
+.rules-grid p,.city-rules-note{margin:0;color:#d0c1a0;font:12px/1.65 Georgia,serif}
+.city-rules-note{margin-top:12px}
+.city-dialog{width:min(92vw,460px);padding:22px;border:1px solid #d5b877;border-radius:8px;background:linear-gradient(145deg,#254341,#142a28);color:#eee0bf;box-shadow:0 24px 60px #000b}
+.city-dialog::backdrop{background:#091513b8;backdrop-filter:blur(3px)}
+.city-dialog h2{margin:3px 0 9px;font:normal 25px Georgia,serif;color:#f2e4c5}
+.city-dialog p:not(.eyebrow){color:#d2c2a0;font:13px/1.55 Georgia,serif}
+.dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:16px}
+.city-footer{padding:24px 18px;color:#cbbc9b;text-align:center;font:11px Georgia,serif}
+@media(max-width:980px){.city-layout{grid-template-columns:minmax(0,1fr) minmax(250px,300px);gap:14px}.city-board-frame{padding:5px;grid-template-columns:16px minmax(0,1fr) 16px;grid-template-rows:14px auto 14px}.city-files,.city-ranks{font-size:8px}}
+@media(max-width:760px){.city-battle-page main{width:calc(100% - 22px);margin-bottom:28px}.city-introduction{padding:12px 0}.city-introduction h1{font-size:clamp(29px,9vw,40px)}.city-introduction>p:last-child{font-size:12px}.city-layout{grid-template-columns:minmax(0,1fr);gap:12px}.city-status{padding:10px 12px}.city-board-frame{width:100%;padding:4px;grid-template-columns:14px minmax(0,1fr) 14px;grid-template-rows:13px auto 13px;gap:1px;border-radius:6px}.city-files,.city-ranks{font-size:7px}.city-player-strip{padding:7px 10px;min-height:44px}.city-player-strip strong{font-size:13px}.city-player-strip .army-count{font-size:9px}.city-board-tools{align-items:flex-start;flex-wrap:wrap;margin:8px 0 10px}.city-legend{font-size:9px;gap:6px 8px}.city-sidebar{gap:9px}.city-sidebar>.panel{padding:13px}.city-rules{padding:15px;margin-top:16px}.rules-grid{grid-template-columns:1fr;gap:8px}.rules-grid article{padding:11px}.rules-grid p,.city-rules-note{font-size:11px}.city-move-log{max-height:220px}.header-caption{display:none}}
+@media(max-width:360px){.city-battle-page main{width:calc(100% - 14px)}.city-board-frame{grid-template-columns:11px minmax(0,1fr) 11px;padding:3px}.city-files,.city-ranks{font-size:6px}.city-piece-mark{font-size:6px}.city-legend{width:100%}.city-controls{grid-template-columns:1fr 1fr}}

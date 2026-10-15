@@ -130,11 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt'].includes(gameType);
-            createGameBtn.disabled = !socket.connected || gameType === 'shavari-go' || gameType === 'valley-hunt';
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameType);
+            createGameBtn.disabled = !socket.connected || gameType === 'shavari-go' || gameType === 'valley-hunt' || gameType === 'shavari-city-battle';
             const setupHint = document.getElementById('setup-hint');
             if (setupHint) setupHint.textContent = gameType === 'shavari-go'
                 ? 'Shavari Go is a shared-device two-player game. Online rooms are not available yet.'
+                : gameType === 'shavari-city-battle'
+                    ? 'Shavari City Battle is local two-player play on a 16 × 17 board. Online rooms are not available yet.'
                 : gameType === 'valley-hunt'
                     ? 'The Valley Hunt is a local game. Choose Play locally to start against the bot or share this device.'
                     : 'Online rooms need a second player. Local play shares this device.';
@@ -170,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mainTime = parseInt(document.getElementById('time-control').value, 10);
         let byoyomiTime = parseInt(document.getElementById('byoyomi-control').value, 10);
         const gameType = gameTypeSelect ? gameTypeSelect.value : 'hikoro';
-        if (gameType === 'shavari-go' || gameType === 'valley-hunt') return;
+        if (gameType === 'shavari-go' || gameType === 'valley-hunt' || gameType === 'shavari-city-battle') return;
 
         const sdsPlayerCountEl = document.getElementById('sds-player-count');
         const sdsPlayerCount = sdsPlayerCountEl ? parseInt(sdsPlayerCountEl.value, 10) : 2;
@@ -193,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     singlePlayerBtn.addEventListener('click', () => {
         if (gameTypeSelect.value === 'shavari-go') { window.location.href = '/shavari-go.html?mode=black'; return; }
+        if (gameTypeSelect.value === 'shavari-city-battle') { window.location.href = '/shavari-city-battle.html'; return; }
         if (gameTypeSelect.value === 'shodansho') {
             const players = Number(sdsPlayerCountSelect?.value || 2), bots = Number(sdsBotCountSelect?.value || 0);
             window.location.href = `/shodansho.html?players=${players}&bots=${bots}`; return;
@@ -215,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('connect', () => {
         document.getElementById('connection-status').textContent = 'Connected · Ready to play';
         document.getElementById('connection-status').title = '';
-        createGameBtn.disabled = gameTypeSelect.value === 'shavari-go' || gameTypeSelect.value === 'valley-hunt'; singlePlayerBtn.disabled = false;
+        createGameBtn.disabled = gameTypeSelect.value === 'shavari-go' || gameTypeSelect.value === 'valley-hunt' || gameTypeSelect.value === 'shavari-city-battle'; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
             try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
         }
@@ -225,15 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', () => {
         localCreationPending = false;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => { if (!switchingLocalMatch) announce(message); });
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         const status = document.getElementById('connection-status');
         if (status) { status.textContent = 'Connection failed · retrying…'; status.title = err.message || 'The game server is unavailable'; }
-        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho','valley-hunt'].includes(gameTypeSelect.value);
-        announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho, Shavari, and The Valley Hunt.");
+        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
+        announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho, Shavari, The Valley Hunt, and Shavari City Battle.");
     });
 
     rulesBtnIngame.addEventListener('click', () => {
@@ -1741,6 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
      if (rulesBtn) {
         rulesBtn.addEventListener('click', () => {
             if (gameTypeSelect.value === 'shavari-go') { window.location.href = '/shavari-go.html?showRules=1'; return; }
+            if (gameTypeSelect.value === 'shavari-city-battle') { window.location.href = '/shavari-city-battle.html?showRules=1'; return; }
             if (['shavari','hikoruka','go','academy'].includes(gameTypeSelect.value)) { window.location.href = `/${gameTypeSelect.value}.html?showRules=1`; return; }
             if (gameTypeSelect.value === 'shodansho') { window.location.href = '/shodansho.html?showRules=1'; return; }
             populateHikoroRules();
@@ -1761,3 +1765,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+

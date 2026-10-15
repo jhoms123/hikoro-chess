@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } catch { /* Storage may be disabled. Defaults remain usable. */ }
     function updateChoice() {
-        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari', mini = selector.value === 'hikoruka', go = selector.value === 'go', shavariGo = selector.value === 'shavari-go', academy = selector.value === 'academy', valleyHunt = selector.value === 'valley-hunt';
+        const sds = selector.value === 'shodansho', shavari = selector.value === 'shavari', mini = selector.value === 'hikoruka', go = selector.value === 'go', shavariGo = selector.value === 'shavari-go', academy = selector.value === 'academy', valleyHunt = selector.value === 'valley-hunt', cityBattle = selector.value === 'shavari-city-battle';
         document.getElementById('go-size-container').hidden = !go;
         document.querySelectorAll('.game-choice').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.game === selector.value)));
         ['time-control', 'byoyomi-control'].forEach(id => {
-            const el = document.getElementById(id); el.disabled = sds || shavari || mini || go || shavariGo || academy || valleyHunt; el.parentElement.hidden = sds || shavari || mini || go || shavariGo || academy || valleyHunt;
+            const el = document.getElementById(id); el.disabled = sds || shavari || mini || go || shavariGo || academy || valleyHunt || cityBattle; el.parentElement.hidden = sds || shavari || mini || go || shavariGo || academy || valleyHunt || cityBattle;
         });
-        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : mini ? 'Hikorka is untimed. Play locally with a friend or the bot, or open a two-player online table.' : go ? 'Shield Go is untimed. Choose a board size, then share this device or open an online table for two players.' : shavariGo ? 'Shavari Go is untimed and uses a 13 × 13 board. Play locally with a friend or against a bot; online rooms are not available.' : valleyHunt ? 'The Valley Hunt is local play. Choose Play locally, then select bot or two-player mode and the bot thinking time.' : academy ? 'Learn eight real Hikoro pieces, royal palaces, and sanctuary wins on 8 × 8. Local play includes guided practice; online rooms use a two-player teaching match.' : 'Online rooms need a second player. Local play shares this device.';
+        document.getElementById('setup-hint').textContent = sds ? 'Sho Dan Sho is untimed. Choose 2–4 players, then open an online room or share this device.' : shavari ? 'Shavari chess is untimed. Share this device with saved progress, or open a two-player online table.' : mini ? 'Hikorka is untimed. Play locally with a friend or the bot, or open a two-player online table.' : go ? 'Shield Go is untimed. Choose a board size, then share this device or open an online table for two players.' : shavariGo ? 'Shavari Go is untimed and uses a 13 × 13 board. Play locally with a friend or against a bot; online rooms are not available.' : valleyHunt ? 'The Valley Hunt is local play. Choose Play locally, then select bot or two-player mode and the bot thinking time.' : cityBattle ? 'Shavari City Battle is local two-player play on a 16 × 17 board. Share this device; online rooms and a bot are not available yet.' : academy ? 'Learn eight real Hikoro pieces, royal palaces, and sanctuary wins on 8 × 8. Local play includes guided practice; online rooms use a two-player teaching match.' : 'Online rooms need a second player. Local play shares this device.';
     }
     preferences.forEach(id => document.getElementById(id).addEventListener('change', () => {
         try { localStorage.setItem('hikoro-preferences', JSON.stringify(Object.fromEntries(preferences.map(id => [id, document.getElementById(id).value])))); } catch {}
@@ -45,3 +45,4 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'ArrowRight' && document.getElementById('replay-controls').style.display === 'flex') { e.preventDefault(); document.getElementById('replay-next-btn').click(); }
     });
 });
+

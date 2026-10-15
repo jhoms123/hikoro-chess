@@ -84,3 +84,6 @@ body[data-audio-theme] .collection-audio .material-control{font-size:12px!import
 .hikoro-site button.game-choice[data-game=valley-hunt]{--card-tint:#243e2d}
 .hikoro-site button.game-choice[data-game=valley-hunt] .match-peek{padding:6px;background:linear-gradient(#17291d66,#17291d66),var(--stone) center/400px}
 body[data-audio-theme=valley-hunt]{--theme-emblem:url('assets/collection/icons/compass.svg')}
+.hikoro-site button.game-choice[data-game=shavari-city-battle]{--card-tint:#174743;border:10px double #c5ad70;border-image:none;background:linear-gradient(#0b4e48d9,#083c37d9),var(--stone) center/350px;padding:4px}
+.hikoro-site button.game-choice[data-game=shavari-city-battle] .match-peek{padding:6px;background:linear-gradient(#102e2a66,#102e2a66),var(--stone) center/400px}
+
