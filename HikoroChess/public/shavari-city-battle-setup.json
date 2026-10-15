@@ -27,7 +27,7 @@
       ],
       "rankNumbering": "1 is north/top; 17 is south/bottom"
     },
-    "updatedAt": "2026-10-15T13:52:27.017Z"
+    "updatedAt": "2026-10-15T16:35:57.941Z"
   },
   "orientation": {
     "north": "turquoise",
@@ -41,7 +41,7 @@
     "mirrorBuildings": true,
     "stacking": {
       "enabled": true,
-      "maxHeight": 3,
+      "maxHeight": 2,
       "moveModes": [
         "whole-stack"
       ],
@@ -97,7 +97,8 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "lotus"
+      "icon": "lotus",
+      "hanzi": "帅"
     },
     {
       "id": "caravan-lance",
@@ -143,7 +144,8 @@
           }
         ]
       },
-      "icon": "camel"
+      "icon": "camel",
+      "hanzi": "旅"
     },
     {
       "id": "elephant-cannon",
@@ -189,7 +191,9 @@
           }
         ]
       },
-      "icon": "elephant-head"
+      "icon": "elephant-head",
+      "hanzi": "炮",
+      "stackGroup": "elephants"
     },
     {
       "id": "scarab-pawn",
@@ -224,7 +228,9 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "gold-scarab"
+      "icon": "gold-scarab",
+      "hanzi": "虫",
+      "stackGroup": "city-units"
     },
     {
       "id": "piece-5c6ac872-5982-422c-829b-d31de00c9ed7",
@@ -288,7 +294,9 @@
         ],
         "rays": []
       },
-      "icon": "lancer-pawn"
+      "icon": "lancer-pawn",
+      "hanzi": "兵",
+      "stackGroup": "lancers"
     },
     {
       "id": "piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7",
@@ -452,7 +460,9 @@
           }
         ]
       },
-      "icon": "lancer-knight"
+      "icon": "lancer-knight",
+      "hanzi": "马",
+      "stackGroup": "lancers"
     },
     {
       "id": "piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1",
@@ -612,7 +622,8 @@
           }
         ]
       },
-      "icon": "cannon-general"
+      "icon": "cannon-general",
+      "hanzi": "将"
     },
     {
       "id": "piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c",
@@ -788,7 +799,9 @@
         ],
         "rays": []
       },
-      "icon": "camel-lancer"
+      "icon": "camel-lancer",
+      "hanzi": "枪",
+      "stackGroup": "lancers"
     },
     {
       "id": "piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8",
@@ -865,7 +878,9 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "city-soldier"
+      "icon": "city-soldier",
+      "hanzi": "士",
+      "stackGroup": "city-units"
     },
     {
       "id": "piece-2a02372c-daa3-4171-b4bd-8b80696b9da3",
@@ -929,7 +944,9 @@
         ],
         "rays": []
       },
-      "icon": "city-pawn"
+      "icon": "city-pawn",
+      "hanzi": "卒",
+      "stackGroup": "city-units"
     },
     {
       "id": "piece-8c484400-b57d-4b39-aff7-f65d8a21c2af",
@@ -1027,7 +1044,8 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "lotus-bud"
+      "icon": "lotus-bud",
+      "hanzi": "莲"
     },
     {
       "id": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
@@ -1078,7 +1096,9 @@
           }
         ]
       },
-      "icon": "cart-runner"
+      "icon": "cart-runner",
+      "hanzi": "车",
+      "stackGroup": "carts"
     },
     {
       "id": "piece-1f3decac-7174-4ce1-a012-00eae63d2cf6",
@@ -1138,7 +1158,9 @@
           }
         ]
       },
-      "icon": "cannon-cart"
+      "icon": "cannon-cart",
+      "hanzi": "砲",
+      "stackGroup": "carts"
     },
     {
       "id": "piece-86e52855-661d-4802-8f40-2fa0d84b2ec7",
@@ -1173,7 +1195,9 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "fighting-dog"
+      "icon": "fighting-dog",
+      "hanzi": "犬",
+      "stackGroup": "city-units"
     },
     {
       "id": "piece-7c6a6ffe-2244-472f-9b58-2213b759853d",
@@ -1278,7 +1302,9 @@
         "jumps": [],
         "rays": []
       },
-      "icon": "elephant-soldier"
+      "icon": "elephant-soldier",
+      "hanzi": "象",
+      "stackGroup": "elephants"
     }
   ],
   "position": {

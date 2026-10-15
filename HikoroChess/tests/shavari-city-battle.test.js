@@ -3,16 +3,16 @@ const assert = require('node:assert/strict');
 const { create } = require('../public/shavari-city-battle-engine.js');
 const setup = require('../public/shavari-city-battle-setup.json');
 
-function scenario({ columns = 5, rows = 5, movement, units, buildings = [], extraTypes = [], victory = {} }) {
+function scenario({ columns = 5, rows = 5, movement, units, buildings = [], extraTypes = [], victory = {}, stacking = {}, stackGroup }) {
     const files = Array.from({ length: columns }, (_, i) => String.fromCharCode(65 + i));
-    const scout = { id: 'scout', name: 'Scout', mark: 'SC', basePiece: false, movement };
+    const scout = { id: 'scout', name: 'Scout', mark: 'SC', basePiece: false, movement, ...(stackGroup ? { stackGroup } : {}) };
     return {
         format: 'shavari-city-battle-setup',
         metadata: { board: { columns, rows, files } },
         orientation: { movementVectorsDefinedFor: 'carnelian-south', oppositeCourtTransform: 'rank-flip' },
         settings: {
             orientationTransform: 'rank-flip',
-            stacking: { enabled: true, maxHeight: 3, generalCannotStack: true, tallerCanJumpShorter: true, tallerCanCoverShorter: true },
+            stacking: { enabled: true, maxHeight: 3, generalCannotStack: true, tallerCanJumpShorter: true, tallerCanCoverShorter: true, ...stacking },
             victory: { captureGeneral: true, noLegalMoveLoses: true, ...victory }
         },
         pieceTypes: [scout, ...extraTypes],
@@ -32,6 +32,53 @@ test('loads the supplied 16 by 17 opening with mirrored armies and city blocks',
     assert.equal(state.board.flat().length, 150);
     assert.equal(state.buildings.filter(Boolean).length, 30);
     assert.equal(state.turn, 'carnelian');
+});
+
+test('City Battle defines only the four requested stack families and one-character Chinese marks', () => {
+    const groups = {
+        lancers: ['Camel Lancer', 'Lancer Knight', 'Lancer Pawn'],
+        elephants: ['Elephant Cannon', 'Elephant Soldier'],
+        carts: ['Cart Runner', 'Cannon Cart'],
+        'city-units': ['Scarab Pawn', 'City Pawn', 'Fighting Dog', 'City Soldier']
+    };
+    const game = create(setup);
+    const pieces = new Map(setup.pieceTypes.map(piece => [piece.name, piece]));
+    assert.equal(game.maxHeight, 2);
+    for (const [group, names] of Object.entries(groups)) {
+        for (const name of names) assert.equal(pieces.get(name)?.stackGroup, group, `${name} belongs to ${group}`);
+    }
+    for (const piece of setup.pieceTypes) {
+        assert.equal(Array.from(piece.hanzi || '').length, 1, `${piece.name} has exactly one Han character`);
+        assert.match(piece.hanzi, /^\p{Script=Han}$/u, `${piece.name} label is a Han character`);
+        if (!Object.values(groups).flat().includes(piece.name)) assert.equal(piece.stackGroup, undefined, `${piece.name} stays unstacked`);
+    }
+});
+
+test('formations stack only inside their named family and never exceed two pieces', () => {
+    const movement = { steps: [{ dx: 1, dy: 0, capture: true }], jumps: [], rays: [] };
+    const noMoves = { noLegalMoveLoses: false };
+    const lancer = { id: 'lancer', name: 'Lancer', stackGroup: 'lancers', movement: { steps: [], jumps: [], rays: [] } };
+    const city = { id: 'city', name: 'City unit', stackGroup: 'city-units', movement: { steps: [], jumps: [], rays: [] } };
+    const allowed = create(scenario({
+        movement, stackGroup: 'lancers', stacking: { maxHeight: 2 }, extraTypes: [lancer],
+        units: [unit('mover', 'scout', 'carnelian', 1, 2), unit('ally', 'lancer', 'carnelian', 2, 2)], victory: noMoves
+    }));
+    const allowedState = allowed.initial();
+    assert.deepEqual(at(moves(allowed, allowedState, 1, 2), 2, 2)?.options, ['stack']);
+    const stacked = allowed.apply(allowedState, { from: { x: 1, y: 2 }, to: { x: 2, y: 2 }, kind: 'stack' });
+    assert.equal(stacked.board[2 * allowed.COLS + 2].length, 2);
+
+    const blocked = create(scenario({
+        movement, stackGroup: 'lancers', stacking: { maxHeight: 2 }, extraTypes: [city],
+        units: [unit('mover', 'scout', 'carnelian', 1, 2), unit('ally', 'city', 'carnelian', 2, 2)], victory: noMoves
+    }));
+    assert.equal(at(moves(blocked, blocked.initial(), 1, 2), 2, 2), undefined, 'a different family cannot share the square');
+
+    const capped = create(scenario({
+        movement, stackGroup: 'lancers', stacking: { maxHeight: 2 }, extraTypes: [lancer],
+        units: [unit('base', 'scout', 'carnelian', 1, 2), unit('top', 'scout', 'carnelian', 1, 2), unit('target', 'lancer', 'carnelian', 2, 2)], victory: noMoves
+    }));
+    assert.equal(at(moves(capped, capped.initial(), 1, 2), 2, 2), undefined, 'a third member is rejected');
 });
 
 test('mirrors movement vectors for the northern Turquoise court', () => {

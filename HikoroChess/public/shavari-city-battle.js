@@ -4,7 +4,7 @@
     const $ = id => document.getElementById(id);
     const STORAGE_KEY = 'shavari-city-battle-local-v1';
     const courts = { carnelian: 'Carnelian court', turquoise: 'Turquoise court' };
-    let engine, setup, state, journal = [], cursor = 0, flipped = false, selected = null, pendingLanding = null;
+    let engine, setup, state, journal = [], cursor = 0, flipped = false, symbolSet = 'shavari', selected = null, pendingLanding = null;
     let botSeat = null, botPaused = false, botThinking = false, botGeneration = 0, botWorker = null, botErrorPly = -1;
     let cells = [];
 
@@ -16,7 +16,7 @@
 
     function saveLocal() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, journal, cursor, flipped, botSeat, botPaused }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 4, journal, cursor, flipped, botSeat, botPaused, symbolSet }));
         } catch {
             announce('Browser storage is unavailable. Save a game record before leaving this page.');
         }
@@ -25,12 +25,13 @@
     function restoreLocal() {
         try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (![1, 2, 3].includes(saved?.version) || !Array.isArray(saved.journal) || !Number.isInteger(saved.cursor)) return false;
+            if (![1, 2, 3, 4].includes(saved?.version) || !Array.isArray(saved.journal) || !Number.isInteger(saved.cursor)) return false;
             const restored = engine.replay(saved.journal, saved.cursor);
             if (!restored || !engine.replay(saved.journal)) return false;
             journal = saved.journal;
             cursor = saved.cursor;
             flipped = Boolean(saved.flipped);
+            symbolSet = saved.version >= 4 && saved.symbolSet === 'hanzi' ? 'hanzi' : 'shavari';
             botSeat = saved.version >= 2 && ['carnelian', 'turquoise', 'both'].includes(saved.botSeat) ? saved.botSeat : null;
             botPaused = botSeat === 'both' && saved.version >= 3 && Boolean(saved.botPaused);
             $('local-opponent').value = botSeat || 'none';
@@ -58,7 +59,7 @@
         selected = null;
         render();
         try {
-            const worker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-bot-v1');
+            const worker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-stacks-hanzi-v1');
             botWorker = worker;
             worker.onmessage = event => {
                 if (ticket !== botGeneration) return;
@@ -244,6 +245,13 @@
     }
 
     function pieceSymbol(type, className) {
+        if (symbolSet === 'hanzi' && type?.hanzi) {
+            const label = document.createElement('span');
+            label.className = `${className} city-piece-hanzi`;
+            label.textContent = type.hanzi;
+            label.setAttribute('aria-hidden', 'true');
+            return label;
+        }
         if (type?.icon) {
             const image = document.createElement('img');
             image.className = className;
@@ -392,6 +400,9 @@
 
     function render() {
         if (!state) return;
+        const symbolToggle = $('toggle-piece-symbols');
+        symbolToggle.textContent = symbolSet === 'hanzi' ? 'Use Shavari artwork' : 'Use Chinese characters';
+        symbolToggle.setAttribute('aria-pressed', String(symbolSet === 'hanzi'));
         const moves = selected && !state.result ? engine.legalMoves(state, selected) : [];
         renderBoard(moves);
         renderSelection(moves);
@@ -469,8 +480,8 @@
             engine = window.ShavariCityBattleEngine.create(setup);
             state = engine.initial();
             buildBoard();
-            buildPieceGuide();
             const restored = restoreLocal();
+            buildPieceGuide();
             render();
             if (!restored) saveLocal();
             if (isBotTurn()) scheduleBot();
@@ -483,6 +494,12 @@
     }
 
     $('flip-board').addEventListener('click', () => { flipped = !flipped; drawCoordinates(); saveLocal(); render(); });
+    $('toggle-piece-symbols').addEventListener('click', () => {
+        symbolSet = symbolSet === 'hanzi' ? 'shavari' : 'hanzi';
+        saveLocal();
+        buildPieceGuide();
+        render();
+    });
     $('undo-move').addEventListener('click', () => {
         if (!cursor) return;
         cancelBot();

@@ -22,6 +22,10 @@
         const stackRules = rules.stacking || {};
         const transform = setup.orientation?.oppositeCourtTransform || rules.orientationTransform || 'rank-flip';
         const maxHeight = Math.max(1, Math.min(8, Number(stackRules.maxHeight) || 3));
+        const hasStackGroupRules = [...types.values()].some(piece => Object.prototype.hasOwnProperty.call(piece, 'stackGroup'));
+        const stackGroupByType = new Map([...types.values()]
+            .filter(piece => typeof piece.stackGroup === 'string' && piece.stackGroup)
+            .map(piece => [piece.id, piece.stackGroup]));
         const generalTypes = new Set(types.has('lotus-general') ? ['lotus-general'] : [...types.values()].filter(p => p.basePiece && /general/i.test(p.name)).map(p => p.id));
         const captureGeneralWins = rules.victory?.captureGeneral !== false;
         const noMoveLoses = rules.victory?.noLegalMoveLoses !== false;
@@ -34,7 +38,12 @@
         const coord = point => `${FILES[point.x] || '?'}${point.y + 1}`;
         const getType = id => types.get(id) || null;
         const ownsGeneral = pieces => pieces.some(piece => generalTypes.has(piece.typeId));
-        const canStack = pieces => stackRules.enabled !== false && pieces.length <= maxHeight && !ownsGeneral(pieces);
+        const stackGroupsMatch = pieces => {
+            if (!hasStackGroupRules) return true;
+            const group = stackGroupByType.get(pieces[0]?.typeId);
+            return Boolean(group && pieces.every(piece => stackGroupByType.get(piece.typeId) === group));
+        };
+        const canStack = pieces => stackRules.enabled !== false && pieces.length <= maxHeight && !ownsGeneral(pieces) && stackGroupsMatch(pieces);
 
         function initial() {
             const cells = Array.from({ length: COLS * ROWS }, () => []);
@@ -49,6 +58,7 @@
                 const at = index(x, y);
                 if (buildings[at]) throw new Error(`A unit and building share ${coord({ x, y })}.`);
                 cells[at].push({ id: String(unit.id || `${unit.typeId}-${unit.side}-${at}-${cells[at].length}`), typeId: unit.typeId, owner: side });
+                if (cells[at].length > 1 && !canStack(cells[at])) throw new Error(`An invalid formation starts at ${coord({ x, y })}.`);
             }
             const state = {
                 board: cells,
