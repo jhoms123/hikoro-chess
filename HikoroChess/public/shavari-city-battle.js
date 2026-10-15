@@ -60,7 +60,7 @@
         render();
         try {
             if (!botWorker) {
-                botWorker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-general-threat-v4');
+                botWorker = new Worker('/shavari-city-battle-bot-worker.js?v=20261016-bot-root60-v1');
                 const worker = botWorker;
                 worker.onmessage = event => {
                     if (event.data?.id !== botGeneration) return;
