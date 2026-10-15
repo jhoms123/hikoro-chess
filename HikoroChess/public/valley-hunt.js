@@ -502,7 +502,7 @@ function selectAt(r,c){
 function tokenMarkup(piece,under){
   const kindName=piece.kind.charAt(0).toUpperCase()+piece.kind.slice(1);
   const icon="/assets/valley-hunt/"+piece.kind+".svg";
-  let html='<span class="token '+piece.side+(piece.kind==="dragon"?' dragon':'')+'" title="'+NAME[piece.side]+" "+kindName+'"><img class="sigil" src="'+icon+'" alt=""><span class="mini-name">'+piece.kind+'</span></span>';
+  let html='<span class="token '+piece.side+(piece.kind==="dragon"?' dragon':'')+'" title="'+NAME[piece.side]+" "+kindName+'"><img class="sigil" src="'+icon+'" alt=""></span>';
   if(under)html+='<span class="stack-under" title="Pinned '+NAME[under.side]+" "+under.kind+'"><img src="/assets/valley-hunt/'+under.kind+'.svg" alt=""></span><span class="pinned-ring"></span>';
   return html;
 }
@@ -544,14 +544,14 @@ function renderScores(){
 function render(){
   buildBoard();renderScores();
   [MOSS,RUST].forEach(function(side){const strip=document.getElementById("strip-"+side);if(strip)strip.classList.toggle("active",state.turn===side);});
-  const statusMain=document.getElementById("statusMain"),statusSub=document.getElementById("statusSub"),turnName=document.getElementById("turnName"),dot=document.getElementById("turnDot");
+  const statusMain=document.getElementById("statusMain"),statusSub=document.getElementById("statusSub"),dot=document.getElementById("turnDot");
   dot.className="turn-dot"+(state.turn===RUST?" rust":"");
-  if(state.winner){statusMain.textContent=NAME[state.winner]+" wins the Valley Hunt.";statusSub.textContent="Two of the opposing hunters have been captured.";turnName.textContent=NAME[state.winner]+" wins";}
-  else if(state.botThinking){statusMain.textContent=NAME[state.turn]+" bot is thinking…";statusSub.textContent="Searching captures, hunter safety, and dragon pins.";turnName.textContent=NAME[state.turn]+" bot thinking";}
-  else if(state.gameMode==="bot-bot"&&state.botPaused){statusMain.textContent="Bots paused.";statusSub.textContent=NAME[state.turn]+" is next. Resume to continue the match.";turnName.textContent=NAME[state.turn]+" to move · paused";}
-  else if(state.selected){const p=findById(state.selected);statusMain.textContent=NAME[state.turn]+" selected the "+(p?p.kind:"piece")+".";statusSub.textContent="Choose a highlighted destination. A completed trap captures immediately.";turnName.textContent=NAME[state.turn]+" to move";}
-  else if(isBotTurn()){statusMain.textContent=NAME[state.turn]+" bot to move";statusSub.textContent=state.note||"The bot is ready to calculate its move.";turnName.textContent=NAME[state.turn]+" bot to move";}
-  else{statusMain.textContent=NAME[state.turn]+" to move";const last=state.lastMove?findById(state.lastMove.id):null;statusSub.textContent=state.note||(state.gameMode!=="local"&&last&&isBotSide(last.side)?"Bot search: depth "+state.botInfo.depth+" · "+state.botInfo.nodes.toLocaleString()+" nodes.":"Select one of your pieces to see its legal moves.");turnName.textContent=NAME[state.turn]+" to move";}
+  if(state.winner){statusMain.textContent=NAME[state.winner]+" wins the Valley Hunt.";statusSub.textContent="Two of the opposing hunters have been captured.";}
+  else if(state.botThinking){statusMain.textContent=NAME[state.turn]+" bot is thinking…";statusSub.textContent="Searching captures, hunter safety, and dragon pins.";}
+  else if(state.gameMode==="bot-bot"&&state.botPaused){statusMain.textContent="Bots paused.";statusSub.textContent=NAME[state.turn]+" is next. Resume to continue the match.";}
+  else if(state.selected){const p=findById(state.selected);statusMain.textContent=NAME[state.turn]+" selected the "+(p?p.kind:"piece")+".";statusSub.textContent="Choose a highlighted destination. A completed trap captures immediately.";}
+  else if(isBotTurn()){statusMain.textContent=NAME[state.turn]+" bot to move";statusSub.textContent=state.note||"The bot is ready to calculate its move.";}
+  else{statusMain.textContent=NAME[state.turn]+" to move";const last=state.lastMove?findById(state.lastMove.id):null;statusSub.textContent=state.note||(state.gameMode!=="local"&&last&&isBotSide(last.side)?"Bot search: depth "+state.botInfo.depth+" · "+state.botInfo.nodes.toLocaleString()+" nodes.":"Select a piece, then choose a highlighted square.");}
   const log=document.getElementById("moveLog");log.innerHTML="";
   if(!state.log.length){log.innerHTML='<div class="empty-log">The valley is quiet. Make the first move.</div>';}
   else state.log.slice(0,7).forEach(function(item){const line=document.createElement("div");line.className="log-item";line.textContent=item;log.appendChild(line);});
