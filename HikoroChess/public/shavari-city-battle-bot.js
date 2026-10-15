@@ -25,7 +25,8 @@
         const captureGeneralWins = setup.settings?.victory?.captureGeneral !== false;
         const noMoveLoses = setup.settings?.victory?.noLegalMoveLoses !== false;
         const values = new Map([...engine.types].map(([id, type]) => [id, MATERIAL[id] || valueFromMovement(type)]));
-        let deadline = Infinity, nodes = 0, tableHits = 0, stopped = false, table = new Map(), killers = new Map();
+        let deadline = Infinity, nodes = 0, tableHits = 0, stopped = false, table = new Map(), killers = new Map(), rootDefenseBonuses = new Map();
+        const generalCaptureCache = new Map(), evaluationCache = new Map();
         const engineTransform = setup.orientation?.oppositeCourtTransform || setup.settings?.orientationTransform || 'rank-flip';
 
         const movementProfiles = new Map([...engine.types].map(([id, type]) => {
@@ -78,41 +79,62 @@
                 && dx === ray.dx * distance && dy === ray.dy * distance ? distance : null;
         }
 
-        function defensiveStackBonus(state, action) {
-            if (action.kind !== 'stack' || setup.settings?.stacking?.tallerCanJumpShorter === false) return 0;
-            const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
-            const moving = state.board[fromAt], existing = state.board[toAt];
-            const newHeight = existing.length + moving.length;
+        function defensiveStackBonuses(state, actions) {
+            const candidates = new Map(), bonuses = new Map();
+            if (setup.settings?.stacking?.tallerCanJumpShorter === false) return bonuses;
+            for (const action of actions) {
+                if (action.kind !== 'stack') continue;
+                const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
+                const moving = state.board[fromAt], existing = state.board[toAt];
+                if (!candidates.has(toAt)) candidates.set(toAt, []);
+                candidates.get(toAt).push({ movingHeight: moving.length, existingHeight: existing.length });
+            }
+            if (!candidates.size) return bonuses;
+
             const defendingSide = state.turn, attackingSide = engine.otherSide(defendingSide);
-            let bestBonus = 0;
             for (let at = 0; at < size; at++) {
                 const enemyStack = state.board[at];
-                if (!enemyStack.length || enemyStack[enemyStack.length - 1].owner !== attackingSide
-                    || enemyStack.length <= existing.length || enemyStack.length > newHeight) continue;
+                if (!enemyStack.length || enemyStack[enemyStack.length - 1].owner !== attackingSide) continue;
                 const enemyFrom = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
-                const rays = [];
+                const uniqueRays = new Map();
                 for (const piece of enemyStack) {
-                    for (const ray of captureProfiles.get(piece.typeId)?.[attackingSide]?.rays || []) rays.push(ray);
+                    for (const ray of captureProfiles.get(piece.typeId)?.[attackingSide]?.rays || []) {
+                        uniqueRays.set(`${ray.dx},${ray.dy}:${ray.maxDistance}`, ray);
+                    }
                 }
-                if (!rays.length) continue;
-                const targets = engine.legalMoves(state, enemyFrom, attackingSide).filter(destination => destination.options.includes('capture'));
-                const reachesBlock = targets.some(target => target.x === action.to.x && target.y === action.to.y);
-                if (!reachesBlock) continue;
-                for (const ray of rays) {
-                    const blockDistance = rayDistance(ray, enemyFrom, action.to);
-                    if (blockDistance === null) continue;
-                    for (const target of targets) {
-                        const targetDistance = rayDistance(ray, enemyFrom, target);
-                        if (targetDistance === null || targetDistance <= blockDistance) continue;
-                        const stack = state.board[engine.index(target.x, target.y)];
-                        if (!stack.some(piece => piece.owner === defendingSide)) continue;
-                        const targetValue = stack.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0);
-                        if (targetValue < 300 && !stack.some(piece => engine.generalTypes.has(piece.typeId))) continue;
-                        bestBonus = Math.max(bestBonus, 100_000 + targetValue * 10);
+                if (!uniqueRays.size) continue;
+                // Resolve this enemy stack's legal captures once, then look for
+                // valuable targets behind possible stack destinations.
+                const captures = engine.legalMoves(state, enemyFrom, attackingSide)
+                    .filter(destination => destination.options.includes('capture'));
+                if (captures.length < 2) continue;
+                for (const ray of uniqueRays.values()) {
+                    const alongRay = [];
+                    for (const destination of captures) {
+                        const distance = rayDistance(ray, enemyFrom, destination);
+                        if (distance !== null) alongRay.push({ destination, distance });
+                    }
+                    if (alongRay.length < 2) continue;
+                    for (const target of alongRay) {
+                        const targetStack = state.board[engine.index(target.destination.x, target.destination.y)];
+                        if (!targetStack.some(piece => piece.owner === defendingSide)) continue;
+                        const targetValue = targetStack.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0);
+                        if (targetValue < 300 && !targetStack.some(piece => engine.generalTypes.has(piece.typeId))) continue;
+                        for (const block of alongRay) {
+                            if (block.distance >= target.distance) continue;
+                            const blockAt = engine.index(block.destination.x, block.destination.y);
+                            const existing = state.board[blockAt];
+                            if (!existing.some(piece => piece.owner === defendingSide)) continue;
+                            for (const candidate of candidates.get(blockAt) || []) {
+                                if (enemyStack.length <= candidate.existingHeight
+                                    || enemyStack.length > candidate.existingHeight + candidate.movingHeight) continue;
+                                bonuses.set(blockAt, Math.max(bonuses.get(blockAt) || 0, 100_000 + targetValue * 10));
+                            }
+                        }
                     }
                 }
             }
-            return bestBonus;
+            return bonuses;
         }
 
         function formationValue(firstId, secondId) {
@@ -219,7 +241,7 @@
             const moving = state.board[fromAt], target = state.board[toAt];
             let score = 0;
             if (action.kind === 'capture') {
-                score += (ply === 0 ? 3_000 : 30_000) + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 8;
+                score += 30_000 + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 8;
                 if (target.some(piece => engine.generalTypes.has(piece.typeId))) score += 1_000_000;
                 score -= (values.get(moving[moving.length - 1].typeId) || 100) / 8;
             } else if (action.kind === 'cover') {
@@ -229,7 +251,7 @@
                 score += ply === 0
                     ? (quality > 0 ? 8_000 + quality * 12 : 6_500 + quality * 5)
                     : (quality > 0 ? 1_500 + quality * 12 : -250 + quality * 5);
-                if (ply === 0) score += defensiveStackBonus(state, action);
+                if (ply === 0) score += rootDefenseBonuses.get(toAt) || 0;
             }
             const centerX = (engine.COLS - 1) / 2, centerY = (engine.ROWS - 1) / 2;
             score += 15 - (Math.abs(action.to.x - centerX) + Math.abs(action.to.y - centerY)) * 1.4;
@@ -246,6 +268,12 @@
         function ordered(state, actions, ttMove, ply) {
             return actions.map(action => ({ action, score: moveOrderScore(state, action, ttMove, ply) }))
                 .sort((a, b) => b.score - a.score).map(entry => entry.action);
+        }
+
+        function prioritizeMove(actions, ttMove) {
+            if (!ttMove) return actions;
+            const index = actions.findIndex(action => sameAction(action, ttMove));
+            return index <= 0 ? actions : [actions[index], ...actions.slice(0, index), ...actions.slice(index + 1)];
         }
 
         function make(state, action) {
@@ -302,6 +330,8 @@
         }
 
         function evaluate(state) {
+            const cacheKey = state.positionHashKey;
+            if (cacheKey && evaluationCache.has(cacheKey)) return evaluationCache.get(cacheKey);
             let score = 0;
             const cx = (engine.COLS - 1) / 2, cy = (engine.ROWS - 1) / 2;
             const generals = { carnelian: null, turquoise: null };
@@ -376,6 +406,10 @@
                 const cover = Math.min(30, nearbyFriends * 7);
                 score += sign * (cover - danger);
             }
+            if (cacheKey) {
+                if (evaluationCache.size > 50_000) evaluationCache.clear();
+                evaluationCache.set(cacheKey, score);
+            }
             return score;
         }
 
@@ -413,6 +447,8 @@
         }
 
         function hasGeneralCapture(state, attackerSide, defenderSide) {
+            const cacheKey = state.positionHashKey ? `${state.positionHashKey}:${attackerSide}:${defenderSide}` : null;
+            if (cacheKey && generalCaptureCache.has(cacheKey)) return generalCaptureCache.get(cacheKey);
             const targets = [];
             for (let at = 0; at < size; at++) {
                 const stack = state.board[at];
@@ -420,7 +456,7 @@
                     targets.push({ x: at % engine.COLS, y: Math.floor(at / engine.COLS) });
                 }
             }
-            if (!targets.length) return false;
+            if (!targets.length) return cacheGeneralCapture(cacheKey, false);
 
             const attackers = [];
             for (let at = 0; at < size; at++) {
@@ -432,10 +468,77 @@
             for (const { from } of attackers) {
                 for (const destination of engine.legalMoves(state, from, attackerSide)) {
                     if (!destination.options.includes('capture')) continue;
-                    if (targets.some(target => destination.x === target.x && destination.y === target.y)) return true;
+                    if (targets.some(target => destination.x === target.x && destination.y === target.y)) {
+                        return cacheGeneralCapture(cacheKey, true);
+                    }
                 }
             }
+            return cacheGeneralCapture(cacheKey, false);
+        }
+
+        function cacheGeneralCapture(key, value) {
+            if (key) {
+                if (generalCaptureCache.size > 50_000) generalCaptureCache.clear();
+                generalCaptureCache.set(key, value);
+            }
+            return value;
+        }
+
+        function allowsImmediateGeneralCapture(state, action) {
+            const old = make(state, action);
+            let unsafe = false;
+            if (!old.capturedGeneral && !isDraw(state) && engine.hasLegalMove(state, state.turn)) {
+                unsafe = hasGeneralCapture(state, state.turn, engine.otherSide(state.turn));
+            }
+            unmake(state, action, old);
+            return unsafe;
+        }
+
+        function allowsForcedGeneralThreat(state, action) {
+            const defendingSide = state.turn;
+            const old = make(state, action);
+            if (old.capturedGeneral || isDraw(state) || !engine.hasLegalMove(state, state.turn)) {
+                unmake(state, action, old);
+                return false;
+            }
+            const attackingSide = state.turn;
+            for (const reply of generate(state)) {
+                const replyOld = make(state, reply);
+                let unsafe = replyOld.capturedGeneral;
+                if (!unsafe && !isDraw(state)) {
+                    unsafe = hasGeneralCapture(state, attackingSide, defendingSide);
+                    if (!unsafe && noMoveLoses && !engine.hasLegalMove(state, state.turn)) unsafe = true;
+                    if (unsafe && !replyOld.capturedGeneral) {
+                        let hasSafeReply = false;
+                        for (const defense of generate(state)) {
+                            const defenseOld = make(state, defense);
+                            let stillLosing = !isDraw(state)
+                                && hasGeneralCapture(state, attackingSide, defendingSide);
+                            if (stillLosing && noMoveLoses && !engine.hasLegalMove(state, state.turn)) stillLosing = false;
+                            unmake(state, defense, defenseOld);
+                            if (!stillLosing) { hasSafeReply = true; break; }
+                        }
+                        unsafe = !hasSafeReply;
+                    }
+                }
+                unmake(state, reply, replyOld);
+                if (unsafe) {
+                    unmake(state, action, old);
+                    return true;
+                }
+            }
+            unmake(state, action, old);
             return false;
+        }
+
+        function staticRootScore(state, action) {
+            const old = make(state, action);
+            let score;
+            if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;
+            else if (isDraw(state)) score = 0;
+            else score = -evaluate(state);
+            unmake(state, action, old);
+            return score;
         }
 
         function quiescence(state, alpha, beta, ply, remaining, legalActions, checkExtensions = 2) {
@@ -479,7 +582,10 @@
             if (checkTime()) return evaluate(state);
             if (depth <= 0) {
                 if (isDraw(state)) return 0;
-                return quiescence(state, alpha, beta, ply, 1);
+                // General threats are extended explicitly below. Avoid a
+                // full noisy-capture tree at every leaf on this large board;
+                // it consumes the clock before the bot can compare replies.
+                return quiescence(state, alpha, beta, ply, 0);
             }
             const actions = generate(state);
             if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
@@ -531,50 +637,99 @@
             if (!restored || restored.result || !Array.isArray(restored.board) || restored.board.length !== size || !Array.isArray(restored.buildings)) return { action: null, depth: 0, nodes: 0, score: null };
             const root = makeState(restored), rootActions = generate(root);
             if (!rootActions.length) return { action: null, depth: 0, nodes: 0, score: -MATE };
+            if (generalCaptureCache.size > 40_000) generalCaptureCache.clear();
+            if (evaluationCache.size > 40_000) evaluationCache.clear();
             const budget = Math.max(100, Math.min(4000, Number(thinkingMs) || 1000));
             deadline = Date.now() + Math.max(80, budget - Math.min(25, budget * 0.04));
             nodes = 0; tableHits = 0; stopped = false; killers = new Map();
-            let bestAction = ordered(root, rootActions, null, 0)[0], bestScore = -Infinity, completedDepth = 0;
-            for (const action of rootActions) {
-                const old = make(root, action);
-                const score = captureGeneralWins && old.capturedGeneral ? MATE - 1 : !engine.hasLegalMove(root, root.turn) ? (noMoveLoses ? MATE - 1 : 0) : isDraw(root) ? 0 : -evaluate(root);
-                unmake(root, action, old);
-                if (score > bestScore) { bestScore = score; bestAction = action; }
-            }
+            // Calculate line-blocking stack bonuses when a direct General
+            // threat makes defense urgent. Otherwise skip this optional scan
+            // and spend the budget on the actual search.
+            const generalThreat = captureGeneralWins
+                && hasGeneralCapture(root, engine.otherSide(root.turn), root.turn);
+            rootDefenseBonuses = generalThreat ? defensiveStackBonuses(root, rootActions) : new Map();
+            const rootOrder = ordered(root, rootActions, null, 0);
+            // Keep a fast, ordered fallback. Root-wide static scoring used to
+            // spend the whole time limit before iterative deepening could run.
+            let bestAction = rootOrder[0], bestScore = staticRootScore(root, bestAction), completedDepth = 0;
             for (let depth = 1; depth <= 16 && !stopped; depth++) {
                 const alpha = depth > 1 ? bestScore - 80 : -Infinity;
                 const beta = depth > 1 ? bestScore + 80 : Infinity;
                 let windowScore = -Infinity, windowAction = null, a = alpha;
-                for (const action of ordered(root, rootActions, table.get(transpositionKey(root))?.action, 0)) {
+                const iterationOrder = prioritizeMove(rootOrder, table.get(transpositionKey(root))?.action);
+                let rootIndex = 0;
+                for (const action of iterationOrder) {
+                    const targetBefore = root.board[engine.index(action.to.x, action.to.y)];
+                    const targetGeneral = targetBefore.some(piece => engine.generalTypes.has(piece.typeId));
                     const old = make(root, action);
                     let score;
                     if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;
                     else if (isDraw(root)) score = 0;
-                    else score = -negamax(root, depth - 1, -beta, -a, 1);
+                    else {
+                        const reduce = depth >= 2 && !generalThreat && rootIndex >= 4 && !targetGeneral;
+                        if (reduce) {
+                            score = -negamax(root, depth - 2, -beta, -a, 1);
+                            if (!stopped && score > a) score = -negamax(root, depth - 1, -beta, -a, 1);
+                        } else score = -negamax(root, depth - 1, -beta, -a, 1);
+                    }
                     unmake(root, action, old);
+                    rootIndex++;
                     if (stopped) break;
                     if (score > windowScore) { windowScore = score; windowAction = action; }
                     if (score > a) a = score;
                 }
-                if (stopped) {
-                    if (windowAction) { bestAction = windowAction; bestScore = windowScore; }
-                    break;
-                }
+                // An interrupted iteration has not compared every root move.
+                // Keep the last fully completed iteration's result.
+                if (stopped) break;
                 if (windowScore <= alpha || windowScore >= beta) {
-                    stopped = false;
-                    const full = searchRootWindow(root, rootActions, depth, -Infinity, Infinity);
+                    const full = searchRootWindow(root, rootActions, depth, -Infinity, Infinity, rootOrder);
                     if (!full || stopped) break;
                     windowScore = full.score; windowAction = full.action;
                 }
                 if (windowAction) { bestAction = windowAction; bestScore = windowScore; completedDepth = depth; }
                 if (Math.abs(bestScore) >= MATE - 32) break;
             }
-            return { action: bestAction, depth: completedDepth, nodes, tableHits, tableSize: table.size, score: bestScore };
+
+            // A shallow or interrupted search can miss a one-move General
+            // loss. Repair that blunder when any legal move avoids it.
+            let avoidedImmediateGeneralLoss = false;
+            let avoidedPreparedGeneralThreat = false;
+            const selectedAllowsImmediateLoss = captureGeneralWins && rootActions.length > 1
+                && allowsImmediateGeneralCapture(root, bestAction);
+            if (selectedAllowsImmediateLoss) {
+                for (const action of rootOrder) {
+                    if (sameAction(action, bestAction)) continue;
+                    if (allowsImmediateGeneralCapture(root, action)) continue;
+                    bestAction = action;
+                    bestScore = staticRootScore(root, action);
+                    avoidedImmediateGeneralLoss = true;
+                    break;
+                }
+            }
+            const selectedAllowsThreatSetup = !selectedAllowsImmediateLoss && captureGeneralWins
+                && !generalThreat && completedDepth < 2 && allowsForcedGeneralThreat(root, bestAction);
+            if (selectedAllowsThreatSetup) {
+                // If search could not finish depth two, reject a move that
+                // allows a forced General capture after one opponent reply.
+                // Limit extra safety work so a rare repair cannot stall a turn.
+                const repairDeadline = Date.now() + Math.min(1_000, Math.max(250, budget * 0.5));
+                for (const action of rootOrder.slice(0, 96)) {
+                    if (Date.now() >= repairDeadline) break;
+                    if (sameAction(action, bestAction)) continue;
+                    if (allowsImmediateGeneralCapture(root, action)
+                        || allowsForcedGeneralThreat(root, action)) continue;
+                    bestAction = action;
+                    bestScore = staticRootScore(root, action);
+                    avoidedPreparedGeneralThreat = true;
+                    break;
+                }
+            }
+            return { action: bestAction, depth: completedDepth, nodes, tableHits, tableSize: table.size, score: bestScore, avoidedImmediateGeneralLoss, avoidedPreparedGeneralThreat, selectedAllowsImmediateLoss, selectedAllowsThreatSetup };
         }
 
-        function searchRootWindow(root, actions, depth, alpha, beta) {
+        function searchRootWindow(root, actions, depth, alpha, beta, rootOrder) {
             let best = -Infinity, bestAction = null, a = alpha;
-            for (const action of ordered(root, actions, null, 0)) {
+            for (const action of rootOrder) {
                 const old = make(root, action);
                 let score;
                 if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;

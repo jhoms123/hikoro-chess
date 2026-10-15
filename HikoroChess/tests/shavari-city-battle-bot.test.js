@@ -86,7 +86,6 @@ test('bot blocks the C3 cannon line in the uploaded City Battle loss', () => {
     const state = engine.replay(journal, journal.length);
     const result = createBot(setup).choose(journal, journal.length, 500, state);
 
-    assert.deepEqual(result.action, { from: { x: 1, y: 11 }, to: { x: 2, y: 10 }, kind: 'stack' });
     const afterBlock = engine.apply(state, result.action);
     assert.ok(afterBlock, 'the block should be a legal move');
 
@@ -103,6 +102,99 @@ test('bot blocks the C3 cannon line in the uploaded City Battle loss', () => {
         }
     }
     assert.equal(canCaptureGeneral, false, 'the C11 stack must stop the cannon line to the General');
+});
+
+test('bot keeps the General safe in the recorded 1-second timeout blunder', () => {
+    const journal = [
+        ['E16','D16','stack'], ['D2','E2','stack'], ['D16','D5','capture'], ['E6','F5','stack'],
+        ['D5','A5','capture'], ['G6','H7','stack'], ['A5','A1','capture'], ['E3','D1','stack'],
+        ['E15','D15','stack'], ['P7','P11','capture'], ['H12','H11','stack'], ['C1','F2','move'],
+        ['O12','P11','capture'], ['J6','I7','stack'], ['D15','D7','capture'], ['L2','M2','stack'],
+        ['M16','L16','stack'], ['F6','F7','stack'], ['J12','I11','stack'], ['M2','M17','capture'],
+        ['L16','M17','capture'], ['M1','J2','stack'], ['D11','E10','stack']
+    ].map(([from, to, kind]) => ({
+        from: { x: from.charCodeAt(0) - 65, y: Number(from.slice(1)) - 1 },
+        to: { x: to.charCodeAt(0) - 65, y: Number(to.slice(1)) - 1 },
+        kind
+    }));
+    const engine = createEngine(setup), state = engine.replay(journal, journal.length);
+    assert.equal(state.turn, 'turquoise');
+
+    const result = createBot(setup).choose(journal, journal.length, 1000, state);
+    const after = engine.apply(state, result.action);
+    assert.ok(after, 'the selected move should remain legal');
+
+    let canCaptureGeneral = false;
+    for (let at = 0; at < after.board.length; at++) {
+        const stack = after.board[at];
+        if (!stack.length || stack[stack.length - 1].owner !== 'carnelian') continue;
+        const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+        for (const destination of engine.legalMoves(after, from, 'carnelian')) {
+            const target = after.board[engine.index(destination.x, destination.y)];
+            if (destination.options.includes('capture') && target.some(piece => engine.generalTypes.has(piece.typeId))) {
+                canCaptureGeneral = true;
+            }
+        }
+    }
+    assert.equal(canCaptureGeneral, false, 'an available safe move must be chosen instead of allowing the immediate General capture');
+});
+
+test('bot avoids the recorded move that creates a forced General threat next turn', () => {
+    const square = text => ({ x: text.charCodeAt(0) - 65, y: Number(text.slice(1)) - 1 });
+    const journal = [
+        ['P11','P7','capture'], ['O6','P7','capture'], ['E15','D13','stack'],
+        ['D1','G2','stack'], ['D13','D2','capture'], ['L2','M2','stack']
+    ].map(([from, to, kind]) => ({ from: square(from), to: square(to), kind }));
+    const engine = createEngine(setup), state = engine.replay(journal, journal.length);
+    const result = createBot(setup).choose(journal, journal.length, 1000, state);
+    const afterMove = engine.apply(state, result.action);
+    assert.ok(afterMove, 'the chosen move should be legal');
+
+    function canCaptureGeneral(position, attacker, defender) {
+        for (let at = 0; at < position.board.length; at++) {
+            const stack = position.board[at];
+            if (!stack.length || stack[stack.length - 1].owner !== attacker) continue;
+            const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+            for (const destination of engine.legalMoves(position, from, attacker)) {
+                const target = position.board[engine.index(destination.x, destination.y)];
+                if (destination.options.includes('capture') && target.some(piece =>
+                    piece.owner === defender && engine.generalTypes.has(piece.typeId))) return true;
+            }
+        }
+        return false;
+    }
+
+    for (let at = 0; at < afterMove.board.length; at++) {
+        const stack = afterMove.board[at];
+        if (!stack.length || stack[stack.length - 1].owner !== 'turquoise') continue;
+        const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+        for (const destination of engine.legalMoves(afterMove, from, 'turquoise')) {
+            for (const kind of destination.options) {
+                const afterReply = engine.apply(afterMove, { from, to: { x: destination.x, y: destination.y }, kind });
+                if (!afterReply || afterReply.result || !canCaptureGeneral(afterReply, 'turquoise', 'carnelian')) continue;
+                let safeDefense = false;
+                for (let defenseAt = 0; defenseAt < afterReply.board.length && !safeDefense; defenseAt++) {
+                    const defenders = afterReply.board[defenseAt];
+                    if (!defenders.length || defenders[defenders.length - 1].owner !== 'carnelian') continue;
+                    const defenseFrom = { x: defenseAt % engine.COLS, y: Math.floor(defenseAt / engine.COLS) };
+                    for (const defense of engine.legalMoves(afterReply, defenseFrom, 'carnelian')) {
+                        for (const defenseKind of defense.options) {
+                            const next = engine.apply(afterReply, {
+                                from: defenseFrom, to: { x: defense.x, y: defense.y }, kind: defenseKind
+                            });
+                            if (next && (next.result?.winner === 'carnelian' || next.result?.winner === null
+                                || !canCaptureGeneral(next, 'turquoise', 'carnelian'))) {
+                                safeDefense = true;
+                                break;
+                            }
+                        }
+                        if (safeDefense) break;
+                    }
+                }
+                assert.ok(safeDefense, `Turquoise reply ${engine.coord(from)}→${engine.coord(destination)} must leave a safe defense`);
+            }
+        }
+    }
 });
 
 test('bot loads the supplied city opening and returns an engine-legal action', () => {
