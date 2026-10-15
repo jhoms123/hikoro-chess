@@ -80,3 +80,7 @@ body[data-audio-theme] .material-control{font-size:16px!important}
 body[data-audio-theme] .collection-audio .material-control{font-size:12px!important}
 @media(max-width:700px){body[data-audio-theme] .material-control{font-size:15px!important}.hero-copy h1{font-size:43px!important}.mode-toggle .material-control{font-size:13px!important}.academy-table .guide-card .material-control{font-size:14px!important}}
 
+
+.hikoro-site button.game-choice[data-game=valley-hunt]{--card-tint:#243e2d}
+.hikoro-site button.game-choice[data-game=valley-hunt] .match-peek{padding:6px;background:linear-gradient(#17291d66,#17291d66),var(--stone) center/400px}
+body[data-audio-theme=valley-hunt]{--theme-emblem:url('assets/collection/icons/compass.svg')}
