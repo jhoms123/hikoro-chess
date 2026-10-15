@@ -77,6 +77,34 @@ test('bot sees a forced General capture created by a quiet move at shallow searc
     assert.ok(result.score >= 499_000, 'the bot should recognize the forced Lotus General capture');
 });
 
+test('bot blocks the C3 cannon line in the uploaded City Battle loss', () => {
+    const journal = [
+        { from: { x: 4, y: 14 }, to: { x: 3, y: 12 }, kind: 'stack' },
+        { from: { x: 3, y: 1 }, to: { x: 2, y: 2 }, kind: 'stack' }
+    ];
+    const engine = createEngine(setup);
+    const state = engine.replay(journal, journal.length);
+    const result = createBot(setup).choose(journal, journal.length, 500, state);
+
+    assert.deepEqual(result.action, { from: { x: 1, y: 11 }, to: { x: 2, y: 10 }, kind: 'stack' });
+    const afterBlock = engine.apply(state, result.action);
+    assert.ok(afterBlock, 'the block should be a legal move');
+
+    let canCaptureGeneral = false;
+    for (let at = 0; at < afterBlock.board.length; at++) {
+        const stack = afterBlock.board[at];
+        if (!stack.length || stack[stack.length - 1].owner !== 'turquoise') continue;
+        const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+        for (const destination of engine.legalMoves(afterBlock, from, 'turquoise')) {
+            const target = afterBlock.board[engine.index(destination.x, destination.y)];
+            if (destination.options.includes('capture') && target.some(piece => engine.generalTypes.has(piece.typeId))) {
+                canCaptureGeneral = true;
+            }
+        }
+    }
+    assert.equal(canCaptureGeneral, false, 'the C11 stack must stop the cannon line to the General');
+});
+
 test('bot loads the supplied city opening and returns an engine-legal action', () => {
     const engine = createEngine(setup), state = engine.initial();
     const result = createBot(setup).choose([], 0, 120);

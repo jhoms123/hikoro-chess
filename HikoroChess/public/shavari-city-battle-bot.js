@@ -26,6 +26,7 @@
         const noMoveLoses = setup.settings?.victory?.noLegalMoveLoses !== false;
         const values = new Map([...engine.types].map(([id, type]) => [id, MATERIAL[id] || valueFromMovement(type)]));
         let deadline = Infinity, nodes = 0, tableHits = 0, stopped = false, table = new Map(), killers = new Map();
+        const engineTransform = setup.orientation?.oppositeCourtTransform || setup.settings?.orientationTransform || 'rank-flip';
 
         const movementProfiles = new Map([...engine.types].map(([id, type]) => {
             const movement = type.movement || {};
@@ -44,6 +45,75 @@
             }
             return [id, { group: type.stackGroup || null, mobility, forwardSouth, forwardNorth, forwardAny }];
         }));
+
+        const captureProfiles = new Map([...engine.types].map(([id, type]) => {
+            const movement = type.movement || {};
+            const bySide = {};
+            for (const side of ['carnelian', 'turquoise']) {
+                const direct = new Set(), rays = [];
+                for (const kind of ['step', 'jump', 'ray']) {
+                    const rules = movement[`${kind}s`] || [];
+                    for (const rule of rules) {
+                        if (!rule.capture) continue;
+                        let dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0;
+                        if (side === 'turquoise') {
+                            if (engineTransform === 'rotate-180') { dx = -dx; dy = -dy; }
+                            else dy = -dy;
+                        }
+                        if (!dx && !dy) continue;
+                        if (kind === 'ray') {
+                            rays.push({ dx, dy, maxDistance: Math.max(1, Math.min(32, Number(rule.maxDistance) || Math.max(engine.COLS, engine.ROWS))) });
+                        } else direct.add(`${dx},${dy}`);
+                    }
+                }
+                bySide[side] = { direct, rays };
+            }
+            return [id, bySide];
+        }));
+
+        function rayDistance(ray, from, target) {
+            const dx = target.x - from.x, dy = target.y - from.y;
+            const distance = ray.dx ? dx / ray.dx : dy / ray.dy;
+            return Number.isInteger(distance) && distance >= 1 && distance <= ray.maxDistance
+                && dx === ray.dx * distance && dy === ray.dy * distance ? distance : null;
+        }
+
+        function defensiveStackBonus(state, action) {
+            if (action.kind !== 'stack' || setup.settings?.stacking?.tallerCanJumpShorter === false) return 0;
+            const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
+            const moving = state.board[fromAt], existing = state.board[toAt];
+            const newHeight = existing.length + moving.length;
+            const defendingSide = state.turn, attackingSide = engine.otherSide(defendingSide);
+            let bestBonus = 0;
+            for (let at = 0; at < size; at++) {
+                const enemyStack = state.board[at];
+                if (!enemyStack.length || enemyStack[enemyStack.length - 1].owner !== attackingSide
+                    || enemyStack.length <= existing.length || enemyStack.length > newHeight) continue;
+                const enemyFrom = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+                const rays = [];
+                for (const piece of enemyStack) {
+                    for (const ray of captureProfiles.get(piece.typeId)?.[attackingSide]?.rays || []) rays.push(ray);
+                }
+                if (!rays.length) continue;
+                const targets = engine.legalMoves(state, enemyFrom, attackingSide).filter(destination => destination.options.includes('capture'));
+                const reachesBlock = targets.some(target => target.x === action.to.x && target.y === action.to.y);
+                if (!reachesBlock) continue;
+                for (const ray of rays) {
+                    const blockDistance = rayDistance(ray, enemyFrom, action.to);
+                    if (blockDistance === null) continue;
+                    for (const target of targets) {
+                        const targetDistance = rayDistance(ray, enemyFrom, target);
+                        if (targetDistance === null || targetDistance <= blockDistance) continue;
+                        const stack = state.board[engine.index(target.x, target.y)];
+                        if (!stack.some(piece => piece.owner === defendingSide)) continue;
+                        const targetValue = stack.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0);
+                        if (targetValue < 300 && !stack.some(piece => engine.generalTypes.has(piece.typeId))) continue;
+                        bestBonus = Math.max(bestBonus, 100_000 + targetValue * 10);
+                    }
+                }
+            }
+            return bestBonus;
+        }
 
         function formationValue(firstId, secondId) {
             const first = movementProfiles.get(firstId), second = movementProfiles.get(secondId);
@@ -149,14 +219,17 @@
             const moving = state.board[fromAt], target = state.board[toAt];
             let score = 0;
             if (action.kind === 'capture') {
-                score += 30_000 + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 8;
+                score += (ply === 0 ? 3_000 : 30_000) + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 8;
                 if (target.some(piece => engine.generalTypes.has(piece.typeId))) score += 1_000_000;
                 score -= (values.get(moving[moving.length - 1].typeId) || 100) / 8;
             } else if (action.kind === 'cover') {
-                score += 8_000 + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 2;
+                score += (ply === 0 ? 7_000 : 8_000) + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 2;
             } else if (action.kind === 'stack') {
                 const quality = formationValue(moving[moving.length - 1].typeId, target[target.length - 1].typeId);
-                score += quality > 0 ? 1_500 + quality * 12 : -250 + quality * 5;
+                score += ply === 0
+                    ? (quality > 0 ? 8_000 + quality * 12 : 6_500 + quality * 5)
+                    : (quality > 0 ? 1_500 + quality * 12 : -250 + quality * 5);
+                if (ply === 0) score += defensiveStackBonus(state, action);
             }
             const centerX = (engine.COLS - 1) / 2, centerY = (engine.ROWS - 1) / 2;
             score += 15 - (Math.abs(action.to.x - centerX) + Math.abs(action.to.y - centerY)) * 1.4;
@@ -324,34 +397,20 @@
             return stopped;
         }
 
-        function canReachGeneral(state, from, moving, target) {
+        function canReachGeneral(from, moving, target) {
             const targetDx = target.x - from.x, targetDy = target.y - from.y;
             for (const piece of moving) {
-                const movement = engine.types.get(piece.typeId)?.movement || {};
-                for (const [kind, rules] of [['step', movement.steps], ['jump', movement.jumps], ['ray', movement.rays]]) {
-                    for (const rule of rules || []) {
-                        if (!rule.capture) continue;
-                        let dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0;
-                        if (piece.owner === 'turquoise') {
-                            if (engineTransform === 'rotate-180') { dx = -dx; dy = -dy; }
-                            else dy = -dy;
-                        }
-                        if (!dx && !dy) continue;
-                        if (kind !== 'ray') {
-                            if (targetDx === dx && targetDy === dy) return true;
-                            continue;
-                        }
-                        const distance = dx ? targetDx / dx : targetDy / dy;
-                        const maxDistance = Math.max(1, Math.min(32, Number(rule.maxDistance) || Math.max(engine.COLS, engine.ROWS)));
-                        if (Number.isInteger(distance) && distance >= 1 && distance <= maxDistance
-                            && targetDx === dx * distance && targetDy === dy * distance) return true;
-                    }
+                const profile = captureProfiles.get(piece.typeId)?.[piece.owner];
+                if (!profile) continue;
+                if (profile.direct.has(`${targetDx},${targetDy}`)) return true;
+                for (const { dx, dy, maxDistance } of profile.rays) {
+                    const distance = dx ? targetDx / dx : targetDy / dy;
+                    if (Number.isInteger(distance) && distance >= 1 && distance <= maxDistance
+                        && targetDx === dx * distance && targetDy === dy * distance) return true;
                 }
             }
             return false;
         }
-
-        const engineTransform = setup.orientation?.oppositeCourtTransform || setup.settings?.orientationTransform || 'rank-flip';
 
         function hasGeneralCapture(state, attackerSide, defenderSide) {
             const targets = [];
@@ -368,7 +427,7 @@
                 const stack = state.board[at];
                 if (!stack.length || stack[stack.length - 1].owner !== attackerSide) continue;
                 const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
-                if (targets.some(target => canReachGeneral(state, from, stack, target))) attackers.push({ from, targets });
+                if (targets.some(target => canReachGeneral(from, stack, target))) attackers.push({ from, targets });
             }
             for (const { from } of attackers) {
                 for (const destination of engine.legalMoves(state, from, attackerSide)) {
@@ -420,7 +479,7 @@
             if (checkTime()) return evaluate(state);
             if (depth <= 0) {
                 if (isDraw(state)) return 0;
-                return quiescence(state, alpha, beta, ply, 2);
+                return quiescence(state, alpha, beta, ply, 1);
             }
             const actions = generate(state);
             if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
@@ -493,11 +552,14 @@
                     else if (isDraw(root)) score = 0;
                     else score = -negamax(root, depth - 1, -beta, -a, 1);
                     unmake(root, action, old);
+                    if (stopped) break;
                     if (score > windowScore) { windowScore = score; windowAction = action; }
                     if (score > a) a = score;
-                    if (stopped) break;
                 }
-                if (stopped) break;
+                if (stopped) {
+                    if (windowAction) { bestAction = windowAction; bestScore = windowScore; }
+                    break;
+                }
                 if (windowScore <= alpha || windowScore >= beta) {
                     stopped = false;
                     const full = searchRootWindow(root, rootActions, depth, -Infinity, Infinity);
