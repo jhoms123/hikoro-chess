@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded',()=>{
             else if(/pickup|shield/.test(id))icon=theme==='shodansho'?'seed':'crown';
             const primary=icon==='play'||b.classList.contains('primary-button');
             if(primary)b.dataset.primary='true';
-            let material={lobby:'wood',shodansho:'parchment',shavari:'jade',hikoruka:'wood',go:'stone','shavari-go':'wood',academy:'parchment'}[theme]||'wood';
+            let material={lobby:'wood',shodansho:'parchment',shavari:'jade',hikoruka:'wood',go:'stone','shavari-go':'wood',academy:'parchment','valley-hunt':'wood'}[theme]||'wood';
             if(b.closest('#hikoro-game-wrapper,#turn-indicator-container')||body.classList.contains('game-active'))material='pearl';
             if(icon==='rules'||icon==='save'||b.classList.contains('atlas-secondary'))material='parchment';
             if(/resign|reset|accept-confirm/.test(id))material='seal';
@@ -38,11 +38,12 @@ document.addEventListener('DOMContentLoaded',()=>{
         hikoruka:{name:'Hikorka chess',description:'Five heraldic roles. Eight pieces. Protect your Sovereign on a compact board.',guide:'hikoruka.html?showRules=1',guideLabel:'Meet the citadel’s company →'},
         go:{name:'Shield Go',description:'Place, leap, shield, and surround on a wooden 9 × 9 or 13 × 13 table.',guide:'go.html?showRules=1',guideLabel:'Learn stones, shields, and territory →'},
         'shavari-go':{name:'Shavari Go',description:'Breach lines, silence enemy standards, and win by territory or Crownhold capture on a 13 × 13 board.',guide:'shavari-go.html?showRules=1',guideLabel:'Learn the royal ranks, special placements, siege, and scoring →'},
-        academy:{name:'Hikoro Academy',description:'Learn real Hikoro movements in guided practice, then teach a friend on 8 × 8.',guide:'academy.html',guideLabel:'Begin guided practice →'}
+        academy:{name:'Hikoro Academy',description:'Learn real Hikoro movements in guided practice, then teach a friend on 8 × 8.',guide:'academy.html',guideLabel:'Begin guided practice →'},
+        'valley-hunt':{name:'The Valley Hunt',description:'Trap enemy forces, pin pieces beneath Dragons, and protect your hunters on a 5 × 12 board.',guide:'valley-hunt.html#rules-panel',guideLabel:'Learn the capture rules →'}
     };
     const selector=document.getElementById('game-type-select');
     function update(){const game=selector.value,w=worlds[game];if(!w)return;
-        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='shavari-go'?'shavari-go.svg?v=20261014-shavari-go-preview-v2':game+'.webp'}`;
+        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='shavari-go'?'shavari-go.svg?v=20261014-shavari-go-preview-v2':game==='valley-hunt'?'valley-hunt.svg?v=20261015-valley-hunt-v1':game+'.webp'}`;
         document.getElementById('selected-table-name').textContent=w.name;
         document.getElementById('selected-table-description').textContent=w.description;
         const guide=document.getElementById('selected-table-guide');guide.href=w.guide;guide.textContent=w.guideLabel;
