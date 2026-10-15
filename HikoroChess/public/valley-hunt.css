@@ -175,3 +175,9 @@ body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,
  .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(40px,calc((var(--mobile-board-width,100vw) - 84px)/5),76px);--vh-cell-h:clamp(36px,11vw,54px)}
  .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(50px,calc((var(--mobile-board-width) - 84px)/5),90px);--vh-cell-h:clamp(40px,13vw,64px)}
 }
+
+/* Keep the shared wood-button skin from shrinking interactive board cells. */
+.valley-hunt-page .board .cell.material-control{box-sizing:border-box;min-width:0;min-height:0!important;padding:0!important;border:1px solid #796a4d!important;border-image:none!important;border-radius:0!important;background-color:#c8b995!important;background-image:none!important;box-shadow:none!important;filter:none;transform:none}
+.valley-hunt-page .board .cell.shade.material-control{background-color:#92866c!important}
+.valley-hunt-page .board .cell.in-valley.material-control{background-image:linear-gradient(#72865024,#72865024)!important}
+.valley-hunt-page .board .cell.in-valley.shade.material-control{background-color:#928a69!important}
