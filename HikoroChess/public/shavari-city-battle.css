@@ -64,7 +64,7 @@
 .city-opponent-control>select{box-sizing:border-box;width:100%;min-height:42px;border:1px solid #a7977299;border-radius:8px;background:#26372f;color:#f8f0dc;padding:8px 12px;font-size:14px}
 .city-opponent-control>small{color:#c8b998;font:11px/1.45 Georgia,serif}
 .city-bot-match-toggle{width:100%;min-height:40px;margin-top:4px}
-.city-bot-match-toggle[hidden]{display:none}
+.city-bot-match-toggle[hidden]{display:none!important}
 .city-sidebar .fine-print{margin:10px 0 0;color:#c8b998;font:11px/1.55 Georgia,serif}
 .selected-detail{display:flex;align-items:center;gap:10px;min-height:58px;margin-top:13px;padding:9px;border-radius:5px;background:#101f1e99;color:#eedcb6;font:12px/1.35 Georgia,serif}
 .selected-detail>div:last-child{display:grid;gap:4px;min-width:0}
