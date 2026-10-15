@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17221e">
+<meta name="description" content="Play The Valley Hunt, a strategy game of dogs, hunters, children, and Dragons on a 5 by 12 board.">
+<title>The Valley Hunt · Hikoro</title>
+<link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
+<link rel="stylesheet" href="/site-audio.css?v=20261015-valley-hunt-v1">
+<script src="/site-audio.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261015-valley-hunt-v1">
+<script src="/collection-theme.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/mobile-table.css?v=20261015-valley-hunt-v1">
+<script src="/mobile-table.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/phone-game-shell.css?v=20261015-valley-hunt-v1">
+<script src="/phone-game-shell.js?v=20261015-valley-hunt-v1" defer></script>
+<link rel="stylesheet" href="/valley-hunt.css?v=20261015-valley-hunt-v1">
+<script src="/valley-hunt.js?v=20261015-valley-hunt-v1" defer></script>
+</head>
+<body data-audio-theme="valley-hunt" class="valley-hunt-page">
+<header class="site-header">
+  <a class="collection-link quiet-button" id="lobby-link" href="/">← Hikoro collection</a>
+  <span class="edition">THE VALLEY HUNT · 5 × 12</span>
+  <a class="quiet-button header-rules" href="#rules-panel">How to play</a>
+</header>
+<main>
+  <section class="introduction"><p class="eyebrow">A GAME OF TRAPS, TACTICS &amp; TERRAINS</p><h1>The Valley Hunt</h1><p>Set the pack, spring the trap, and keep your hunters safe.</p></section>
+  <div class="match-layout">
+    <section class="play-area" aria-label="The Valley Hunt board and current position">
+      <div class="board-heading"><div class="turn-label"><span class="turn-dot" id="turnDot"></span><span id="turnName">Moss to move</span></div><div class="board-meta">Select a piece, then choose a highlighted square</div></div>
+      <div class="player-strip rust" id="strip-rust"><span class="player-mark rust-mark" aria-hidden="true"></span><strong>Rust</strong><small>Upper ridge</small><span class="army-count">3 hunters · 1 Dragon</span></div>
+      <div class="board-shell" aria-label="5 by 12 Valley Hunt board">
+        <div class="ranks" id="ranksLeft" aria-hidden="true"></div>
+        <div class="board-plate"><div class="board" id="board" role="grid" aria-label="5 by 12 game board"><div class="goal-line top"></div><div class="goal-line bottom"></div></div><div class="files" id="files" aria-hidden="true"></div></div>
+        <div class="ranks" id="ranksRight" aria-hidden="true"></div>
+      </div>
+      <div class="board-foot"><span>Rust begins at the far ridge</span><span>Moss begins in the valley</span></div>
+      <div class="legend"><span><i></i> Legal move</span><span><i class="ring"></i> Dragon landing</span></div>
+      <div class="player-strip moss" id="strip-moss"><span class="player-mark moss-mark" aria-hidden="true"></span><strong>Moss</strong><small>Lower ridge · moves first</small><span class="army-count">3 hunters · 1 Dragon</span></div>
+    </section>
+    <aside class="match-panel" aria-label="Game controls and details">
+      <section class="panel turn-panel" aria-live="polite"><p class="eyebrow">THE VALLEY HUNT</p><h2 id="statusMain">Moss moves first.</h2><p class="fine-print" id="statusSub">Select one of your pieces to see its legal moves.</p></section>
+      <section class="panel control-panel" data-mobile-title="Play controls">
+        <h2>Play</h2>
+        <div class="button-row"><button class="quiet-button primary-button" id="newGame" type="button">New game</button><button class="quiet-button" id="undoMove" type="button">Undo</button><button class="quiet-button" id="toggleBots" type="button" hidden>Pause bots</button></div>
+        <label class="control-label" for="gameMode">Game mode</label>
+        <select id="gameMode" aria-label="Choose game mode"><option value="human-bot" selected>You vs Strong Bot</option><option value="bot-bot">Strong Bot vs Strong Bot</option><option value="local">Two players</option></select>
+        <label class="control-label" for="botThinkingTime">Bot thinking time per move</label>
+        <select id="botThinkingTime" aria-label="Choose bot thinking time"><option value="200">0.2 seconds</option><option value="500">0.5 seconds</option><option value="1000">1 second</option><option value="2000">2 seconds</option><option value="3000" selected>3 seconds</option><option value="4000">4 seconds</option><option value="5000">5 seconds</option></select>
+        <p class="fine-print">One shared engine plays either color. In bot versus bot mode, pause any time to inspect the board.</p>
+      </section>
+      <section class="panel hunter-panel" data-mobile-title="Hunter count"><h2>Hunter count</h2><div class="score-block" id="scoreBlock"></div><p class="fine-print">Capture two of the other side’s three hunters to win.</p></section>
+      <section class="panel chronicle"><h2>Move record</h2><div class="log" id="moveLog" aria-live="polite"><div class="empty-log">The valley is quiet. Make the first move.</div></div><p class="move-note" id="moveNote"></p></section>
+      <section class="panel piece-guide-card" data-mobile-title="The pieces"><h2>The pieces</h2><div class="piece-list">
+        <div class="piece-row"><img src="/assets/valley-hunt/dog.svg" alt="" class="piece-icon"><div><h3>Dog · 7 each</h3><p>Forward one or two squares along a clear file, or one square diagonally in any direction.</p></div></div>
+        <div class="piece-row"><img src="/assets/valley-hunt/hunter.svg" alt="" class="piece-icon"><div><h3>Hunter · 3 each</h3><p>One square in any orthogonal direction. Capture two enemy hunters to win.</p></div></div>
+        <div class="piece-row"><img src="/assets/valley-hunt/child.svg" alt="" class="piece-icon"><div><h3>Child · 2 each</h3><p>One square in any direction, or up to two clear squares along a diagonal.</p></div></div>
+        <div class="piece-row"><img src="/assets/valley-hunt/dragon.svg" alt="" class="piece-icon"><div><h3>Dragon · 1 each</h3><p>Slides like a rook and leaps three forward plus one sideways. A friendly piece blocks its forward leap.</p></div></div>
+      </div></section>
+      <section class="panel artwork-credit-panel" data-mobile-title="Piece art credits"><h2>Piece art</h2><p class="fine-print">Game-icons.net, CC BY 3.0: Hound by <a href="https://game-icons.net/1x1/lorc/hound.html" target="_blank" rel="noopener">Lorc</a>; Archer and Baby Face by <a href="https://game-icons.net/1x1/delapouite/archer.html" target="_blank" rel="noopener">Delapouite</a> (<a href="https://game-icons.net/1x1/delapouite/baby-face.html" target="_blank" rel="noopener">Baby Face</a>); Dragon Head by <a href="https://game-icons.net/1x1/lorc/dragon-head.html" target="_blank" rel="noopener">Lorc</a>. Transparent backgrounds; original glyphs retained.</p></section>
+      <section class="panel rules-panel" id="rules-panel" data-mobile-title="Rules &amp; piece art"><p class="eyebrow">RULES &amp; PIECE ART</p><h2>How to play</h2>
+    <div class="rules-grid">
+      <article><h3>Capture by surrounding</h3><p>A piece is captured when two opposing pieces stand on opposite neighboring squares around it: across a rank, file, or diagonal. The move that completes the pair triggers capture. Dogs captured this way switch sides; captured hunters and children leave the board. Dragons cannot be captured.</p></article>
+      <article><h3>Dragon displacement</h3><p>A Dragon can land on any enemy non-Dragon piece if a separate friendly piece is orthogonally next to that target before the Dragon lands. The Dragon itself cannot provide the support. The target is removed, including dogs; displacement never flips a dog. Capturing a hunter counts toward the win.</p></article>
+      <article><h3>Dragon pins</h3><p>A Dragon may land on a piece and pin it beneath itself. The small icon badge shows what is underneath; the pinned piece cannot move until the Dragon leaves. Dragons cannot occupy a square the other Dragon could legally reach. Friendly pieces block their Dragon’s forward leap.</p></article>
+      <article><h3>Winning &amp; repetition</h3><p>Capture two of the opposing hunters to win. A piece cannot make the same two-square back-and-forth loop for a third time; its third completion must be a different move. Moss moves first.</p></article>
+    </div>
+    <p class="credit-line">Piece icon artists: Lorc (Hound, Dragon Head) and Delapouite (Archer, Baby Face), Game-icons.net, CC BY 3.0. <a href="credits.html">Full collection credits</a>.</p>
+  </section>
+    </aside>
+  </div>
+
+</main>
+<footer class="collection-footer">The Valley Hunt · <a href="/">Return to the Hikoro collection</a> · <a href="credits.html">Artists &amp; licenses</a></footer>
+</body>
+</html>
