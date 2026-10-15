@@ -324,27 +324,90 @@
             return stopped;
         }
 
-        function quiescence(state, alpha, beta, ply, remaining, legalActions) {
+        function canReachGeneral(state, from, moving, target) {
+            const targetDx = target.x - from.x, targetDy = target.y - from.y;
+            for (const piece of moving) {
+                const movement = engine.types.get(piece.typeId)?.movement || {};
+                for (const [kind, rules] of [['step', movement.steps], ['jump', movement.jumps], ['ray', movement.rays]]) {
+                    for (const rule of rules || []) {
+                        if (!rule.capture) continue;
+                        let dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0;
+                        if (piece.owner === 'turquoise') {
+                            if (engineTransform === 'rotate-180') { dx = -dx; dy = -dy; }
+                            else dy = -dy;
+                        }
+                        if (!dx && !dy) continue;
+                        if (kind !== 'ray') {
+                            if (targetDx === dx && targetDy === dy) return true;
+                            continue;
+                        }
+                        const distance = dx ? targetDx / dx : targetDy / dy;
+                        const maxDistance = Math.max(1, Math.min(32, Number(rule.maxDistance) || Math.max(engine.COLS, engine.ROWS)));
+                        if (Number.isInteger(distance) && distance >= 1 && distance <= maxDistance
+                            && targetDx === dx * distance && targetDy === dy * distance) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        const engineTransform = setup.orientation?.oppositeCourtTransform || setup.settings?.orientationTransform || 'rank-flip';
+
+        function hasGeneralCapture(state, attackerSide, defenderSide) {
+            const targets = [];
+            for (let at = 0; at < size; at++) {
+                const stack = state.board[at];
+                if (stack.some(piece => piece.owner === defenderSide && engine.generalTypes.has(piece.typeId))) {
+                    targets.push({ x: at % engine.COLS, y: Math.floor(at / engine.COLS) });
+                }
+            }
+            if (!targets.length) return false;
+
+            const attackers = [];
+            for (let at = 0; at < size; at++) {
+                const stack = state.board[at];
+                if (!stack.length || stack[stack.length - 1].owner !== attackerSide) continue;
+                const from = { x: at % engine.COLS, y: Math.floor(at / engine.COLS) };
+                if (targets.some(target => canReachGeneral(state, from, stack, target))) attackers.push({ from, targets });
+            }
+            for (const { from } of attackers) {
+                for (const destination of engine.legalMoves(state, from, attackerSide)) {
+                    if (!destination.options.includes('capture')) continue;
+                    if (targets.some(target => destination.x === target.x && destination.y === target.y)) return true;
+                }
+            }
+            return false;
+        }
+
+        function quiescence(state, alpha, beta, ply, remaining, legalActions, checkExtensions = 2) {
             if (checkTime()) return evaluate(state);
             if (isDraw(state)) return 0;
-            if (remaining <= 0) {
+            const inCheck = captureGeneralWins && hasGeneralCapture(state, engine.otherSide(state.turn), state.turn);
+            if (remaining <= 0 && !inCheck) {
+                if (captureGeneralWins && hasGeneralCapture(state, state.turn, engine.otherSide(state.turn))) return MATE - ply;
                 if (!engine.hasLegalMove(state, state.turn)) return noMoveLoses ? -MATE + ply : 0;
                 return evaluate(state);
             }
 
             const actions = legalActions || generate(state);
             if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
-            let best = evaluate(state);
-            if (best >= beta) return best;
-            if (best > alpha) alpha = best;
+            if (captureGeneralWins && actions.some(action => {
+                if (action.kind !== 'capture') return false;
+                return state.board[engine.index(action.to.x, action.to.y)].some(piece => engine.generalTypes.has(piece.typeId));
+            })) return MATE - ply;
 
-            const captures = ordered(state, actions.filter(action => action.kind === 'capture'), null, ply);
-            for (const action of captures) {
+            if (inCheck && checkExtensions <= 0) return evaluate(state) - 1200;
+            let best = inCheck ? -Infinity : evaluate(state);
+            if (!inCheck && best >= beta) return best;
+            if (!inCheck && best > alpha) alpha = best;
+
+            const candidates = ordered(state, inCheck ? actions : actions.filter(action => action.kind === 'capture'), null, ply);
+            for (const action of candidates) {
                 const old = make(state, action);
                 let score;
                 if (captureGeneralWins && old.capturedGeneral) score = MATE - (ply + 1);
                 else if (isDraw(state)) score = 0;
-                else score = -quiescence(state, -beta, -alpha, ply + 1, remaining - 1);
+                else score = -quiescence(state, -beta, -alpha, ply + 1, inCheck ? remaining : remaining - 1, undefined, inCheck ? checkExtensions - 1 : checkExtensions);
                 unmake(state, action, old);
                 if (score > best) best = score;
                 if (score > alpha) alpha = score;

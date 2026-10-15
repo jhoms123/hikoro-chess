@@ -50,6 +50,33 @@ test('bot prevents an immediate reply that would capture its Lotus General', () 
     assert.deepEqual(result.action, { from: { x: 0, y: 2 }, to: { x: 1, y: 2 }, kind: 'capture' });
 });
 
+test('bot sees a forced General capture created by a quiet move at shallow search depth', () => {
+    const scenario = {
+        metadata: { board: { columns: 5, rows: 4, files: ['A', 'B', 'C', 'D', 'E'] } },
+        orientation: { oppositeCourtTransform: 'rank-flip' },
+        settings: { stacking: { enabled: true, maxHeight: 2 }, victory: { captureGeneral: true, noLegalMoveLoses: true } },
+        pieceTypes: [
+            { id: 'threatener', name: 'Threatener', movement: { steps: [{ dx: 1, dy: 0, capture: false }], jumps: [{ dx: 2, dy: 0, capture: true }], rays: [] } },
+            { id: 'lotus-general', name: 'Lotus General', movement: { steps: [], jumps: [], rays: [] } },
+            { id: 'helper', name: 'Helper', movement: { steps: [{ dx: -1, dy: 0, capture: false }, { dx: 1, dy: 0, capture: false }], jumps: [], rays: [] } }
+        ],
+        position: { units: [
+            unit('threatener', 'threatener', 'turquoise', 0, 0),
+            unit('carnelian-general', 'lotus-general', 'carnelian', 3, 0),
+            unit('helper', 'helper', 'carnelian', 4, 3),
+            unit('turquoise-general', 'lotus-general', 'turquoise', 4, 0)
+        ], blockedSquares: [] }
+    };
+    const engine = createEngine(scenario), state = engine.initial();
+    state.turn = 'turquoise';
+    state.positionHash = engine.hashPosition(state);
+    state.positionHashCounts = { [engine.hashKey(state.positionHash)]: 1 };
+
+    const result = createBot(scenario).choose([], 0, 500, state);
+    assert.deepEqual(result.action, { from: { x: 0, y: 0 }, to: { x: 1, y: 0 }, kind: 'move' });
+    assert.ok(result.score >= 499_000, 'the bot should recognize the forced Lotus General capture');
+});
+
 test('bot loads the supplied city opening and returns an engine-legal action', () => {
     const engine = createEngine(setup), state = engine.initial();
     const result = createBot(setup).choose([], 0, 120);
