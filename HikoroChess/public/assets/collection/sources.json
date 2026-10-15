@@ -14,7 +14,11 @@
     "leave": "delapouite/exit-door",
     "seed": "delapouite/seedling",
     "wave": "lorc/waves",
-    "crown": "lorc/crown"
+    "crown": "lorc/crown",
+    "valley-hunt-dog": "lorc/hound",
+    "valley-hunt-hunter": "delapouite/archer",
+    "valley-hunt-child": "delapouite/baby-face",
+    "valley-hunt-dragon": "lorc/dragon-head"
   },
   "license": "CC BY 3.0",
   "changes": [
@@ -53,5 +57,19 @@
     "source": "https://github.com/octaviopardo/EBGaramond12",
     "distribution": "https://github.com/google/fonts/tree/main/ofl/ebgaramond",
     "changes": "None"
+  },
+  "gameCards": {
+    "valley-hunt": {
+      "asset": "matches/valley-hunt.svg",
+      "description": "Vector rendering of the exact mirrored 5 × 12 starting position using credited Game-icons.net emblems.",
+      "artists": {
+        "hound": "Lorc",
+        "archer": "Delapouite",
+        "baby-face": "Delapouite",
+        "dragon-head": "Lorc"
+      },
+      "license": "CC BY 3.0",
+      "changes": "Transparent backgrounds; original path geometry retained; white emblems placed on team-colored discs."
+    }
   }
 }
