@@ -50,11 +50,7 @@ function forward(side){return side===MOSS?-1:1;}
 const ORTHO=[[1,0],[-1,0],[0,1],[0,-1]];
 const DIAG=[[1,1],[1,-1],[-1,1],[-1,-1]];
 const ALL=ORTHO.concat(DIAG);
-function dragonLeapClear(piece,pieces){
-  const f=forward(piece.side);
-  for(let n=1;n<=3;n++)if(hasSideAt(pieces,piece.r+n*f,piece.c,piece.side))return false;
-  return true;
-}
+function dragonLeapClear(){return true;}
 function wouldCompleteThirdBackAndForth(piece,r,c){
   const trail=(piece.trail||[key(piece.r,piece.c)]).slice(-6).concat(key(r,c));
   if(trail.length<7||trail[0]===trail[1])return false;
