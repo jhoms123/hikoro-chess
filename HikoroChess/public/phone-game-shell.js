@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   body.classList.remove('phone-game-shell','phone-options-open');body.style.removeProperty('--phone-top');
  }
  // Only phones use the compact shell. Desktop keeps the source board/sidebar layout.
- function refresh(){if(media.matches&&playing()){if(!bar)setup();}else teardown();}
+ function refresh(){if(theme==='valley-hunt'){if(bar)teardown();return;}if(media.matches&&playing()){if(!bar)setup();}else teardown();}
  media.addEventListener('change',()=>requestAnimationFrame(refresh));
  window.addEventListener('resize',()=>{if(bar)body.style.setProperty('--phone-top',Math.ceil(bar.getBoundingClientRect().bottom)+'px');schedule();});
  observer=new MutationObserver(()=>{if(theme==='lobby'&&!bar&&playing())requestAnimationFrame(refresh);else if(theme==='lobby'&&bar&&!playing())requestAnimationFrame(refresh);else if(bar){if(theme==='lobby')relocate(document.querySelector('.table-companion'));schedule();}});
