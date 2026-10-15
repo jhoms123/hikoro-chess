@@ -75,3 +75,5 @@ body.valley-hunt-page{--vh-ink:#eee9d9;--vh-muted:#bdc3b2;--vh-moss:#a9c888;--vh
  .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(50px,calc((var(--mobile-board-width) - 54px)/5),78px)}
 }
 @media(max-width:365px){body.valley-hunt-page{--vh-cell-w:43px;--vh-cell-h:30px}.valley-hunt-page .player-strip small{display:none}.valley-hunt-page .army-count{font-size:9px}}
+
+.valley-hunt-page [hidden]{display:none!important}
