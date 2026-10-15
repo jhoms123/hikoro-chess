@@ -100,7 +100,7 @@ body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,
 .valley-hunt-page .token.dragon .sigil{width:82%;height:82%}
 .valley-hunt-page .board-foot{max-width:730px;width:100%;box-sizing:border-box;margin:0 auto;font-size:12px}
 .valley-hunt-page .legend{max-width:730px;width:100%;box-sizing:border-box;justify-content:center;margin:0 auto 3px;font-size:12px}
-.valley-hunt-page .match-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:1000px;margin:24px auto 0;align-items:start}
+.valley-hunt-page .match-panel{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:1000px;max-height:none;margin:24px auto 0;overflow:visible;align-items:start}
 .valley-hunt-page .match-panel>.panel{min-width:0}
 .valley-hunt-page .control-panel{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px;align-items:end}
 .valley-hunt-page .control-panel>h2,.valley-hunt-page .control-panel>.button-row,.valley-hunt-page .control-panel>.fine-print{grid-column:1/-1}
@@ -111,7 +111,7 @@ body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,
 .valley-hunt-page .piece-guide-card .piece-row{grid-template-columns:44px minmax(0,1fr)}
 .valley-hunt-page .piece-guide-card .piece-icon{width:40px;height:40px}
 @media(max-width:1050px){
- body.valley-hunt-page{--vh-cell-w:clamp(60px,7.6vw,82px);--vh-cell-h:clamp(43px,5.55vw,58px)}
+ body.valley-hunt-page{--vh-cell-w:clamp(60px,9vw,90px);--vh-cell-h:clamp(43px,6vw,63px)}
  .valley-hunt-page .match-layout{display:block;max-width:920px}
  .valley-hunt-page .match-panel{max-width:920px}
 }
@@ -152,9 +152,9 @@ body.valley-hunt-page{--vh-cell-w:clamp(56px,7.2vw,82px);--vh-cell-h:clamp(40px,
  .valley-hunt-page .rules-panel>h2{font-size:24px}
  .valley-hunt-page .rules-grid{grid-template-columns:1fr}
  .valley-hunt-page .rules-grid p,.valley-hunt-page .credit-line{font-size:12px}
- .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(44px,calc((var(--mobile-board-width,100vw) - 60px)/5),76px);--vh-cell-h:clamp(32px,calc(var(--vh-cell-w)*.72),54px)}
+ .valley-hunt-page .mobile-board-surface{--vh-cell-w:clamp(44px,calc((var(--mobile-board-width,100vw) - 60px)/5),76px);--vh-cell-h:clamp(32px,12.7vw,54px)}
  .valley-hunt-page .mobile-board-surface .board-plate{width:max-content;margin:0 auto}
- .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(58px,calc((var(--mobile-board-width) - 60px)/5),90px);--vh-cell-h:clamp(42px,calc(var(--vh-cell-w)*.72),64px)}
+ .valley-hunt-page .mobile-board-viewport.is-detailed .mobile-board-surface{--vh-cell-w:clamp(58px,calc((var(--mobile-board-width) - 60px)/5),90px);--vh-cell-h:clamp(42px,16vw,64px)}
 }
 @media(max-width:365px){
  .valley-hunt-page .board-heading{align-items:flex-start;flex-direction:column}
