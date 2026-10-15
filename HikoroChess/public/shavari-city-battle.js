@@ -59,33 +59,33 @@
         selected = null;
         render();
         try {
-            const worker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-bot-search-v2');
-            botWorker = worker;
-            worker.onmessage = event => {
-                if (ticket !== botGeneration) return;
-                botWorker = null;
-                botThinking = false;
-                worker.terminate();
-                const action = event.data?.action;
-                if (event.data?.error || !action) {
+            if (!botWorker) {
+                botWorker = new Worker('/shavari-city-battle-bot-worker.js?v=20261015-city-bot-strategy-v3');
+                const worker = botWorker;
+                worker.onmessage = event => {
+                    if (event.data?.id !== botGeneration) return;
+                    botThinking = false;
+                    const action = event.data?.action;
+                    if (event.data?.error || !action) {
+                        botErrorPly = state.ply;
+                        announce('The Shavari bot could not find a move. Change the opponent setting or reload the match to retry.');
+                        render();
+                        return;
+                    }
+                    botErrorPly = -1;
+                    playMove(action, true);
+                };
+                worker.onerror = () => {
+                    if (!botThinking) return;
+                    botThinking = false;
+                    worker.terminate();
+                    if (botWorker === worker) botWorker = null;
                     botErrorPly = state.ply;
-                    announce('The Shavari bot could not find a move. Change the opponent setting or reload the match to retry.');
+                    announce('The Shavari bot worker could not start. Change the opponent setting or reload the match to retry.');
                     render();
-                    return;
-                }
-                botErrorPly = -1;
-                playMove(action, true);
-            };
-            worker.onerror = () => {
-                if (ticket !== botGeneration) return;
-                botWorker = null;
-                botThinking = false;
-                worker.terminate();
-                botErrorPly = state.ply;
-                announce('The Shavari bot worker could not start. Change the opponent setting or reload the match to retry.');
-                render();
-            };
-            worker.postMessage({
+                };
+            }
+            botWorker.postMessage({
                 id: ticket,
                 setup,
                 state: {
@@ -101,6 +101,7 @@
             });
         } catch {
             botThinking = false;
+            if (botWorker) botWorker.terminate();
             botWorker = null;
             botErrorPly = state.ply;
             announce('The Shavari bot worker could not start. Change the opponent setting or reload the match to retry.');

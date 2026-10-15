@@ -25,7 +25,48 @@
         const captureGeneralWins = setup.settings?.victory?.captureGeneral !== false;
         const noMoveLoses = setup.settings?.victory?.noLegalMoveLoses !== false;
         const values = new Map([...engine.types].map(([id, type]) => [id, MATERIAL[id] || valueFromMovement(type)]));
-        let deadline = Infinity, nodes = 0, stopped = false, table = new Map(), killers = new Map();
+        let deadline = Infinity, nodes = 0, tableHits = 0, stopped = false, table = new Map(), killers = new Map();
+
+        const movementProfiles = new Map([...engine.types].map(([id, type]) => {
+            const movement = type.movement || {};
+            const mobility = new Set();
+            const forwardSouth = new Set(), forwardNorth = new Set(), forwardAny = new Set();
+            for (const [kind, key] of [['step', 'steps'], ['jump', 'jumps'], ['ray', 'rays']]) {
+                for (const rule of movement[key] || []) {
+                    const dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0;
+                    const distance = kind === 'ray' ? Number(rule.maxDistance) || 0 : 1;
+                    const shape = `${kind}:${dx},${dy}:${distance}`;
+                    mobility.add(shape);
+                    if (dy < 0) forwardSouth.add(shape);
+                    if (dy > 0) forwardNorth.add(shape);
+                    if (dy !== 0) forwardAny.add(shape);
+                }
+            }
+            return [id, { group: type.stackGroup || null, mobility, forwardSouth, forwardNorth, forwardAny }];
+        }));
+
+        function formationValue(firstId, secondId) {
+            const first = movementProfiles.get(firstId), second = movementProfiles.get(secondId);
+            if (!first || !second || !first.group || first.group !== second.group) return -30;
+            const shared = [...first.mobility].filter(rule => second.mobility.has(rule)).length;
+            const union = first.mobility.size + second.mobility.size - shared;
+            if (!union) return -12;
+            const unique = union - shared;
+            const similarity = shared / union;
+            const forwardUnique = [...new Set([...first.forwardAny, ...second.forwardAny])]
+                .filter(rule => !(first.forwardAny.has(rule) && second.forwardAny.has(rule))).length;
+            // Joining two near-identical move sets burns a turn; complementary
+            // profiles earn a small bonus, especially when they add forward reach.
+            return Math.max(-16, Math.min(30, unique * 7 - shared * 4 + Math.min(3, forwardUnique) * 3 - similarity * 5));
+        }
+
+        function stackCarrierBonus(stack, advance) {
+            if (stack.length < 2 || advance < 4) return 0;
+            const forwardKey = stack[0].owner === 'carnelian' ? 'forwardSouth' : 'forwardNorth';
+            const forwardCarrier = stack.some(piece => movementProfiles.get(piece.typeId)?.[forwardKey].size);
+            const bestValue = Math.max(...stack.map(piece => values.get(piece.typeId) || 100));
+            return forwardCarrier && bestValue >= 350 ? 8 : 0;
+        }
 
         function valueFromMovement(type) {
             const move = type.movement || {};
@@ -42,6 +83,30 @@
             return `${state.turn}|${occupied.join('|')}`;
         }
 
+        function occurrenceHash(key, count) {
+            let first = 2166136261, second = 2246822519;
+            for (let i = 0; i < key.length; i++) {
+                const code = key.charCodeAt(i);
+                first = Math.imul(first ^ code, 16777619);
+                second = Math.imul(second ^ code, 3266489917);
+            }
+            return [Math.imul(first ^ count, 16777619) >>> 0, Math.imul(second ^ count, 668265263) >>> 0];
+        }
+
+        function historyHash(counts) {
+            let first = 0, second = 0;
+            for (const [key, count] of Object.entries(counts)) {
+                const token = occurrenceHash(key, count);
+                first ^= token[0];
+                second ^= token[1];
+            }
+            return [first >>> 0, second >>> 0];
+        }
+
+        function transpositionKey(state) {
+            return `${state.positionHashKey}#${state.noCapturePlies}#${state.positionHashCounts[state.positionHashKey] || 0}#${state.historyHash[0]}#${state.historyHash[1]}`;
+        }
+
         function makeState(restored) {
             const positionHash = Array.isArray(restored.positionHash) ? restored.positionHash.slice() : engine.hashPosition(restored);
             const positionHashKey = engine.hashKey(positionHash);
@@ -50,6 +115,7 @@
                 const oldKey = signature(restored);
                 positionHashCounts[positionHashKey] = restored.positionCounts?.[oldKey] || 1;
             }
+            const repetitionHash = historyHash(positionHashCounts);
             return {
                 board: restored.board.map(stack => stack.slice()),
                 buildings: restored.buildings,
@@ -58,7 +124,8 @@
                 noCapturePlies: restored.noCapturePlies,
                 positionHash,
                 positionHashKey,
-                positionHashCounts
+                positionHashCounts,
+                historyHash: repetitionHash
             };
         }
 
@@ -87,7 +154,10 @@
                 score -= (values.get(moving[moving.length - 1].typeId) || 100) / 8;
             } else if (action.kind === 'cover') {
                 score += 8_000 + target.reduce((sum, piece) => sum + (values.get(piece.typeId) || 100), 0) * 2;
-            } else if (action.kind === 'stack') score += 1_500;
+            } else if (action.kind === 'stack') {
+                const quality = formationValue(moving[moving.length - 1].typeId, target[target.length - 1].typeId);
+                score += quality > 0 ? 1_500 + quality * 12 : -250 + quality * 5;
+            }
             const centerX = (engine.COLS - 1) / 2, centerY = (engine.ROWS - 1) / 2;
             score += 15 - (Math.abs(action.to.x - centerX) + Math.abs(action.to.y - centerY)) * 1.4;
             score += action.kind === 'move' ? 0 : 2;
@@ -109,7 +179,7 @@
             const fromAt = engine.index(action.from.x, action.from.y), toAt = engine.index(action.to.x, action.to.y);
             const moving = state.board[fromAt], target = state.board[toAt];
             const capturedGeneral = action.kind === 'capture' && target.some(piece => engine.generalTypes.has(piece.typeId));
-            const old = { from: moving, to: target, turn: state.turn, ply: state.ply, noCapturePlies: state.noCapturePlies, positionHash: state.positionHash, positionHashKey: state.positionHashKey, capturedGeneral };
+            const old = { from: moving, to: target, turn: state.turn, ply: state.ply, noCapturePlies: state.noCapturePlies, positionHash: state.positionHash, positionHashKey: state.positionHashKey, historyHash: state.historyHash.slice(), capturedGeneral };
             const nextHash = state.positionHash.slice();
             const fromBefore = engine.hashCell(fromAt, moving), toBefore = engine.hashCell(toAt, target);
             for (let word = 0; word < nextHash.length; word++) nextHash[word] ^= fromBefore[word] ^ toBefore[word];
@@ -124,7 +194,16 @@
             state.positionHashKey = engine.hashKey(nextHash);
             state.ply++;
             state.noCapturePlies = action.kind === 'capture' ? 0 : state.noCapturePlies + 1;
-            state.positionHashCounts[state.positionHashKey] = (state.positionHashCounts[state.positionHashKey] || 0) + 1;
+            const previousCount = state.positionHashCounts[state.positionHashKey] || 0;
+            if (previousCount) {
+                const previousToken = occurrenceHash(state.positionHashKey, previousCount);
+                state.historyHash[0] ^= previousToken[0];
+                state.historyHash[1] ^= previousToken[1];
+            }
+            state.positionHashCounts[state.positionHashKey] = previousCount + 1;
+            const nextToken = occurrenceHash(state.positionHashKey, previousCount + 1);
+            state.historyHash[0] = (state.historyHash[0] ^ nextToken[0]) >>> 0;
+            state.historyHash[1] = (state.historyHash[1] ^ nextToken[1]) >>> 0;
             old.key = state.positionHashKey;
             return old;
         }
@@ -134,6 +213,7 @@
             const count = state.positionHashCounts[old.key] || 0;
             if (count <= 1) delete state.positionHashCounts[old.key];
             else state.positionHashCounts[old.key] = count - 1;
+            state.historyHash = old.historyHash;
             state.board[fromAt] = old.from;
             state.board[toAt] = old.to;
             state.turn = old.turn;
@@ -151,22 +231,90 @@
         function evaluate(state) {
             let score = 0;
             const cx = (engine.COLS - 1) / 2, cy = (engine.ROWS - 1) / 2;
+            const generals = { carnelian: null, turquoise: null };
+            const pieceSquares = { carnelian: [], turquoise: [] };
             for (let at = 0; at < size; at++) {
                 const stack = state.board[at];
                 if (!stack.length) continue;
                 const x = at % engine.COLS, y = Math.floor(at / engine.COLS);
+                const top = stack[stack.length - 1];
+                pieceSquares[top.owner].push({ at, x, y, stack });
+                if (stack.some(piece => engine.generalTypes.has(piece.typeId))) generals[top.owner] = { at, x, y };
                 for (const piece of stack) {
                     const sign = piece.owner === state.turn ? 1 : -1;
                     const material = values.get(piece.typeId) || 100;
                     const advance = piece.owner === 'carnelian' ? engine.ROWS - 1 - y : y;
                     const center = Math.max(0, 8 - Math.abs(x - cx) - Math.abs(y - cy));
-                    score += sign * (material + advance * 1.35 + center * 1.2);
+                    const enemyHalf = Math.max(0, advance - Math.floor(engine.ROWS / 2));
+                    score += sign * (material + advance * 1.45 + center * 1.8 + enemyHalf * 1.05);
+
+                    // Jumps ignore intervening units, so an invasion of the
+                    // back three ranks is dangerous: reward the attacker and
+                    // charge the defending side for conceding those landings.
+                    if (advance >= engine.ROWS - 3) {
+                        const invasion = (advance - (engine.ROWS - 4)) * (18 + Math.min(18, material * 0.025));
+                        score += sign * invasion;
+                    }
+                    if (advance <= 3 && Math.abs(x - cx) <= 3) score += sign * 3;
                 }
                 if (stack.length > 1) {
-                    const top = stack[stack.length - 1];
-                    score += (top.owner === state.turn ? 1 : -1) * (stack.length - 1) * 20;
+                    const sign = top.owner === state.turn ? 1 : -1;
+                    const advance = top.owner === 'carnelian' ? engine.ROWS - 1 - y : y;
+                    score += sign * formationValue(stack[0].typeId, stack[1].typeId) * 1.35;
+                    score += sign * stackCarrierBonus(stack, advance);
                 }
             }
+
+            // A nearby enemy makes a valuable lone unit, or an exposed whole
+            // stack, easier to lose. Adjacent friendly units provide support.
+            for (const side of ['carnelian', 'turquoise']) {
+                const sign = side === state.turn ? 1 : -1;
+                for (const piece of pieceSquares[side]) {
+                    let enemyAdjacent = false, friendAdjacent = false;
+                    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                        if (!dx && !dy) continue;
+                        const x = piece.x + dx, y = piece.y + dy;
+                        if (x < 0 || x >= engine.COLS || y < 0 || y >= engine.ROWS) continue;
+                        const neighbor = state.board[engine.index(x, y)];
+                        if (!neighbor.length) continue;
+                        if (neighbor[neighbor.length - 1].owner === side) friendAdjacent = true;
+                        else enemyAdjacent = true;
+                    }
+                    if (enemyAdjacent) {
+                        const exposed = piece.stack.reduce((sum, unit) => sum + (values.get(unit.typeId) || 100), 0);
+                        score -= sign * exposed * (friendAdjacent ? 0.035 : 0.085);
+                    }
+                }
+
+                const general = generals[side];
+                if (!general) continue;
+                let nearestEnemy = 99, nearbyFriends = 0;
+                for (const target of pieceSquares[side === 'carnelian' ? 'turquoise' : 'carnelian']) {
+                    nearestEnemy = Math.min(nearestEnemy, Math.max(Math.abs(target.x - general.x), Math.abs(target.y - general.y)));
+                }
+                for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+                    if (!dx && !dy) continue;
+                    const x = general.x + dx, y = general.y + dy;
+                    if (x < 0 || x >= engine.COLS || y < 0 || y >= engine.ROWS) continue;
+                    const neighbor = state.board[engine.index(x, y)];
+                    if (neighbor.length && neighbor[neighbor.length - 1].owner === side) nearbyFriends++;
+                }
+                const danger = nearestEnemy <= 4 ? [0, 125, 78, 38, 14][nearestEnemy] : 0;
+                const cover = Math.min(30, nearbyFriends * 7);
+                score += sign * (cover - danger);
+            }
+            return score;
+        }
+
+        function scoreToTable(score, ply) {
+            if (score > MATE - 10000) return score + ply;
+            if (score < -MATE + 10000) return score - ply;
+            return score;
+        }
+
+        function scoreFromTable(score, ply) {
+            if (score > MATE - 10000) return score - ply;
+            if (score < -MATE + 10000) return score + ply;
             return score;
         }
 
@@ -215,14 +363,16 @@
             if (!actions.length) return noMoveLoses ? -MATE + ply : 0;
             if (isDraw(state)) return 0;
 
-            const key = `${state.positionHashKey}#${state.noCapturePlies}#${state.positionHashCounts[state.positionHashKey] || 0}`;
+            const key = transpositionKey(state);
             const entry = table.get(key);
-            const originalAlpha = alpha;
+            const originalAlpha = alpha, originalBeta = beta;
             if (entry && entry.depth >= depth) {
-                if (entry.flag === 'exact') return entry.score;
-                if (entry.flag === 'lower') alpha = Math.max(alpha, entry.score);
-                else if (entry.flag === 'upper') beta = Math.min(beta, entry.score);
-                if (alpha >= beta) return entry.score;
+                tableHits++;
+                const entryScore = scoreFromTable(entry.score, ply);
+                if (entry.flag === 'exact') return entryScore;
+                if (entry.flag === 'lower') alpha = Math.max(alpha, entryScore);
+                else if (entry.flag === 'upper') beta = Math.min(beta, entryScore);
+                if (alpha >= beta) return entryScore;
             }
             let bestScore = -Infinity, bestAction = null;
             for (const action of ordered(state, actions, entry?.action, ply)) {
@@ -244,9 +394,12 @@
                 if (stopped) break;
             }
             if (bestAction && !stopped) {
-                const flag = bestScore <= originalAlpha ? 'upper' : bestScore >= beta ? 'lower' : 'exact';
+                const flag = bestScore <= originalAlpha ? 'upper' : bestScore >= originalBeta ? 'lower' : 'exact';
                 if (table.size > 100000) table.clear();
-                table.set(key, { depth, score: bestScore, flag, action: bestAction });
+                const previous = table.get(key);
+                if (!previous || depth >= previous.depth || (flag === 'exact' && previous.flag !== 'exact')) {
+                    table.set(key, { depth, score: scoreToTable(bestScore, ply), flag, action: bestAction });
+                }
             }
             return bestScore;
         }
@@ -258,7 +411,7 @@
             if (!rootActions.length) return { action: null, depth: 0, nodes: 0, score: -MATE };
             const budget = Math.max(100, Math.min(4000, Number(thinkingMs) || 1000));
             deadline = Date.now() + Math.max(80, budget - Math.min(25, budget * 0.04));
-            nodes = 0; stopped = false; table = new Map(); killers = new Map();
+            nodes = 0; tableHits = 0; stopped = false; killers = new Map();
             let bestAction = ordered(root, rootActions, null, 0)[0], bestScore = -Infinity, completedDepth = 0;
             for (const action of rootActions) {
                 const old = make(root, action);
@@ -270,7 +423,7 @@
                 const alpha = depth > 1 ? bestScore - 80 : -Infinity;
                 const beta = depth > 1 ? bestScore + 80 : Infinity;
                 let windowScore = -Infinity, windowAction = null, a = alpha;
-                for (const action of ordered(root, rootActions, table.get(`${root.positionHashKey}#${root.noCapturePlies}#${root.positionHashCounts[root.positionHashKey] || 0}`)?.action, 0)) {
+                for (const action of ordered(root, rootActions, table.get(transpositionKey(root))?.action, 0)) {
                     const old = make(root, action);
                     let score;
                     if (captureGeneralWins && old.capturedGeneral) score = MATE - 1;
@@ -291,7 +444,7 @@
                 if (windowAction) { bestAction = windowAction; bestScore = windowScore; completedDepth = depth; }
                 if (Math.abs(bestScore) >= MATE - 32) break;
             }
-            return { action: bestAction, depth: completedDepth, nodes, score: bestScore };
+            return { action: bestAction, depth: completedDepth, nodes, tableHits, tableSize: table.size, score: bestScore };
         }
 
         function searchRootWindow(root, actions, depth, alpha, beta) {

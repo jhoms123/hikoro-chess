@@ -74,3 +74,17 @@ test('bot accepts the live position directly without replaying the move journal'
     assert.ok(result.action, 'a worker snapshot should be enough to choose a reply');
     assert.ok(engine.apply(afterFirst, result.action), 'the direct-state reply must be legal');
 });
+
+test('bot reuses transposition results across searches in the same worker', () => {
+    const scenario = smallSetup([
+        unit('red-scout', 'scout', 'carnelian', 0, 2),
+        unit('blue-scout', 'scout', 'turquoise', 3, 1),
+        unit('red-general', 'lotus-general', 'carnelian', 4, 3),
+        unit('blue-general', 'lotus-general', 'turquoise', 0, 0)
+    ]);
+    const engine = createEngine(scenario), state = engine.initial(), bot = createBot(scenario);
+    const first = bot.choose([], 0, 250, state);
+    const second = bot.choose([], 0, 250, state);
+    assert.ok(first.action && second.action, 'both searches should return a legal move');
+    assert.ok(second.tableHits > 0, 'the second search should reuse cached positions');
+});
