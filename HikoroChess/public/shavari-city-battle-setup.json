@@ -27,7 +27,7 @@
       ],
       "rankNumbering": "1 is north/top; 17 is south/bottom"
     },
-    "updatedAt": "2026-10-15T16:35:57.941Z"
+    "updatedAt": "2026-10-15T17:30:00.000Z"
   },
   "orientation": {
     "north": "turquoise",
@@ -2808,6 +2808,86 @@
         "x": 12,
         "y": 1,
         "mirrorPair": "pair-51d3da60-07c9-42b1-8267-a1ba0f7e18ed"
+      },
+      {
+        "id": "unit-cart-runner-a7-turquoise",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "turquoise",
+        "file": "A",
+        "row": 7,
+        "x": 0,
+        "y": 6,
+        "mirrorPair": "cart-runner-west-approach"
+      },
+      {
+        "id": "unit-cart-runner-p7-turquoise",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "turquoise",
+        "file": "P",
+        "row": 7,
+        "x": 15,
+        "y": 6,
+        "mirrorPair": "cart-runner-east-approach"
+      },
+      {
+        "id": "unit-cart-runner-a11-carnelian",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "carnelian",
+        "file": "A",
+        "row": 11,
+        "x": 0,
+        "y": 10,
+        "mirrorPair": "cart-runner-west-approach"
+      },
+      {
+        "id": "unit-cart-runner-p11-carnelian",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "carnelian",
+        "file": "P",
+        "row": 11,
+        "x": 15,
+        "y": 10,
+        "mirrorPair": "cart-runner-east-approach"
+      },
+      {
+        "id": "unit-cart-runner-e5-turquoise",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "turquoise",
+        "file": "E",
+        "row": 5,
+        "x": 4,
+        "y": 4,
+        "mirrorPair": "cart-runner-west-center"
+      },
+      {
+        "id": "unit-cart-runner-l5-turquoise",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "turquoise",
+        "file": "L",
+        "row": 5,
+        "x": 11,
+        "y": 4,
+        "mirrorPair": "cart-runner-east-center"
+      },
+      {
+        "id": "unit-cart-runner-e13-carnelian",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "carnelian",
+        "file": "E",
+        "row": 13,
+        "x": 4,
+        "y": 12,
+        "mirrorPair": "cart-runner-west-center"
+      },
+      {
+        "id": "unit-cart-runner-l13-carnelian",
+        "typeId": "piece-03c9d522-7a19-41ac-9549-5759ffd08f38",
+        "side": "carnelian",
+        "file": "L",
+        "row": 13,
+        "x": 11,
+        "y": 12,
+        "mirrorPair": "cart-runner-east-center"
       }
     ],
     "blockedSquares": [

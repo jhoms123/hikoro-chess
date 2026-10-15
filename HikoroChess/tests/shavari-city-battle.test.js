@@ -29,9 +29,27 @@ test('loads the supplied 16 by 17 opening with mirrored armies and city blocks',
     assert.equal(game.COLS, 16);
     assert.equal(game.ROWS, 17);
     assert.equal(state.board.length, 272);
-    assert.equal(state.board.flat().length, 150);
+    assert.equal(state.board.flat().length, 158);
     assert.equal(state.buildings.filter(Boolean).length, 30);
     assert.equal(state.turn, 'carnelian');
+});
+
+test('adds four mirrored Cart Runners per player without changing buildings', () => {
+    const cartRunner = setup.pieceTypes.find(piece => piece.name === 'Cart Runner');
+    const runners = setup.position.units.filter(unit => unit.typeId === cartRunner.id);
+    const runnerSquares = new Set(runners.map(unit => `${unit.x},${unit.y}`));
+    const game = create(setup), state = game.initial();
+    assert.equal(runners.length, 8);
+    assert.equal(runners.filter(unit => unit.side === 'turquoise').length, 4);
+    assert.equal(runners.filter(unit => unit.side === 'carnelian').length, 4);
+    assert.equal(setup.position.units.length - runners.length, 150, 'the existing 150-piece seating chart remains in place');
+    assert.equal(setup.position.blockedSquares.length, 30, 'the building layout remains unchanged');
+    for (const unit of runners) {
+        assert.ok(runnerSquares.has(`${15 - unit.x},${unit.y}`), `${unit.file}${unit.row} has a left-right partner`);
+        assert.ok(runnerSquares.has(`${unit.x},${16 - unit.y}`), `${unit.file}${unit.row} has an opponent-side mirror`);
+        assert.equal(state.board[unit.y * game.COLS + unit.x].length, 1, `${unit.file}${unit.row} does not overlap another piece`);
+        assert.equal(state.buildings[unit.y * game.COLS + unit.x], false, `${unit.file}${unit.row} is not on a building`);
+    }
 });
 
 test('City Battle defines only the four requested stack families and one-character Chinese marks', () => {
