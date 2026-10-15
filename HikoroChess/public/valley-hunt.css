@@ -38,7 +38,13 @@ body.valley-hunt-page .army-count{margin-left:auto;font:12px Georgia,serif;color
 .valley-hunt-page .cell.legal.occupied-landing::after{width:82%;height:86%;background:transparent;border:3px solid #f1e79c;box-shadow:none}
 .valley-hunt-page .goal-line{position:absolute;left:0;right:0;height:2px;background:#e1c58870;pointer-events:none;z-index:2}.valley-hunt-page .goal-line.top{top:25%}.valley-hunt-page .goal-line.bottom{bottom:25%}
 .valley-hunt-page .token{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:calc(var(--vh-cell-w)*.87);height:calc(var(--vh-cell-h)*.9);padding:2px;border:1px solid #443923;border-radius:50%;box-shadow:0 4px 5px #15180f99,inset 0 1px 3px #fff9;user-select:none;line-height:1}
-.valley-hunt-page .token.moss{background:linear-gradient(145deg,#e2ebc4,#9eb983)}.valley-hunt-page .token.rust{background:linear-gradient(145deg,#f5d2ac,#c78462)}.valley-hunt-page .token.dragon{background:linear-gradient(145deg,#f2e4b7,#b3985c);border:2px solid #60502e}
+.valley-hunt-page .token.moss{background:linear-gradient(145deg,#e2ebc4,#9eb983)}.valley-hunt-page .token.rust{background:linear-gradient(145deg,#f5d2ac,#c78462)}
+.valley-hunt-page .token.dragon{border-width:2px}
+.valley-hunt-page .token.dragon.moss{background:linear-gradient(145deg,#e0ecc0,#91aa70);border-color:#536b43}
+.valley-hunt-page .token.dragon.rust{background:linear-gradient(145deg,#f4d0ab,#bd7959);border-color:#80513d}
+.valley-hunt-page .token.dragon::after{position:absolute;top:-3px;right:-3px;display:grid;place-items:center;width:25%;aspect-ratio:1;border:1px solid #f1dfb3;border-radius:50%;box-shadow:0 1px 3px #17170fcc;color:#fff3d2;font:700 clamp(8px,1vw,11px)/1 Georgia,serif}
+.valley-hunt-page .token.dragon.moss::after{content:"M";background:#526a42}
+.valley-hunt-page .token.dragon.rust::after{content:"R";background:#824e3a}
 .valley-hunt-page .token .sigil,.valley-hunt-page .token.dragon .sigil{display:block;flex:none;width:86%;height:86%;object-fit:contain;filter:brightness(.12) sepia(.2);pointer-events:none}
 .valley-hunt-page .stack-under{position:absolute;right:0;bottom:0;z-index:4;display:grid;place-items:center;width:24px;height:24px;border:2px solid #443923;border-radius:50%;background:#f3e5bc;box-shadow:0 2px 4px #1417119c}
 .valley-hunt-page .stack-under img{width:18px;height:18px;object-fit:contain;filter:brightness(.15)}.valley-hunt-page .pinned-ring{position:absolute;inset:2px;border:2px dashed #f6e4a6;border-radius:50%;pointer-events:none;z-index:3}
