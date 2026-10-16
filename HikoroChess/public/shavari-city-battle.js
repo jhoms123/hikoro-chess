@@ -7,6 +7,7 @@
     let engine, setup, state, journal = [], cursor = 0, flipped = false, symbolSet = 'shavari', selected = null, pendingLanding = null;
     let botSeat = null, botPaused = false, botThinking = false, botGeneration = 0, botWorker = null, botErrorPly = -1;
     let cells = [];
+    let rulesLanguage = 'en';
 
     function announce(message) {
         const notice = $('notice');
@@ -109,22 +110,77 @@
         }
     }
 
-    function labelVector(dx, dy) {
-        const names = { '0,-1': 'north', '1,-1': 'northeast', '1,0': 'east', '1,1': 'southeast', '0,1': 'south', '-1,1': 'southwest', '-1,0': 'west', '-1,-1': 'northwest' };
-        return names[dx + ',' + dy] || `Δ file ${dx > 0 ? '+' : ''}${dx}, Δ row ${dy > 0 ? '+' : ''}${dy}`;
+    const spanishPieceNames = {
+        'lotus-general': 'General del Loto',
+        'caravan-lance': 'Lanza Caravanera',
+        'elephant-cannon': 'Cañón de Elefante',
+        'scarab-pawn': 'Peón Escarabajo',
+        'piece-5c6ac872-5982-422c-829b-d31de00c9ed7': 'Peón Lancero',
+        'piece-bb8b6ba6-3262-4f9c-ac80-2fb84db481a7': 'Caballero Lancero',
+        'piece-cc0eed88-dca2-4a4b-8d9e-f53903291be1': 'General Cañonero',
+        'piece-73a759e9-cc3d-4e5e-96df-acbd20bf6a4c': 'Lancero Camellero',
+        'piece-877bc1d8-c8c9-427b-ab17-cb111a06f6e8': 'Soldado de la Ciudad',
+        'piece-2a02372c-daa3-4171-b4bd-8b80696b9da3': 'Peón de la Ciudad',
+        'piece-8c484400-b57d-4b39-aff7-f65d8a21c2af': 'Peón del Loto',
+        'piece-03c9d522-7a19-41ac-9549-5759ffd08f38': 'Corredor de Carro',
+        'piece-1f3decac-7174-4ce1-a012-00eae63d2cf6': 'Carro Cañón',
+        'piece-86e52855-661d-4802-8f40-2fa0d84b2ec7': 'Perro de Combate',
+        'piece-7c6a6ffe-2244-472f-9b58-2213b759853d': 'Soldado de Elefante'
+    };
+
+    function movementOffset(rule, language) {
+        const dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0, parts = [];
+        if (dx < 0) parts.push(Math.abs(dx) + (language === 'es' ? ' columna(s) hacia A' : ' file(s) toward A'));
+        if (dx > 0) parts.push(Math.abs(dx) + (language === 'es' ? ' columna(s) hacia P' : ' file(s) toward P'));
+        if (dy < 0) parts.push(Math.abs(dy) + (language === 'es' ? ' fila(s) hacia delante' : ' row(s) forward'));
+        if (dy > 0) parts.push(Math.abs(dy) + (language === 'es' ? ' fila(s) hacia atrás' : ' row(s) backward'));
+        return parts.length ? parts.join(' + ') : (language === 'es' ? 'sin desplazamiento' : 'no offset');
     }
 
     function ruleSummary(piece) {
         const movement = piece.movement || {}, lines = [];
-        for (const [kind, key] of [['Step', 'steps'], ['Jump', 'jumps'], ['Line', 'rays']]) {
-            const entries = (movement[key] || []).map(rule => {
-                const vector = labelVector(Number(rule.dx) || 0, Number(rule.dy) || 0);
-                const distance = kind === 'Line' ? (rule.maxDistance ? ` · ${rule.maxDistance} squares` : ' · to the edge') : '';
-                return `${vector}${distance}${rule.capture ? ' · can capture' : ' · no capture'}`;
+        const categories = [
+            { key: 'steps', en: 'Steps', es: 'Pasos' },
+            { key: 'jumps', en: 'Jumps', es: 'Saltos' },
+            { key: 'rays', en: 'Lines', es: 'Líneas' }
+        ];
+        for (const category of categories) {
+            const entries = (movement[category.key] || []).map(rule => {
+                let description = movementOffset(rule, rulesLanguage);
+                if (category.key === 'rays') description += rule.maxDistance
+                    ? ' · ' + (rulesLanguage === 'es' ? 'máximo ' : 'max ') + rule.maxDistance + (rulesLanguage === 'es' ? ' casillas' : ' squares')
+                    : ' · ' + (rulesLanguage === 'es' ? 'hasta el borde' : 'to the edge');
+                description += ' · ' + (rule.capture
+                    ? (rulesLanguage === 'es' ? 'puede capturar' : 'can capture')
+                    : (rulesLanguage === 'es' ? 'no puede capturar' : 'cannot capture'));
+                return description;
             });
-            if (entries.length) lines.push(`${kind}: ${entries.join('; ')}`);
+            if (entries.length) lines.push((rulesLanguage === 'es' ? category.es : category.en) + ': ' + entries.join('; '));
         }
-        return lines.join(' · ') || 'No movement rules in the supplied setup.';
+        return lines.join(' · ') || (rulesLanguage === 'es' ? 'Sin movimientos definidos.' : 'No movement rules are defined.');
+    }
+
+    function applyRulesLanguage(language) {
+        rulesLanguage = language === 'es' ? 'es' : 'en';
+        document.querySelectorAll('[data-rules-language]').forEach(button => {
+            const active = button.dataset.rulesLanguage === rulesLanguage;
+            button.setAttribute('aria-pressed', String(active));
+        });
+        document.querySelectorAll('[data-rules-content]').forEach(panel => {
+            panel.hidden = panel.dataset.rulesContent !== rulesLanguage;
+        });
+        const eyebrow = $('rules-eyebrow');
+        const heading = $('rules-heading');
+        const headerLink = $('header-rules');
+        const guideEyebrow = $('piece-guide-eyebrow');
+        const guideTitle = $('piece-guide-title');
+        if (eyebrow) eyebrow.textContent = rulesLanguage === 'es' ? 'REGLAS COMPLETAS · MOVIMIENTOS' : 'COMPLETE RULES · MOVEMENT';
+        if (heading) heading.textContent = rulesLanguage === 'es' ? 'Cómo jugar' : 'How to play';
+        if (headerLink) headerLink.textContent = rulesLanguage === 'es' ? 'Cómo jugar' : 'How to play';
+        if (guideEyebrow) guideEyebrow.textContent = rulesLanguage === 'es' ? 'EL EJÉRCITO' : 'THE ARMY';
+        if (guideTitle) guideTitle.textContent = rulesLanguage === 'es' ? 'Movimientos de las piezas' : 'Piece movements';
+        try { localStorage.setItem('shavari-city-battle-rules-language', rulesLanguage); } catch {}
+        if (engine && setup) buildPieceGuide();
     }
 
     function buildBoard() {
@@ -439,7 +495,11 @@
             const copy = document.createElement('div');
             const title = document.createElement('h3');
             const moves = document.createElement('p');
-            title.textContent = `${piece.name} · Rank ${engine.rankForType(piece.id)}`;
+            const rankLabel = rulesLanguage === 'es' ? 'Rango ' : 'Rank ';
+            const score = engine.movementScoreForType(piece.id);
+            const scoreLabel = rulesLanguage === 'es' ? ' puntos de movimiento' : ' movement points';
+            const pieceName = rulesLanguage === 'es' ? (spanishPieceNames[piece.id] || piece.name) + ' (' + piece.name + ')' : piece.name;
+            title.textContent = pieceName + ' · ' + rankLabel + engine.rankForType(piece.id) + ' · ' + score + scoreLabel;
             moves.textContent = ruleSummary(piece);
             copy.append(title, moves);
             card.append(badge, copy);
@@ -577,6 +637,11 @@
         render();
         if (isBotTurn()) scheduleBot();
     });
+    document.querySelectorAll('[data-rules-language]').forEach(button => {
+        button.addEventListener('click', () => applyRulesLanguage(button.dataset.rulesLanguage));
+    });
+    try { rulesLanguage = localStorage.getItem('shavari-city-battle-rules-language') === 'es' ? 'es' : 'en'; } catch {}
+    applyRulesLanguage(rulesLanguage);
     window.BotDifficulty?.attach('shavari-city-battle', $('local-opponent-control'));
     window.BotDifficulty?.show('shavari-city-battle', Boolean(botSeat));
     start();
