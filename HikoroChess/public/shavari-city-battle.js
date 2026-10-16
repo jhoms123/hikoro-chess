@@ -130,10 +130,10 @@
 
     function movementOffset(rule, language) {
         const dx = Number(rule.dx) || 0, dy = Number(rule.dy) || 0, parts = [];
-        if (dx < 0) parts.push(Math.abs(dx) + (language === 'es' ? ' columna(s) hacia A' : ' file(s) toward A'));
-        if (dx > 0) parts.push(Math.abs(dx) + (language === 'es' ? ' columna(s) hacia P' : ' file(s) toward P'));
-        if (dy < 0) parts.push(Math.abs(dy) + (language === 'es' ? ' fila(s) hacia delante' : ' row(s) forward'));
-        if (dy > 0) parts.push(Math.abs(dy) + (language === 'es' ? ' fila(s) hacia atrás' : ' row(s) backward'));
+        if (dx < 0) parts.push(Math.abs(dx) + (language === 'es' ? (Math.abs(dx) === 1 ? ' columna hacia A' : ' columnas hacia A') : (Math.abs(dx) === 1 ? ' file toward A' : ' files toward A')));
+        if (dx > 0) parts.push(Math.abs(dx) + (language === 'es' ? (Math.abs(dx) === 1 ? ' columna hacia P' : ' columnas hacia P') : (Math.abs(dx) === 1 ? ' file toward P' : ' files toward P')));
+        if (dy < 0) parts.push(Math.abs(dy) + (language === 'es' ? (Math.abs(dy) === 1 ? ' fila hacia delante' : ' filas hacia delante') : (Math.abs(dy) === 1 ? ' row forward' : ' rows forward')));
+        if (dy > 0) parts.push(Math.abs(dy) + (language === 'es' ? (Math.abs(dy) === 1 ? ' fila hacia atrás' : ' filas hacia atrás') : (Math.abs(dy) === 1 ? ' row backward' : ' rows backward')));
         return parts.length ? parts.join(' + ') : (language === 'es' ? 'sin desplazamiento' : 'no offset');
     }
 
