@@ -33,6 +33,7 @@
         const rank3MinScore = Number(movementRankRules.rank3MinScore) || 20;
         const transform = setup.orientation?.oppositeCourtTransform || rules.orientationTransform || 'rank-flip';
         const maxHeight = Math.max(1, Math.min(8, Number(stackRules.maxHeight) || 3));
+        const maxFormationRank = Math.max(1, Math.min(3, Number(stackRules.maxFormationRank) || 3));
         const hasStackGroupRules = [...types.values()].some(piece => Object.prototype.hasOwnProperty.call(piece, 'stackGroup'));
         const stackGroupByType = new Map([...types.values()]
             .filter(piece => typeof piece.stackGroup === 'string' && piece.stackGroup)
@@ -95,7 +96,12 @@
             const group = stackGroupByType.get(pieces[0]?.typeId);
             return Boolean(group && pieces.every(piece => stackGroupByType.get(piece.typeId) === group));
         };
-        const canStack = pieces => stackRules.enabled !== false && pieces.length <= maxHeight && !ownsGeneral(pieces) && stackGroupsMatch(pieces);
+        const canStack = pieces => stackRules.enabled !== false
+            && pieces.length <= maxHeight
+            && !ownsGeneral(pieces)
+            && stackGroupsMatch(pieces)
+            && (pieces.length < 2 || pieces.every(piece => rankForType(piece.typeId) < 3))
+            && formationRank(pieces) <= maxFormationRank;
 
         function movementScoreForType(typeId) {
             const movement = types.get(typeId)?.movement || {};
@@ -322,7 +328,7 @@
             return state;
         }
 
-        return Object.freeze({ COLS, ROWS, FILES, maxHeight, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide, movementScoreForType, rankForType, formationRank, hashCell, hashPosition, hashKey, turnHash });
+        return Object.freeze({ COLS, ROWS, FILES, maxHeight, maxFormationRank, types, generalTypes, initial, legalMoves, hasLegalMove, apply, replay, coord, index, inside, otherSide, movementScoreForType, rankForType, formationRank, hashCell, hashPosition, hashKey, turnHash });
     }
 
     return Object.freeze({ create, SIDES });

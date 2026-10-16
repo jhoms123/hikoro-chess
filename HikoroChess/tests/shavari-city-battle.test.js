@@ -149,12 +149,47 @@ test('capture flags govern enemy landings', () => {
 test('movement ranks score steps, jumps, and line directions with Rank 3 strongest', () => {
     const game = create(setup);
     const pieces = new Map(setup.pieceTypes.map(piece => [piece.name, piece]));
+    assert.equal(game.maxFormationRank, 3);
     assert.equal(game.movementScoreForType(pieces.get('Scarab Pawn').id), 3);
     assert.equal(game.rankForType(pieces.get('Scarab Pawn').id), 1);
     assert.equal(game.movementScoreForType(pieces.get('City Soldier').id), 9);
     assert.equal(game.rankForType(pieces.get('Cart Runner').id), 2);
     assert.equal(game.movementScoreForType(pieces.get('Cannon General').id), 48);
     assert.equal(game.rankForType(pieces.get('Cannon General').id), 3);
+});
+
+test('a formation cannot exceed Rank 3 and Rank 3 pieces cannot stack', () => {
+    const rankOneMovement = { steps: [{ dx: 1, dy: 0, capture: false }], jumps: [], rays: [] };
+    const rankTwo = { id: 'rank-two', name: 'Rank Two', stackGroup: 'rank-limit', movement: {
+        steps: Array.from({ length: 9 }, (_, i) => ({ dx: i + 1, dy: 0, capture: false })), jumps: [], rays: []
+    } };
+    const rankThree = { id: 'rank-three', name: 'Rank Three', stackGroup: 'rank-limit', movement: { steps: [], jumps: [], rays: [
+        { dx: 1, dy: 0, capture: false }, { dx: -1, dy: 0, capture: false },
+        { dx: 0, dy: 1, capture: false }, { dx: 0, dy: -1, capture: false }
+    ] } };
+    const build = (movingType, targetType, sameSquare = false) => {
+        const game = create(scenario({
+            movement: rankOneMovement,
+            stackGroup: 'rank-limit',
+            extraTypes: [rankTwo, rankThree],
+            stacking: { maxHeight: 3, maxFormationRank: 3 },
+            units: [
+                unit('mover', movingType, 'carnelian', 1, 2),
+                unit('target', targetType, 'carnelian', sameSquare ? 1 : 2, 2)
+            ]
+        }));
+        const state = game.initial();
+        return { game, state, destination: at(moves(game, state, 1, 2), 2, 2) };
+    };
+
+    const rankTwoPlusOne = build('rank-two', 'scout');
+    assert.deepEqual(rankTwoPlusOne.destination?.options, ['stack'], 'Rank 2 + Rank 1 may stack as Rank 3');
+    const combined = rankTwoPlusOne.game.apply(rankTwoPlusOne.state, { from: { x: 1, y: 2 }, to: { x: 2, y: 2 }, kind: 'stack' });
+    assert.equal(rankTwoPlusOne.game.formationRank(combined.board[2 * rankTwoPlusOne.game.COLS + 2]), 3);
+
+    assert.equal(build('rank-two', 'rank-two').destination, undefined, 'Rank 2 + Rank 2 exceeds the cap');
+    assert.equal(build('rank-three', 'scout').destination, undefined, 'a Rank 3 piece cannot stack with another piece');
+    assert.throws(() => build('rank-three', 'scout', true), /invalid formation/i, 'invalid Rank 4 starting stacks are rejected');
 });
 
 test('captures require equal-or-higher summed formation rank, including stacked targets', () => {
@@ -181,12 +216,12 @@ test('captures require equal-or-higher summed formation rank, including stacked 
     assert.ok(supportedTarget?.options.includes('capture'), 'Rank 2 + Rank 1 can take Rank 3');
     assert.equal(rankTwoPlusOne.formationRank(rankTwoPlusOne.initial().board[1 + 2 * rankTwoPlusOne.COLS]), 3);
 
-    const lowerAttacker = fight(['scout', 'rank-one'], ['rank-three', 'rank-one']);
-    assert.equal(at(moves(lowerAttacker, lowerAttacker.initial(), 1, 2), 2, 2), undefined, 'a Rank 3 + Rank 1 target is Rank 4');
+    const lowerAttacker = fight(['scout'], ['scout', 'rank-one']);
+    assert.equal(at(moves(lowerAttacker, lowerAttacker.initial(), 1, 2), 2, 2), undefined, 'Rank 2 cannot take a stacked Rank 3 target');
 
-    const equalFormations = fight(['rank-three', 'rank-one'], ['rank-three', 'rank-one']);
+    const equalFormations = fight(['scout', 'rank-one'], ['scout', 'rank-one']);
     const equalTarget = at(moves(equalFormations, equalFormations.initial(), 1, 2), 2, 2);
-    assert.ok(equalTarget?.options.includes('capture'), 'equal Rank 4 formations can capture each other');
+    assert.ok(equalTarget?.options.includes('capture'), 'equal Rank 3 formations can capture each other');
 });
 
 test('sliding rays stop at equal stacks and taller formations may pass a shorter stack', () => {

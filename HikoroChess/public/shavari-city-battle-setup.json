@@ -60,7 +60,8 @@
       "allMembersContributeMoves": true,
       "tallerCanJumpShorter": true,
       "tallerCanCoverShorter": true,
-      "captureRemovesWholeStack": true
+      "captureRemovesWholeStack": true,
+      "maxFormationRank": 3
     },
     "victory": {
       "captureGeneral": true,
