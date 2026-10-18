@@ -127,6 +127,17 @@ test('lobby and bilingual game guide expose all ten pieces and full win rules', 
     assert.match(read('script.js'), /fourfold-garden\.html\?mode=bot-indigo/);
 });
 
+test('shared collection styling leaves Fourfold board points under game-specific styling', () => {
+    const dom = new JSDOM('<!doctype html><html><body data-audio-theme="fourfold-garden"><button class="point">intersection</button><button id="rules-button">How to play</button></body></html>', { runScripts: 'outside-only' });
+    try {
+        const w = dom.window;
+        w.eval(read('collection-theme.js'));
+        w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+        assert.equal(w.document.querySelector('.point').classList.contains('material-control'), false);
+        assert.equal(w.document.getElementById('rules-button').classList.contains('material-control'), true);
+    } finally { dom.window.close(); }
+});
+
 test('live board, score and all ten piece explanations render in Cuban Spanish', async t => {
     const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html?mode=bot-indigo', runScripts: 'outside-only', pretendToBeVisual: true });
     t.after(() => dom.window.close());
