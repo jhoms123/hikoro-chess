@@ -145,6 +145,8 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
         assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/, 'flower and tool reserves share one visible phone tray');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
+        assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
+        assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
     } finally { dom.window.close(); }
 });

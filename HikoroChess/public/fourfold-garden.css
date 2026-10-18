@@ -25,6 +25,8 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .board-art,.fourfold-garden-page .ray-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .fourfold-garden-page .board-art{z-index:0;filter:drop-shadow(0 4px 6px #0008)}
 .fourfold-garden-page .point{position:absolute;display:grid;place-items:center;width:8.3333%;height:8.3333%;padding:0;border:0;border-radius:50%;background:transparent;color:#19221c;cursor:pointer;touch-action:manipulation;transform:translate(-50%,-50%);z-index:2}
+/* The shared Sho Dan Sho pressed-button rule replaces transforms; preserve the point's vertex alignment while a pointer is held. */
+.fourfold-garden-page .point:active:not(:disabled){transform:translate(-50%,-50%)}
 .fourfold-garden-page .point:hover{filter:brightness(1.16)}
 .fourfold-garden-page .point.selected-target{box-shadow:inset 0 0 0 3px #ffe08a,0 0 7px #fff1a6;z-index:3}
 .fourfold-garden-page .point.pickup-target{box-shadow:inset 0 0 0 3px #a6e0a2,0 0 6px #a6e0a2;z-index:3}
