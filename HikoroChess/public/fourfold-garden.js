@@ -638,6 +638,36 @@ function tokenTitle(piece,status){
 function renderBoard(status){
   const board=document.getElementById("board");
   board.innerHTML="";
+  // Resolve taps by the nearest lattice point instead of relying on tiny
+  // overlapping browser hit boxes. This keeps mouse, touch, and pen input
+  // consistent even when the board is scaled down on a phone.
+  if(!board.dataset.pointInputBound){
+    board.dataset.pointInputBound="true";
+    let pointerStart=null;
+    function nearestPointAt(clientX,clientY){
+      const bounds=board.getBoundingClientRect();
+      if(!bounds.width||!bounds.height)return null;
+      const stepX=bounds.width/(SIZE+1),stepY=bounds.height/(SIZE+1);
+      const x=Math.round((clientX-bounds.left)/stepX)-1,y=Math.round((clientY-bounds.top)/stepY)-1;
+      if(x<0||y<0||x>=SIZE||y>=SIZE)return null;
+      const centerX=bounds.left+(x+1)*stepX,centerY=bounds.top+(y+1)*stepY;
+      if(Math.abs(clientX-centerX)>Math.max(22,stepX*.48)||Math.abs(clientY-centerY)>Math.max(22,stepY*.48))return null;
+      return playableAt(x,y)?idx(x,y):null;
+    }
+    board.addEventListener("pointerdown",function(event){
+      if(event.button!==0||event.isPrimary===false)return;
+      pointerStart={pointerId:event.pointerId,x:event.clientX,y:event.clientY};
+    },{passive:true});
+    board.addEventListener("pointercancel",function(){pointerStart=null});
+    board.addEventListener("pointerup",function(event){
+      if(!pointerStart||pointerStart.pointerId!==event.pointerId||event.button!==0||event.isPrimary===false)return;
+      const start=pointerStart;pointerStart=null;
+      if(Math.hypot(event.clientX-start.x,event.clientY-start.y)>10)return;
+      const index=nearestPointAt(event.clientX,event.clientY);
+      if(index===null)return;
+      event.preventDefault();handlePoint(index);
+    },{passive:false});
+  }
   const harmonyIds=new Set();
   status.flowerLinks.concat(status.toolLinks).forEach(function(link){harmonyIds.add(link.a);harmonyIds.add(link.b)});
   const ns="http://www.w3.org/2000/svg";
@@ -723,7 +753,9 @@ function renderBoard(status){
       const glyph=document.createElement("span");glyph.className="token-glyph";glyph.innerHTML=PIECE_ICONS[p.type]||"";glyph.setAttribute("aria-hidden","true");token.appendChild(glyph);token.title=tokenTitle(p,status);
       button.appendChild(token);
     }
-    button.addEventListener("click",function(){handlePoint(i)});
+    // Keep native keyboard and assistive-technology activation. Pointer input
+    // is handled by the board's nearest-point resolver above.
+    button.addEventListener("click",function(event){if(event.detail===0)handlePoint(i)});
     board.appendChild(button);
   }
   const centerLabel=document.createElement("span");
@@ -733,18 +765,18 @@ function renderBank(group,status){
   const host=document.getElementById(group==="flower"?"flowerBank":"toolBank");
   const types=Object.keys(DEFS).filter(function(t){return DEFS[t].group===group&&DEFS[t].count>0});
   host.innerHTML="";
-  const wrap=document.createElement("div");wrap.className="bank-group reserve-card";wrap.dataset.active="true";
+  const wrap=document.createElement("div");wrap.className="bank-group reserve-card";wrap.dataset.active="true";wrap.dataset.owner=String(state.current);
   const label=document.createElement("div");label.className="bank-label";label.innerHTML="<span>"+(group==="flower"?"Flower reserve":"Tool reserve")+"</span><span>"+types.reduce(function(n,t){return n+(state.reserves[state.current][t]||0)},0)+" left</span>";
   wrap.appendChild(label);
   const grid=document.createElement("div");grid.className="bank";
   types.forEach(function(type){
     const d=DEFS[type],count=state.reserves[state.current][type]||0,spent=Math.min(count,state.reserveSpent[state.current][type]||0),ready=count-spent,button=document.createElement("button");
-    button.type="button";button.className="reserve-flower tile-card"+(selectedType===type?" active hand-item-active":"");
+    button.type="button";button.className="reserve-flower tile-card "+d.group+(selectedType===type?" active hand-item-active":"");
     button.disabled=count<=0||state.winner!==null||state.draw||state.turnStage!=="place"||mode!=="place"||humanInputLocked();
     button.title=uiText(d.name)+" — "+uiText(d.desc)+(d.ability?" "+uiText("Reserve: "+ready+" ready, "+spent+" spent."):"");
     button.setAttribute("aria-label",uiText(d.name)+" — "+uiText(count+" in reserve"));
     button.innerHTML='<div class="tile-glyph">'+(PIECE_ICONS[type]||d.glyph)+'</div><div class="tile-name">'+d.short+'</div><div class="tile-count">× '+count+(d.ability?' · '+ready+' ready':'')+'</div>';
-    button.addEventListener("click",function(){selectedType=type;setStatus("Place "+d.short,"Choose any open playable point on the circular board.");render()});
+    button.addEventListener("click",function(){selectedType=type;setStatus("Place "+d.short,uiText("Tap an open board point to place this piece."));render()});
     grid.appendChild(button);
   });
   wrap.appendChild(grid);host.appendChild(wrap);
@@ -810,7 +842,7 @@ function render(status){
   }else if(mode==="pickup"){
     setStatus("Pick up your piece","Click one of your own pieces to return it to your reserve.");
   }else if(selectedType){
-    setStatus("Place "+DEFS[selectedType].short,DEFS[selectedType].desc);
+    setStatus("Place "+DEFS[selectedType].short,uiText("Tap an open board point to place this piece."));
   }else if(bonusStage){
     setStatus(ownersName(current)+" optional action","You have placed. Use one ability, pick up one of your own pieces, or finish the turn.");
   }else{
@@ -824,7 +856,7 @@ function render(status){
   }else if(mode==="pickup"){
     selectedNote.textContent="Click one of your own pieces to return it to reserve. The piece placed this turn is protected unless it is your only piece on the board.";
   }else if(selectedType){
-    selectedNote.textContent="Selected: "+DEFS[selectedType].name+". Crossed-out points violate a piece-alignment restriction.";
+    selectedNote.textContent=uiText("Selected: "+DEFS[selectedType].name+". Tap an open board point to place it; crossed-out points are forbidden.");
   }else if(bonusStage){
     selectedNote.textContent="Your piece is placed. Choose one optional ability or pick up one of your own pieces; otherwise finish the turn.";
   }else{
