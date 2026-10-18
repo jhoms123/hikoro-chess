@@ -3,7 +3,7 @@ const path = require('path');
 const Identity = require('./public/player-identity');
 const { installUsernameAuth } = require('./username-auth');
 
-const GAME_TYPES = ['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy'];
+const GAME_TYPES = ['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy', 'fourfold-garden'];
 function accountConfig(env = process.env) {
     const url = env.SUPABASE_URL || '';
     const key = env.SUPABASE_PUBLISHABLE_KEY || '';

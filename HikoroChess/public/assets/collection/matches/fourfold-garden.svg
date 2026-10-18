@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
+<title id="title">Fourfold Garden compact board</title><desc id="desc">A small round garden board divided into red, white and neutral fields, with ivory and indigo flower and tool pieces linked by harmony lines.</desc>
+<defs>
+ <radialGradient id="wood" cx="35%" cy="27%"><stop stop-color="#f2d9a1"/><stop offset=".55" stop-color="#9a6838"/><stop offset="1" stop-color="#3c2415"/></radialGradient>
+ <radialGradient id="field" cx="35%" cy="28%"><stop stop-color="#d3c49b"/><stop offset="1" stop-color="#766344"/></radialGradient>
+ <radialGradient id="ivory"><stop stop-color="#fff4cd"/><stop offset=".7" stop-color="#d4bd82"/><stop offset="1" stop-color="#927246"/></radialGradient>
+ <radialGradient id="indigo"><stop stop-color="#e2f1ff"/><stop offset=".7" stop-color="#8faec4"/><stop offset="1" stop-color="#456279"/></radialGradient>
+ <clipPath id="circle"><circle cx="300" cy="300" r="224"/></clipPath>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#090604" flood-opacity=".55"/></filter>
+</defs>
+<circle cx="300" cy="300" r="252" fill="#26180f" stroke="#d1ad70" stroke-width="4"/>
+<circle cx="300" cy="300" r="238" fill="url(#wood)" stroke="#4d3019" stroke-width="10"/>
+<circle cx="300" cy="300" r="224" fill="url(#field)" stroke="#e2c181" stroke-width="5"/>
+<g clip-path="url(#circle)">
+ <path d="M300 300 300 76 76 300Z" fill="#e5d9bd"/><path d="M300 300 524 300 300 76Z" fill="#ba7060"/>
+ <path d="M300 300 76 300 300 524Z" fill="#ba7060"/><path d="M300 300 524 300 300 524Z" fill="#e5d9bd"/>
+ <g stroke="#513f2b" stroke-opacity=".68" stroke-width="2">
+  <path d="M118 100V500M154 100V500M190 100V500M226 100V500M262 100V500M298 100V500M334 100V500M370 100V500M406 100V500M442 100V500M478 100V500"/>
+  <path d="M100 118H500M100 154H500M100 190H500M100 226H500M100 262H500M100 298H500M100 334H500M100 370H500M100 406H500M100 442H500M100 478H500"/>
+ </g>
+ <path d="M300 76 524 300 300 524 76 300Z" fill="none" stroke="#6b5135" stroke-width="5"/>
+ <path d="M156 300 300 156M444 300 300 444" fill="none" stroke="#f4e7c7" stroke-width="5" stroke-dasharray="8 8" opacity=".9"/>
+ <path d="M156 228 372 228" fill="none" stroke="#287746" stroke-width="8" stroke-linecap="round"/><path d="M228 156 372 300" fill="none" stroke="#417d42" stroke-width="7" stroke-dasharray="7 7"/>
+ <path d="M228 372 444 372" fill="none" stroke="#a73527" stroke-width="7" stroke-dasharray="9 7"/>
+ <circle cx="300" cy="300" r="21" fill="#e8c77e" stroke="#73552e" stroke-width="5"/>
+ <g filter="url(#shadow)" stroke="#624a2e" stroke-width="3">
+  <path d="M220 191 230 179 242 184 247 198 239 210 225 209 216 201Z" fill="url(#ivory)"/><text x="231" y="203" font-family="Georgia" font-size="18" text-anchor="middle" fill="#49351e" stroke="none">✿</text>
+  <path d="M379 191 389 179 401 184 406 198 398 210 384 209 375 201Z" fill="url(#indigo)"/><text x="390" y="203" font-family="Georgia" font-size="18" text-anchor="middle" fill="#263849" stroke="none">✾</text>
+  <rect x="283" y="190" width="34" height="34" rx="8" transform="rotate(45 300 207)" fill="url(#ivory)"/><text x="300" y="214" font-family="Georgia" font-size="18" text-anchor="middle" fill="#49351e" stroke="none">≋</text>
+  <path d="M286 370 296 358 308 363 313 377 305 389 291 388 282 380Z" fill="url(#indigo)"/><text x="297" y="382" font-family="Georgia" font-size="18" text-anchor="middle" fill="#263849" stroke="none">♧</text>
+ </g>
+</g>
+<circle cx="300" cy="300" r="224" fill="none" stroke="#3b2617" stroke-width="8"/>
+<path d="M300 54v26M546 300h-26M300 546v-26M54 300h26" stroke="#f5d48b" stroke-width="8" stroke-linecap="round"/>
+</svg>

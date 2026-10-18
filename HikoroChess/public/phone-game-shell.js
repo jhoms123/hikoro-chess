@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   body.classList.add('phone-game-shell');
   window.scrollTo(0,0);
   bar=document.createElement('nav');bar.className='phone-table-bar';bar.setAttribute('aria-label','Game actions');
-  const name=document.createElement('strong');name.className='phone-game-name';name.textContent=({lobby:'Hikoro',academy:'Academy',hikoruka:'Hikorüka',shavari:'Shavari',shodansho:'Sho Dan Sho',go:'Shield Go','valley-hunt':'Valley Hunt'})[theme]||'Game';bar.append(name);
+  const name=document.createElement('strong');name.className='phone-game-name';name.textContent=({lobby:'Hikoro',academy:'Academy',hikoruka:'Hikorüka',shavari:'Shavari',shodansho:'Sho Dan Sho',go:'Shield Go','valley-hunt':'Valley Hunt','fourfold-garden':'Fourfold Garden'})[theme]||'Game';bar.append(name);
   drawer=document.createElement('section');drawer.id='phone-options';drawer.className='phone-options-drawer';drawer.setAttribute('aria-label','Game options');drawer.setAttribute('aria-hidden','true');
   const head=document.createElement('div');head.className='phone-options-head';const title=document.createElement('span');title.textContent='Game options';const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='Close';closeButton.addEventListener('click',close);head.append(title,closeButton);
   list=document.createElement('div');list.className='phone-options-list';drawer.append(head,list);
@@ -52,6 +52,16 @@ document.addEventListener('DOMContentLoaded',()=>{
    if(!media.matches&&statusBox&&!statusBox.closest('.game-layout'))relocateTo(statusBox,layout,viewport||layout?.firstElementChild);
    if(!media.matches&&hands&&!hands.closest('.game-layout'))relocateTo(hands,layout,viewport?.nextSibling||boardWrap?.nextSibling||null);
    relocate(document.querySelector('.mobile-garden-actions'));relocate(document.querySelector('.game-sidebar'));relocate(document.querySelector('.inventory-sidebar'));
+  }else if(theme==='fourfold-garden'){
+   relocate(document.querySelector('.side'));
+   relocate(document.querySelector('.legend'));
+   if(window.I18n){
+    const language=document.createElement('label');language.className='phone-language-control';language.textContent='Language / Idioma';
+    const select=document.createElement('select');select.setAttribute('aria-label','Language / Idioma');
+    for(const [value,labelText]of [['en','English'],['es-CU','Español (Cuba)']]){const option=document.createElement('option');option.value=value;option.textContent=labelText;select.append(option);}
+    select.value=window.I18n.language;select.addEventListener('change',()=>window.I18n.setLanguage(select.value));
+    window.addEventListener('language-changed',()=>{select.value=window.I18n.language;});language.append(select);list.append(language);
+   }
   }else if(theme==='lobby'){
    const history=document.getElementById('move-history-container');
    relocate(document.querySelector('.table-companion'));

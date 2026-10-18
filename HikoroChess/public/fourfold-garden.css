@@ -1,0 +1,129 @@
+:root{--paper:#ead9b3;--paper-ink:#3e2b19;--accent:#d3b16f;--table-ui:#292018;--table-ui-2:#3b2e20;--table-line:#b89a65;--table-ink:#f1e2c2;--table-gold:#d5b879}
+body.fourfold-garden-page{min-height:100vh;background:linear-gradient(180deg,#170f0bce,#140e09ef),url('assets/collection/materials/timber.webp') center/900px repeat;color:#f0e2c4;font-family:Georgia,'Times New Roman',serif}
+.fourfold-garden-page button,.fourfold-garden-page select{font-family:Georgia,'Times New Roman',serif}
+.fourfold-garden-page .garden-appbar{max-width:1320px;min-height:74px;margin:12px auto 16px;padding:11px 24px;border:12px solid transparent;border-image:url('assets/medieval/wood-panel.png') 24/12px/0 stretch;background:linear-gradient(#f0e2c9e6,#e4d3adf0),url('assets/medieval/aged-parchment.webp') center/cover;color:#412e1d;box-shadow:0 10px 20px #0007}
+.fourfold-garden-page .garden-appbar .collection-link{color:#563b22;font:600 13px/1.4 Georgia,serif;text-decoration:none}
+.fourfold-garden-page .garden-appbar .collection-link:hover{color:#8b5d2b;text-decoration:underline}
+.fourfold-garden-page .garden-appbar .edition{color:#73522d;font:700 9px/1.4 Georgia,serif;letter-spacing:2px}
+.fourfold-garden-page .garden-appbar .quiet-button{min-height:38px;padding:8px 14px;border:1px solid #81643b;background:#765736;color:#fff0ca;border-radius:3px;font:600 12px Georgia,serif}
+.fourfold-garden-page .app{width:min(100% - 36px,1390px);max-width:none;padding:0 0 38px}
+.fourfold-garden-page .garden-intro{align-items:center;max-width:1120px;margin:0 auto 16px;padding:8px 10px 11px;border-bottom:1px solid #d0ac6a55}
+.fourfold-garden-page .garden-intro .eyebrow,.fourfold-garden-page .section h2{color:#e1c88e}
+.fourfold-garden-page .garden-intro h1{color:#f0e0bd;font-size:clamp(30px,4vw,44px);margin:5px 0}
+.fourfold-garden-page .garden-intro .subtitle{color:#d2c2a1;font:italic 14px/1.5 Georgia,serif}
+.fourfold-garden-page .badge{border:1px solid #a5814d;background:#2a2118;color:#ead7ac;border-radius:3px;font:11px Georgia,serif;white-space:normal}
+.fourfold-garden-page .layout{grid-template-columns:minmax(460px,1.35fr) minmax(340px,.9fr);gap:18px}
+.fourfold-garden-page .panel{border:10px solid transparent;border-image:url('assets/medieval/wood-panel.png') 24/10px/0 stretch;border-radius:0;background:linear-gradient(#32271de8,#211a14f5),url('assets/collection/materials/timber.webp') center/600px;color:#f1e4c6;box-shadow:0 12px 22px #0007}
+.fourfold-garden-page .board-panel{padding:12px}
+.fourfold-garden-page .board-head{margin:1px 2px 10px}
+.fourfold-garden-page .board-title{color:#f0e0bd;font:500 19px Georgia,serif}
+.fourfold-garden-page .turn-pill{border:1px solid #9d7b49;border-radius:3px;background:#2b241b;color:#f0e2c4;font:700 11px Georgia,serif}
+.fourfold-garden-page .turn-pill.p0{color:#ffe8b4;border-color:#c3a66e}
+.fourfold-garden-page .turn-pill.p1{color:#d7e9fb;border-color:#7290ae}
+.fourfold-garden-page .board-wrap{border-radius:2px;padding:7px;background:#402f1f;box-shadow:inset 0 0 0 1px #d0ad70,0 4px 9px #0007}
+.fourfold-garden-page .board{width:min(100%,740px);min-width:440px}
+.fourfold-garden-page .board-art{filter:drop-shadow(0 5px 7px #0009)}
+.fourfold-garden-page .point{border-radius:50%;background:transparent}
+.fourfold-garden-page .point:hover{filter:brightness(1.22)}
+.fourfold-garden-page .point.selected-target{box-shadow:inset 0 0 0 3px #ffe08a,0 0 7px #fff1a6}
+.fourfold-garden-page .point.pickup-target{box-shadow:inset 0 0 0 3px #a6e0a2,0 0 6px #a6e0a2}
+.fourfold-garden-page .token{width:72%;height:72%;min-width:16px;min-height:16px;max-width:44px;max-height:44px;border:2px solid #55452f;box-shadow:0 3px 6px #21180f99,inset 0 2px 3px #fff9,inset 0 -3px 4px #0005;font-family:Georgia,serif;font-size:clamp(12px,1.8vw,20px);font-weight:700;text-shadow:0 1px #fff8}
+.fourfold-garden-page .token.owner0{background:radial-gradient(circle at 32% 25%,#fff7dc,#e2ce9c 54%,#ad9060);border-color:#775b35;color:#49351e}
+.fourfold-garden-page .token.owner1{background:radial-gradient(circle at 32% 25%,#eff7ff,#a7bfd1 55%,#647b8d);border-color:#41566a;color:#263849}
+.fourfold-garden-page .token.flower{border-radius:47% 53% 47% 53%;transform:rotate(-8deg);outline:1px solid #fff4;outline-offset:-5px}
+.fourfold-garden-page .token.tool{border-radius:8px;transform:rotate(45deg);outline:1px solid #fff4;outline-offset:-5px}
+.fourfold-garden-page .token-glyph{display:block;transform:rotate(0)}
+.fourfold-garden-page .token.tool .token-glyph{transform:rotate(-45deg)}
+.fourfold-garden-page .token.knotweed,.fourfold-garden-page .token.wheel,.fourfold-garden-page .token.fan,.fourfold-garden-page .token.bell{background-image:linear-gradient(145deg,#ffffff38,#00000015),radial-gradient(circle at 30% 25%,#fff0c6,#cba25e 58%,#80603b)}
+.fourfold-garden-page .token.harmonized{outline:3px solid #b3f3a1;filter:drop-shadow(0 0 5px #b8f5a588)}
+.fourfold-garden-page .token.tool.harmonized{outline-color:#a4e2ed;filter:drop-shadow(0 0 5px #a4e2ed99)}
+.fourfold-garden-page .token.dissonant{box-shadow:0 0 0 3px #a73527,0 0 10px #ed6b55}
+.fourfold-garden-page .ray-h{stroke:#287746;stroke-width:9;filter:drop-shadow(0 0 2px #e7ffe5)}
+.fourfold-garden-page .ray-h-diagonal{stroke:#417d42;stroke-width:8;stroke-dasharray:5 5;filter:drop-shadow(0 0 2px #e7ffe5)}
+.fourfold-garden-page .ray-d{stroke:#b3382f;stroke-width:7;stroke-dasharray:9 6;filter:drop-shadow(0 0 2px #ffe4df)}
+.fourfold-garden-page .ray-tool{stroke:#29778d;stroke-width:7;stroke-dasharray:3 5;filter:drop-shadow(0 0 2px #dcf9ff)}
+.fourfold-garden-page .ray-tool-d{stroke:#bb623e;stroke-width:6;stroke-dasharray:6 5;filter:drop-shadow(0 0 2px #fff0dd)}
+.fourfold-garden-page .ray-bridge,.fourfold-garden-page .ray-bond{stroke:#b48a3d;filter:drop-shadow(0 0 2px #fff0c0)}
+.fourfold-garden-page .ray-mirror{stroke:#4e8aa1;filter:drop-shadow(0 0 2px #e2fbff)}
+.fourfold-garden-page .ray-counterpoint{stroke:#774d91;filter:drop-shadow(0 0 2px #fbebff)}
+.fourfold-garden-page .score-strip{border:1px solid #a98856;border-radius:2px;background:#211a14;color:#e7d7b3;font:11px/1.5 Georgia,serif}
+.fourfold-garden-page .score-strip strong,.fourfold-garden-page .score-strip .p0,.fourfold-garden-page .score-strip .p1{color:#f1dfb2}
+.fourfold-garden-page .legend{color:#d8c7a4}
+.fourfold-garden-page .sample-line{filter:drop-shadow(0 1px 1px #fff7)}
+.fourfold-garden-page .section{padding:14px}
+.fourfold-garden-page .section h2{font:500 18px Georgia,serif}
+.fourfold-garden-page .status-box{background:#211a14;border:1px solid #896c42;border-radius:2px}
+.fourfold-garden-page .status-detail,.fourfold-garden-page .bot-note{color:#d5c6a7}
+.fourfold-garden-page .opponent-control label,.fourfold-garden-page .bank-label{color:#e4d3ae}
+.fourfold-garden-page .opponent-control select,.fourfold-garden-page .btn,.fourfold-garden-page .tile-card{border:1px solid #927248;border-radius:2px;background:#3b3022;color:#f2e2c1}
+.fourfold-garden-page .opponent-control select{min-height:42px}
+.fourfold-garden-page .btn:hover,.fourfold-garden-page .tile-card:hover{border-color:#e2c180;filter:brightness(1.12)}
+.fourfold-garden-page .btn.active,.fourfold-garden-page .tile-card.active{background:#c9ad70;color:#2e2618;border-color:#e7d39d}
+.fourfold-garden-page .btn.subtle{background:#2d2419}
+.fourfold-garden-page .btn.danger{border-color:#a05c4b;background:#4a281f;color:#ffe0d5}
+.fourfold-garden-page .tile-glyph{color:#f2dfac;text-shadow:0 1px 2px #0008}
+.fourfold-garden-page .tile-name{color:#f1e2c3}
+.fourfold-garden-page .tile-count{color:#d5c5a4}
+.fourfold-garden-page .selected-note,.fourfold-garden-page .rules{color:#e4d6b9}
+.fourfold-garden-page .rules strong{color:#f1d694}
+.fourfold-garden-page .rules li{margin:0 0 8px}
+.fourfold-garden-page .compat,.fourfold-garden-page .compat-content{color:#e2d4b7}
+.fourfold-garden-page .compat-table th,.fourfold-garden-page .compat-table td{border-color:#927c58}
+.fourfold-garden-page .compat-table th{background:#30271d;color:#efdbad}
+.fourfold-garden-page .log-entry{color:#e3d5b8;border-left-color:#baa06e}
+.fourfold-garden-page .log-entry.capture{color:#ffd2c7;border-left-color:#ce735e}
+.fourfold-garden-page .log-entry.win{color:#ffedb7;border-left-color:#e4c375}
+.fourfold-garden-page .modal{border-radius:2px;border:10px solid transparent;border-image:url('assets/medieval/wood-panel.png') 24/10px/0 stretch;background:linear-gradient(#382b1feF,#241b14f6),url('assets/collection/materials/timber.webp') center/600px;color:#f1e2c4}
+.fourfold-garden-page .modal h2{color:#f0d79b}
+.fourfold-garden-page .modal p{color:#e5d5b6}
+.fourfold-garden-page .small-print{color:#c7b693}
+.fourfold-garden-page .piece-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fourfold-garden-page .piece-guide-card{display:flex;align-items:flex-start;gap:9px;min-width:0;padding:9px;border:1px solid #856b48;background:#221b14}
+.fourfold-garden-page .piece-guide-glyph{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border:1px solid #92764c;border-radius:50%;background:radial-gradient(circle at 30% 25%,#f6ebcf,#b89b67);color:#342719;font-size:19px;box-shadow:inset 0 1px 2px #fff9,0 2px 4px #0008}
+.fourfold-garden-page .piece-guide-glyph.tool{border-radius:8px;transform:rotate(45deg)}
+.fourfold-garden-page .piece-guide-card h3{margin:0 0 4px;color:#f0dba9;font:600 13px/1.25 Georgia,serif}
+.fourfold-garden-page .piece-guide-card p{margin:0;color:#d8c7a6;font:11px/1.45 Georgia,serif}
+.fourfold-garden-page .online-controls{display:grid;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #8e744e}
+.fourfold-garden-page #onlineStatus{margin:0;min-height:30px}
+.fourfold-garden-page .modal-backdrop{z-index:80}
+@media(max-width:980px){.fourfold-garden-page .layout{grid-template-columns:minmax(0,1fr);max-width:780px;margin:auto}.fourfold-garden-page .side{grid-template-columns:1fr 1fr;align-items:start}.fourfold-garden-page .control-section{grid-row:span 2}}
+@media(max-width:760px){
+ body.fourfold-garden-page.phone-game-shell{background:#211910}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .garden-appbar{display:none!important}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .app{box-sizing:border-box;width:100%;height:calc(100dvh - var(--phone-top,44px));max-width:none;margin:0;padding:0 5px 5px;overflow:hidden;display:flex;flex-direction:column}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .garden-intro{display:none}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] main.layout{display:flex!important;flex:1;flex-direction:column;min-height:0;height:100%;max-width:none;margin:0;gap:4px;overflow:hidden}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .board-panel{display:flex;flex:1;flex-direction:column;min-height:0;padding:5px}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .board-head{flex:none;min-height:28px;margin:0 2px 3px}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .board-title{font-size:14px}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .turn-pill{padding:4px 6px;font-size:10px}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .board-wrap.mobile-board-viewport{display:flex;flex:1;min-height:0;align-items:center;justify-content:center;width:100%;margin:0;padding:3px;overflow:auto}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .mobile-board-surface{display:block;flex:none;width:var(--phone-fit-width,100%)!important;margin:auto}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .board{width:100%;min-width:0;max-width:none}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .score-strip{flex:none;margin:4px 0 0;padding:4px 6px;font-size:9px}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .legend{display:none}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] main.layout>.side{display:none!important}
+ body.phone-game-shell[data-audio-theme=fourfold-garden] .point.sight-forbidden:before{font-size:10px}
+}
+@media(max-width:620px){
+ .fourfold-garden-page .app{padding:0 5px 6px}
+ .fourfold-garden-page .layout{gap:6px}
+ .fourfold-garden-page .board-panel{padding:6px}
+ .fourfold-garden-page .board-wrap{padding:3px}
+ .fourfold-garden-page .board{width:100%;min-width:0}
+ .fourfold-garden-page .point{width:8.8%;height:8.8%}
+ .fourfold-garden-page .token{width:70%;height:70%;min-width:12px;min-height:12px;font-size:clamp(9px,3.2vw,15px)}
+ .fourfold-garden-page .center-mark{width:11px;height:11px}
+ .fourfold-garden-page .piece-guide-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.fourfold-garden-page *,body.phone-game-shell[data-audio-theme=fourfold-garden] *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.fourfold-garden-page .piece-icon{display:block;width:100%;height:100%;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.fourfold-garden-page .token-glyph{display:grid;place-items:center;width:66%;height:66%;color:inherit}
+.fourfold-garden-page .token.tool .token-glyph .piece-icon{transform:rotate(-45deg)}
+.fourfold-garden-page .tile-glyph{display:grid;place-items:center;height:25px}
+.fourfold-garden-page .tile-glyph .piece-icon{width:22px;height:22px;stroke-width:1.7}
+.fourfold-garden-page .piece-guide-glyph{padding:6px}
+.fourfold-garden-page .piece-guide-glyph .piece-icon{width:100%;height:100%;stroke-width:1.6}
+.fourfold-garden-page .piece-guide-glyph.tool .piece-icon{transform:rotate(-45deg)}
+@media(max-width:760px){body.phone-game-shell[data-audio-theme=fourfold-garden] .phone-options-list .legend{display:flex;flex-wrap:wrap;padding:8px;color:#e4d6b9;font:10px Georgia,serif}}
+@media(max-width:760px){body.phone-game-shell[data-audio-theme=fourfold-garden] .phone-options-list>.side{display:grid!important;grid-template-columns:minmax(0,1fr)!important;align-items:stretch;width:100%}.phone-game-shell[data-audio-theme=fourfold-garden] .phone-options-list>.side>.section{width:100%;min-width:0}}
