@@ -146,7 +146,8 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
         assert.match(css, /grid-template-columns:minmax\(0,1fr\);align-items:stretch/, 'phone reserve groups use the full width for readable, larger targets');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-garden-selection/, 'selection CSS changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-garden-selection-grid/, 'selection CSS changes get a fresh cache key');
+        assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-garden-selection/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-garden/, 'the game uses the current bilingual catalog');
