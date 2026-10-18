@@ -569,7 +569,7 @@
   ],
   [
     "× {0} · {1} ready",
-    "× {0} · {1} disponibles"
+    "× {0} · {1} sin usar"
   ],
   [
     "· last completed position repeated {0}/3 times",
@@ -618,5 +618,57 @@
   [
     "Bot match paused. Opening profiles: Ivory — {0}; Indigo — {1}. Use Pause bot match to stop the action.",
     "Partida entre bots pausada. Estilos iniciales: Marfil — {0}; Índigo — {1}. Usa «Pausar partida automática» para detenerla."
+  ],
+  [
+    "Reserve: {0} ready, {1} spent.",
+    "Habilidades en reserva sin usar: {0}; agotadas: {1}."
+  ],
+  [
+    "{0} in reserve",
+    "{0} en la reserva"
+  ],
+  [
+    "New game. {0} begins by placing a tile.",
+    "Partida nueva. {0} comienza colocando una pieza."
+  ],
+  [
+    "{0} placed {1} at {2}.",
+    "{0} colocó {1} en {2}."
+  ],
+  [
+    "{0} finished the turn without a bonus action.",
+    "{0} terminó el turno sin una acción adicional."
+  ],
+  [
+    "{0} captured {1} inside a Harmony loop; it returns to {2}'s reserve.",
+    "{0} capturó {1} dentro de un circuito de Armonía; vuelve a la reserva de {2}."
+  ],
+  [
+    "Harmony links: {0}",
+    "Vínculos de Armonía: {0}"
+  ],
+  [
+    "{0} used Wheel to rotate its surrounding tiles.",
+    "{0} usó la Rueda para girar las piezas circundantes."
+  ],
+  [
+    "{0} used Orchid to push an enemy flower away.",
+    "{0} usó la Orquídea para empujar una Flor enemiga."
+  ],
+  [
+    "{0} used Fan to push a line of pieces.",
+    "{0} usó el Abanico para empujar una fila de piezas."
+  ],
+  [
+    "{0} used Bell to pull an enemy tile.",
+    "{0} usó la Campana para atraer una pieza enemiga."
+  ],
+  [
+    "{0} used Bell to claim enemy {1} from a live Tool Harmony link.",
+    "{0} usó la Campana para reclamar la Herramienta enemiga {1} de un vínculo activo de Armonía de Herramientas."
+  ],
+  [
+    "{0} picked up its own {1} and return it to reserve.",
+    "{0} recogió su {1} y la devolvió a la reserva."
   ]
 ]

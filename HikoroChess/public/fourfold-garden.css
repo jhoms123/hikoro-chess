@@ -1,6 +1,8 @@
 /* Fourfold Garden uses the Sho Dan Sho manuscript shell; this file only
    styles the compact board, this game's reserves, and its status elements. */
 .fourfold-garden-page .site-header .language-control{margin:0;color:var(--muted);font:11px Arial,sans-serif}
+body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-gradient(ellipse at top,#5361438a,#111d15e8),var(--wood) center/900px repeat}
+.fourfold-garden-page [hidden]{display:none!important}
 .fourfold-garden-page .site-header .language-select{min-height:38px;max-width:150px;padding:6px 9px;border-radius:3px}
 .fourfold-garden-page .garden-masthead{max-width:900px}
 .fourfold-garden-page .garden-masthead h1{font-variant:small-caps}
@@ -131,7 +133,7 @@
 @media(min-width:761px) and (max-width:1100px){.fourfold-garden-page .game-layout{grid-template-columns:minmax(0,1fr) minmax(230px,300px)!important;gap:14px!important}.fourfold-garden-page .game-layout>.mobile-board-viewport{grid-column:1;grid-row:1}.fourfold-garden-page .game-layout>.game-sidebar{grid-column:2;grid-row:1}.fourfold-garden-page .game-layout>.inventory-sidebar{grid-column:2;grid-row:2;max-height:calc(100dvh - 150px)}}
 @media(max-width:760px){
  .fourfold-garden-page .garden-masthead,.fourfold-garden-page>.site-header,.fourfold-garden-page>.site-footer{display:none!important}
- body.phone-game-shell.fourfold-garden-page{height:100dvh;overflow:hidden;background:#211710}
+ body.phone-game-shell.fourfold-garden-page{height:100dvh;overflow:hidden;background:radial-gradient(ellipse at top,#5361438a,#111d15e8),var(--wood) center/900px repeat}
  body.phone-game-shell.fourfold-garden-page main.game-layout{display:flex!important;flex-direction:column;width:100%;height:calc(100dvh - var(--phone-top,44px));min-height:0;max-width:none;margin:0;padding:4px 5px!important;gap:5px;overflow:hidden}
  body.phone-game-shell.fourfold-garden-page .game-layout>.mobile-board-viewport{order:1;display:flex!important;align-items:center;justify-content:center;flex:1 1 0!important;min-height:0;width:100%;margin:0;overflow:auto}
  body.phone-game-shell.fourfold-garden-page .mobile-board-surface{display:block;flex:none;width:var(--phone-fit-width,100%)!important;margin:auto}
@@ -149,11 +151,11 @@
  body.phone-game-shell.fourfold-garden-page .bank-group{box-sizing:border-box;height:100%;padding:5px}
  body.phone-game-shell.fourfold-garden-page .bank-label{margin:0 0 3px;font-size:9px}
  body.phone-game-shell.fourfold-garden-page .bank{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
- body.phone-game-shell.fourfold-garden-page .reserve-flower{min-height:35px;height:35px;padding:1px}
- body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-glyph{height:14px;font-size:14px}
- body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-glyph svg{width:15px;height:15px}
- body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-name{font-size:8px;margin:0}
- body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-count{font-size:7px;margin:0}
+ body.phone-game-shell.fourfold-garden-page .reserve-flower{min-height:40px;height:40px;padding:2px}
+ body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-glyph{height:22px;font-size:20px}
+ body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-glyph svg{width:21px;height:21px}
+ body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-name{display:none}
+ body.phone-game-shell.fourfold-garden-page .reserve-flower .tile-count{font-size:8px;margin:0}
  body.phone-game-shell.fourfold-garden-page .phone-options-list>.game-sidebar{display:block!important;width:100%!important;max-height:none;overflow:visible}
  body.phone-game-shell.fourfold-garden-page .phone-options-list>.inventory-sidebar{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important;max-height:none;overflow:visible}
  body.phone-game-shell.fourfold-garden-page .phone-options-list .inventory-sidebar>.reserve-panel{display:none!important}
