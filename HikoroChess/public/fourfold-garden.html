@@ -1,205 +1,24 @@
 <!doctype html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#111816">
+<meta name="theme-color" content="#211710">
 <title>Fourfold Garden · Hikoro collection</title>
-<style>
-:root{
-  color-scheme:dark;
-  --ink:#e9eee5;--muted:#aab6a9;--panel:#18221e;--panel2:#202d26;--line:#334239;
-  --gold:#d8bc79;--green:#86b897;--red:#dc8f7e;--whitegarden:#eee6d0;--neutral:#aaa486;
-  --p0:#d6c28a;--p1:#89a9ca;--bg:#101713;
-}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at 50% -15%,#26372c 0%,#121a16 54%,#0e1411 100%);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-button{font:inherit}
-.app{max-width:1500px;margin:0 auto;padding:22px 20px 34px}
-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:2px 0 18px}
-.eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:800}
-h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.015em;font-size:clamp(28px,4vw,43px);line-height:1.02;margin:6px 0}
-.subtitle{color:var(--muted);font-size:14px}
-.badge{border:1px solid #435148;background:#1b2820;border-radius:999px;padding:9px 13px;color:#d2dfd1;font-size:12px;white-space:nowrap}
-.layout{display:grid;grid-template-columns:minmax(460px,1.4fr) minmax(330px,.85fr);gap:18px;align-items:start}
-.panel{background:linear-gradient(145deg,rgba(30,42,35,.96),rgba(20,29,24,.98));border:1px solid #35453a;border-radius:18px;box-shadow:0 18px 42px rgba(0,0,0,.24)}
-.board-panel{padding:16px}
-.board-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 2px 13px}
-.board-title{font:500 19px Georgia,serif;letter-spacing:.02em}
-.turn-pill{border-radius:999px;background:#24332a;border:1px solid #46584a;padding:7px 11px;font-size:12px;font-weight:750}
-.turn-pill.p0{color:#ffe9ad;border-color:#a79055}
-.turn-pill.p1{color:#c5e1ff;border-color:#6687a8}
-.board-wrap{width:100%;overflow:auto;border-radius:13px;background:#172019;padding:8px;box-shadow:inset 0 0 0 1px #445345}
-.board{position:relative;display:block;aspect-ratio:1;width:min(100%,740px);min-width:440px;margin:0 auto;isolation:isolate;touch-action:manipulation}
-.board-art,.ray-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.board-art{z-index:0}
-.point{position:absolute;display:grid;place-items:center;width:8.3333%;height:8.3333%;padding:0;border:0;border-radius:50%;background:transparent;color:#19221c;cursor:pointer;touch-action:manipulation;transform:translate(-50%,-50%);z-index:2}
-.point:hover{filter:brightness(1.14)}
-.point.selected-target{box-shadow:inset 0 0 0 3px #ffda7d;z-index:3}
-.point.pickup-target{box-shadow:inset 0 0 0 3px #8fe3a3;z-index:3}
-.point.sight-forbidden:before{content:"×";position:absolute;inset:17%;display:grid;place-items:center;border:2px solid rgba(164,63,48,.9);border-radius:50%;background:rgba(53,24,21,.62);color:#ffd4c8;font-size:clamp(9px,1.5vw,17px);font-weight:900;line-height:1;z-index:4;pointer-events:none}
-.score-strip{display:grid;grid-template-columns:1fr;gap:4px;margin:10px 2px 0;padding:9px 11px;border:1px solid #3d4d40;border-radius:10px;background:#1b2820;color:#c8d5c7;font-size:11px;line-height:1.4}
-.score-strip strong{color:#e9dfb9}
-.score-strip .score-lines{display:flex;flex-wrap:wrap;gap:5px 14px}
-.score-strip .p0{color:#ffe9ad}.score-strip .p1{color:#c5e1ff}
-.point.last-move:after{content:"";position:absolute;inset:3px;border:2px solid rgba(255,247,192,.9);border-radius:50%;pointer-events:none}
-.token{position:relative;z-index:2;width:75%;height:75%;min-width:15px;min-height:15px;max-width:42px;max-height:42px;border-radius:50%;display:grid;place-items:center;box-shadow:0 3px 6px rgba(0,0,0,.38),inset 0 1px 2px rgba(255,255,255,.54);font-size:clamp(10px,1.6vw,19px);font-weight:800;line-height:1;color:#18211b;border:2px solid rgba(21,31,24,.78);transition:transform .12s}
-.token.owner0{background:radial-gradient(circle at 32% 27%,#fff1bf,#d8c27e 63%,#ae9354);border-color:#66532c}
-.token.owner1{background:radial-gradient(circle at 32% 27%,#ecf4ff,#8caecc 63%,#55748e);border-color:#344e65}
-.token.flower{border-radius:45% 55% 45% 55%;transform:rotate(-8deg)}
-.token.tool{border-radius:9px}
-.token.dissonant{box-shadow:0 0 0 2px #9c392e,0 0 10px #e66c59}
-.token.harmonized{outline:3px solid #a5ffc0;outline-offset:1px;filter:drop-shadow(0 0 5px rgba(142,255,178,.75))}
-.token.tool.harmonized{outline-color:#91e6ff;filter:drop-shadow(0 0 5px rgba(121,220,255,.8))}
-.token.shielded:before{content:"✚";position:absolute;left:-5px;bottom:-5px;font-size:10px;line-height:1;color:#fff0a8;text-shadow:0 1px 3px #000,0 0 3px #000}
-.token.mirror-active:before{content:"↗";position:absolute;left:-6px;bottom:-7px;font-size:13px;line-height:1;color:#c6f4ff;text-shadow:0 1px 3px #000,0 0 3px #000}
-.token.spent:after{content:"";position:absolute;right:-3px;top:-3px;width:7px;height:7px;border-radius:50%;background:#69736c;border:1px solid #d2d7cf}
-.ray-layer{z-index:1}
-.ray-h{stroke:#8ff2ad;stroke-width:8;stroke-linecap:round;opacity:1;filter:drop-shadow(0 0 3px #102116)}
-.ray-h-diagonal{stroke:#b4f4bc;stroke-width:7;stroke-dasharray:5 5;stroke-linecap:round;filter:drop-shadow(0 0 3px #102116)}
-.ray-d{stroke:#ff8a78;stroke-width:6;stroke-dasharray:9 6;stroke-linecap:round;opacity:1;filter:drop-shadow(0 0 3px #21120e)}
-.ray-tool{stroke:#79dcff;stroke-width:6;stroke-dasharray:3 5;stroke-linecap:round;opacity:1;filter:drop-shadow(0 0 3px #101b25)}
-.ray-tool-d{stroke:#ffad74;stroke-width:5;stroke-dasharray:6 5;stroke-linecap:round;opacity:1;filter:drop-shadow(0 0 3px #21140e)}
-.ray-bridge{stroke:#f4dc91;stroke-width:8;stroke-dasharray:15 5;stroke-linecap:round;filter:drop-shadow(0 0 3px #211b0d)}
-.ray-bond{stroke:#f4dc91;stroke-width:7;stroke-dasharray:2 4;stroke-linecap:round;filter:drop-shadow(0 0 3px #211b0d)}
-.ray-mirror{fill:none;stroke:#c6f4ff;stroke-width:8;stroke-dasharray:3 5;stroke-linecap:round;filter:drop-shadow(0 0 3px #101b25)}
-.ray-counterpoint{stroke:#d6a7ff;stroke-width:8;stroke-dasharray:4 5;stroke-linecap:round;filter:drop-shadow(0 0 3px #241432)}
-.center-mark{position:absolute;z-index:1;pointer-events:none;left:50%;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border:2px solid rgba(73,54,22,.72);border-radius:50%;background:rgba(229,200,118,.32)}
-.legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin:13px 2px 0;color:var(--muted);font-size:11px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.swatch{width:14px;height:10px;border:1px solid #786e56;border-radius:3px;display:inline-block}
-.swatch.red{background:#ce8471}.swatch.white{background:#e9e0c9}.swatch.neutral{background:#b9ae8e}
-.sample-line{display:inline-block;width:22px;border-top:4px solid #8ff2ad}.sample-line.diagonal{border-top:4px dashed #b4f4bc}.sample-line.d{border-top:4px dashed #ff8a78}.sample-line.tool{border-top:4px dotted #79dcff}.sample-line.counterpoint{border-top:4px dotted #d6a7ff}.sample-line.bond{border-top:4px dotted #f4dc91}
-.side{display:grid;gap:14px}
-.section{padding:15px}
-.section h2{font:500 18px Georgia,serif;margin:0 0 11px}
-.status-box{padding:12px;border-radius:12px;background:#233128;border:1px solid #3c4c40;margin-bottom:12px}
-.status-main{font-size:15px;font-weight:800;margin-bottom:4px}
-.status-detail{color:var(--muted);font-size:12px;line-height:1.45}
-.opponent-control{display:grid;gap:7px;margin:0 0 11px}
-.opponent-control label{font-size:11px;color:#d2dfd1;font-weight:800;letter-spacing:.04em}
-.opponent-control select{width:100%;min-height:42px;border:1px solid #526254;border-radius:10px;background:#202b24;color:var(--ink);padding:9px 11px;font:inherit;font-size:13px}
-.bot-control-row{display:flex;gap:7px}
-.bot-control-row .btn{flex:1}
-.bot-note{color:var(--muted);font-size:11px;line-height:1.4}
-.mode-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
-.btn{border:1px solid #526254;background:#29382e;color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700;transition:.15s}
-.btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
-.btn.active{background:#d2bd7b;color:#1e261e;border-color:#e0cc8b}
-.btn.subtle{background:#202b24}
-.btn.danger{border-color:#714c45;color:#ffd4c9;background:#382722}
-.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.action-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.action-row .btn{padding:8px 6px;font-size:12px}
-.selected-note{min-height:36px;margin:11px 0 0;color:#d2dfd1;font-size:12px;line-height:1.45}
-.bank-group{margin-top:12px}
-.bank-label{display:flex;align-items:center;justify-content:space-between;color:#c8d5c7;font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin:0 1px 7px}
-.bank{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.tile-card{min-width:0;border:1px solid #3a4b40;border-radius:10px;background:#202d25;color:var(--ink);padding:7px 5px 6px;cursor:pointer;text-align:center;touch-action:manipulation}
-.tile-card:hover{background:#2b3c30;border-color:#81906d}
-.tile-card.active{border-color:#e4ca75;box-shadow:0 0 0 1px #e4ca75 inset;background:#34402b}
-.tile-card:disabled{opacity:.35;cursor:not-allowed}
-.tile-glyph{font-size:18px;line-height:1.15;color:#e2d19c}
-.tile-name{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
-.tile-count{font-size:10px;color:#b5c2b5;margin-top:2px}
-.rules{color:#c5d0c4;font-size:12px;line-height:1.55}
-.rules strong{color:#f1e5bf}
-.rules ul{padding-left:17px;margin:6px 0}
-.log{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
-.log-entry{border-left:2px solid #74875f;padding:3px 7px;color:#c9d5c8;font-size:11px;line-height:1.35}
-.log-entry.capture{border-color:#de816c;color:#ffd0c3}
-.log-entry.win{border-color:#e5c66e;color:#ffebae}
-.modal-backdrop{position:fixed;inset:0;background:rgba(6,10,8,.78);z-index:10;display:none;place-items:center;padding:20px}
-.modal-backdrop.show{display:grid}
-.modal{max-width:470px;width:100%;border-radius:18px;border:1px solid #65724d;background:#1d2b22;padding:24px;box-shadow:0 25px 80px #000}
-.modal h2{font:500 28px Georgia,serif;margin:0 0 8px;color:#f1dfaa}
-.modal p{color:#c7d4c6;line-height:1.5}
-.modal .btn{width:100%;margin-top:8px}
-.small-print{color:#849488;font-size:10px;margin-top:10px;line-height:1.4}
-.compat{margin-top:12px;border-top:1px solid #39493d;padding-top:9px}
-.compat summary{cursor:pointer;color:#e2d19c;font-size:12px;font-weight:750}
-.compat-content{color:#c5d0c4;font-size:11px;line-height:1.5;padding:8px 1px 1px}
-.compat-content p{margin:5px 0}
-.compat-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}
-.compat-table th,.compat-table td{padding:5px 6px;border:1px solid #415244;text-align:left}
-.compat-table th{color:#e2d19c;background:#243128}
-.compat-table td.h{color:#adffbf;background:rgba(44,104,62,.2);font-weight:800}
-.compat-table td.d{color:#ffb1a2;background:rgba(130,52,40,.18);font-weight:800}
-.compat-table td.na{color:#788679}
-@media(max-width:980px){
-  .layout{grid-template-columns:minmax(0,1fr);max-width:780px;margin:auto}
-  .side{grid-template-columns:1fr 1fr;align-items:start}
-  .control-section{grid-row:span 2}
-}
-@media(max-width:620px){
-  .app{padding:14px 10px 24px}
-  header{align-items:flex-start;flex-direction:column;gap:9px;margin-bottom:12px}
-  .badge{font-size:10px;padding:7px 10px}
-  .layout{gap:12px}
-  .board-panel{padding:10px}
-  .board{width:100%;min-width:0}
-  .board-wrap{padding:4px}
-  .side{grid-template-columns:1fr}
-  .control-section{grid-row:auto}
-  .bank{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .tile-card{padding:6px 3px}
-  .tile-name{font-size:9px}
-  .token{font-size:clamp(9px,3.4vw,16px);min-width:12px;min-height:12px}
-  .center-mark{font-size:7px}
-  .legend{font-size:10px;gap:8px 12px}
-}
-</style>
-<link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-garden"><script src="/site-audio.js?v=20261018-fourfold-garden" defer></script>
-<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-garden"><script src="/collection-theme.js?v=20261018-fourfold-garden" defer></script>
-<link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-garden"><script src="/mobile-table.js?v=20261018-fourfold-garden" defer></script>
-<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-garden"><script src="/phone-game-shell.js?v=20261018-fourfold-garden" defer></script>
+
+<link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-garden"><script src="/site-audio.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-garden"><script src="/collection-theme.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-garden"><script src="/mobile-table.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-garden"><script src="/phone-game-shell.js?v=20261018-fourfold-garden" defer=""></script>
 <link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-garden"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261018-fourfold-garden"></script>
-<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-garden"><script src="/table-companion.js?v=20261018-fourfold-garden"></script><script src="/experience.js?v=20261018-fourfold-garden" defer></script>
+<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-garden"><script src="/table-companion.js?v=20261018-fourfold-garden"></script><script src="/experience.js?v=20261018-fourfold-garden" defer=""></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
 <script src="/i18n-catalog.js?v=20261018-fourfold-garden"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
 <link rel="stylesheet" href="fourfold-garden.css?v=20261018-fourfold-garden">
 </head>
-<body data-audio-theme="fourfold-garden" class="fourfold-garden-page">
-<header class="site-header player-appbar garden-appbar">
-  <a class="collection-link" href="/" id="lobby-link">← Hikoro collection</a>
-  <span class="edition">THE COMPACT GARDEN TABLE</span>
-  <button class="quiet-button" id="rules-toggle" type="button">How to play</button>
-</header>
-<div class="app">
-  <header class="garden-intro">
-    <div>
-      <div class="eyebrow">A COMPACT HARMONY STRATEGY</div>
-      <h1>Fourfold Garden</h1>
-      <div class="subtitle">Place flowers, weave relationships, and capture the center.</div>
-    </div>
-    <div class="badge">10 pieces per player · local and online</div>
-  </header>
-
-  <main class="layout">
-    <section class="panel board-panel">
-      <div class="board-head">
-        <div class="board-title">Compact Garden · 109 playable points</div>
-        <div id="turnPill" class="turn-pill p0">Ivory to play</div>
-      </div>
-      <div class="board-wrap mobile-board-viewport">
-        <div class="mobile-board-surface"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div>
-      </div>
-      <div id="harmonyScore" class="score-strip" aria-live="polite"></div>
-      <div class="legend">
-        <span><i class="swatch red"></i>Red Garden</span>
-        <span><i class="swatch white"></i>White Garden</span>
-        <span><i class="swatch neutral"></i>Neutral Garden</span>
-        <span><i class="sample-line"></i>Flower Harmony</span>
-        <span><i class="sample-line diagonal"></i>Diagonal Flower Harmony</span>
-        <span><i class="sample-line tool"></i>Tool Harmony</span>
-        <span><i class="sample-line d"></i>Dissonance</span>
-        <span><i class="sample-line counterpoint"></i>Counterpoint Harmony</span>
-        <span><i class="sample-line bond"></i>Vine–Bamboo bond</span>
-      </div>
-    </section>
-
-    <aside class="side">
-      <section class="panel section control-section">
+<body data-audio-theme="fourfold-garden" class="fourfold-garden-page sds-page">
+<header class="site-header"><a class="site-brand" href="/" id="lobby-link" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a><span class="header-caption">A garden of strategy &amp; harmony</span><label class="language-control" translate="no"><span>Language / Idioma</span><select class="language-select" aria-label="Language / Idioma"><option value="en">English</option><option value="es-CU">Español (Cuba)</option></select></label><button class="header-rules" id="rules-toggle" type="button" aria-haspopup="dialog" aria-controls="rules-modal">How to play <span aria-hidden="true">↗</span></button></header>
+<section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Fourfold Garden</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
+<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status and actions"><section class="control-section bg-game-panel">
         <h2>Turn and reserve</h2>
         <div class="status-box">
           <div id="statusMain" class="status-main">Ivory's turn</div>
@@ -214,38 +33,50 @@ h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.0
             <option value="watch">Watch bot vs bot</option>
           </select>
           <div class="bot-control-row">
-            <button id="pauseBotBtn" class="btn subtle" type="button" hidden>Pause bot match</button>
+            <button id="pauseBotBtn" class="btn subtle" type="button" hidden="">Pause bot match</button>
           </div>
           <div class="bot-note" id="botNote">Choose a player mode. In watch mode, the board will play automatically.</div>
         </div>
         <div class="online-controls" id="onlineControls">
           <button id="onlineCreateBtn" class="btn" type="button">Create online table</button>
-          <button id="copyInviteBtn" class="btn subtle" type="button" hidden>Copy invite link</button>
-          <button id="resign-button" class="btn danger" type="button" hidden>Resign</button>
+          <button id="copyInviteBtn" class="btn subtle" type="button" hidden="">Copy invite link</button>
+          <button id="resign-button" class="btn danger" type="button" hidden="">Resign</button>
           <div id="onlineStatus" class="bot-note" role="status" aria-live="polite">Play locally or create a room and share its invite link.</div>
         </div>
         <div class="mode-row">
           <button id="placeMode" class="btn active">Place piece</button>
-          <button id="abilityMode" class="btn" disabled>Use ability</button>
-          <button id="pickupMode" class="btn" disabled>Pick up yours</button>
+          <button id="abilityMode" class="btn" disabled="">Use ability</button>
+          <button id="pickupMode" class="btn" disabled="">Pick up yours</button>
         </div>
         <div class="action-row">
-          <button id="finishTurnBtn" class="btn subtle" disabled>Finish turn</button>
+          <button id="finishTurnBtn" class="btn subtle" disabled="">Finish turn</button>
           <button id="undoBtn" class="btn subtle">Undo</button>
           <button id="resetBtn" class="btn danger">New game</button>
         </div>
         <div id="selectedNote" class="selected-note">Place one reserve piece first. Then choose one optional ability or pick up one of your own pieces.</div>
-        <div id="flowerBank"></div>
-        <div id="toolBank"></div>
-      </section>
 
-      <section class="panel section piece-guide" aria-labelledby="pieces-title">
+
+      </section></aside><div id="board-wrapper" class="board-stage" aria-label="Fourfold Garden board and status"><div class="board-head">
+        <div class="board-title">Compact Garden · 109 playable points</div>
+        <div id="turnPill" class="turn-pill p0">Ivory to play</div>
+      </div><div class="board-wrap"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div><div id="harmonyScore" class="score-strip" aria-live="polite"></div><div class="legend">
+        <span><i class="swatch red"></i>Red Garden</span>
+        <span><i class="swatch white"></i>White Garden</span>
+        <span><i class="swatch neutral"></i>Neutral Garden</span>
+        <span><i class="sample-line"></i>Flower Harmony</span>
+        <span><i class="sample-line diagonal"></i>Diagonal Flower Harmony</span>
+        <span><i class="sample-line tool"></i>Tool Harmony</span>
+        <span><i class="sample-line d"></i>Dissonance</span>
+        <span><i class="sample-line counterpoint"></i>Counterpoint Harmony</span>
+        <span><i class="sample-line bond"></i>Vine–Bamboo bond</span>
+      </div></div><aside class="inventory-sidebar" aria-label="Reserves, piece guide, and turn log"><section class="bg-game-panel reserve-panel"><h2>Flower reserves</h2><p class="reserve-intro">Choose a reserve piece, place it on an open point, then choose an optional action.</p><div id="hands-container" class="reserve-hands"><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="piece-guide bg-game-panel" aria-labelledby="pieces-title">
         <h2 id="pieces-title">The ten pieces in this edition</h2>
         <p class="rules">Six Flowers and four Tools form two separate harmony groups. Each player has one copy of each listed piece.</p>
         <div id="pieceGuideGrid" class="piece-guide-grid"></div>
-      </section>
-
-      <section class="panel section rules-section" id="rules-section">
+      </section><section class="bg-game-panel log-panel">
+        <h2>Turn log</h2>
+        <div id="log" class="log"></div>
+      </section></aside></main><footer class="site-footer"><span>Fourfold Garden</span><span>Movement · Balance · Harmony</span><a class="asset-credits" href="assets/medieval/CREDITS.md" target="_blank" rel="noopener">Art credits</a></footer><div id="rules-modal" class="hidden-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true"><div id="rules-content"><div class="rules-book-header"><h2 id="rules-title">The Book of Harmony</h2><button class="header-rules" id="close-rules" type="button" aria-label="Close rules">Close</button></div><div class="rules-book-body"><section class="rules-section" id="rules-section">
         <h2>How to play</h2>
         <div class="rules">
           <ul>
@@ -282,17 +113,7 @@ h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.0
             <p>Repetition tiebreak: Count each active same-owner Flower or Tool Harmony link once for that player. Count each active Dissonance link against every owner represented at either endpoint (so a cross-owner Dissonance counts against both). Compare Harmony ÷ Dissonance. A positive Harmony count with zero Dissonance is ∞; zero Harmony and zero Dissonance is 0. Equal ratios after the third occurrence are a draw.</p>
           </div>
         </details>
-      </section>
-
-      <section class="panel section">
-        <h2>Turn log</h2>
-        <div id="log" class="log"></div>
-      </section>
-    </aside>
-  </main>
-</div>
-
-<div id="modalBackdrop" class="modal-backdrop">
+      </section></div></div></div><div id="modalBackdrop" class="modal-backdrop">
   <div class="modal">
     <div class="eyebrow">The garden is claimed</div>
     <h2 id="modalTitle">Ivory wins</h2>
@@ -301,6 +122,9 @@ h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.0
   </div>
 </div>
 
-<script src="fourfold-garden.js?v=20261018-fourfold-garden" defer></script>
-</body>
-</html>
+
+
+<script src="fourfold-garden.js?v=20261018-fourfold-garden" defer=""></script>
+
+
+</body></html>

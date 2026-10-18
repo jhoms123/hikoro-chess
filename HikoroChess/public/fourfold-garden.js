@@ -727,13 +727,13 @@ function renderBank(group,status){
   const host=document.getElementById(group==="flower"?"flowerBank":"toolBank");
   const types=Object.keys(DEFS).filter(function(t){return DEFS[t].group===group&&DEFS[t].count>0});
   host.innerHTML="";
-  const wrap=document.createElement("div");wrap.className="bank-group";
+  const wrap=document.createElement("div");wrap.className="bank-group reserve-card";wrap.dataset.active="true";
   const label=document.createElement("div");label.className="bank-label";label.innerHTML="<span>"+(group==="flower"?"Flower reserve":"Tool reserve")+"</span><span>"+types.reduce(function(n,t){return n+(state.reserves[state.current][t]||0)},0)+" left</span>";
   wrap.appendChild(label);
   const grid=document.createElement("div");grid.className="bank";
   types.forEach(function(type){
     const d=DEFS[type],count=state.reserves[state.current][type]||0,spent=Math.min(count,state.reserveSpent[state.current][type]||0),ready=count-spent,button=document.createElement("button");
-    button.type="button";button.className="tile-card"+(selectedType===type?" active":"");
+    button.type="button";button.className="reserve-flower tile-card"+(selectedType===type?" active hand-item-active":"");
     button.disabled=count<=0||state.winner!==null||state.draw||state.turnStage!=="place"||mode!=="place"||humanInputLocked();
     button.title=d.name+" — "+d.desc+(d.ability?" Reserve: "+ready+" ready, "+spent+" spent.":"");
     button.innerHTML='<div class="tile-glyph">'+(PIECE_ICONS[type]||d.glyph)+'</div><div class="tile-name">'+d.short+'</div><div class="tile-count">× '+count+(d.ability?' · '+ready+' ready':'')+'</div>';
@@ -2600,8 +2600,25 @@ if(typeof module!=="undefined"&&module.exports){
     document.getElementById("resign-button")?.addEventListener("click",()=>{
       if(onlineGameId&&onlineSocket.connected&&confirm("Resign this online match?"))onlineSocket.emit("fourfold-gardenResign",{gameId:onlineGameId});
     });
-    document.getElementById("rules-toggle")?.addEventListener("click",()=>document.getElementById("rules-section")?.scrollIntoView({behavior:"smooth",block:"start"}));
     if(onlineGameId){localizeButtonState();onlineConnected=onlineSocket.connected;}
+  }
+  const rulesModal=document.getElementById("rules-modal"),rulesToggle=document.getElementById("rules-toggle"),closeRules=document.getElementById("close-rules");
+  function setRulesOpen(open){
+    if(!rulesModal)return;
+    rulesModal.classList.toggle("hidden-modal",!open);
+    rulesModal.setAttribute("aria-hidden",String(!open));
+    document.body.classList.toggle("rules-open",open);
+    if(open)closeRules?.focus();else rulesToggle?.focus();
+  }
+  rulesToggle?.addEventListener("click",()=>setRulesOpen(true));
+  closeRules?.addEventListener("click",()=>setRulesOpen(false));
+  rulesModal?.addEventListener("click",event=>{if(event.target===rulesModal)setRulesOpen(false)});
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&rulesModal&&!rulesModal.classList.contains("hidden-modal"))setRulesOpen(false)});
+  const languageSelect=document.querySelector(".site-header .language-select");
+  if(languageSelect&&window.I18n){
+    languageSelect.value=window.I18n.language;
+    languageSelect.addEventListener("change",()=>window.I18n.setLanguage(languageSelect.value));
+    window.addEventListener("language-changed",()=>{languageSelect.value=window.I18n.language;});
   }
   window.FourfoldGardenEngine=FourfoldGardenEngine;
   document.getElementById("placeMode").addEventListener("click",function(){if(state.turnStage!=="place")return;mode="place";pending=null;engineActionIntent=null;selectedType=null;render()});

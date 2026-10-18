@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!media.matches||!playing())return;
   const viewport=document.querySelector('.mobile-board-viewport');
   if(!viewport||viewport.classList.contains('is-detailed'))return;
-  const ratio=theme==='lobby'?0.64:1;
+  const ratio=theme==='lobby'?0.64:theme==='fourfold-garden'?0.82:1;
   const width=Math.max(100,Math.floor(Math.min(viewport.clientWidth-4,(viewport.clientHeight-4)*ratio)));
   const surface=viewport.querySelector('.mobile-board-surface');if(!surface)return;
   const size=width+'px';
@@ -53,8 +53,12 @@ document.addEventListener('DOMContentLoaded',()=>{
    if(!media.matches&&hands&&!hands.closest('.game-layout'))relocateTo(hands,layout,viewport?.nextSibling||boardWrap?.nextSibling||null);
    relocate(document.querySelector('.mobile-garden-actions'));relocate(document.querySelector('.game-sidebar'));relocate(document.querySelector('.inventory-sidebar'));
   }else if(theme==='fourfold-garden'){
-   relocate(document.querySelector('.side'));
+   const layout=document.querySelector('.game-layout'),viewport=layout?.querySelector(':scope>.mobile-board-viewport'),hands=document.getElementById('hands-container');
+   relocate(document.querySelector('.game-sidebar'));
+   relocate(document.querySelector('.inventory-sidebar'));
+   if(layout&&hands)relocateTo(hands,layout,viewport?.nextSibling||null);
    relocate(document.querySelector('.legend'));
+   relocate(document.getElementById('rules-toggle'));
    if(window.I18n){
     const language=document.createElement('label');language.className='phone-language-control';language.textContent='Language / Idioma';
     const select=document.createElement('select');select.setAttribute('aria-label','Language / Idioma');
