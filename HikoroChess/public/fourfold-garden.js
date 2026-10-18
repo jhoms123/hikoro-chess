@@ -180,6 +180,9 @@ function ownersName(owner){
   const profile=onlineGameId&&state&&state.playerProfiles&&state.playerProfiles[owner];
   return profile&&profile.display_name?profile.display_name:PLAYER_NAMES[owner]
 }
+function uiText(value){
+  return typeof window!=="undefined"&&window.I18n?window.I18n.t(value):value;
+}
 function isFlower(piece){return !!piece&&DEFS[piece.type].group==="flower"}
 function isTool(piece){return !!piece&&DEFS[piece.type].group==="tool"}
 function isAligned(a,b){
@@ -621,13 +624,16 @@ function commitOnlineAction(){
 function tokenTitle(piece,status){
   const d=DEFS[piece.type],isD=d.group==="flower"?status.fDisabled[piece.id]:status.tDisabled[piece.id];
   const links=(d.group==="flower"?status.flowerLinks:status.toolLinks).filter(function(link){return link.a===piece.id||link.b===piece.id}).length;
-  let extra=isD?" · DISSONANT/JAMMED":"";
-  if(links)extra+=" · HARMONIZED ("+links+" link"+(links===1?"":"s")+")";
-  if(isShielded(piece))extra+=" · SHIELDED until the Lotus or target moves";
-  if(piece.type==="mirror"&&piece.mirrorActive)extra+=" · MIRROR ACTIVE until it moves";
-  if(d.ability&&!piece.used)extra+=" · ability unused";
-  if(d.ability&&piece.used)extra+=" · ability spent";
-  return ownersName(piece.owner)+" "+d.name+extra+" — "+d.desc;
+  const ownerName=ownersName(piece.owner);
+  const displayOwner=ownerName===PLAYER_NAMES[piece.owner]?uiText(ownerName):ownerName;
+  const extras=[];
+  if(isD)extras.push(uiText("Dissonant / jammed"));
+  if(links)extras.push(uiText("Harmony links: "+links));
+  if(isShielded(piece))extras.push(uiText("Shielded until the Lotus or target moves"));
+  if(piece.type==="mirror"&&piece.mirrorActive)extras.push(uiText("Mirror active until it moves"));
+  if(d.ability&&!piece.used)extras.push(uiText("Ability unused"));
+  if(d.ability&&piece.used)extras.push(uiText("Ability spent"));
+  return displayOwner+" "+uiText(d.name)+(extras.length?" · "+extras.join(" · "):"")+" — "+uiText(d.desc);
 }
 function renderBoard(status){
   const board=document.getElementById("board");
@@ -735,7 +741,8 @@ function renderBank(group,status){
     const d=DEFS[type],count=state.reserves[state.current][type]||0,spent=Math.min(count,state.reserveSpent[state.current][type]||0),ready=count-spent,button=document.createElement("button");
     button.type="button";button.className="reserve-flower tile-card"+(selectedType===type?" active hand-item-active":"");
     button.disabled=count<=0||state.winner!==null||state.draw||state.turnStage!=="place"||mode!=="place"||humanInputLocked();
-    button.title=d.name+" — "+d.desc+(d.ability?" Reserve: "+ready+" ready, "+spent+" spent.":"");
+    button.title=uiText(d.name)+" — "+uiText(d.desc)+(d.ability?" "+uiText("Reserve: "+ready+" ready, "+spent+" spent."):"");
+    button.setAttribute("aria-label",uiText(d.name)+" — "+uiText(count+" in reserve"));
     button.innerHTML='<div class="tile-glyph">'+(PIECE_ICONS[type]||d.glyph)+'</div><div class="tile-name">'+d.short+'</div><div class="tile-count">× '+count+(d.ability?' · '+ready+' ready':'')+'</div>';
     button.addEventListener("click",function(){selectedType=type;setStatus("Place "+d.short,"Choose any open playable point on the circular board.");render()});
     grid.appendChild(button);
@@ -745,7 +752,7 @@ function renderBank(group,status){
 function renderLog(){
   const host=document.getElementById("log");host.innerHTML="";
   state.log.slice(0,12).forEach(function(entry){
-    const div=document.createElement("div");div.className="log-entry "+(entry.kind||"");div.textContent=entry.text;host.appendChild(div);
+    const div=document.createElement("div");div.className="log-entry "+(entry.kind||"");div.textContent=uiText(entry.text);host.appendChild(div);
   });
 }
 function renderHarmonyScore(status){
@@ -2495,7 +2502,7 @@ function resetGame(){
   if(onlineGameId)return;
   cancelScheduledBot();
   state=newState();startRepetitionTracking();undoState=null;selectedType=null;mode="place";pending=null;lastPoint=-1;engineActionIntent=null;
-  addLog("New game. Ivory begins by placing a tile.","");
+  addLog("New game. "+ownersName(0)+" begins by placing a tile.","");
   render(resolveCapturesAndWin());
 }
 function engineExport(){
@@ -2618,7 +2625,7 @@ if(typeof module!=="undefined"&&module.exports){
   if(languageSelect&&window.I18n){
     languageSelect.value=window.I18n.language;
     languageSelect.addEventListener("change",()=>window.I18n.setLanguage(languageSelect.value));
-    window.addEventListener("language-changed",()=>{languageSelect.value=window.I18n.language;});
+    window.addEventListener("language-changed",()=>{languageSelect.value=window.I18n.language;render(state.lastStatus||boardStatus());});
   }
   window.FourfoldGardenEngine=FourfoldGardenEngine;
   document.getElementById("placeMode").addEventListener("click",function(){if(state.turnStage!=="place")return;mode="place";pending=null;engineActionIntent=null;selectedType=null;render()});

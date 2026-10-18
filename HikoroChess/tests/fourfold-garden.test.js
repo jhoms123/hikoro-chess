@@ -128,13 +128,20 @@ test('lobby and bilingual game guide expose all ten pieces and full win rules', 
 });
 
 test('shared collection styling leaves Fourfold board points under game-specific styling', () => {
-    const dom = new JSDOM('<!doctype html><html><body data-audio-theme="fourfold-garden"><button class="point">intersection</button><button id="rules-button">How to play</button></body></html>', { runScripts: 'outside-only' });
+    const dom = new JSDOM('<!doctype html><html><head></head><body class="fourfold-garden-page" data-audio-theme="fourfold-garden"><button class="point">intersection</button><button id="rules-button">How to play</button><button id="hidden-game-control" hidden>Hidden control</button></body></html>', { runScripts: 'outside-only' });
     try {
         const w = dom.window;
+        const style = w.document.createElement('style');
+        style.textContent = read('collection-theme.css') + '\n' + read('fourfold-garden.css');
+        w.document.head.append(style);
         w.eval(read('collection-theme.js'));
         w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
         assert.equal(w.document.querySelector('.point').classList.contains('material-control'), false);
         assert.equal(w.document.getElementById('rules-button').classList.contains('material-control'), true);
+        assert.equal(w.getComputedStyle(w.document.getElementById('hidden-game-control')).display, 'none', 'shared material controls must respect the hidden attribute');
+        const css = read('fourfold-garden.css');
+        assert.match(css, /radial-gradient\(ellipse at top,#5361438a,#111d15e8\)/, 'the garden page uses Sho Dan Sho’s forest timber palette');
+        assert.match(css, /reserve-flower \.tile-name\{display:none\}/, 'phone reserve buttons use icon-only labels');
     } finally { dom.window.close(); }
 });
 
@@ -156,12 +163,22 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     assert.ok(guides.some(text => text.startsWith('Crisantemo')));
     assert.ok(guides.some(text => text.includes('Centidonia')));
     assert.ok(guides.every(text => !/Flower wheel:|Once, |Passive Counterpoint:|Once, pull/.test(text)));
+    const orchid = [...w.document.querySelectorAll('.reserve-flower')].find(button => button.getAttribute('aria-label')?.startsWith('Orquídea'));
+    const fan = [...w.document.querySelectorAll('.reserve-flower')].find(button => button.getAttribute('aria-label')?.startsWith('Abanico'));
+    assert.match(orchid.title, /Se aplican las relaciones de la rueda de Flores/);
+    assert.match(fan.title, /Una vez, empuja una fila o columna/);
+    assert.match(fan.title, /Habilidades en reserva sin usar: 1; agotadas: 0/);
+    assert.doesNotMatch(orchid.title + fan.title, /Flower wheel|Once, push|destination must|Reserve:|ready|spent/);
+    assert.match(w.document.querySelector('#log .log-entry').textContent, /Partida nueva\. Marfil comienza colocando una pieza\./);
     w.document.querySelector('.tile-card').click();
     w.document.querySelector('.point[data-index="60"]').click();
     await new Promise(resolve => setTimeout(resolve, 25));
     assert.equal(w.document.querySelectorAll('.point .piece-icon').length, 1);
     assert.match(w.document.querySelector('#statusMain').textContent, /Marfil/);
     assert.match(w.document.querySelector('#harmonyScore').textContent, /se repitió 1\/3 veces/);
+    assert.match(w.document.querySelector('#log .log-entry').textContent, /Marfil colocó Rosa en/);
+    w.document.getElementById('finishTurnBtn').click();
+    assert.match(w.document.querySelector('#log .log-entry').textContent, /Marfil terminó el turno sin una acción adicional/);
 });
 
 test('a local bot answers a human placement and finishes its turn', async t => {
