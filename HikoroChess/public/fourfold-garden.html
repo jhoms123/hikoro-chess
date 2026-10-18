@@ -8,17 +8,17 @@
 <link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-garden"><script src="/site-audio.js?v=20261018-fourfold-garden" defer=""></script>
 <link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-garden"><script src="/collection-theme.js?v=20261018-fourfold-garden-board-points" defer=""></script>
 <link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-garden"><script src="/mobile-table.js?v=20261018-fourfold-garden" defer=""></script>
-<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-playfix"><script src="/phone-game-shell.js?v=20261018-fourfold-playfix" defer=""></script>
+<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-playfix"><script src="/phone-game-shell.js?v=20261018-garden-selection" defer=""></script>
 <link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-garden"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/socket.io/socket.io.js?v=20261018-fourfold-playfix"></script><script src="/accounts.js?v=20261018-fourfold-garden"></script>
 <link rel="stylesheet" href="/experience.css?v=20261018-fourfold-garden"><script src="/table-companion.js?v=20261018-fourfold-garden"></script><script src="/experience.js?v=20261018-fourfold-garden" defer=""></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
-<script src="/i18n-catalog.js?v=20261018-fourfold-playfix"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
-<link rel="stylesheet" href="fourfold-garden.css?v=20261018-fourfold-pressfix">
+<script src="/i18n-catalog.js?v=20261018-fourfold-garden"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
+<link rel="stylesheet" href="fourfold-garden.css?v=20261018-garden-selection">
 </head>
 <body data-audio-theme="fourfold-garden" class="fourfold-garden-page sds-page">
 <header class="site-header"><a class="site-brand" href="/" id="lobby-link" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a><span class="header-caption">A garden of strategy &amp; harmony</span><label class="language-control" translate="no"><span>Language / Idioma</span><select class="language-select" aria-label="Language / Idioma"><option value="en">English</option><option value="es-CU">Español (Cuba)</option></select></label><button class="header-rules" id="rules-toggle" type="button" aria-haspopup="dialog" aria-controls="rules-modal">How to play <span aria-hidden="true">↗</span></button></header>
 <section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Fourfold Garden</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
-<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status and actions"><section class="control-section bg-game-panel">
+<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status, piece selection, and actions"><section class="bg-game-panel reserve-panel"><h2>Choose a piece</h2><p class="reserve-intro">Choose a reserve piece, place it on an open point, then choose an optional action.</p><div id="hands-container" class="reserve-hands"><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="control-section bg-game-panel">
         <h2>Turn and reserve</h2>
         <div class="status-box">
           <div id="statusMain" class="status-main">Ivory's turn</div>
@@ -69,7 +69,7 @@
         <span><i class="sample-line d"></i>Dissonance</span>
         <span><i class="sample-line counterpoint"></i>Counterpoint Harmony</span>
         <span><i class="sample-line bond"></i>Vine–Bamboo bond</span>
-      </div></div><aside class="inventory-sidebar" aria-label="Reserves, piece guide, and turn log"><section class="bg-game-panel reserve-panel"><h2>Flower reserves</h2><p class="reserve-intro">Choose a reserve piece, place it on an open point, then choose an optional action.</p><div id="hands-container" class="reserve-hands"><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="piece-guide bg-game-panel" aria-labelledby="pieces-title">
+      </div></div><aside class="inventory-sidebar" aria-label="Piece guide and turn log"><section class="piece-guide bg-game-panel" aria-labelledby="pieces-title">
         <h2 id="pieces-title">The ten pieces in this edition</h2>
         <p class="rules">Six Flowers and four Tools form two separate harmony groups. Each player has one copy of each listed piece.</p>
         <div id="pieceGuideGrid" class="piece-guide-grid"></div>
@@ -124,7 +124,7 @@
 
 
 
-<script src="fourfold-garden.js?v=20261018-fourfold-playfix" defer=""></script>
+<script src="fourfold-garden.js?v=20261018-garden-selection" defer=""></script>
 
 
 </body></html>

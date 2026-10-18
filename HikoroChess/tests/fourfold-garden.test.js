@@ -141,15 +141,63 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.equal(w.getComputedStyle(w.document.getElementById('hidden-game-control')).display, 'none', 'shared material controls must respect the hidden attribute');
         const css = read('fourfold-garden.css');
         assert.match(css, /radial-gradient\(ellipse at top,#5361438a,#111d15e8\)/, 'the garden page uses Sho Dan Sho’s forest timber palette');
-        assert.match(css, /reserve-flower \.tile-name\{display:none\}/, 'phone reserve buttons use icon-only labels');
+        assert.match(css, /reserve-flower \.tile-name\{display:flex;align-items:center;justify-content:center/, 'phone reserve buttons show readable piece names');
+        assert.match(css, /\.game-layout>#hands-container\{order:1/, 'phone piece selection appears before the board so both are easy to use in sequence');
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
-        assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/, 'flower and tool reserves share one visible phone tray');
+        assert.match(css, /grid-template-columns:minmax\(0,1fr\);align-items:stretch/, 'phone reserve groups use the full width for readable, larger targets');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-fourfold-pressfix/, 'board alignment CSS changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-garden-selection/, 'selection CSS changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-garden-selection/, 'selection interaction changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-garden/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
     } finally { dom.window.close(); }
+});
+
+test('reserve buttons show and toggle the selected piece without changing placement rules', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const w = dom.window;
+    w.SiteAccounts = { register() {}, socket() { return null; }, playerName() { return 'Player'; } };
+    w.eval(read('fourfold-garden.js'));
+    let rose = w.document.querySelector('.reserve-flower[data-piece-type="rose"]');
+    assert.equal(rose.getAttribute('aria-pressed'), 'false');
+    rose.click();
+    rose = w.document.querySelector('.reserve-flower[data-piece-type="rose"]');
+    assert.equal(rose.getAttribute('aria-pressed'), 'true');
+    assert.ok(rose.classList.contains('active'));
+    assert.match(w.document.getElementById('selectedNote').textContent, /Selected: Rose/, 'the next action is named clearly after selection');
+    rose.click();
+    rose = w.document.querySelector('.reserve-flower[data-piece-type="rose"]');
+    assert.equal(rose.getAttribute('aria-pressed'), 'false', 'tapping the selected piece again cancels selection');
+    assert.ok(!rose.classList.contains('active'));
+    assert.equal(w.document.querySelector('.point.selected-target'), null);
+    assert.equal(w.document.querySelectorAll('.point .token').length, 0, 'selecting or cancelling never places a piece by itself');
+});
+
+test('phone shell puts the labeled reserve tray before the board and actions after it', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const w = dom.window;
+    w.SiteAccounts = { register() {}, socket() { return null; }, playerName() { return 'Player'; } };
+    w.matchMedia = () => ({ matches: true, addEventListener() {} });
+    w.requestAnimationFrame = callback => { callback(); return 1; };
+    w.ResizeObserver = class { observe() {} disconnect() {} };
+    w.scrollTo = () => {};
+    const board = w.document.getElementById('board-wrapper');
+    const viewport = w.document.createElement('div');
+    viewport.className = 'mobile-board-viewport';
+    board.before(viewport);
+    viewport.append(board);
+    w.eval(read('fourfold-garden.js'));
+    w.eval(read('phone-game-shell.js'));
+    w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+    const layoutChildren = [...w.document.querySelector('.game-layout').children].map(el => el.id || el.className);
+    assert.deepEqual(layoutChildren, ['hands-container', 'mobile-board-viewport', 'fourfold-phone-dock']);
+    assert.equal(w.document.querySelectorAll('#hands-container .reserve-flower').length, 10);
+    assert.equal(w.document.querySelectorAll('.mobile-board-viewport #board').length, 1);
 });
 
 test('pointer taps resolve to the nearest board point and place the selected piece', t => {
@@ -186,6 +234,7 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     assert.equal(w.document.getElementById('opponentMode').value, 'bot-indigo');
     w.I18n.setLanguage('es-CU');
     await new Promise(resolve => setTimeout(resolve, 25));
+    assert.equal(w.document.querySelector('.reserve-panel h2').textContent, 'Escoge una pieza');
     const guides = [...w.document.querySelectorAll('.piece-guide-card')].map(card => card.textContent);
     assert.equal(guides.length, 10);
     assert.ok(guides.some(text => text.startsWith('Rosa')));
