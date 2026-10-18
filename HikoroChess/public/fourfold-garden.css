@@ -194,7 +194,7 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 @media(max-width:760px){
  body.phone-game-shell.fourfold-garden-page.sds-page main.game-layout{height:auto!important;min-height:calc(100dvh - var(--phone-top,100px))!important;overflow:visible!important;align-items:stretch!important;justify-content:flex-start!important;gap:7px!important}
  body.phone-game-shell.fourfold-garden-page.sds-page .game-layout>.mobile-board-viewport{flex:0 0 auto!important;min-height:0!important;width:100%!important;overflow:visible!important}
- body.phone-game-shell.fourfold-garden-page.sds-page .mobile-board-surface{width:min(var(--phone-fit-width,100%),calc(100dvh - var(--phone-top,100px) - 430px))!important;max-width:100%!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .mobile-board-surface{box-sizing:border-box;width:100%!important;max-width:none!important}
  body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock{order:4!important;flex:none!important;width:100%!important}
  body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock .reserve-intro{display:none!important}
  body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock .btn{min-height:44px!important;max-height:none!important;font-size:12px!important}

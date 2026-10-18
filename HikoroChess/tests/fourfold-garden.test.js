@@ -179,7 +179,9 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.doesNotMatch(html, /id="abilityMode"|Use ability/, 'there is no optional ability button');
         assert.match(html, /class="mobile-reserve-heading"[\s\S]*Flowers and Tools/, 'the phone picker visibly identifies both reserve groups');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection CSS changes get a fresh cache key');
+        assert.match(css, /\.mobile-board-surface\{box-sizing:border-box;width:100%!important;max-width:none!important\}/, 'the mobile board fills the available phone width');
+        assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-mobile-board-fullwidth-v5/, 'board sizing changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
