@@ -11,6 +11,7 @@ const Shavari = require('./public/shavari-engine');
 const Hikoruka = require('./public/hikoruka-engine');
 const Go = require('./public/go-engine');
 const Academy = require('./public/academy-engine');
+const FourfoldGarden = require('./public/fourfold-garden');
 const { installAccounts } = require('./accounts');
 const MatchRecord = require('./public/match-record');
 const Identity = require('./public/player-identity');
@@ -59,11 +60,12 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             if (game.botCount < 0 || game.botCount >= game.maxPlayers) throw Error('Invalid stored Sho Dan Sho bot seats');
             game.humanCapacity = game.maxPlayers - game.botCount;
         }
-        const rules = {shavari:Shavari, hikoruka:Hikoruka, go:Go, academy:Academy}[game.gameType];
+        const rules = {shavari:Shavari, hikoruka:Hikoruka, go:Go, academy:Academy, 'fourfold-garden':FourfoldGarden}[game.gameType];
         let engine = rules ? (game.gameType==='go' ? rules.initial(game.boardSize) : rules.initial()) : game.gameType==='shodansho'&&!game.isSinglePlayer ? createSdsValidator(game.maxPlayers) : null;
         if(rules) for(const action of data.journal){ engine=rules.apply(engine,action); if(!engine)throw Error('Invalid stored action'); }
         if(game.gameType==='shodansho'&&engine)for(const action of game.sdsActions)if(!applySdsAction(engine,action))throw Error('Invalid stored garden action');
         if(game.gameOver&&rules&&!engine.result)engine.result={winner:game.winner==='draw'?0:Number(game.winner),reason:game.reason};
+        if(game.gameType==='fourfold-garden'&&game.gameOver){engine.draw=game.winner==='draw';engine.winner=engine.draw?null:Number(game.winner)-1;}
         games.set(game.id,game); sessions.set(game.id,{...data,engine});
         if(!game.started&&!game.gameOver)lobby.set(game.id,{id:game.id,gameType:game.gameType,creatorName:game.name,timeControl:game.timeControl,currentPlayers:data.tokens.filter(Boolean).length,maxPlayers:game.maxPlayers,humanCapacity:game.humanCapacity||game.maxPlayers,botCount:game.botCount||0,boardSize:game.boardSize});
     }
@@ -100,6 +102,8 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         if (!engine) return;
         const { positions, ...publicEngine } = engine;
         publicEngine.playerProfiles=game.playerProfiles;
+        publicEngine.started=game.started;
+        publicEngine.gameOver=game.gameOver;
         publicEngine.recordJournal = sessions.get(game.id).journal || [];
         game.players.forEach((id, playerIndex) => {
             if (!onlySocket || id === onlySocket.id) broadcast(id, `${game.gameType}State`, { gameId: game.id, state: publicEngine, playerIndex });
@@ -114,8 +118,13 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         game.gameOver = true; game.winner = winner; game.reason = reason;
         game.lastActivity = Date.now();
         persistResult(game);
-        if (['shavari','hikoruka','go','academy'].includes(game.gameType)) {
-            sessions.get(game.id).engine.result = { winner: winner === 'draw' ? 0 : Number(winner), reason };
+        if (['shavari','hikoruka','go','academy','fourfold-garden'].includes(game.gameType)) {
+            const engine = sessions.get(game.id).engine;
+            engine.result = { winner: winner === 'draw' ? 0 : Number(winner), reason };
+            if (game.gameType === 'fourfold-garden') {
+                engine.draw = winner === 'draw';
+                engine.winner = engine.draw ? null : Number(winner) - 1;
+            }
             sendVariant(game);
         } else broadcast(game.id, 'gameStateUpdate', state(game));
         if (game.gameType !== 'hikoro') broadcast(game.id, 'roomClosed', reason);
@@ -140,7 +149,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
     function options(data) {
         if (!data || typeof data !== 'object') return null;
         const gameType = data.gameType || 'hikoro';
-        if (!['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy'].includes(gameType)) return null;
+        if (!['hikoro', 'shodansho', 'shavari', 'hikoruka', 'go', 'academy', 'fourfold-garden'].includes(gameType)) return null;
         const maxPlayers = gameType === 'shodansho' ? Number(data.sdsPlayerCount || 2) : 2;
         const botCount = gameType === 'shodansho' ? Number(data.sdsBotCount ?? 0) : 0;
         if (![2, 3, 4].includes(maxPlayers) || !Number.isInteger(botCount) || botCount < 0 || botCount >= maxPlayers) return null;
@@ -163,7 +172,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             moveList: [], actionJournal: [], whiteCaptured: [], blackCaptured: [], whitePrinceOnBoard: true, blackPrinceOnBoard: true, sdsActions: [] };
         games.set(id, game);
         const tokens = [ticket()];
-        sessions.set(id, { tokens, journal: [], accountIds: [socket.data.accountId || null], engine: config.gameType === 'academy' ? Academy.initial() : config.gameType === 'go' ? Go.initial(config.boardSize) : config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
+        sessions.set(id, { tokens, journal: [], accountIds: [socket.data.accountId || null], engine: config.gameType === 'academy' ? Academy.initial() : config.gameType === 'go' ? Go.initial(config.boardSize) : config.gameType === 'hikoruka' ? Hikoruka.initial() : config.gameType === 'shavari' ? Shavari.initial() : config.gameType === 'fourfold-garden' ? FourfoldGarden.initial() : config.gameType === 'shodansho' && !single ? createSdsValidator(config.maxPlayers) : null });
         socket.join(id);
         if (announceSeat) reply(socket, 'seatAssigned', { gameId: id, token: tokens[0], playerIndex: 0 });
         roster(game);
@@ -329,12 +338,13 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             const game = newGame(socket, config, false);
             lobby.set(game.id, { id: game.id, gameType: game.gameType, creatorName: game.name, timeControl: game.timeControl, currentPlayers: 1, maxPlayers: game.maxPlayers, humanCapacity:game.humanCapacity||game.maxPlayers, botCount:game.botCount||0, boardSize: game.boardSize });
             reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: game.gameType === 'hikoro' ? 'white' : 'waiting' });
+            if(game.gameType==='fourfold-garden')sendVariant(game);
             roster(game); emitLobby();
         });
         on('createSinglePlayerGame', data => {
             const config = options({ ...data, timeControl: { main: -1, byoyomiTime: 0 } });
             if (!config) return err(socket, 'Invalid game settings.');
-            if (['shavari','hikoruka','go','academy'].includes(config.gameType)) return err(socket, `Local play is available at /${config.gameType}.html.`);
+            if (['shavari','hikoruka','go','academy','fourfold-garden'].includes(config.gameType)) return err(socket, `Local play is available at /${config.gameType}.html.`);
             if (!canCreate()) return;
             const game=newGame(socket, config, true);
             if (config.gameType==='hikoro' && data?.hikoroBot===true) {
@@ -388,6 +398,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
                 if (game.gameType === 'shodansho') addSdsBotSeats(game);
                 game.started = true; game.lastMoveTimestamp = Date.now(); lobby.delete(id);
                 broadcast(id, 'gameStart', state(game));
+                if(game.gameType==='fourfold-garden')sendVariant(game);
             } else {
                 lobby.get(id).currentPlayers = count;
                 reply(socket, 'gameCreated', { gameId: id, gameType:game.gameType, color: 'waiting' });
@@ -409,7 +420,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             game.playerProfiles[index]=socket.data.playerIdentity||game.playerProfiles[index];
             socket.join(game.id); game.lastActivity = Date.now();
             broadcast(game.id, 'playerIdentities',{gameId:game.id,players:game.playerProfiles});roster(game);
-            if (['shavari','hikoruka','go','academy'].includes(type)) {
+            if (['shavari','hikoruka','go','academy','fourfold-garden'].includes(type)) {
                 if (!game.started) return reply(socket, 'gameCreated', { gameId: game.id, gameType:game.gameType, color: 'waiting' });
                 sendVariant(game, socket);
             } else if (type === 'shodansho'&&!game.started) reply(socket,'gameCreated',{gameId:game.id,gameType:game.gameType,color:'waiting'});
@@ -448,6 +459,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
                 next.join(fresh.id);reply(next,'seatAssigned',{gameId:fresh.id,token:session.tokens[i],playerIndex:i});
             }
             if(fresh.gameType==='shodansho')addSdsBotSeats(fresh);
+            reply(participants[0],'seatAssigned',{gameId:fresh.id,token:sessions.get(fresh.id).tokens[0],playerIndex:0});
             fresh.started=true;fresh.lastMoveTimestamp=Date.now();old.rematchVotes=[];
             broadcast(fresh.id,'rematchReady',{gameId:fresh.id,gameType:fresh.gameType,maxPlayers:fresh.maxPlayers});roster(fresh);roster(old);
         });
@@ -457,14 +469,17 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
         on('joinHikorukaRoom', data => resume(data, 'hikoruka'));
         on('joinGoRoom', data => resume(data, 'go'));
         on('joinAcademyRoom', data => resume(data, 'academy'));
-        for (const [type, rules] of [['shavari',Shavari],['hikoruka',Hikoruka],['go',Go],['academy',Academy]]) {
+        on('joinFourfoldGardenRoom', data => resume(data, 'fourfold-garden'));
+        for (const [type, rules] of [['shavari',Shavari],['hikoruka',Hikoruka],['go',Go],['academy',Academy],['fourfold-garden',FourfoldGarden]]) {
             on(`${type}Action`, data => {
                 const game = games.get(data?.gameId), engine = sessions.get(data?.gameId)?.engine;
                 if (!game || game.gameType !== type || !game.started || game.gameOver || seat(game,socket) !== engine.player-1)
                     return err(socket,'Not your turn or this seat is no longer active.');
                 const next = rules.apply(engine,data?.action);
                 if (!next) return err(socket,'That move is not legal.');
-                sessions.get(game.id).engine=next;sessions.get(game.id).journal.push(JSON.parse(JSON.stringify(data.action)));game.lastActivity=Date.now();game.gameOver=Boolean(next.result);sendVariant(game);if(game.gameOver){persistResult(game);roster(game);}
+                sessions.get(game.id).engine=next;sessions.get(game.id).journal.push(JSON.parse(JSON.stringify(data.action)));game.lastActivity=Date.now();game.gameOver=Boolean(next.result);
+                if(type==='fourfold-garden'&&game.gameOver){game.winner=next.result?.winner===0?'draw':next.result?.winner;game.reason=next.result?.reason||'Game complete';}
+                sendVariant(game);if(game.gameOver){persistResult(game);roster(game);}
             });
             on(`${type}Resign`, data => {
                 const game=games.get(data?.gameId);
@@ -518,7 +533,7 @@ function createServer({ accountOptions, roomStore = accountOptions?.clientFactor
             const game = games.get(id);
             if (!game || !member(game, socket)) return err(socket, 'You do not hold a seat in this room.');
             if (game.started && !game.isSinglePlayer && !game.gameOver) finish(game,
-                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : ['shavari','hikoruka','go','academy'].includes(game.gameType) ? 2 - seat(game, socket) : 'draw', 'A player left the room.');
+                game.gameType === 'hikoro' ? (seat(game, socket) === 0 ? 'black' : 'white') : ['shavari','hikoruka','go','academy','fourfold-garden'].includes(game.gameType) ? 2 - seat(game, socket) : 'draw', 'A player left the room.');
             else broadcast(id, 'roomClosed', 'This room was closed.');
             socket.leave(id); remove(game);
         });

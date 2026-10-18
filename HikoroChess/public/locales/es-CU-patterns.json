@@ -562,5 +562,61 @@
   [
     "Crossbow at {0}",
     "Ballesta en {0}"
+  ],
+  [
+    "{0} left",
+    "{0} restantes"
+  ],
+  [
+    "× {0} · {1} ready",
+    "× {0} · {1} disponibles"
+  ],
+  [
+    "· last completed position repeated {0}/3 times",
+    "· la última posición completada se repitió {0}/3 veces"
+  ],
+  [
+    "{0}H ÷ {1}D = {2}",
+    "{0}A ÷ {1}D = {2}"
+  ],
+  [
+    "{0} and {1} point {2},{3}",
+    "Punto {2},{3} en las zonas {0} y {1}"
+  ],
+  [
+    "{0} point {1},{2}",
+    "Punto {1},{2} en la zona {0}"
+  ],
+  [
+    "{0} and {1} point {2},{3}: {4} {5}",
+    "Punto {2},{3} en las zonas {0} y {1}: {4} {5}"
+  ],
+  [
+    "{0} point {1},{2}: {3} {4}",
+    "Punto {1},{2} en la zona {0}: {3} {4}"
+  ],
+  [
+    "Forbidden {0} alignment with {1}",
+    "Alineación {0} prohibida con {1}"
+  ],
+  [
+    "Target must be in a clear row or column within {0} points.",
+    "El objetivo debe estar en una fila o columna despejada, a no más de {0} puntos."
+  ],
+  [
+    "You control Ivory; Indigo bot opening style: {0}.",
+    "Controlas a Marfil; estilo inicial del bot Índigo: {0}."
+  ],
+  [
+    "Ivory bot opening style: {0}; you control Indigo.",
+    "Estilo inicial del bot Marfil: {0}; controlas a Índigo."
+  ],
+  [
+    "Watching both bots. Opening profiles: Ivory — {0}; Indigo — {1}. Use Pause bot match to stop the action.",
+    "Observando a ambos bots. Estilos iniciales: Marfil — {0}; Índigo — {1}. Usa «Pausar partida automática» para detenerla."
+  ],
+  [
+    "Bot match paused. Opening profiles: Ivory — {0}; Indigo — {1}. Use Pause bot match to stop the action.",
+    "Partida entre bots pausada. Estilos iniciales: Marfil — {0}; Índigo — {1}. Usa «Pausar partida automática» para detenerla."
   ]
 ]

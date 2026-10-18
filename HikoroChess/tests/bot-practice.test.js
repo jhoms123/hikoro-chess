@@ -26,7 +26,7 @@ test('game pages request the current translation catalog after a catalog update'
     for (const name of fs.readdirSync(publicDir).filter(name => name.endsWith('.html'))) {
         const html = read(name);
         if (html.includes('/i18n-catalog.js?')) {
-            assert.match(html, /\/i18n-catalog\.js\?v=20261008-bot-cuban-translations/, name);
+            assert.match(html, /\/i18n-catalog\.js\?v=20261018-fourfold-garden/, name);
         }
     }
 });

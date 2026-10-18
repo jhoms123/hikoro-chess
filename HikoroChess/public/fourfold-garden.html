@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#211710">
+<title>Fourfold Garden · Hikoro collection</title>
+
+<link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-garden"><script src="/site-audio.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-garden"><script src="/collection-theme.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-garden"><script src="/mobile-table.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-garden"><script src="/phone-game-shell.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-garden"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/accounts.js?v=20261018-fourfold-garden"></script>
+<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-garden"><script src="/table-companion.js?v=20261018-fourfold-garden"></script><script src="/experience.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
+<script src="/i18n-catalog.js?v=20261018-fourfold-garden"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
+<link rel="stylesheet" href="fourfold-garden.css?v=20261018-fourfold-garden">
+</head>
+<body data-audio-theme="fourfold-garden" class="fourfold-garden-page sds-page">
+<header class="site-header"><a class="site-brand" href="/" id="lobby-link" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a><span class="header-caption">A garden of strategy &amp; harmony</span><label class="language-control" translate="no"><span>Language / Idioma</span><select class="language-select" aria-label="Language / Idioma"><option value="en">English</option><option value="es-CU">Español (Cuba)</option></select></label><button class="header-rules" id="rules-toggle" type="button" aria-haspopup="dialog" aria-controls="rules-modal">How to play <span aria-hidden="true">↗</span></button></header>
+<section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Fourfold Garden</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
+<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status and actions"><section class="control-section bg-game-panel">
+        <h2>Turn and reserve</h2>
+        <div class="status-box">
+          <div id="statusMain" class="status-main">Ivory's turn</div>
+          <div id="statusDetail" class="status-detail">Choose a tile, then place it on any open playable point.</div>
+        </div>
+        <div class="opponent-control">
+          <label for="opponentMode">Players</label>
+          <select id="opponentMode">
+            <option value="human">Two players · pass and play</option>
+            <option value="bot-indigo">Play as Ivory · bot plays Indigo</option>
+            <option value="bot-ivory">Play as Indigo · bot plays Ivory</option>
+            <option value="watch">Watch bot vs bot</option>
+          </select>
+          <div class="bot-control-row">
+            <button id="pauseBotBtn" class="btn subtle" type="button" hidden="">Pause bot match</button>
+          </div>
+          <div class="bot-note" id="botNote">Choose a player mode. In watch mode, the board will play automatically.</div>
+        </div>
+        <div class="online-controls" id="onlineControls">
+          <button id="onlineCreateBtn" class="btn" type="button">Create online table</button>
+          <button id="copyInviteBtn" class="btn subtle" type="button" hidden="">Copy invite link</button>
+          <button id="resign-button" class="btn danger" type="button" hidden="">Resign</button>
+          <div id="onlineStatus" class="bot-note" role="status" aria-live="polite">Play locally or create a room and share its invite link.</div>
+        </div>
+        <div class="mode-row">
+          <button id="placeMode" class="btn active">Place piece</button>
+          <button id="abilityMode" class="btn" disabled="">Use ability</button>
+          <button id="pickupMode" class="btn" disabled="">Pick up yours</button>
+        </div>
+        <div class="action-row">
+          <button id="finishTurnBtn" class="btn subtle" disabled="">Finish turn</button>
+          <button id="undoBtn" class="btn subtle">Undo</button>
+          <button id="resetBtn" class="btn danger">New game</button>
+        </div>
+        <div id="selectedNote" class="selected-note">Place one reserve piece first. Then choose one optional ability or pick up one of your own pieces.</div>
+
+
+      </section></aside><div id="board-wrapper" class="board-stage" aria-label="Fourfold Garden board and status"><div class="board-head">
+        <div class="board-title">Compact Garden · 109 playable points</div>
+        <div id="turnPill" class="turn-pill p0">Ivory to play</div>
+      </div><div class="board-wrap"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div><div id="harmonyScore" class="score-strip" aria-live="polite"></div><div class="legend">
+        <span><i class="swatch red"></i>Red Garden</span>
+        <span><i class="swatch white"></i>White Garden</span>
+        <span><i class="swatch neutral"></i>Neutral Garden</span>
+        <span><i class="sample-line"></i>Flower Harmony</span>
+        <span><i class="sample-line diagonal"></i>Diagonal Flower Harmony</span>
+        <span><i class="sample-line tool"></i>Tool Harmony</span>
+        <span><i class="sample-line d"></i>Dissonance</span>
+        <span><i class="sample-line counterpoint"></i>Counterpoint Harmony</span>
+        <span><i class="sample-line bond"></i>Vine–Bamboo bond</span>
+      </div></div><aside class="inventory-sidebar" aria-label="Reserves, piece guide, and turn log"><section class="bg-game-panel reserve-panel"><h2>Flower reserves</h2><p class="reserve-intro">Choose a reserve piece, place it on an open point, then choose an optional action.</p><div id="hands-container" class="reserve-hands"><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="piece-guide bg-game-panel" aria-labelledby="pieces-title">
+        <h2 id="pieces-title">The ten pieces in this edition</h2>
+        <p class="rules">Six Flowers and four Tools form two separate harmony groups. Each player has one copy of each listed piece.</p>
+        <div id="pieceGuideGrid" class="piece-guide-grid"></div>
+      </section><section class="bg-game-panel log-panel">
+        <h2>Turn log</h2>
+        <div id="log" class="log"></div>
+      </section></aside></main><footer class="site-footer"><span>Fourfold Garden</span><span>Movement · Balance · Harmony</span><a class="asset-credits" href="assets/medieval/CREDITS.md" target="_blank" rel="noopener">Art credits</a></footer><div id="rules-modal" class="hidden-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true"><div id="rules-content"><div class="rules-book-header"><h2 id="rules-title">The Book of Harmony</h2><button class="header-rules" id="close-rules" type="button" aria-label="Close rules">Close</button></div><div class="rules-book-body"><section class="rules-section" id="rules-section">
+        <h2>How to play</h2>
+        <div class="rules">
+          <ul>
+            <li>Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece, then you may use one ability, pick up one of your own older pieces, or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.</li>
+            <li>Same-owner Flowers and Tools form Harmony on a clear row or column when their wheel types resonate. Rose or Chrysanthemum can also form clear diagonal Flower Harmony with any resonant friendly Flower. Dissonance stays on rows and columns and affects both endpoints, including across owners. A Peony or Knotweed can convert two Dissonance links from its own pieces on opposite sides into Counterpoint Harmony between the outer pieces; the effect is automatic while all three pieces remain active. A clear Flower Harmony ray from either member of an active, adjacent Vine–Bamboo pair may pass through blockers. Alignment restrictions apply regardless of ownership: Rose and Vine cannot share a row or column; Rose and Chrysanthemum cannot share a diagonal. Blockers do not cancel these restrictions.</li>
+            <li>A closed four-flower Harmony loop captures enemy pieces inside its boundary; captured pieces return to their owners' reserves. The loop can use orthogonal or diagonal Harmony links and can be any simple four-sided shape. Enclose the gold center point with a four-piece Harmony loop to win. If the same complete position occurs three times, the game ends and the player with the higher Harmony-to-Dissonance ratio wins; equal ratios draw. The position includes the player to move, reserves, used abilities, and active special links.</li>
+            <li>Garden thresholds are fixed and visible: one Dissonance ray disables a Red Flower, two disable a Neutral Flower, and three disable a White Flower. The colored petals extend one ring farther, shrinking the Neutral corners.</li>
+            <li>Orchid pushes one adjacent enemy Flower directly away into an empty point. Wheel rotates its full eight-point ring clockwise when all eight points are on the board and none is a Rock. Fan pushes a straight contiguous row or column of up to 3 tiles one point away into an empty point (4 from Neutral); Rocks cannot move. Bell reaches 2 points (3 from Neutral): it pulls an enemy tile along a clear row or column into the empty point nearest the Bell, or claims an enemy Tool in a live Tool Harmony link. A claimed Tool changes to your color and its old link naturally breaks; it keeps its used/unused status. Dissonance jams abilities, except Bell can still act while dissonant. A placement or tool movement that would create a prohibited alignment is illegal. Tools do not count toward Flower victory.</li>
+            <li>Orchid, Wheel, Fan, and Bell each have one active ability use; if a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.</li>
+          </ul>
+          <strong>Tip:</strong> When your last reserve placement does not win, a required pickup appears immediately. That pickup returns the piece to your reserve, and your turn then ends. Use “Undo” to take back your whole last turn.
+        </div>
+        <div class="small-print">Compact rules: the circular board has 109 playable points. Any simple four-flower Harmony loop enclosing the center wins, including loops with diagonal links. Otherwise, the third occurrence of an identical full position ends the game by each player's active Harmony ÷ Dissonance ratio. With no Dissonance and at least one Harmony, the ratio is infinite; with neither link it is zero. Pickups and non-winning captures return pieces to reserves. If both players complete a center ring in the same resolution, the player whose turn it is wins the center.</div>
+        <details class="compat">
+          <summary>Open the relationship charts</summary>
+          <div class="compat-content">
+            <p>Flower wheel (12 types): White Jade → White Lotus → Rose → Vine → Chrysanthemum → Bamboo → Rhododendron → Thorn → Jasmine → Orchid → Lily → Peony → back to White Jade.</p>
+            <p>Tool wheel (8 types): Rock → Knotweed → Mirror → Bridge → Boat → Wheel → Fan → Bell → back to Rock.</p>
+          <table class="compat-table" aria-label="Resonance and Dissonance by shortest distance around each wheel">
+              <thead><tr><th>Shortest wheel distance</th><th>Flowers</th><th>Tools</th></tr></thead>
+              <tbody>
+                <tr><td>0 · same type</td><td class="d">Dissonance</td><td class="d">Dissonance</td></tr>
+                <tr><td>1 step</td><td class="h">Resonance</td><td class="h">Resonance</td></tr>
+                <tr><td>2 steps</td><td class="h">Resonance</td><td class="h">Resonance</td></tr>
+                <tr><td>3 steps</td><td class="h">Resonance</td><td class="d">Dissonance</td></tr>
+                <tr><td>4 steps</td><td class="d">Dissonance</td><td class="d">Dissonance</td></tr>
+                <tr><td>5 steps</td><td class="d">Dissonance</td><td class="na">—</td></tr>
+                <tr><td>6 steps</td><td class="d">Dissonance</td><td class="na">—</td></tr>
+              </tbody>
+            </table>
+            <p>Balanced links: Every flower type has 6 resonant and 6 dissonant flower relationships. Every tool has 4 resonant and 4 dissonant tool relationships. Same-type pairings count as Dissonance.</p>
+            <p>Special connections: Rose and Chrysanthemum may make a clear diagonal Flower Harmony link to any resonant friendly Flower; only Flower Harmony gets this diagonal option. Adjacent friendly Vine and Bamboo power their Flower rays through blockers. If a Peony is between two of its owner's Flowers that each dissonate with it on opposite sides of a clear row or column, those two Dissonance links are replaced by a Counterpoint Harmony between the outer Flowers. Knotweed does the same for two of its owner's Tools. Counterpoint removes those two Dissonance links, ignores the outer pair's usual type relationship, and exists only while the pivot and both outer pieces remain active. Bell's takeover is permanent and visible from the claimed Tool's color, with no extra link marker.</p>
+            <p>Compatibility only compares pieces in their own group. Ordinary Harmony needs a clear row or column, except for the Rose/Chrysanthemum Flower diagonal rule. Dissonance always stays orthogonal and may link either owner. Counterpoint is drawn as a dotted violet line and recalculated automatically; no marker or once-per-game conversion token is needed. Harmony never changes an ability's range. The alignment restrictions are geometric and apply even through blockers: Rose–Vine cannot share a row or column, and Rose–Chrysanthemum cannot share a diagonal.</p>
+            <p>Repetition tiebreak: Count each active same-owner Flower or Tool Harmony link once for that player. Count each active Dissonance link against every owner represented at either endpoint (so a cross-owner Dissonance counts against both). Compare Harmony ÷ Dissonance. A positive Harmony count with zero Dissonance is ∞; zero Harmony and zero Dissonance is 0. Equal ratios after the third occurrence are a draw.</p>
+          </div>
+        </details>
+      </section></div></div></div><div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal">
+    <div class="eyebrow">The garden is claimed</div>
+    <h2 id="modalTitle">Ivory wins</h2>
+    <p id="modalText">A four-flower harmony ring has enclosed the center.</p>
+    <button id="modalReset" class="btn">Start another game</button>
+  </div>
+</div>
+
+
+
+<script src="fourfold-garden.js?v=20261018-fourfold-garden" defer=""></script>
+
+
+</body></html>

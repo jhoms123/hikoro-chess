@@ -130,10 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameTypeSelect) {
         gameTypeSelect.addEventListener('change', () => {
             const gameType = gameTypeSelect.value;
-            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameType);
+            singlePlayerBtn.disabled = !socket.connected && !['shavari','hikoruka','go','shavari-go','academy','shodansho','fourfold-garden','valley-hunt','shavari-city-battle'].includes(gameType);
             createGameBtn.disabled = !socket.connected || gameType === 'shavari-go' || gameType === 'valley-hunt' || gameType === 'shavari-city-battle';
             const setupHint = document.getElementById('setup-hint');
-            if (setupHint) setupHint.textContent = gameType === 'shavari-go'
+            if (setupHint) setupHint.textContent = gameType === 'fourfold-garden'
+                ? 'Fourfold Garden is untimed. Play locally against the garden bot or create an online room to invite another player.'
+                : gameType === 'shavari-go'
                 ? 'Shavari Go is a shared-device two-player game. Online rooms are not available yet.'
                 : gameType === 'shavari-city-battle'
                     ? 'Shavari City Battle is local two-player play on a 16 × 17 board. Online rooms are not available yet.'
@@ -183,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (mainTime === 0 && byoyomiTime === 0) byoyomiTime = 15;
-        const timeControl = {
+        const timeControl = gameType === 'fourfold-garden' ? { main: -1, byoyomiTime: 0, byoyomiPeriods: 0 } : {
             main: mainTime,
             byoyomiTime: mainTime === -1 ? 0 : byoyomiTime,
             byoyomiPeriods: mainTime === -1 ? 0 : (byoyomiTime > 0 ? 999 : 0)
@@ -194,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     singlePlayerBtn.addEventListener('click', () => {
+        if (gameTypeSelect.value === 'fourfold-garden') { window.location.href = '/fourfold-garden.html?mode=bot-indigo'; return; }
         if (gameTypeSelect.value === 'shavari-go') { window.location.href = '/shavari-go.html?mode=black'; return; }
         if (gameTypeSelect.value === 'shavari-city-battle') { window.location.href = '/shavari-city-battle.html'; return; }
         if (gameTypeSelect.value === 'shodansho') {
@@ -220,22 +223,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('connection-status').title = '';
         createGameBtn.disabled = gameTypeSelect.value === 'shavari-go' || gameTypeSelect.value === 'valley-hunt' || gameTypeSelect.value === 'shavari-city-battle'; singlePlayerBtn.disabled = false;
         if (!gameId && !isReplayMode) {
-            try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); } } catch {}
+            try { const saved = sessionStorage.getItem('hikoro-active-room'); if (saved) { gameId = saved; seatToken = sessionStorage.getItem('hikoro-seat-' + saved); roomType = sessionStorage.getItem('hikoro-room-type-' + saved) || roomType; } } catch {}
         }
-        if (gameId && !isReplayMode && seatToken) socket.emit(({hikoro:'resumeGame',shodansho:'joinSdsRoom',go:'joinGoRoom',shavari:'joinShavariRoom',hikoruka:'joinHikorukaRoom',academy:'joinAcademyRoom'})[roomType], { gameId, token: seatToken });
+        if (gameId && !isReplayMode && seatToken) socket.emit(({hikoro:'resumeGame',shodansho:'joinSdsRoom',go:'joinGoRoom',shavari:'joinShavariRoom',hikoruka:'joinHikorukaRoom',academy:'joinAcademyRoom','fourfold-garden':'joinFourfoldGardenRoom'})[roomType], { gameId, token: seatToken });
         else if (hikoroPage && !isReplayMode) startHikoroLocal();
     });
     socket.on('disconnect', () => {
         localCreationPending = false;
         document.getElementById('connection-status').textContent = 'Disconnected · Reconnecting…';
-        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
+        createGameBtn.disabled = true; singlePlayerBtn.disabled = !['shavari','hikoruka','go','shavari-go','academy','shodansho','fourfold-garden','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
     });
     socket.on('roomClosed', message => { if (!switchingLocalMatch) announce(message); });
     socket.on('connect_error', (err) => {
         console.error("Connection failed:", err.message);
         const status = document.getElementById('connection-status');
         if (status) { status.textContent = 'Connection failed · retrying…'; status.title = err.message || 'The game server is unavailable'; }
-        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
+        singlePlayerBtn.disabled = !['shavari','hikoruka','go','academy','shodansho','fourfold-garden','valley-hunt','shavari-city-battle'].includes(gameTypeSelect.value);
         announce("Cannot reach the game server. Retrying automatically. Local play remains available for Sho Dan Sho, Shavari, The Valley Hunt, and Shavari City Battle.");
     });
 
@@ -431,6 +434,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateLobby(games) { discovery.update(games); }
 
     function onGameCreated(data) {
+        if (data.gameType === 'fourfold-garden') {
+            gameId = data.gameId;
+            roomType = data.gameType;
+            sessionStorage.setItem('hikoro-active-room', gameId);
+            sessionStorage.setItem('hikoro-room-type-' + gameId, roomType);
+            window.location.href = `/fourfold-garden.html?gameId=${encodeURIComponent(gameId)}`;
+            return;
+        }
         document.getElementById('site-notice').hidden = true;
         gameId = data.gameId;roomType=data.gameType||'hikoro';
         myColor = data.color;
@@ -448,6 +459,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onGameStart(initialGameState) {
         window.SiteAudio?.setTheme(initialGameState.gameType==='hikoro'?'hikoro':'lobby');
+        if (initialGameState.gameType === 'fourfold-garden') {
+            sessionStorage.setItem('hikoro-active-room', initialGameState.id);
+            sessionStorage.setItem('hikoro-room-type-' + initialGameState.id, 'fourfold-garden');
+            sessionStorage.setItem('hikoro-room-type', 'fourfold-garden');
+            window.location.href = `/fourfold-garden.html?gameId=${encodeURIComponent(initialGameState.id)}`;
+            return;
+        }
         if (['shavari','hikoruka','go','academy'].includes(initialGameState.gameType)) {
             window.location.href = initialGameState.isSinglePlayer ? `/${initialGameState.gameType}.html` : `/${initialGameState.gameType}.html?gameId=${encodeURIComponent(initialGameState.id)}`;
             return;
