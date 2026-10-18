@@ -635,7 +635,7 @@ function tokenTitle(piece,status){
   if(d.ability&&piece.used)extras.push(uiText("Ability spent"));
   return displayOwner+" "+uiText(d.name)+(extras.length?" · "+extras.join(" · "):"")+" — "+uiText(d.desc);
 }
-function renderBoard(status){
+function renderBoard(status,mandatoryAbilityActions){
   const board=document.getElementById("board");
   board.innerHTML="";
   // Resolve taps by the nearest lattice point instead of relying on tiny
@@ -723,6 +723,7 @@ function renderBoard(status){
   status.toolLinks.forEach(function(l){drawLine(l,l.path==="counterpoint"?"ray-counterpoint":"ray-tool")});
   status.toolD.forEach(function(l){drawLine(l,"ray-tool-d")});
   board.appendChild(svg);
+  const requiredAbilitySources=new Set(mode==="ability"&&state.turnStage==="bonus"?(mandatoryAbilityActions||availableAbilityActions(state.current,status)).map(function(action){return action.source}):[]);
   for(let i=0;i<SIZE*SIZE;i++){
     const pos=xy(i);
     if(!playableAt(pos.x,pos.y))continue;
@@ -733,6 +734,11 @@ function renderBoard(status){
     button.dataset.index=String(i);
     const areaLabel=zones.filter(function(z){return z!=="center"}).join(" and ")||region;
     button.setAttribute("aria-label",areaLabel+" point "+(pos.x+1)+","+(pos.y+1)+(p?": "+ownersName(p.owner)+" "+DEFS[p.type].short:""));
+    if(p&&requiredAbilitySources.has(i)){
+      button.classList.add("ability-required-source");
+      button.setAttribute("aria-label",button.getAttribute("aria-label")+" — "+uiText("Required ability source"));
+      button.title=uiText("Required ability source");
+    }
     if(i===lastPoint)button.classList.add("last-move");
     if(pending&&pending.sourceIndex===i)button.classList.add("selected-target");
     if(mode==="pickup"&&p&&canPickUpPiece(p,state.current,true))button.classList.add("pickup-target");
@@ -813,15 +819,15 @@ function render(status){
   state.lastStatus=status;
   const current=state.current;
   const placeStage=state.turnStage==="place",bonusStage=state.turnStage==="bonus",pickupStage=state.turnStage==="pickup"||state.turnStage==="pickupRequired",pickupRequiredStage=state.turnStage==="pickupRequired";
+  const mandatoryAbilities=bonusStage?availableAbilityActions(current,status):[],abilityRequired=mandatoryAbilities.length>0;
+  if(bonusStage&&!pending){if(abilityRequired&&mode!=="ability")mode="ability";else if(!abilityRequired&&mode==="ability")mode="bonus"}
   const pill=document.getElementById("turnPill");pill.className="turn-pill p"+current;pill.textContent=ownersName(current)+(state.winner!==null?" wins":state.draw?" · draw":placeStage?" · place":pickupStage?" · required pickup":" · bonus action");
   document.getElementById("placeMode").classList.toggle("active",mode==="place");
-  document.getElementById("abilityMode").classList.toggle("active",mode==="ability");
   document.getElementById("pickupMode").classList.toggle("active",mode==="pickup");
   document.getElementById("placeMode").disabled=humanInputLocked()||!placeStage;
-  document.getElementById("abilityMode").disabled=humanInputLocked()||!bonusStage;
-  document.getElementById("pickupMode").disabled=humanInputLocked()||(!bonusStage&&!pickupStage);
+  document.getElementById("pickupMode").disabled=humanInputLocked()||(!bonusStage&&!pickupStage)||(bonusStage&&abilityRequired);
   document.getElementById("pickupMode").textContent=pickupStage?"Pick up (required)":"Pick up yours";
-  document.getElementById("finishTurnBtn").disabled=humanInputLocked()||!bonusStage;
+  document.getElementById("finishTurnBtn").disabled=humanInputLocked()||!bonusStage||abilityRequired||state.lastPlacementFinalReserve;
   document.getElementById("undoBtn").disabled=!undoState||humanInputLocked()||!!onlineGameId;
   document.getElementById("pauseBotBtn").hidden=opponentMode!=="watch";
   document.getElementById("pauseBotBtn").textContent=botPaused?"Resume bot match":"Pause bot match";
@@ -844,37 +850,37 @@ function render(status){
   }else if(botPaused&&opponentMode==="watch"){
     setStatus("Bot match paused","Resume the match when you want to keep watching.");
   }else if(isBotTurn()){
-    setStatus(ownersName(current)+" bot to move",placeStage?"The bot must place a reserve piece first.":pickupStage?"The bot must pick up one of its own pieces this turn.":"The bot is considering an ability or picking up one of its own pieces.");
+    setStatus(ownersName(current)+" bot to move",placeStage?"The bot must place a reserve piece first.":pickupStage?"The bot must pick up one of its own pieces this turn.":abilityRequired?"The bot must use one of its legal active abilities before ending the turn.":"The bot may pick up one of its own pieces or finish the turn.");
   }else if(pickupStage){
     setStatus(ownersName(current)+" must pick up",pickupRequiredStage?"Your last reserve piece is on the board. Pick up one of your own pieces to return it to reserve, then your turn ends.":"No reserve pieces remain. Pick up one of your own pieces to return it to reserve; this is your whole turn.");
   }else if(pending){
     setStatus("Ability: "+DEFS[pending.sourceType].short,pending.message);
-  }else if(mode==="ability"){
-    setStatus(ownersName(current)+" optional ability","Click one of your unused ability pieces, then follow its target prompt.");
+  }else if(abilityRequired){
+    setStatus(ownersName(current)+" must use an ability","Choose one highlighted friendly piece with a legal active ability, then follow the target prompt.");
   }else if(mode==="pickup"){
     setStatus("Pick up your piece","Click one of your own pieces to return it to your reserve.");
   }else if(selectedType){
     setStatus("Place "+DEFS[selectedType].short,uiText("Tap an open board point to place this piece."));
   }else if(bonusStage){
-    setStatus(ownersName(current)+" optional action","You have placed. Use one ability, pick up one of your own pieces, or finish the turn.");
+    setStatus(ownersName(current)+" optional action","No legal active ability is available. You may pick up one of your own pieces or finish the turn.");
   }else{
     setStatus(ownersName(current)+" must place","Choose a piece from your reserve and place it on an open point first.");
   }
   const selectedNote=document.getElementById("selectedNote");
   if(pickupStage){
     selectedNote.textContent=pickupRequiredStage?"Last reserve piece placed. Pick up one of your own pieces to return it to reserve; this ends your turn.":"No reserve pieces remain. Pick up one of your own pieces to return it to reserve; this is your whole turn.";
-  }else if(mode==="ability"){
-    selectedNote.textContent="Optional action: activate one friendly piece with an unused power. Passive-only pieces cannot be activated.";
+  }else if(abilityRequired){
+    selectedNote.textContent="Required action: activate one highlighted friendly piece with a legal active ability. Passive-only pieces cannot be activated.";
   }else if(mode==="pickup"){
     selectedNote.textContent="Click one of your own pieces to return it to reserve. The piece placed this turn is protected unless it is your only piece on the board.";
   }else if(selectedType){
     selectedNote.textContent=uiText("Selected: "+DEFS[selectedType].name+". Tap an open board point to place it; crossed-out points are forbidden.");
   }else if(bonusStage){
-    selectedNote.textContent="Your piece is placed. Choose one optional ability or pick up one of your own pieces; otherwise finish the turn.";
+    selectedNote.textContent="Your piece is placed. No legal active ability is available, so you may pick up one of your own pieces or finish the turn.";
   }else{
-    selectedNote.textContent="Select a reserve piece and place it first. An ability or pickup can happen afterward.";
+    selectedNote.textContent="Select a reserve piece and place it first. If a legal active ability is available afterward, you must use it before ending the turn.";
   }
-  renderBoard(status);
+  renderBoard(status,mandatoryAbilities);
   renderHarmonyScore(status);
   renderBank("flower",status);renderBank("tool",status);renderLog();
   if(state.winner!==null||state.draw){
@@ -914,17 +920,28 @@ function finishAction(message,kind){
   if(state.winner!==null||state.draw){render(status);commitOnlineAction();return}
   if(state.turnStage==="place"){
     const mustPickup=state.lastPlacementFinalReserve||!hasReservePieces(actor);
-    state.lastPlacementFinalReserve=false;
-    if(mustPickup){
+    const mandatoryAbilities=availableAbilityActions(actor,status);
+    if(mandatoryAbilities.length){
+      state.turnStage="bonus";selectedType=null;pending=null;mode="ability";
+    }else if(mustPickup){
+      state.lastPlacementFinalReserve=false;
       if(!hasOwnedBoardPiece(actor)){
         addLog(ownersName(actor)+" had no piece left on the board after the placement was captured; the captured piece returned to reserve, so the turn ends.","pickup");
         finishTurn(status);commitOnlineAction();return;
       }
       state.turnStage="pickupRequired";selectedType=null;pending=null;mode="pickup";
     }else{
+      state.lastPlacementFinalReserve=false;
       state.turnStage="bonus";selectedType=null;pending=null;mode="bonus";
     }
     render(status);commitOnlineAction();return;
+  }
+  if(state.turnStage==="bonus"&&engineActionIntent?.kind==="ability"&&state.lastPlacementFinalReserve){
+    state.lastPlacementFinalReserve=false;
+    if(hasOwnedBoardPiece(actor)){
+      state.turnStage="pickupRequired";selectedType=null;pending=null;mode="pickup";
+      render(status);commitOnlineAction();return;
+    }
   }
   finishTurn(status);
   commitOnlineAction();
@@ -957,10 +974,14 @@ function sourceAbility(piece){
   return null;
 }
 function selectAbilitySource(index){
+  if(state.turnStage!=="bonus"){setStatus("Ability unavailable","Place a reserve piece before using an active ability.");return}
   const p=state.board[index];
   if(!p||p.owner!==state.current){setStatus("Choose your own piece","Only the current player can activate their own piece.");return}
   const problem=sourceAbility(p);
   if(problem){setStatus(DEFS[p.type].short,problem);return}
+  if(!availableAbilityActions(state.current,state.lastStatus||boardStatus()).some(function(action){return action.source===index})){
+    setStatus("No legal active ability","Choose a friendly ability piece with a legal action.");render();return;
+  }
   engineActionIntent={kind:"ability",source:index,targets:[]};
   if(p.type==="wheel"){snapshot();if(rotateWheel(index)){p.used=true;lastPoint=index;finishAction("used Wheel to rotate its surrounding tiles.","")}else{engineActionIntent=null;setStatus("Wheel has no legal rotation","The ring must be complete, contain no Rock, and avoid prohibited alignments.");render()}return}
   if(p.type==="mirror"){snapshot();p.used=true;p.mirrorActive=true;lastPoint=index;finishAction("activated Mirror; its right-angle reflection stays active while it remains here.","");return}
@@ -1010,6 +1031,9 @@ function handlePoint(index){
     placePiece(selectedType,index);return;
   }
   if(mode==="pickup"){
+    if(state.turnStage==="bonus"&&availableAbilityActions(state.current,state.lastStatus||boardStatus()).length){
+      mode="ability";setStatus("Ability required","Use a legal active ability before picking up or ending your turn.");render();return;
+    }
     const piece=state.board[index];
     if(!piece){setStatus("Choose your own piece","Click one of your own pieces to remove it.");return}
     if(piece.owner!==state.current){setStatus("That piece belongs to your opponent","You may only pick up one of your own pieces.");return}
@@ -1151,6 +1175,15 @@ function fanPush(sourceIndex,dx,dy,source){
 
 function finishBonus(){
   if(state.winner!==null||state.draw||state.turnStage!=="bonus")return;
+  if(availableAbilityActions(state.current,state.lastStatus||boardStatus()).length){
+    mode="ability";pending=null;selectedType=null;setStatus("Ability required","Use a legal active ability before picking up or ending your turn.");render();return;
+  }
+  if(state.lastPlacementFinalReserve){
+    state.lastPlacementFinalReserve=false;
+    if(hasOwnedBoardPiece(state.current)){
+      state.turnStage="pickupRequired";mode="pickup";pending=null;selectedType=null;render();return;
+    }
+  }
   if(!engineActionIntent)engineActionIntent={kind:"finish"};
   addLog(ownersName(state.current)+" finished the turn without a bonus action.","");
   finishTurn(state.lastStatus||resolveCapturesAndWin());
@@ -1939,7 +1972,6 @@ function botPickupActionHint(q,owner,status,plan,clearanceMap,ringNeeds){
   return hint;
 }
 function botAbilityIsLegal(action,owner){
-  if(["wheel","boat","fan","bell","orchid","thorn"].indexOf(action.kind)<0)return true;
   const previous=state,previousPoint=lastPoint;
   try{
     state=cloneBotSearchState(previous);state.current=owner;state.turnStage="bonus";
@@ -1947,19 +1979,17 @@ function botAbilityIsLegal(action,owner){
   }catch(error){return false}
   finally{state=previous;lastPoint=previousPoint}
 }
+function availableAbilityActions(owner,status){
+  status=status||state.lastStatus||boardStatus();
+  return botAbilityActions(owner,status).filter(function(action){return botAbilityIsLegal(action,owner)}).sort(function(a,b){return (b.hint||0)-(a.hint||0)});
+}
 function botBonusCandidates(owner,status,limit,searching){
-  const abilities=botAbilityActions(owner,status).filter(function(action){return botAbilityIsLegal(action,owner)}).sort(function(a,b){return (b.hint||0)-(a.hint||0)});
+  const abilities=availableAbilityActions(owner,status);
+  if(abilities.length)return abilities.slice(0,limit);
   const plan=ensureCenterRingPlan(owner,status),clearanceMap=centerRingClearanceMap(owner,status),ringNeeds=searching?Object.create(null):centerRingPickupNeeds(owner,status);
   const pickups=eligiblePickupPieces(owner,true).map(function(q){return {kind:"pickup",target:q.piece.id,hint:botPickupActionHint(q,owner,status,plan,clearanceMap,ringNeeds)}}).sort(function(a,b){return b.hint-a.hint});
-  const late=botEndgameFactor()>=.35,abilityCount=late?8:12,pickupCount=late?5:3;
-  const candidates=abilities.slice(0,abilityCount).concat(pickups.slice(0,pickupCount)).sort(function(a,b){return (b.hint||0)-(a.hint||0)});
-  if(late&&pickups.length){
-    const targetPickup=pickups[0];
-    if(!candidates.slice(0,4).some(function(a){return a.kind==="pickup"&&a.target===targetPickup.target})){
-      candidates.pop();candidates.splice(Math.min(3,candidates.length),0,targetPickup);
-    }
-  }
-  return candidates.slice(0,limit);
+  const late=botEndgameFactor()>=.35,pickupCount=late?5:3;
+  return pickups.slice(0,pickupCount).slice(0,limit);
 }
 function generateBotActions(owner,searching){
   if(state.turnStage==="pickup"||state.turnStage==="pickupRequired"){
@@ -2021,6 +2051,7 @@ function applyBotAction(action){
     state.board[action.index]=piece;state.lastPlacementFinalReserve=!hasReservePieces(state.current);state.turnPlacedId=piece.id;lastPoint=action.index;return true;
   }
   if(action.kind==="pickup"&&(state.turnStage==="bonus"||state.turnStage==="pickup"||state.turnStage==="pickupRequired")){
+    if(state.turnStage==="bonus"&&availableAbilityActions(state.current,state.lastStatus||boardStatus()).length)return false;
     const targetIndex=indexOfId(action.target),piece=targetIndex>=0?state.board[targetIndex]:null;
     if(!canPickUpPiece(piece,state.current,true))return false;
     clearSpecialEffectsOnMove(piece);state.board[targetIndex]=null;returnToReserve(piece);state.pickedUp[state.current].push(piece.type);lastPoint=targetIndex;return true;
@@ -2364,25 +2395,63 @@ function scoreBotActionUsing(action,owner,evaluator){
 function scoreBotActionAdvanced(action,owner){return scoreBotActionUsing(action,owner,scoreBotPositionAdvanced)}
 const BOT_THINK_TIME_MS=200;
 function botClockNow(){return typeof performance!=="undefined"&&performance.now?performance.now():Date.now()}
+function scoreBotContinuationAction(action,actor,rootOwner,required){
+  const previous=state,previousPoint=lastPoint;
+  try{
+    state=cloneBotSearchState(previous);state.current=actor;state.turnStage="bonus";
+    if(!applyBotAction(action))return -Infinity;
+    let status=resolveCapturesAndWin();
+    if(state.winner!==null||state.draw)return scoreBotPositionAdvanced(rootOwner,status);
+    if(required&&action.kind!=="pickup"){
+      state.lastPlacementFinalReserve=false;
+      if(hasOwnedBoardPiece(actor)){
+        state.turnStage="pickupRequired";
+        const pickups=generateBotActions(actor,true);
+        let bestPickup=null,bestPickupScore=-Infinity;
+        for(let i=0;i<pickups.length;i++){
+          const value=scoreBotActionAdvanced(pickups[i],rootOwner);
+          if(value>bestPickupScore){bestPickupScore=value;bestPickup=pickups[i]}
+        }
+        if(bestPickup&&applyBotAction(bestPickup))status=resolveCapturesAndWin();
+      }
+    }
+    return scoreBotPositionAdvanced(rootOwner,state.lastStatus||status||boardStatus());
+  }catch(error){return -Infinity}
+  finally{state=previous;lastPoint=previousPoint}
+}
 function probeBestContinuation(actor,rootOwner,deadline,required){
   const status=boardStatus(),baseline=scoreBotPositionAdvanced(rootOwner,status);
-  state.turnStage=required?"pickupRequired":"bonus";
-  let actions=[];
-  if(required)actions=generateBotActions(actor,true);
-  else actions=botBonusCandidates(actor,status,14,true);
-  let bestAction=null,bestScore=baseline,complete=true;
+  state.turnStage="bonus";
+  let actions=botBonusCandidates(actor,status,14,true);
+  let bestAction=null,bestScore=actor===rootOwner?baseline+.05:baseline-.05,complete=true;
   for(let i=0;i<actions.length;i++){
     if(botClockNow()>=deadline-28){complete=false;break}
-    const value=scoreBotActionAdvanced(actions[i],rootOwner);
+    const value=scoreBotContinuationAction(actions[i],actor,rootOwner,required);
     const improves=actor===rootOwner?value>bestScore+.05:value<bestScore-.05;
     if((required&&!bestAction)||improves){bestScore=value;bestAction=actions[i]}
   }
-  if(required&&!bestAction&&actions.length)bestAction=actions[0];
+  const abilityRequired=actions.some(function(action){return action.kind!=="pickup"});
+  if((required||abilityRequired)&&!bestAction&&actions.length)bestAction=actions[0];
   if(bestAction){
     if(!applyBotAction(bestAction))return {complete:false,score:-Infinity};
-    const nextStatus=resolveCapturesAndWin();
+    let nextStatus=resolveCapturesAndWin();
     if(state.winner!==null||state.draw)return {complete:complete,score:scoreBotPositionAdvanced(rootOwner,nextStatus)};
-  }else if(required&&actions.length)return {complete:false,score:-Infinity};
+    if(required&&bestAction.kind!=="pickup"){
+      state.lastPlacementFinalReserve=false;
+      if(hasOwnedBoardPiece(actor)){
+        state.turnStage="pickupRequired";
+        const pickups=generateBotActions(actor,true);
+        let bestPickup=null,bestPickupScore=-Infinity;
+        for(let i=0;i<pickups.length;i++){
+          if(botClockNow()>=deadline-28){complete=false;break}
+          const value=scoreBotActionAdvanced(pickups[i],rootOwner);
+          if(value>bestPickupScore){bestPickupScore=value;bestPickup=pickups[i]}
+        }
+        if(!bestPickup||!applyBotAction(bestPickup))return {complete:false,score:-Infinity};
+        nextStatus=resolveCapturesAndWin();
+      }
+    }
+  }else if(required&&hasOwnedBoardPiece(actor))return {complete:false,score:-Infinity};
   return {complete:complete,score:scoreBotPositionAdvanced(rootOwner,state.lastStatus||boardStatus())};
 }
 function probeCompleteTurn(action,actor,rootOwner,deadline){
@@ -2391,7 +2460,6 @@ function probeCompleteTurn(action,actor,rootOwner,deadline){
   if(state.winner!==null||state.draw)return {complete:true,score:scoreBotPositionAdvanced(rootOwner,status)};
   if(action.kind==="place"){
     const required=state.lastPlacementFinalReserve||!hasReservePieces(actor);
-    state.lastPlacementFinalReserve=false;
     const follow=probeBestContinuation(actor,rootOwner,deadline,required);
     if(!follow.complete)return {complete:false,score:follow.score};
     status=state.lastStatus||status;
@@ -2425,7 +2493,6 @@ function botReplyProbe(opening,owner,deadline){
     if(state.winner!==null||state.draw)return {worst:scoreBotPositionAdvanced(owner,status),complete:true};
     if(opening.kind==="place"){
       const required=state.lastPlacementFinalReserve||!hasReservePieces(owner);
-      state.lastPlacementFinalReserve=false;
       const follow=probeBestContinuation(owner,owner,deadline,required);
       if(!follow.complete)return {worst:follow.score,complete:false};
       status=state.lastStatus||status;
@@ -2484,13 +2551,14 @@ function chooseBotAction(){
   if(state.turnStage==="bonus"){
     const baseline=scoreBotPositionAdvanced(owner,boardStatus());
     const candidates=actions.slice(0,12);
+    const abilityRequired=candidates.some(function(action){return action.kind!=="pickup"});
     let best=null,bestScore=baseline+.05;
     for(let i=0;i<candidates.length;i++){
       if(botClockNow()>=deadline-28)break;
       const score=scoreBotActionAdvanced(candidates[i],owner);
       if(score>bestScore){bestScore=score;best=candidates[i]}
     }
-    return best||{kind:"finish"};
+    return best||(abilityRequired?candidates[0]:{kind:"finish"});
   }
   const candidates=actions.slice(0,3),evaluated=[];
   for(let i=0;i<candidates.length;i++){
@@ -2539,6 +2607,7 @@ function executeBotAction(action){
     return;
   }
   if(action.kind==="place")recordBotPlacement(state.current,action.type,action.index);
+  else if(action.kind!=="pickup")engineActionIntent={kind:"ability"};
   finishAction(message,"");
 }
 
@@ -2673,7 +2742,6 @@ if(typeof module!=="undefined"&&module.exports){
   }
   window.FourfoldGardenEngine=FourfoldGardenEngine;
   document.getElementById("placeMode").addEventListener("click",function(){if(state.turnStage!=="place")return;mode="place";pending=null;engineActionIntent=null;selectedType=null;render()});
-  document.getElementById("abilityMode").addEventListener("click",function(){if(state.turnStage!=="bonus")return;mode="ability";pending=null;engineActionIntent=null;selectedType=null;render()});
   document.getElementById("pickupMode").addEventListener("click",function(){if(state.turnStage!=="bonus"&&state.turnStage!=="pickup"&&state.turnStage!=="pickupRequired")return;mode="pickup";pending=null;engineActionIntent=null;selectedType=null;render()});
   document.getElementById("finishTurnBtn").addEventListener("click",finishBonus);
   document.getElementById("undoBtn").addEventListener("click",function(){

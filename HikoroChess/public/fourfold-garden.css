@@ -30,6 +30,8 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .point:hover{filter:brightness(1.16)}
 .fourfold-garden-page .point.selected-target{box-shadow:inset 0 0 0 3px #ffe08a,0 0 7px #fff1a6;z-index:3}
 .fourfold-garden-page .point.pickup-target{box-shadow:inset 0 0 0 3px #a6e0a2,0 0 6px #a6e0a2;z-index:3}
+.fourfold-garden-page .point.ability-required-source{z-index:5}
+.fourfold-garden-page .point.ability-required-source .token{outline:4px solid #ffe28a;outline-offset:2px;filter:drop-shadow(0 0 8px #ffe28a)}
 .fourfold-garden-page .point.sight-forbidden:before{content:"×";position:absolute;inset:17%;display:grid;place-items:center;border:2px solid #a54536;border-radius:50%;background:#f3ddc7;color:#8d2923;font-size:clamp(9px,1.5vw,17px);font-weight:900;line-height:1;z-index:4;pointer-events:none}
 .fourfold-garden-page .point.last-move:after{content:"";position:absolute;inset:3px;border:2px solid rgba(255,247,192,.95);border-radius:50%;pointer-events:none}
 .fourfold-garden-page .token{--chip-face:#ddc486;--chip-edge:#725b32;--chip-ink:#513d20;position:relative;z-index:2;box-sizing:border-box;width:82%;height:82%;min-width:18px;min-height:18px;max-width:48px;max-height:48px;border:2px solid var(--chip-edge);border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 31% 24%,#fff9df 0,var(--chip-face) 48%,#aa8c4e 100%);box-shadow:0 3px 5px #0008,inset 0 0 0 2px #ffffff55,inset 0 -3px 5px #49341d66;color:var(--chip-ink);transition:filter .12s;pointer-events:none}
@@ -73,7 +75,8 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .bot-control-row{display:flex;gap:7px}.fourfold-garden-page .bot-control-row .btn{flex:1}
 .fourfold-garden-page .online-controls{display:grid;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #80654255}
 .fourfold-garden-page .online-controls #onlineStatus{margin:0;min-height:30px}
-.fourfold-garden-page .mode-row,.fourfold-garden-page .action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:9px 0}
+.fourfold-garden-page .mode-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:9px 0}
+.fourfold-garden-page .action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:9px 0}
 .fourfold-garden-page .mode-row .btn,.fourfold-garden-page .action-row .btn{min-width:0;padding:7px 4px;font:600 10px/1.3 Arial,sans-serif}
 .fourfold-garden-page .btn.active{background:#d2b779;color:#2b2418;border-color:#6d5128}
 .fourfold-garden-page .selected-note{min-height:36px;margin:10px 0 0;color:#625037;font:11px/1.45 Arial,sans-serif}
@@ -155,9 +158,10 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
  body.phone-game-shell.fourfold-garden-page .score-strip .score-lines{gap:2px 8px}
  body.phone-game-shell.fourfold-garden-page .legend{display:none}
  body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock{order:3;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;width:100%;max-width:620px;margin:0 auto}
- body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .mode-row,body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:0}
+ body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .mode-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0}
+ body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:0}
  body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .btn{box-sizing:border-box;min-width:0;min-height:40px!important;max-height:44px;padding:4px 3px!important;font:600 11px/1.15 Arial,sans-serif!important;white-space:normal}
- body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .selected-note{min-height:0;max-height:32px;overflow:auto;margin:0;padding:4px 6px;border:1px solid #b7a17466;background:#172719b8;color:#f0e3c4;font:10px/1.3 Arial,sans-serif}
+ body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .selected-note{min-height:0;max-height:64px;overflow:auto;margin:0;padding:5px 7px;border:1px solid #b7a17466;background:#172719b8;color:#f0e3c4;font:11px/1.35 Arial,sans-serif}
  body.phone-game-shell.fourfold-garden-page .game-layout>#hands-container{order:1;display:grid!important;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:5px;width:100%;height:auto;min-height:0;max-height:min(39dvh,330px);flex:0 0 auto;margin:0;padding:0;overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:#b8995d #172719}.fourfold-garden-page #hands-container::-webkit-scrollbar{width:6px}.fourfold-garden-page #hands-container::-webkit-scrollbar-thumb{background:#b8995d;border-radius:6px}body.phone-game-shell.fourfold-garden-page .mobile-reserve-heading{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;padding:4px 8px;border:1px solid #adad7666;background:#172719;color:#f0e3c4;font:600 11px/1.2 Georgia,serif}body.phone-game-shell.fourfold-garden-page .mobile-reserve-heading span{color:#d3c397;font:10px/1.2 Arial,sans-serif}body.phone-game-shell.fourfold-garden-page #hands-container .bank-label{position:sticky;top:28px;z-index:5;padding:2px 3px;background:#18271b}
  body.phone-game-shell.fourfold-garden-page .game-layout>.mobile-board-viewport{order:2}
  body.phone-game-shell.fourfold-garden-page #hands-container>div{min-width:0;width:auto;height:auto;max-height:none;overflow:visible}
@@ -184,3 +188,31 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
  body.phone-game-shell.fourfold-garden-page .piece-guide-glyph{flex-basis:25px;width:25px;height:25px;padding:4px}
 }
 @media(prefers-reduced-motion:reduce){.fourfold-garden-page *,body.phone-game-shell[data-audio-theme=fourfold-garden] *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* The shared Sho Dan Sho phone shell makes every reserve a short horizontal
+   carousel. Fourfold needs one tall, two-column tray for both piece groups. */
+@media(max-width:760px){
+ body.phone-game-shell.fourfold-garden-page.sds-page main.game-layout{height:auto!important;min-height:calc(100dvh - var(--phone-top,100px))!important;overflow:visible!important;align-items:stretch!important;justify-content:flex-start!important;gap:7px!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .game-layout>.mobile-board-viewport{flex:0 0 auto!important;min-height:0!important;width:100%!important;overflow:visible!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .mobile-board-surface{width:min(var(--phone-fit-width,100%),calc(100dvh - var(--phone-top,100px) - 430px))!important;max-width:100%!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock{order:4!important;flex:none!important;width:100%!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock .reserve-intro{display:none!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .fourfold-phone-dock .btn{min-height:44px!important;max-height:none!important;font-size:12px!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page .game-layout>#hands-container{order:3!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;align-items:stretch!important;gap:7px!important;width:min(100%,620px)!important;height:38dvh!important;min-height:190px!important;max-height:min(44dvh,360px)!important;flex:0 0 auto!important;margin:0 auto!important;padding:0 0 7px!important;overflow-x:hidden!important;overflow-y:auto!important;overflow-anchor:none;overscroll-behavior-y:contain!important;touch-action:pan-y!important;-webkit-overflow-scrolling:touch!important;scroll-snap-type:none!important;scroll-behavior:auto!important;scroll-padding-block:40px;scrollbar-width:thin;scrollbar-color:#b8995d #172719}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container::-webkit-scrollbar{width:7px}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container::-webkit-scrollbar-thumb{background:#b8995d;border-radius:7px}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container>.mobile-reserve-heading{position:sticky;top:0;z-index:8;box-sizing:border-box;display:flex!important;align-items:center;justify-content:space-between;gap:8px;width:100%;height:36px;min-height:36px;margin:0;padding:5px 9px;border:1px solid #adad7666;background:#172719;color:#f0e3c4;font:600 13px/1.2 Georgia,serif}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container>.mobile-reserve-heading span{color:#d3c397;font:11px/1.2 Arial,sans-serif}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container>div:not(.mobile-reserve-heading){box-sizing:border-box;display:block!important;flex:0 0 auto!important;width:100%!important;min-width:0!important;height:auto!important;max-height:none!important;margin:0!important;overflow:visible!important;scroll-snap-align:none!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .bank-group{box-sizing:border-box;height:auto!important;max-height:none!important;margin:0;padding:6px!important;overflow:visible!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .bank-label{position:sticky;top:36px;z-index:7;box-sizing:border-box;display:flex!important;min-height:22px;margin:0 0 5px;padding:3px 2px;background:#18271b;font-size:10px}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .bank{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;width:100%!important;min-width:0!important;overflow:visible!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower{box-sizing:border-box;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;align-items:center;justify-content:center;width:100%!important;min-width:0!important;min-height:96px!important;height:auto!important;max-height:none!important;padding:5px!important;overflow:visible!important;border-radius:4px;font-size:12px;line-height:1.15}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-glyph{box-sizing:border-box;display:grid;place-items:center;flex:0 0 42px!important;width:42px!important;height:42px!important;aspect-ratio:1/1;margin:0 auto 2px!important}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-glyph .piece-icon{display:block;flex:none;width:29px!important;height:29px!important;max-width:100%;max-height:100%;aspect-ratio:1/1;object-fit:contain}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-name{box-sizing:border-box;display:flex!important;align-items:center;justify-content:center;min-height:24px;max-width:100%;margin:0;padding:0 2px;overflow:visible;text-overflow:clip;white-space:normal;color:#41301d;font:12px/1.1 Georgia,serif;text-wrap:balance}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-count{margin-top:2px;font:10px/1.1 Arial,sans-serif}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower.active,
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower.hand-item-active{outline:3px solid #ffdf83;outline-offset:1px;filter:none!important;transform:none!important;background-color:#f3e6c6!important;box-shadow:0 0 0 2px #392919,0 0 12px #ffe28a}
+ body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower:focus-visible{outline:3px solid #ffe7a1;outline-offset:2px}
+}
