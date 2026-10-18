@@ -83,12 +83,13 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .bank-group[data-active="true"]{border-color:#d4bf85;background:#42573488}
 .fourfold-garden-page .bank-label{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px;color:#f0e3c4}
 .fourfold-garden-page .bank{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.fourfold-garden-page .bank-group.reserve-card>div.bank{grid-template-columns:repeat(3,minmax(0,1fr))}
 .fourfold-garden-page .reserve-flower{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:62px;padding:4px 3px;background:#eadab4 url('assets/medieval/aged-parchment.webp') center/cover;border:1px solid #b79c66;color:#3d2d1d;text-align:center;font:11px/1.15 Georgia,serif;cursor:pointer;touch-action:manipulation}
 .fourfold-garden-page .reserve-flower .tile-glyph{--reserve-face:#ddc486;--reserve-edge:#725b32;--reserve-ink:#513d20;box-sizing:border-box;display:grid;place-items:center;width:29px;height:29px;margin:0 auto;border:1px solid var(--reserve-edge);border-radius:50%;background:radial-gradient(circle at 31% 24%,#fff9df 0,var(--reserve-face) 48%,#aa8c4e 100%);box-shadow:0 2px 3px #0005,inset 0 0 0 1px #ffffff66;color:var(--reserve-ink)}
 .fourfold-garden-page .bank-group[data-owner="1"] .reserve-flower .tile-glyph{--reserve-face:#42566d;--reserve-edge:#192b3d;--reserve-ink:#f2dfb7;background:radial-gradient(circle at 31% 24%,#a8b9c9 0,var(--reserve-face) 49%,#1d2d3e 100%)}
 .fourfold-garden-page .reserve-flower.tool .tile-glyph{border-style:double;border-width:3px}
 .fourfold-garden-page .reserve-flower .tile-glyph .piece-icon{width:20px;height:20px}
-.fourfold-garden-page .reserve-flower .tile-name{max-width:100%;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#41301d;font:10px/1.15 Georgia,serif}
+.fourfold-garden-page .reserve-flower .tile-name{display:flex;align-items:center;justify-content:center;min-height:18px;max-width:100%;margin-top:2px;overflow:visible;text-overflow:clip;white-space:normal;color:#41301d;font:10px/1.05 Georgia,serif}
 .fourfold-garden-page .reserve-flower .tile-count{color:#6c5635;font:9px/1.15 Arial,sans-serif}
 .fourfold-garden-page .reserve-flower.active,.fourfold-garden-page .reserve-flower.hand-item-active{z-index:2;border-color:#633d0d;outline:2px solid #ffdf83;outline-offset:1px;background-color:#f3e6c6!important;box-shadow:0 0 0 2px #392919,0 0 12px #ffe28a}
 .fourfold-garden-page .reserve-flower.active:after,.fourfold-garden-page .reserve-flower.hand-item-active:after{content:"✓";position:absolute;top:2px;right:4px;color:#3a5c34;font:700 12px/1 Arial,sans-serif;text-shadow:0 1px #fff5}
