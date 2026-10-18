@@ -670,5 +670,9 @@
   [
     "{0} picked up its own {1} and return it to reserve.",
     "{0} recogió su {1} y la devolvió a la reserva."
+  ],
+  [
+    "Selected: {0}. Tap an open board point to place it; crossed-out points are forbidden.",
+    "Seleccionada: {0}. Toca un punto vacío del tablero para colocarla; los puntos tachados están prohibidos."
   ]
 ]

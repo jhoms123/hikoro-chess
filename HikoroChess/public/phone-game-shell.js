@@ -1,7 +1,7 @@
 /* A compact table bar and a single dismissible sheet for secondary controls. */
 document.addEventListener('DOMContentLoaded',()=>{
  const body=document.body,media=matchMedia('(max-width:760px)'),theme=body.dataset.audioTheme;
- let bar,drawer,list,openButton,moved=[],resizeObserver,frame=0,observer;
+ let bar,drawer,list,openButton,gameControlsDock,moved=[],resizeObserver,frame=0,observer;
  const playing=()=>theme==='lobby'?body.classList.contains('game-active'):true;
  const visibleTarget=el=>{if(!el)return false;for(let node=el;node&&node!==document.body;node=node.parentElement)if(node.hidden||node.style.display==='none')return false;return true;};
  function action(label,selector){
@@ -16,8 +16,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!media.matches||!playing())return;
   const viewport=document.querySelector('.mobile-board-viewport');
   if(!viewport||viewport.classList.contains('is-detailed'))return;
-  const ratio=theme==='lobby'?0.64:theme==='fourfold-garden'?0.82:1;
-  const width=Math.max(100,Math.floor(Math.min(viewport.clientWidth-4,(viewport.clientHeight-4)*ratio)));
+  const ratio=theme==='lobby'?0.64:1;
+  const width=theme==='fourfold-garden'
+   ?Math.max(100,Math.floor(viewport.clientWidth-4))
+   :Math.max(100,Math.floor(Math.min(viewport.clientWidth-4,(viewport.clientHeight-4)*ratio)));
   const surface=viewport.querySelector('.mobile-board-surface');if(!surface)return;
   const size=width+'px';
   if(surface.style.getPropertyValue('--mobile-board-width')!==size)surface.style.setProperty('--mobile-board-width',size);
@@ -54,9 +56,16 @@ document.addEventListener('DOMContentLoaded',()=>{
    relocate(document.querySelector('.mobile-garden-actions'));relocate(document.querySelector('.game-sidebar'));relocate(document.querySelector('.inventory-sidebar'));
   }else if(theme==='fourfold-garden'){
    const layout=document.querySelector('.game-layout'),viewport=layout?.querySelector(':scope>.mobile-board-viewport'),hands=document.getElementById('hands-container');
+   if(layout){
+    gameControlsDock=document.createElement('section');gameControlsDock.className='fourfold-phone-dock';gameControlsDock.setAttribute('aria-label','Turn actions');
+    layout.insertBefore(gameControlsDock,viewport?.nextSibling||null);
+    for(const selector of ['.game-sidebar .mode-row','.game-sidebar .action-row','.game-sidebar .selected-note']){
+     const control=document.querySelector(selector);if(control)relocateTo(control,gameControlsDock);
+    }
+   }
    relocate(document.querySelector('.game-sidebar'));
    relocate(document.querySelector('.inventory-sidebar'));
-   if(layout&&hands)relocateTo(hands,layout,viewport?.nextSibling||null);
+   if(layout&&hands)relocateTo(hands,layout,gameControlsDock?.nextSibling||viewport?.nextSibling||null);
    relocate(document.querySelector('.legend'));
    relocate(document.getElementById('rules-toggle'));
    if(window.I18n){
@@ -93,6 +102,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   close();resizeObserver?.disconnect();resizeObserver=null;document.removeEventListener('keydown',keydown);
   for(const [el,marker] of moved.reverse()){if(marker.isConnected){if(el.isConnected)marker.replaceWith(el);else marker.remove();}}
   moved=[];bar.remove();drawer.remove();bar=drawer=list=openButton=null;
+  gameControlsDock?.remove();gameControlsDock=null;
   body.classList.remove('phone-game-shell','phone-options-open');body.style.removeProperty('--phone-top');
  }
  // Only phones use the compact shell. Desktop keeps the source board/sidebar layout.

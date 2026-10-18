@@ -142,7 +142,33 @@ test('shared collection styling leaves Fourfold board points under game-specific
         const css = read('fourfold-garden.css');
         assert.match(css, /radial-gradient\(ellipse at top,#5361438a,#111d15e8\)/, 'the garden page uses Sho Dan Sho’s forest timber palette');
         assert.match(css, /reserve-flower \.tile-name\{display:none\}/, 'phone reserve buttons use icon-only labels');
+        assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
+        assert.match(css, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/, 'flower and tool reserves share one visible phone tray');
+        assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
+        assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
     } finally { dom.window.close(); }
+});
+
+test('pointer taps resolve to the nearest board point and place the selected piece', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const w = dom.window;
+    w.SiteAccounts = { register() {}, socket() { return null; }, playerName() { return 'Player'; } };
+    w.eval(read('fourfold-garden.js'));
+    const board = w.document.getElementById('board');
+    board.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1200, height: 1200, right: 1200, bottom: 1200 });
+    w.document.querySelector('.reserve-flower').click();
+    const pointer = (type, x, y) => {
+        const event = new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+        Object.defineProperty(event, 'pointerId', { value: 7 });
+        Object.defineProperty(event, 'isPrimary', { value: true });
+        board.dispatchEvent(event);
+    };
+    pointer('pointerdown', 618, 318);
+    pointer('pointerup', 618, 318);
+    assert.equal(w.document.querySelectorAll('.point .token').length, 1);
+    assert.ok(w.document.querySelector('.point[data-index="27"] .token'), 'a forgiving near-point tap selects the closest intersection');
+    assert.match(w.document.getElementById('statusMain').textContent, /optional action/i);
 });
 
 test('live board, score and all ten piece explanations render in Cuban Spanish', async t => {
