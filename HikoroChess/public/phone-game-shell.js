@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    }
    relocate(document.querySelector('.game-sidebar'));
    relocate(document.querySelector('.inventory-sidebar'));
-   if(layout&&hands)relocateTo(hands,layout,gameControlsDock?.nextSibling||viewport?.nextSibling||null);
+   if(layout&&hands)relocateTo(hands,layout,viewport||gameControlsDock?.nextSibling||null);
    relocate(document.querySelector('.legend'));
    relocate(document.getElementById('rules-toggle'));
    if(window.I18n){
