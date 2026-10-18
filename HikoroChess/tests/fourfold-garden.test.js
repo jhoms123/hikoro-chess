@@ -42,6 +42,34 @@ test('compact game keeps the circular 109-point board, separate reserves, and le
     assert.equal(Garden.apply(state, { kind: 'finish' }).player, 1);
 });
 
+test('a legal active ability is mandatory, including before the last-reserve pickup', () => {
+    const setup = lastReserve => {
+        const state = Garden.initial();
+        state.board[48] = { id: 'wheelA', type: 'wheel', owner: 0, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null };
+        state.board[49] = { id: 'roseA', type: 'rose', owner: 0, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null };
+        for (const type of Object.keys(state.reserves[0])) state.reserves[0][type] = 0;
+        state.reserves[0].bamboo = lastReserve ? 1 : 2;
+        state.current = 0; state.turnStage = 'place'; state.nextId = 3;
+        return state;
+    };
+
+    let state = Garden.apply(setup(false), { kind: 'place', type: 'bamboo', index: 60 });
+    assert.equal(state.turnStage, 'bonus');
+    assert.equal(Garden.apply(state, { kind: 'finish' }), null, 'finishing cannot bypass an available Wheel action');
+    assert.equal(Garden.apply(state, { kind: 'pickup', index: 49 }), null, 'pickup cannot bypass an available active ability');
+    state = Garden.apply(state, { kind: 'ability', source: 48, targets: [] });
+    assert.equal(state.player, 2, 'using the required ability ends a normal bonus step');
+
+    state = Garden.apply(setup(true), { kind: 'place', type: 'bamboo', index: 60 });
+    assert.equal(state.turnStage, 'bonus', 'the active ability happens before the last-reserve pickup');
+    state = Garden.apply(state, { kind: 'ability', source: 48, targets: [] });
+    assert.equal(state.turnStage, 'pickupRequired');
+    assert.equal(Garden.apply(state, { kind: 'finish' }), null, 'the last-reserve pickup remains mandatory after the ability');
+    const oldPiece = state.board.findIndex(piece => piece?.owner === 0 && piece.id !== state.turnPlacedId);
+    state = Garden.apply(state, { kind: 'pickup', index: oldPiece });
+    assert.equal(state.player, 2);
+});
+
 test('pickup can return the just-placed piece only when it is your sole board piece', () => {
     let state = Garden.apply(Garden.initial(), { kind: 'place', type: 'rose', index: 60 });
     state = Garden.apply(state, { kind: 'pickup', index: 60 });
@@ -118,8 +146,8 @@ test('lobby and bilingual game guide expose all ten pieces and full win rules', 
     assert.match(html, /diagonal links/);
     const translations = JSON.parse(read('locales/es-CU.json'));
     const sourceRules = [
-        'Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece, then you may use one ability, pick up one of your own older pieces, or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.',
-        'Orchid, Wheel, Fan, and Bell each have one active ability use; if a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.',
+        'Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece. If at least one legal active ability is available after placement, you must use one before the turn can end; you cannot skip it to pick up a piece or finish. If no legal active ability is available, you may pick up one of your own older pieces or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must also pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.',
+        'Orchid, Wheel, Fan, and Bell each have one active ability use; whenever a legal active ability is available after a placement, one must be used before the turn can end. If a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects that resolve automatically; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.',
         'Tool wheel (8 types): Rock → Knotweed → Mirror → Bridge → Boat → Wheel → Fan → Bell → back to Rock.'
     ];
     assert.ok(sourceRules.every(key => typeof translations[key] === 'string'), 'Spanish entries exist for full game rules');
@@ -142,17 +170,20 @@ test('shared collection styling leaves Fourfold board points under game-specific
         const css = read('fourfold-garden.css');
         assert.match(css, /radial-gradient\(ellipse at top,#5361438a,#111d15e8\)/, 'the garden page uses Sho Dan Sho’s forest timber palette');
         assert.match(css, /reserve-flower \.tile-name\{display:flex;align-items:center;justify-content:center/, 'phone reserve buttons show readable piece names');
-        assert.match(css, /\.game-layout>#hands-container\{order:1/, 'phone piece selection appears before the board so both are easy to use in sequence');
+        assert.match(css, /\.game-layout>#hands-container\{order:3/, 'the vertical reserve tray follows the board and precedes the action dock');
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
         assert.match(css, /grid-template-columns:minmax\(0,1fr\);align-items:stretch/, 'phone reserve groups use the full width for readable, larger targets');
-        assert.match(css, /\.game-layout>#hands-container\{[^}]*max-height:min\(39dvh,330px\)[^}]*overflow-y:auto!important/, 'the shared phone tray scrolls through both Flower and Tool reserves');
+        assert.match(css, /\.game-layout>#hands-container\{[^}]*max-height:min\(44dvh,360px\)[^}]*scroll-snap-type:none!important/, 'the phone picker scrolls vertically without snapping when a card is tapped');
+        assert.match(css, /#hands-container \.bank\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/, 'flowers and tools use a two-column card grid');
+        assert.match(css, /tile-glyph \.piece-icon\{[^}]*aspect-ratio:1\/1/, 'piece emblem artwork keeps its square proportions');
+        assert.doesNotMatch(html, /id="abilityMode"|Use ability/, 'there is no optional ability button');
         assert.match(html, /class="mobile-reserve-heading"[\s\S]*Flowers and Tools/, 'the phone picker visibly identifies both reserve groups');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-phone-piece-picker-v2/, 'selection CSS changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection CSS changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-phone-piece-picker-v2/, 'selection interaction changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-garden/, 'the game uses the current bilingual catalog');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-mandatory-abilities-v1/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
@@ -180,7 +211,7 @@ test('reserve buttons show and toggle the selected piece without changing placem
     assert.equal(w.document.querySelectorAll('.point .token').length, 0, 'selecting or cancelling never places a piece by itself');
 });
 
-test('phone shell puts the labeled reserve tray before the board and actions after it', t => {
+test('phone shell keeps the labeled reserve tray and all piece cards mounted', t => {
     const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
     t.after(() => dom.window.close());
     const w = dom.window;

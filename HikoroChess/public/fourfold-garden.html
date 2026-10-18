@@ -5,20 +5,20 @@
 <meta name="theme-color" content="#211710">
 <title>Fourfold Garden · Hikoro collection</title>
 
-<link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-garden"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-garden"><script src="/site-audio.js?v=20261018-fourfold-garden" defer=""></script>
-<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-garden"><script src="/collection-theme.js?v=20261018-fourfold-garden-board-points" defer=""></script>
-<link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-garden"><script src="/mobile-table.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/site-audio.js?v=20261018-fourfold-mandatory-abilities-v1" defer=""></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/collection-theme.js?v=20261018-fourfold-mandatory-abilities-v1-board-points" defer=""></script>
+<link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/mobile-table.js?v=20261018-fourfold-mandatory-abilities-v1" defer=""></script>
 <link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-playfix"><script src="/phone-game-shell.js?v=20261018-garden-selection" defer=""></script>
-<link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-garden"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/socket.io/socket.io.js?v=20261018-fourfold-playfix"></script><script src="/accounts.js?v=20261018-fourfold-garden"></script>
-<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-garden"><script src="/table-companion.js?v=20261018-fourfold-garden"></script><script src="/experience.js?v=20261018-fourfold-garden" defer=""></script>
+<link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/socket.io/socket.io.js?v=20261018-fourfold-playfix"></script><script src="/accounts.js?v=20261018-fourfold-mandatory-abilities-v1"></script>
+<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/table-companion.js?v=20261018-fourfold-mandatory-abilities-v1"></script><script src="/experience.js?v=20261018-fourfold-mandatory-abilities-v1" defer=""></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
-<script src="/i18n-catalog.js?v=20261018-fourfold-garden"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
-<link rel="stylesheet" href="fourfold-garden.css?v=20261018-phone-piece-picker-v2">
+<script src="/i18n-catalog.js?v=20261018-fourfold-mandatory-abilities-v1"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
+<link rel="stylesheet" href="fourfold-garden.css?v=20261018-mobile-picker-mandatory-abilities-v4">
 </head>
 <body data-audio-theme="fourfold-garden" class="fourfold-garden-page sds-page">
 <header class="site-header"><a class="site-brand" href="/" id="lobby-link" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a><span class="header-caption">A garden of strategy &amp; harmony</span><label class="language-control" translate="no"><span>Language / Idioma</span><select class="language-select" aria-label="Language / Idioma"><option value="en">English</option><option value="es-CU">Español (Cuba)</option></select></label><button class="header-rules" id="rules-toggle" type="button" aria-haspopup="dialog" aria-controls="rules-modal">How to play <span aria-hidden="true">↗</span></button></header>
 <section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Fourfold Garden</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
-<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status, piece selection, and actions"><section class="bg-game-panel reserve-panel"><h2>Choose a piece</h2><p class="reserve-intro">Choose a reserve piece, place it on an open point, then choose an optional action.</p><div id="hands-container" class="reserve-hands" role="group" tabindex="0" aria-label="Flowers and Tools"><div class="mobile-reserve-heading"><strong>Choose a piece</strong><span>Flowers and Tools</span></div><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="control-section bg-game-panel">
+<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status, piece selection, and actions"><section class="bg-game-panel reserve-panel"><h2>Choose a piece</h2><p class="reserve-intro">Choose a reserve piece and place it on an open point. If a legal active ability is available, you must use one before your turn can end.</p><div id="hands-container" class="reserve-hands" role="group" tabindex="0" aria-label="Flowers and Tools"><div class="mobile-reserve-heading"><strong>Choose a piece</strong><span>Flowers and Tools</span></div><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="control-section bg-game-panel">
         <h2>Turn and reserve</h2>
         <div class="status-box">
           <div id="statusMain" class="status-main">Ivory's turn</div>
@@ -45,7 +45,6 @@
         </div>
         <div class="mode-row">
           <button id="placeMode" class="btn active">Place piece</button>
-          <button id="abilityMode" class="btn" disabled="">Use ability</button>
           <button id="pickupMode" class="btn" disabled="">Pick up yours</button>
         </div>
         <div class="action-row">
@@ -53,7 +52,7 @@
           <button id="undoBtn" class="btn subtle">Undo</button>
           <button id="resetBtn" class="btn danger">New game</button>
         </div>
-        <div id="selectedNote" class="selected-note">Place one reserve piece first. Then choose one optional ability or pick up one of your own pieces.</div>
+        <div id="selectedNote" class="selected-note">Place one reserve piece first. If a legal active ability is available, use one before ending your turn; otherwise you may pick up one of your own pieces or finish the turn.</div>
 
 
       </section></aside><div id="board-wrapper" class="board-stage" aria-label="Fourfold Garden board and status"><div class="board-head">
@@ -80,14 +79,14 @@
         <h2>How to play</h2>
         <div class="rules">
           <ul>
-            <li>Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece, then you may use one ability, pick up one of your own older pieces, or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.</li>
+            <li>Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece. If at least one legal active ability is available after placement, you must use one before the turn can end; you cannot skip it to pick up a piece or finish. If no legal active ability is available, you may pick up one of your own older pieces or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must also pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.</li>
             <li>Same-owner Flowers and Tools form Harmony on a clear row or column when their wheel types resonate. Rose or Chrysanthemum can also form clear diagonal Flower Harmony with any resonant friendly Flower. Dissonance stays on rows and columns and affects both endpoints, including across owners. A Peony or Knotweed can convert two Dissonance links from its own pieces on opposite sides into Counterpoint Harmony between the outer pieces; the effect is automatic while all three pieces remain active. A clear Flower Harmony ray from either member of an active, adjacent Vine–Bamboo pair may pass through blockers. Alignment restrictions apply regardless of ownership: Rose and Vine cannot share a row or column; Rose and Chrysanthemum cannot share a diagonal. Blockers do not cancel these restrictions.</li>
             <li>A closed four-flower Harmony loop captures enemy pieces inside its boundary; captured pieces return to their owners' reserves. The loop can use orthogonal or diagonal Harmony links and can be any simple four-sided shape. Enclose the gold center point with a four-piece Harmony loop to win. If the same complete position occurs three times, the game ends and the player with the higher Harmony-to-Dissonance ratio wins; equal ratios draw. The position includes the player to move, reserves, used abilities, and active special links.</li>
             <li>Garden thresholds are fixed and visible: one Dissonance ray disables a Red Flower, two disable a Neutral Flower, and three disable a White Flower. The colored petals extend one ring farther, shrinking the Neutral corners.</li>
             <li>Orchid pushes one adjacent enemy Flower directly away into an empty point. Wheel rotates its full eight-point ring clockwise when all eight points are on the board and none is a Rock. Fan pushes a straight contiguous row or column of up to 3 tiles one point away into an empty point (4 from Neutral); Rocks cannot move. Bell reaches 2 points (3 from Neutral): it pulls an enemy tile along a clear row or column into the empty point nearest the Bell, or claims an enemy Tool in a live Tool Harmony link. A claimed Tool changes to your color and its old link naturally breaks; it keeps its used/unused status. Dissonance jams abilities, except Bell can still act while dissonant. A placement or tool movement that would create a prohibited alignment is illegal. Tools do not count toward Flower victory.</li>
-            <li>Orchid, Wheel, Fan, and Bell each have one active ability use; if a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.</li>
+            <li>Orchid, Wheel, Fan, and Bell each have one active ability use; whenever a legal active ability is available after a placement, one must be used before the turn can end. If a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects that resolve automatically; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.</li>
           </ul>
-          <strong>Tip:</strong> When your last reserve placement does not win, a required pickup appears immediately. That pickup returns the piece to your reserve, and your turn then ends. Use “Undo” to take back your whole last turn.
+          <strong>Tip:</strong> When your last reserve placement does not win, use any legal active ability first, then make the required pickup. The pickup returns a piece to your reserve and ends your turn. Use “Undo” to take back your whole last turn.
         </div>
         <div class="small-print">Compact rules: the circular board has 109 playable points. Any simple four-flower Harmony loop enclosing the center wins, including loops with diagonal links. Otherwise, the third occurrence of an identical full position ends the game by each player's active Harmony ÷ Dissonance ratio. With no Dissonance and at least one Harmony, the ratio is infinite; with neither link it is zero. Pickups and non-winning captures return pieces to reserves. If both players complete a center ring in the same resolution, the player whose turn it is wins the center.</div>
         <details class="compat">
@@ -124,7 +123,7 @@
 
 
 
-<script src="fourfold-garden.js?v=20261018-phone-piece-picker-v2" defer=""></script>
+<script src="fourfold-garden.js?v=20261018-mobile-picker-mandatory-abilities-v4" defer=""></script>
 
 
 </body></html>
