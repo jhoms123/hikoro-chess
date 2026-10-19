@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('piece-info-content').textContent='Tap a board piece or choose a flower to see its movement.';
     fold(document.querySelector('.game-sidebar>div'),'Garden options');
    }
-   if(theme==='lobby'){
+   if(theme==='lobby'&&document.getElementById('hikoro-game-wrapper')){
     const shortcuts=document.createElement('div');shortcuts.className='mobile-hikoro-actions';document.getElementById('hikoro-game-wrapper').prepend(shortcuts);move(document.getElementById('rules-btn-ingame'),shortcuts);move(document.getElementById('main-menu-btn'),shortcuts);
     status=document.createElement('p');status.className='mobile-hikoro-status';status.setAttribute('aria-live','polite');document.getElementById('hikoro-game-wrapper').prepend(status);
     move(document.getElementById('hikoro-local-settings'),document.getElementById('hikoro-game-wrapper'),viewport);

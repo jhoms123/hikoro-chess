@@ -16,10 +16,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if(!media.matches||!playing())return;
   const viewport=document.querySelector('.mobile-board-viewport');
   if(!viewport||viewport.classList.contains('is-detailed'))return;
-  const ratio=theme==='lobby'?0.64:1;
-  const width=theme==='fourfold-garden'
-   ?Math.max(100,Math.floor(viewport.clientWidth-4))
-   :Math.max(100,Math.floor(Math.min(viewport.clientWidth-4,(viewport.clientHeight-4)*ratio)));
+  const width=Math.max(100,Math.floor(viewport.clientWidth-4));
   const surface=viewport.querySelector('.mobile-board-surface');if(!surface)return;
   const size=width+'px';
   if(surface.style.getPropertyValue('--mobile-board-width')!==size)surface.style.setProperty('--mobile-board-width',size);
@@ -28,7 +25,16 @@ document.addEventListener('DOMContentLoaded',()=>{
  function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;fit();for(const sync of syncActions)sync();});}
  function open(){body.classList.add('phone-options-open');openButton.setAttribute('aria-expanded','true');drawer.setAttribute('aria-hidden','false');drawer.querySelector('.phone-options-head button').focus();}
  function close(){body.classList.remove('phone-options-open');openButton?.setAttribute('aria-expanded','false');drawer?.setAttribute('aria-hidden','true');openButton?.focus();}
- function keydown(e){if(e.key==='Escape'&&body.classList.contains('phone-options-open'))close();}
+ function keydown(e){
+  if(!body.classList.contains('phone-options-open'))return;
+  if(e.key==='Escape'){e.preventDefault();close();}
+  if(e.key==='Tab'){
+   const items=[...drawer.querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
+   const first=items[0],last=items[items.length-1];
+   if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+  }
+ }
  function relocateTo(el,parent,before=null){if(!el||!parent||el.parentElement===parent)return;const marker=document.createComment('original table position');el.before(marker);parent.insertBefore(el,before);moved.push([el,marker]);}
  function relocate(el){if(!el||el.closest('.phone-options-list'))return;relocateTo(el,list);}
  function setup(){
@@ -37,10 +43,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.scrollTo(0,0);
   bar=document.createElement('nav');bar.className='phone-table-bar';bar.setAttribute('aria-label','Game actions');
   const name=document.createElement('strong');name.className='phone-game-name';name.textContent=({lobby:'Hikoro',academy:'Academy',hikoruka:'Hikorüka',shavari:'Shavari',shodansho:'Sho Dan Sho',go:'Shield Go','valley-hunt':'Valley Hunt','fourfold-garden':'Fourfold Garden'})[theme]||'Game';bar.append(name);
-  drawer=document.createElement('section');drawer.id='phone-options';drawer.className='phone-options-drawer';drawer.setAttribute('aria-label','Game options');drawer.setAttribute('aria-hidden','true');
+  drawer=document.createElement('section');drawer.id='phone-options';drawer.className='phone-options-drawer';drawer.setAttribute('role','dialog');drawer.setAttribute('aria-modal','true');drawer.setAttribute('aria-label','Game options');drawer.setAttribute('aria-hidden','true');
   const head=document.createElement('div');head.className='phone-options-head';const title=document.createElement('span');title.textContent='Game options';const closeButton=document.createElement('button');closeButton.type='button';closeButton.textContent='Close';closeButton.addEventListener('click',close);head.append(title,closeButton);
   list=document.createElement('div');list.className='phone-options-list';drawer.append(head,list);
   syncActions=[];
+  action('How to play','#rules-button,#rules-toggle,#rules-btn-ingame,.header-rules');
   syncActions.push(action('Exit','#main-menu-btn')||action('Exit','#lobby-link')||action('Exit','.site-header .collection-link'));
   if(theme==='go'){syncActions.push(action('Pass','#pass-button'));syncActions.push(action('Shield','#shield-button'));}
   if(theme==='shodansho'){syncActions.push(action('Pick up','#pickup-btn'));syncActions.push(action('Cancel','#cancel-selection-btn'));}
