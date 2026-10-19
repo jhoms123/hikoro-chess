@@ -2165,5 +2165,6 @@
   "A Harmony ring of three or more pieces has enclosed the center.": "Un circuito de Armonía de tres piezas o más ha encerrado el centro.",
   "Both players completed center rings at once.": "Ambos jugadores completaron circuitos centrales a la vez.",
   "{0} wins the tie by taking the center.": "{0} gana el desempate y captura el centro.",
-  "The game ended in a draw.": "La partida terminó en tablas."
+  "The game ended in a draw.": "La partida terminó en tablas.",
+  "Use “Undo” to take back your whole last turn.": "Usa «Deshacer» para revertir todo tu último turno."
 }
