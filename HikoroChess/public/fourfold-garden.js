@@ -2596,9 +2596,11 @@ function botReplyProbe(opening,owner,deadline){
   return {worst:worst,complete:complete&&Number.isFinite(worst)};
 }
 const BOT_MCTS_EXPLORATION=.76;
+const BOT_MCTS_RAVE_EQUIV=120;
+const BOT_MCTS_RAVE_FAMILY_EQUIV=36;
 const BOT_MCTS_ROLLOUT_TURNS=1;
 const BOT_MCTS_FINALIZE_RESERVE_MS=12;
-let botMctsLastStats={durationMs:0,iterations:0,maxDepth:0};
+let botMctsLastStats={durationMs:0,iterations:0,maxDepth:0,raveUpdates:0};
 function botMctsTerminalValue(position,owner){
   if(position.winner!==null)return position.winner===owner?1:-1;
   if(position.draw)return 0;
@@ -2702,10 +2704,26 @@ function botMctsActionPriors(actions){
   const total=weights.reduce(function(sum,value){return sum+value},0)||1;
   return weights.map(function(value){return value/total});
 }
-function botMctsMakeNode(position,actions,prior,deadline){
-  const terminal=botMctsTerminalValue(position,state.current);
+function botMctsActionKeys(action){
+  if(action.kind==="place"){
+    // Exact squares rarely recur; the type/region family lets similar Pai Sho placements share AMAF evidence.
+    const point=xy(action.index),regionX=Math.floor(point.x/4),regionY=Math.floor(point.y/4);
+    return ["p:"+action.type+":"+action.index,"pf:"+action.type+":"+regionX+":"+regionY];
+  }
+  if(action.kind==="pickup")return ["u:"+action.target];
+  if(action.kind==="finish")return ["f"];
+  return ["a:"+action.kind+":"+(action.source===undefined?"":action.source)+":"+(action.target===undefined?"":action.target)];
+}
+function botMctsMakeNode(position,actions,prior,deadline,rootOwner){
+  const terminal=botMctsTerminalValue(position,rootOwner);
   const nextActions=actions||[];
-  return {position:position,owner:position.current,actions:nextActions,priors:botMctsActionPriors(nextActions),nextAction:0,children:[],visits:0,value:0,prior:prior||1,terminal:terminal,deadline:deadline};
+  const actionKeys=nextActions.map(botMctsActionKeys),amaf=Object.create(null);
+  for(let i=0;i<actionKeys.length;i++)for(let j=0;j<actionKeys[i].length;j++)if(!amaf[actionKeys[i][j]])amaf[actionKeys[i][j]]={visits:0,value:0};
+  return {position:position,owner:position.current,actions:nextActions,actionKeys:actionKeys,amaf:amaf,priors:botMctsActionPriors(nextActions),nextAction:0,children:[],visits:0,value:0,prior:prior||1,terminal:terminal,deadline:deadline};
+}
+function botMctsRaveBeta(visits,actionVisits,equivalent){
+  if(!actionVisits)return 0;
+  return Math.sqrt(equivalent/(3*visits+equivalent));
 }
 function botMctsSelectChild(node,rootOwner){
   const parent=Math.sqrt(node.visits+1),maximizing=node.owner===rootOwner;
@@ -2713,7 +2731,13 @@ function botMctsSelectChild(node,rootOwner){
   for(let i=0;i<node.children.length;i++){
     const child=node.children[i];
     const mean=child.visits?child.value/child.visits:0;
-    const exploit=(maximizing?mean:-mean);
+    const keys=node.actionKeys[child.actionIndex]||[],exact=node.amaf[keys[0]],family=node.amaf[keys[1]];
+    const exactBeta=botMctsRaveBeta(child.visits,exact&&exact.visits,BOT_MCTS_RAVE_EQUIV);
+    const familyBeta=botMctsRaveBeta(child.visits,family&&family.visits,BOT_MCTS_RAVE_FAMILY_EQUIV)*(family?family.visits/(family.visits+2):0);
+    const exactMean=exact&&exact.visits?exact.value/exact.visits:mean;
+    const familyMean=family&&family.visits?family.value/family.visits:mean;
+    const raveMean=exactBeta*exactMean+(1-exactBeta)*(familyBeta*familyMean+(1-familyBeta)*mean);
+    const exploit=(maximizing?raveMean:-raveMean);
     const explore=BOT_MCTS_EXPLORATION*child.prior*parent/(1+child.visits);
     const score=exploit+explore;
     if(score>bestValue){bestValue=score;best=child}
@@ -2777,7 +2801,7 @@ function botMctsProjectedValue(node,rootOwner){
 }
 function botMctsSearch(actions,owner,deadline){
   const started=botClockNow(),originalState=state,originalPoint=lastPoint;
-  let iterations=0,maxDepth=0,maxIterationMs=0,tailEvaluations=0,root=null,forcedWin=actions.find(function(action){return action.tacticalWin});
+  let iterations=0,maxDepth=0,maxIterationMs=0,tailEvaluations=0,raveUpdates=0,root=null,forcedWin=actions.find(function(action){return action.tacticalWin});
   const timing={transition:0,actionList:0,evaluation:0};
   function canStart(phase,minimum){
     return deadline-botClockNow()>Math.max(minimum,timing[phase]*1.8+4);
@@ -2789,7 +2813,7 @@ function botMctsSearch(actions,owner,deadline){
   }
   try{
     const position=cloneBotSearchState(state),rootActions=actions.slice();
-    root=botMctsMakeNode(position,rootActions,1,deadline);
+    root=botMctsMakeNode(position,rootActions,1,deadline,owner);
     let seed=(position.botOpeningSeeds&&position.botOpeningSeeds[owner]||0x9e3779b9)>>>0;
     seed^=(position.ply||0)*0x85ebca6b;
     const random=botMctsRandom(seed);
@@ -2798,7 +2822,7 @@ function botMctsSearch(actions,owner,deadline){
       const nextCost=Math.max(10,timing.transition*1.25+4,timing.evaluation*1.25+4);
       if(remaining<=nextCost)break;
       const iterationStarted=botClockNow();
-      let node=root,path=[root],depth=0,value=null,failed=false;
+      let node=root,path=[{node:root,moveStart:0}],simulationMoves=[],depth=0,value=null,failed=false;
       while(true){
         if(node.terminal!==null){value=node.terminal;break}
         if(deadline-botClockNow()<=Math.max(8,timing.transition*1.25+4)){
@@ -2811,19 +2835,22 @@ function botMctsSearch(actions,owner,deadline){
           state=cloneBotSearchState(node.position);lastPoint=-1;
           if(!canStart("transition",10)){value=node.visits?node.value/node.visits:0;break}
           if(!measure("transition",function(){return botMctsApplyTurnAction(action,deadline)})){failed=true;break}
+          simulationMoves.push({owner:node.owner,keys:node.actionKeys[actionIndex]||[]});
           const childPosition=cloneBotSearchState(state);
           const childTerminal=botMctsTerminalValue(childPosition,owner);
           const childActions=childTerminal===null&&canStart("actionList",14)?measure("actionList",botMctsActionListCurrent):[];
-          const child=botMctsMakeNode(childPosition,childActions,node.priors[actionIndex]||.01,deadline);
-          child.action=action;
-          node.children.push(child);node=child;path.push(child);depth++;
+          const child=botMctsMakeNode(childPosition,childActions,node.priors[actionIndex]||.01,deadline,owner);
+          child.action=action;child.actionIndex=actionIndex;
+          node.children.push(child);node=child;path.push({node:child,moveStart:simulationMoves.length});depth++;
           if(childTerminal!==null)value=childTerminal;
           else{
             for(let rollout=0;rollout<BOT_MCTS_ROLLOUT_TURNS&&canStart("actionList",14);rollout++){
               const rolloutActions=measure("actionList",botMctsActionListCurrent);
               if(!rolloutActions.length)break;
               const rolloutAction=botMctsRolloutAction(rolloutActions,random);
+              const rolloutOwner=state.current,rolloutKeys=botMctsActionKeys(rolloutAction);
               if(!canStart("transition",18)||!measure("transition",function(){return botMctsApplyTurnAction(rolloutAction,deadline)}))break;
+              simulationMoves.push({owner:rolloutOwner,keys:rolloutKeys});
               depth++;
               if(state.winner!==null||state.draw)break;
             }
@@ -2838,12 +2865,25 @@ function botMctsSearch(actions,owner,deadline){
         }
         const next=botMctsSelectChild(node,owner);
         if(!next){value=0;break}
-        node=next;path.push(node);depth++;
+        simulationMoves.push({owner:node.owner,keys:node.actionKeys[next.actionIndex]||[]});
+        node=next;path.push({node:node,moveStart:simulationMoves.length});depth++;
       }
       maxIterationMs=Math.max(maxIterationMs,botClockNow()-iterationStarted);
       if(failed)continue;
       if(!Number.isFinite(value))value=0;
-      for(let i=0;i<path.length;i++){path[i].visits++;path[i].value+=value}
+      for(let i=0;i<path.length;i++){
+        const entry=path[i],visited=Object.create(null);
+        entry.node.visits++;entry.node.value+=value;
+        for(let j=entry.moveStart;j<simulationMoves.length;j++){
+          const move=simulationMoves[j];
+          if(move.owner!==entry.node.owner)continue;
+          for(let k=0;k<move.keys.length;k++){
+            const key=move.keys[k],stats=entry.node.amaf[key];
+            if(!stats||visited[key])continue;
+            visited[key]=true;stats.visits++;stats.value+=value;raveUpdates++;
+          }
+        }
+      }
       iterations++;maxDepth=Math.max(maxDepth,depth);
     }
     if(root&&deadline-botClockNow()>Math.max(18,timing.evaluation*1.8+8))tailEvaluations=botMctsTailRefine(root,owner,deadline,timing);
@@ -2851,7 +2891,7 @@ function botMctsSearch(actions,owner,deadline){
     console.error("Prince Pai Sho MCTS error:",error);
   }finally{
     state=originalState;lastPoint=originalPoint;
-    botMctsLastStats={durationMs:botClockNow()-started,iterations:iterations,maxDepth:maxDepth,maxIterationMs:maxIterationMs,tailEvaluations:tailEvaluations,maxTransitionMs:timing.transition,maxActionListMs:timing.actionList,maxEvaluationMs:timing.evaluation};
+    botMctsLastStats={durationMs:botClockNow()-started,iterations:iterations,maxDepth:maxDepth,raveUpdates:raveUpdates,maxIterationMs:maxIterationMs,tailEvaluations:tailEvaluations,maxTransitionMs:timing.transition,maxActionListMs:timing.actionList,maxEvaluationMs:timing.evaluation};
   }
   if(forcedWin)return forcedWin;
   if(!root||!root.children.length)return actions[0]||null;

@@ -532,6 +532,7 @@ test('Prince Pai Sho bot searches a legal move through its full 200 ms MCTS budg
     assert.ok(elapsed >= 175 && elapsed <= 200, 'the bot uses nearly all of its 200 ms budget without exceeding it');
     assert.ok(stats.iterations > 0, 'MCTS completes actual tree simulations');
     assert.ok(stats.maxDepth >= 2, 'the search reaches beyond the root move');
+    assert.ok(stats.raveUpdates > 0, 'RAVE learns action values from moves played later in simulations');
 });
 
 test('a local bot answers a human placement and finishes its turn', async t => {
