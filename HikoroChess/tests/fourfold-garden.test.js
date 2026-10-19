@@ -347,7 +347,7 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-victory-board-review-v1/, 'the game stylesheet uses the current release cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-prince-bot-beam-v1/, 'the updated bot code bypasses stale cached code');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-prince-mcts-v1/, 'the updated bot code bypasses stale cached code');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-prince-v2/, 'the phone controls use the current release cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-dissonance-abilities-v1/, 'the updated rules use the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
@@ -511,6 +511,27 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     assert.match(w.document.querySelector('#log .log-entry').textContent, /Marfil colocó Rosa en/);
     w.document.getElementById('finishTurnBtn').click();
     assert.match(w.document.querySelector('#log .log-entry').textContent, /Marfil terminó el turno sin una acción adicional/);
+});
+
+test('Prince Pai Sho bot searches a legal move through its full 200 ms MCTS budget', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const anchor = 'const FourfoldGardenEngine=Object.freeze({initial:engineInitial,apply:engineApply});';
+    const source = read('fourfold-garden.js').replace(anchor, 'window.__PrinceMctsTest={initial:engineInitial,load:engineLoad,choose:chooseBotAction,stats:()=>({...botMctsLastStats})};\n' + anchor);
+    dom.window.eval(source);
+    const bot = dom.window.__PrinceMctsTest;
+    const state = bot.initial();
+    bot.load(state);
+    const started = dom.window.performance.now();
+    const action = bot.choose();
+    const elapsed = dom.window.performance.now() - started;
+    const next = Garden.apply(state, action);
+    const stats = bot.stats();
+
+    assert.ok(next, 'the selected search result is a legal game action');
+    assert.ok(elapsed >= 175 && elapsed <= 200, 'the bot uses nearly all of its 200 ms budget without exceeding it');
+    assert.ok(stats.iterations > 0, 'MCTS completes actual tree simulations');
+    assert.ok(stats.maxDepth >= 2, 'the search reaches beyond the root move');
 });
 
 test('a local bot answers a human placement and finishes its turn', async t => {
