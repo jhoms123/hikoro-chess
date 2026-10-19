@@ -2732,8 +2732,8 @@ function botMctsSelectChild(node,rootOwner){
     const child=node.children[i];
     const mean=child.visits?child.value/child.visits:0;
     const keys=node.actionKeys[child.actionIndex]||[],exact=node.amaf[keys[0]],family=node.amaf[keys[1]];
-    const exactBeta=botMctsRaveBeta(child.visits,exact&&exact.visits,BOT_MCTS_RAVE_EQUIV);
-    const familyBeta=botMctsRaveBeta(child.visits,family&&family.visits,BOT_MCTS_RAVE_FAMILY_EQUIV)*(family?family.visits/(family.visits+2):0);
+    const exactBeta=botMctsRaveBeta(node.visits,exact&&exact.visits,BOT_MCTS_RAVE_EQUIV);
+    const familyBeta=botMctsRaveBeta(node.visits,family&&family.visits,BOT_MCTS_RAVE_FAMILY_EQUIV)*(family?family.visits/(family.visits+2):0);
     const exactMean=exact&&exact.visits?exact.value/exact.visits:mean;
     const familyMean=family&&family.visits?family.value/family.visits:mean;
     const raveMean=exactBeta*exactMean+(1-exactBeta)*(familyBeta*familyMean+(1-familyBeta)*mean);
