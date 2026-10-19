@@ -173,15 +173,16 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /\.game-layout>#hands-container\{order:3/, 'the vertical reserve tray follows the board and precedes the action dock');
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
         assert.match(css, /grid-template-columns:minmax\(0,1fr\);align-items:stretch/, 'phone reserve groups use the full width for readable, larger targets');
-        assert.match(css, /\.game-layout>#hands-container\{[^}]*max-height:min\(44dvh,360px\)[^}]*scroll-snap-type:none!important/, 'the phone picker scrolls vertically without snapping when a card is tapped');
-        assert.match(css, /#hands-container \.bank\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/, 'flowers and tools use a two-column card grid');
+        assert.match(css, /\.game-layout>#hands-container\{[^}]*height:auto!important;min-height:0!important;max-height:none!important[^}]*overflow:visible!important[^}]*touch-action:auto!important/, 'the piece picker has no height-limited inner scroll area');
+        assert.match(css, /#hands-container \.bank\{grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/, 'each reserve group uses five compact columns');
+        assert.match(css, /#hands-container \.reserve-flower\{[^}]*min-height:68px!important/, 'compact reserve cards stay large enough to tap');
         assert.match(css, /tile-glyph \.piece-icon\{[^}]*aspect-ratio:1\/1/, 'piece emblem artwork keeps its square proportions');
         assert.doesNotMatch(html, /id="abilityMode"|Use ability/, 'there is no optional ability button');
         assert.match(html, /class="mobile-reserve-heading"[\s\S]*Flowers and Tools/, 'the phone picker visibly identifies both reserve groups');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
         assert.match(css, /\.mobile-board-surface\{box-sizing:border-box;width:100%!important;max-width:none!important\}/, 'the mobile board fills the available phone width');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261018-mobile-board-fullwidth-v5/, 'board sizing changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mobile-picker-compact-v6/, 'board sizing changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
@@ -364,22 +365,19 @@ test('online garden rooms validate seats, synchronize actions, resume, and end o
     assert.equal((await result).state.winner, 1);
 });
 
-test('piece selection preserves the reserve button, tray scroll, and tool choices', t => {
+test('piece selection preserves the reserve button and tool choices without an inner scroll', t => {
     const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
     t.after(() => dom.window.close());
     const w = dom.window;
     w.SiteAccounts = { register() {}, socket() { return null; }, playerName() { return 'Player'; } };
     w.eval(read('fourfold-garden.js'));
-    const tray = w.document.getElementById('hands-container');
     assert.equal(w.document.querySelectorAll('#flowerBank .reserve-flower').length, 6);
     assert.equal(w.document.querySelectorAll('#toolBank .reserve-flower').length, 4);
     const bell = w.document.querySelector('.reserve-flower[data-piece-type="bell"]');
     bell.focus();
-    tray.scrollTop = 76;
     bell.click();
     assert.strictEqual(w.document.querySelector('.reserve-flower[data-piece-type="bell"]'), bell, 'selection keeps the tapped button mounted');
     assert.strictEqual(w.document.activeElement, bell, 'selection does not drop focus when the UI rerenders');
-    assert.equal(tray.scrollTop, 76, 'selecting a Tool does not reset the reserve tray scroll');
     assert.equal(bell.getAttribute('aria-pressed'), 'true');
     assert.ok(bell.classList.contains('active'));
     bell.click();
