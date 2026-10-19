@@ -245,3 +245,15 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .ray-mixed-d{stroke:#9a3f69;stroke-width:6;stroke-dasharray:2 5;stroke-linecap:round;filter:drop-shadow(0 0 2px #ffe0ec)}
 .fourfold-garden-page .sample-line.mixed{border-top:4px dashed #9b7430}
 .fourfold-garden-page .sample-line.mixed-d{border-top:4px dotted #9a3f69}
+/* Affinity colors form a peripheral inlay; the central emblem stays clear. */
+.fourfold-garden-page .piece-affinity-dots{inset:-2px;border-radius:50%;background:var(--affinity-ring);mask:radial-gradient(circle closest-side,transparent 70%,#000 72%);-webkit-mask:radial-gradient(circle closest-side,transparent 70%,#000 72%);filter:drop-shadow(0 0 1px #211609);z-index:3}
+.fourfold-garden-page .piece-affinity-dot{display:none}
+.fourfold-garden-page .token-glyph{position:relative;z-index:4;width:60%;height:60%}
+.fourfold-garden-page .token.owner0{--chip-face:#f6e7bf;--chip-edge:#84622c;--chip-ink:#302211;background:radial-gradient(circle at 30% 25%,#fff9e5,#ebd39d)}
+.fourfold-garden-page .token.owner1{--chip-face:#243e72;--chip-edge:#101e3c;--chip-ink:#fff4d4;background:radial-gradient(circle at 30% 25%,#42649a,#16274c)}
+.fourfold-garden-page .reserve-flower .tile-glyph,.fourfold-garden-page .piece-guide-glyph{isolation:isolate}
+.fourfold-garden-page .tile-glyph .piece-icon,.fourfold-garden-page .piece-guide-glyph .piece-icon{position:relative;z-index:4}
+.fourfold-garden-page .bank-group[data-owner="1"] .tile-glyph{background:#243e72;color:#fff4d4}
+.fourfold-garden-page .reserve-flower .tile-count{color:#49341c;font-size:11px}
+@media(max-width:760px){body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-glyph{width:30px!important;height:30px!important;flex-basis:30px!important}body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-name{font-size:10px!important;line-height:1.15!important}body.phone-game-shell.fourfold-garden-page.sds-page #hands-container .reserve-flower .tile-count{font-size:10px!important;line-height:1.15!important}}
+.fourfold-garden-page .token.harmonized,.fourfold-garden-page .token.tool.harmonized{outline-width:1px;outline-offset:2px;filter:drop-shadow(0 2px 2px #21160999)}

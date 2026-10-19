@@ -701,6 +701,7 @@ function appendHarmonyMarkers(container,type){
   const colors=PIECE_AFFINITIES[type]||[];
   if(!container||!colors.length)return;
   const markers=document.createElement("span");markers.className="piece-affinity-dots";markers.dataset.count=String(colors.length);markers.setAttribute("aria-hidden","true");
+  markers.style.setProperty("--affinity-ring","conic-gradient("+colors.map(function(color,i){return AFFINITY_COLORS[color]+" "+(i*360/colors.length)+"deg "+((i+1)*360/colors.length)+"deg"}).join(",")+")");
   colors.forEach(function(color){const dot=document.createElement("i");dot.className="piece-affinity-dot";dot.style.setProperty("--affinity-color",AFFINITY_COLORS[color]);markers.appendChild(dot)});
   container.appendChild(markers);
 }
@@ -1283,7 +1284,7 @@ function scheduleBotTurn(){
     botTimer=null;
     if(!isBotTurn()||botPaused||state.winner!==null||state.draw){botThinking=false;render();return}
     let action=null;
-    try{action=chooseBotAction()}catch(error){console.error("Fourfold Garden bot error:",error)}
+    try{action=chooseBotAction()}catch(error){console.error("Prince Pai Sho bot error:",error)}
     if(action)executeBotAction(action);
     else if(state.turnStage==="bonus")finishBonus();
     else{setStatus("No legal placement","The game cannot continue from this position.");render()}
@@ -2702,7 +2703,7 @@ function engineExport(){
   return out;
 }
 function engineLoad(snapshot){
-  if(!snapshot||!Array.isArray(snapshot.board)||snapshot.board.length!==SIZE*SIZE||!Array.isArray(snapshot.reserves)||!Number.isInteger(snapshot.current)||snapshot.current<0||snapshot.current>1)throw Error("Invalid Fourfold Garden state");
+  if(!snapshot||!Array.isArray(snapshot.board)||snapshot.board.length!==SIZE*SIZE||!Array.isArray(snapshot.reserves)||!Number.isInteger(snapshot.current)||snapshot.current<0||snapshot.current>1)throw Error("Invalid Prince Pai Sho state");
   state=clone(snapshot);delete state.player;delete state.result;
   pending=null;engineActionIntent=null;selectedType=null;undoState=null;lastPoint=-1;
   mode=state.turnStage==="pickup"||state.turnStage==="pickupRequired"?"pickup":"place";

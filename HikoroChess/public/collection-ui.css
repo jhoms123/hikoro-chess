@@ -65,3 +65,35 @@
  .collection-practice :is(select,input){max-width:100%;min-width:0}
  .collection-practice :is(p,li,.subtle){overflow-wrap:anywhere}
 }
+/* The collection's final materials: pale parchment controls, timber surrounds. */
+html body .collection-actions,
+html body.phone-game-shell .phone-table-bar{background:#392619 url('/assets/collection/materials/timber.webp') center/600px!important;border-color:#aa8750!important}
+html body .collection-material-control,
+html body[data-audio-theme] .material-control.collection-material-control,
+html body.phone-game-shell .phone-table-bar button.collection-material-control,
+html body .collection-actions :is(a,button){
+ background:#f0dfb6 url('/assets/medieval/aged-parchment.webp') center/100% 100% no-repeat!important;
+ color:#302316!important;border:1px solid #9b7842!important;border-image:none!important;border-radius:4px!important;
+ box-shadow:inset 0 0 0 1px #fff0c8,0 2px 3px #1e130b55!important;text-shadow:none!important;
+ font-family:Georgia,serif!important;font-weight:600!important;line-height:1.35!important;min-height:44px;
+}
+html body .collection-material-control:hover:not(:disabled){filter:brightness(1.06)!important}
+html body .collection-material-control:disabled{opacity:.65!important;color:#695840!important;filter:none!important}
+html body .collection-material-control:before{filter:brightness(.25)!important}
+html body :is(select,input:not([type=checkbox]):not([type=radio]),textarea){background-color:#f3e6c9;color:#302316;border-color:#aa8750;color-scheme:light}
+html body select option{background:#f3e6c9;color:#302316}
+html body :is(.phone-options-drawer,.phone-options-head){background:#37281b url('/assets/collection/materials/timber.webp') center/600px;color:#fff0cd}
+html body.phone-game-shell .phone-options-list :is(.panel,.bg-game-panel){background:#f0dfb6 url('/assets/medieval/aged-parchment.webp') center/cover!important;color:#302316!important}
+html body.phone-game-shell .phone-options-list :is(h2,h3,p,label,small,.fine-print){color:#302316!important}
+html body :is(.panel,.bg-game-panel,.setup-panel) :is(.reserve-intro,.selected-note){color:#48351e!important;font-size:13px;line-height:1.55}
+html body .inventory-sidebar :is(.rules,.small-print,.piece-guide-card p){color:#f2e3c2!important}
+html body .city-sidebar :is(p,small,.fine-print),html body .city-rules :is(p,li){color:#f0e2c4}
+html body .collection-material-control[aria-pressed=true]{outline:2px solid #5b441e;outline-offset:2px}
+/* Readable paper panels in dialogs, journals, and the account hall. */
+html body :is(.account-page,.account-journal,.record-page){color:#302316}
+html body :is(.account-page,.account-journal,.record-page) :is(p,label,small,h1,h2,h3){color:#49341f}
+html body .collection-actions{padding:9px;border:2px solid #947344}
+html body .phone-game-name{color:#ffe4a7!important}
+html body .collection-material-control[data-primary=true]{border:2px solid #78562c!important}
+html body .collection-material-control[aria-pressed=true]{background-color:#fce9ad!important;box-shadow:inset 0 0 0 2px #6e4d26,0 2px 4px #0004!important}
+@media(max-width:760px){html body.phone-game-shell .phone-game-name{white-space:normal!important;text-overflow:clip;overflow:visible;min-width:76px;line-height:1.2;font-size:12px}}

@@ -1,0 +1,482 @@
+[
+  {
+    "game": "index",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "academy",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 304,
+      "h": 304
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shodansho",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "fourfold-garden",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 286,
+      "h": 286
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 306,
+      "h": 306
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "hikoruka",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 304,
+      "h": 304
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "go",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 306,
+      "h": 306
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari-go",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 256,
+      "h": 256
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari-city-battle",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 254,
+      "h": 270
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "valley-hunt",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 266,
+      "h": 484
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "bastion",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 940,
+      "h": 940
+    },
+    "bad": [
+      "DIV.mobile-board-surface",
+      "DIV.board-shell",
+      "DIV.board go-board bastion-board",
+      "svg.[object SVGAnimatedString]",
+      "line.[object SVGAnimatedString]"
+    ],
+    "errors": []
+  },
+  {
+    "game": "credits",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "history",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "leaderboard",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "player",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "replay",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "review",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": null,
+    "bad": [
+      "IFRAME."
+    ],
+    "errors": []
+  },
+  {
+    "game": "shavari-bot",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 282,
+      "h": 282
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shodansho-bot",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": true,
+    "board": {
+      "w": 288,
+      "h": 288
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "bastion-spectator",
+    "width": 320,
+    "overflow": false,
+    "wide": 320,
+    "nav": false,
+    "board": {
+      "w": 268,
+      "h": 268
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "index",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "academy",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 662,
+      "h": 662
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shodansho",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "fourfold-garden",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 678,
+      "h": 678
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 760,
+      "h": 760
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "hikoruka",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 524,
+      "h": 524
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "go",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 760,
+      "h": 760
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari-go",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 772,
+      "h": 772
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari-city-battle",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 872,
+      "h": 927
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "valley-hunt",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 530,
+      "h": 908
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "bastion",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 760,
+      "h": 760
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "credits",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "history",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "leaderboard",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "player",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "replay",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "review",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": null,
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shavari-bot",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 746,
+      "h": 746
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "shodansho-bot",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": true,
+    "board": {
+      "w": 968,
+      "h": 968
+    },
+    "bad": [],
+    "errors": []
+  },
+  {
+    "game": "bastion-spectator",
+    "width": 1440,
+    "overflow": false,
+    "wide": 1440,
+    "nav": false,
+    "board": {
+      "w": 880,
+      "h": 880
+    },
+    "bad": [],
+    "errors": []
+  }
+]

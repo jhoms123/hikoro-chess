@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const worlds={
         hikoro:{name:'Hikoro Chess',description:'An ocean kingdom of captures, promotions, and royal sanctuaries.',guide:'academy.html',guideLabel:'Learn the ocean pieces in Academy →'},
         shodansho:{name:'Sho Dan Sho',description:'Cultivate harmony with seven flower types on a circular garden board.',guide:'shodansho.html?showRules=1',guideLabel:'Explore the garden rules →'},
-        'fourfold-garden':{name:'Fourfold Garden',description:'A compact harmony game with ten pieces per player, a circle of relationships, and a four-flower center capture.',guide:'fourfold-garden.html#rules-section',guideLabel:'Learn the pieces and garden rules →'},
+        'fourfold-garden':{name:'Prince Pai Sho',description:'A harmony game of flowers and tools, colored relationships, and center capture.',guide:'fourfold-garden.html#rules-section',guideLabel:'Learn the pieces and garden rules →'},
         shavari:{name:'Shavari chess',description:'Build formations, combine movements, and command the lotus court.',guide:'shavari.html?showRules=1',guideLabel:'Read the court’s rules →'},
         hikoruka:{name:'Hikorka chess',description:'Five heraldic roles. Eight pieces. Protect your Sovereign on a compact board.',guide:'hikoruka.html?showRules=1',guideLabel:'Meet the citadel’s company →'},
         go:{name:'Shield Go',description:'Place, leap, shield, and surround on a wooden 9 × 9 or 13 × 13 table.',guide:'go.html?showRules=1',guideLabel:'Learn stones, shields, and territory →'},
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     };
     const selector=document.getElementById('game-type-select');
     function update(){const game=selector.value,w=worlds[game];if(!w)return;
-        document.getElementById('selected-table-art').src=`assets/collection/matches/${game==='shavari-go'?'shavari-go.svg?v=20261014-shavari-go-preview-v2':game==='valley-hunt'?'valley-hunt.svg?v=20261015-valley-hunt-v1':game==='shavari-city-battle'?'shavari-city-battle.svg?v=20261015-city-battle-v1':game==='fourfold-garden'?'fourfold-garden.svg?v=20261018-fourfold-garden':game+'.webp'}`;
+        document.getElementById('selected-table-art').src=`assets/collection/matches/${game}-current.webp?v=20261019-prince-v2`;
         document.getElementById('selected-table-name').textContent=w.name;
         document.getElementById('selected-table-description').textContent=w.description;
         const guide=document.getElementById('selected-table-guide');guide.href=w.guide;guide.textContent=w.guideLabel;

@@ -18,6 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
  if(heading)heading.after(bar);else if(document.querySelector('main'))document.querySelector('main').before(bar);else body.prepend(bar);
  function translate(){const w=words[(window.I18n?.language||document.documentElement.lang).startsWith('es')?'es':'en'];for(const [el,i]of labels)el.textContent=w[i];}
  translate();sync();window.addEventListener('language-changed',translate);
+ // Apply materials to interface controls, never to game squares or reserve pieces.
+ function materials(){
+  document.querySelectorAll('button,a.quiet-button,a.atlas-primary,a.atlas-secondary,.collection-actions a').forEach(control=>{
+   if(control.matches('.game-choice,.mini-cell,.intersection,.point,.square,.cell,.city-square,.reserve-flower,.piece-choice,.captured-piece')||control.closest('#board,#game-board,#board-container,#city-board,.mini-board,.piece-tray,#hands-container,#flowerBank,#toolBank'))return;
+   if(!control.classList.contains('collection-material-control'))control.classList.add('collection-material-control');
+  });
+ }
+ materials();let pending=false;
+ new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;materials();});}).observe(body,{childList:true,subtree:true});
  // Lobby controls appear only after a game starts.
  if(body.dataset.audioTheme==='lobby')new MutationObserver(sync).observe(body,{attributes:true,attributeFilter:['class']});
  // Anchored rules can be inside a collapsed mobile panel.
