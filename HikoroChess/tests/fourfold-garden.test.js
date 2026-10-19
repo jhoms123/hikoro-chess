@@ -347,7 +347,7 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-victory-board-review-v1/, 'the game stylesheet uses the current release cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-victory-board-review-v1/, 'the updated game code bypasses stale cached code');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-prince-bot-beam-v1/, 'the updated bot code bypasses stale cached code');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-prince-v2/, 'the phone controls use the current release cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-dissonance-abilities-v1/, 'the updated rules use the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
