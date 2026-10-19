@@ -205,7 +205,8 @@ test('lobby and bilingual game guide explain mixed links and three-piece rings',
         normalize(page.window.document.querySelector('#rules-section .small-print').textContent),
         ...Array.from(page.window.document.querySelectorAll('#rules-section .compat-content > p'), item => normalize(item.textContent)),
         'Flower and Tool Harmony and Dissonance chart', 'Harmony Tools', 'Dissonant Tools',
-        'Mixed Dissonance', 'Flower–Tool Harmony'
+        'Mixed Dissonance', 'Flower–Tool Harmony',
+        'Use “Undo” to take back your whole last turn.'
     ];
     page.window.close();
     assert.ok(sourceRules.every(key => typeof translations[key] === 'string'), 'Spanish entries exist for the full game guide and mixed-link chart');
@@ -260,7 +261,7 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-mixed-harmony-rings-v1/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-fourfold-finish-topbar-v1/, 'phone selection order changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-mixed-harmony-rings-v1/, 'the game uses the current bilingual catalog');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-mixed-harmony-rings-v2/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');

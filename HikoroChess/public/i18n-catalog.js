@@ -25,3 +25,4 @@ window.HikoroSpanish["{0} wins the tie by taking the center."] = "{0} gana el de
 window.HikoroSpanish["The game ended in a draw."] = "La partida terminó en tablas.";
 window.HikoroSpanishPatterns.push(["{0} captured the center with a {1}-piece Harmony ring.","{0} capturó el centro con un circuito de Armonía formado por {1} piezas."]);
 window.HikoroSpanishPatterns.push(["{0} wins the tie by taking the center.","{0} gana el desempate y captura el centro."]);
+window.HikoroSpanish["Use “Undo” to take back your whole last turn."] = "Usa «Deshacer» para revertir todo tu último turno.";
