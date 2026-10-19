@@ -183,15 +183,18 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(html, /class="mobile-reserve-heading"[\s\S]*Flowers and Tools/, 'the phone picker visibly identifies both reserve groups');
         assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
         assert.match(css, /\.mobile-board-surface\{box-sizing:border-box;width:100%!important;max-width:none!important\}/, 'the mobile board fills the available phone width');
+        assert.match(css, /phone-table-bar #finishTurnBtn\{margin-left:auto!important\}/, 'the optional finish action sits in the center of the phone table bar');
+        assert.match(css, /fourfold-phone-dock \.action-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important\}/, 'the remaining dock actions use the space freed by the finish action');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mobile-picker-grid-v7/, 'board sizing changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mobile-finish-turn-v9/, 'board sizing changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261018-mobile-picker-mandatory-abilities-v4/, 'selection interaction changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261018-garden-selection/, 'phone selection order changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-optional-finish-turn-v1/, 'selection interaction changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-fourfold-finish-topbar-v1/, 'phone selection order changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-mandatory-abilities-v1/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
+        assert.match(read('phone-game-shell.js'), /relocateTo\(finishTurn,bar,openButton\)/, 'Finish turn moves into the top bar on phones');
     } finally { dom.window.close(); }
 });
 
@@ -216,8 +219,8 @@ test('reserve buttons show and toggle the selected piece without changing placem
     assert.equal(w.document.querySelectorAll('.point .token').length, 0, 'selecting or cancelling never places a piece by itself');
 });
 
-test('phone shell keeps the labeled reserve tray and all piece cards mounted', t => {
-    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+test('phone shell keeps the reserve tray mounted and shows Finish turn only when skipping pickup is legal', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html?mode=human', runScripts: 'outside-only', pretendToBeVisual: true });
     t.after(() => dom.window.close());
     const w = dom.window;
     w.SiteAccounts = { register() {}, socket() { return null; }, playerName() { return 'Player'; } };
@@ -237,6 +240,23 @@ test('phone shell keeps the labeled reserve tray and all piece cards mounted', t
     assert.deepEqual(layoutChildren, ['hands-container', 'mobile-board-viewport', 'fourfold-phone-dock']);
     assert.equal(w.document.querySelectorAll('#hands-container .reserve-flower').length, 10);
     assert.equal(w.document.querySelectorAll('.mobile-board-viewport #board').length, 1);
+    const finishTurn = w.document.getElementById('finishTurnBtn');
+    assert.strictEqual(finishTurn.parentElement, w.document.querySelector('.phone-table-bar'), 'the Finish turn action is placed in the top bar');
+    assert.equal(finishTurn.hidden, true, 'Finish turn stays hidden before an optional pickup can be skipped');
+    const gameBoard = w.document.getElementById('board');
+    gameBoard.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1200, height: 1200, right: 1200, bottom: 1200 });
+    w.document.querySelector('.reserve-flower[data-piece-type="rose"]').click();
+    const pointer = (type, x, y) => {
+        const event = new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+        Object.defineProperty(event, 'pointerId', { value: 7 });
+        Object.defineProperty(event, 'isPrimary', { value: true });
+        gameBoard.dispatchEvent(event);
+    };
+    pointer('pointerdown', 618, 318);
+    pointer('pointerup', 618, 318);
+    assert.equal(finishTurn.hidden, false, 'Finish turn appears after a legal placement');
+    finishTurn.click();
+    assert.equal(finishTurn.hidden, true, 'Finish turn hides again after the turn advances');
 });
 
 test('pointer taps resolve to the nearest board point and place the selected piece', t => {
