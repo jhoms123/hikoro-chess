@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     for(const selector of ['.game-sidebar .mode-row','.game-sidebar .action-row','.game-sidebar .selected-note']){
      const control=document.querySelector(selector);if(control)relocateTo(control,gameControlsDock);
     }
+    const finishTurn=document.getElementById('finishTurnBtn');if(finishTurn)relocateTo(finishTurn,bar,openButton);
    }
    relocate(document.querySelector('.game-sidebar'));
    relocate(document.querySelector('.inventory-sidebar'));
