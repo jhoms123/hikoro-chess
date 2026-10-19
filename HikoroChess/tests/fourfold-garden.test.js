@@ -172,9 +172,11 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /reserve-flower \.tile-name\{display:flex;align-items:center;justify-content:center/, 'phone reserve buttons show readable piece names');
         assert.match(css, /\.game-layout>#hands-container\{order:3/, 'the vertical reserve tray follows the board and precedes the action dock');
         assert.match(css, /fourfold-phone-dock/, 'phone turn actions stay beside the board and reserves');
-        assert.match(css, /grid-template-columns:minmax\(0,1fr\);align-items:stretch/, 'phone reserve groups use the full width for readable, larger targets');
+        assert.match(css, /\.game-layout>#hands-container\{[^}]*width:min\(100%,620px\)!important/, 'the shared phone reserve picker uses the full available width');
         assert.match(css, /\.game-layout>#hands-container\{[^}]*height:auto!important;min-height:0!important;max-height:none!important[^}]*overflow:visible!important[^}]*touch-action:auto!important/, 'the piece picker has no height-limited inner scroll area');
-        assert.match(css, /#hands-container \.bank\{display:grid!important;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/, 'each reserve group is an actual five-column grid, not a horizontal carousel');
+        assert.match(css, /\.game-layout>#hands-container\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)!important/, 'flowers and tools share one five-column phone grid');
+        assert.match(css, /#hands-container>#flowerBank,[\s\S]*#hands-container>#toolBank,[\s\S]*#hands-container \.bank-group,[\s\S]*#hands-container \.bank\{display:contents!important\}/, 'flower and tool wrappers flatten into the shared card grid');
+        assert.match(css, /#hands-container>\.mobile-reserve-heading\{[^}]*grid-column:1\/-1!important/, 'the picker heading spans the shared grid');
         assert.match(css, /#hands-container \.reserve-flower\{[^}]*min-height:68px!important/, 'compact reserve cards stay large enough to tap');
         assert.match(css, /tile-glyph \.piece-icon\{[^}]*aspect-ratio:1\/1/, 'piece emblem artwork keeps its square proportions');
         assert.doesNotMatch(html, /id="abilityMode"|Use ability/, 'there is no optional ability button');
