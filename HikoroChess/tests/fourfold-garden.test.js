@@ -70,6 +70,50 @@ test('a legal active ability is mandatory, including before the last-reserve pic
     assert.equal(state.player, 2);
 });
 
+test('Harmony color dots mark exactly the active compatible piece pairs', () => {
+    const source = read('fourfold-garden.js');
+    const match = source.match(/const PIECE_AFFINITIES=Object\.freeze\((\{[^\n]+\})\);/);
+    assert.ok(match, 'the active piece affinity map is present');
+    const affinities = JSON.parse(match[1]);
+    const types = Object.keys(affinities);
+    const marked = [];
+    for (let a = 0; a < types.length; a++) {
+        for (let b = a + 1; b < types.length; b++) {
+            const left = affinities[types[a]], right = affinities[types[b]];
+            if (left.some(color => right.includes(color))) marked.push(types[a] + '-' + types[b]);
+        }
+    }
+    const expected = [
+        'rose-vine', 'rose-chrysanthemum', 'rose-bamboo', 'rose-peony', 'rose-wheel', 'rose-bell',
+        'vine-chrysanthemum', 'vine-bamboo', 'vine-knotweed', 'vine-fan',
+        'chrysanthemum-bamboo', 'chrysanthemum-wheel', 'chrysanthemum-fan',
+        'bamboo-knotweed', 'bamboo-bell', 'orchid-peony', 'orchid-fan', 'orchid-bell',
+        'peony-knotweed', 'peony-wheel', 'knotweed-wheel', 'knotweed-fan', 'knotweed-bell',
+        'wheel-fan', 'wheel-bell', 'fan-bell'
+    ];
+    assert.deepEqual(marked.sort(), expected.sort());
+});
+
+test('Bell pulls an enemy Tool without changing its owner', () => {
+    const state = Garden.initial();
+    const piece = (id, type, owner) => ({ id, type, owner, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
+    state.board[60] = piece('bell-own', 'bell', 0);
+    state.board[38] = piece('wheel-enemy', 'wheel', 1);
+    state.board[39] = piece('knotweed-enemy', 'knotweed', 1);
+    state.reserves[0].bell = 0;
+    state.current = 0;
+    state.turnStage = 'bonus';
+    state.nextId = 4;
+
+    const moved = Garden.apply(state, { kind: 'ability', source: 60, targets: [38] });
+    assert.ok(moved, 'Bell has a legal pull against the linked enemy Tool');
+    assert.equal(moved.board[38], null);
+    assert.equal(moved.board[49].type, 'wheel');
+    assert.equal(moved.board[49].owner, 1, 'pulling preserves the enemy Tool owner');
+    assert.equal(moved.board[39].owner, 1, 'the Tool Harmony partner remains with its owner');
+    assert.equal(moved.board[60].used, true);
+});
+
 test('pickup can return the just-placed piece only when it is your sole board piece', () => {
     let state = Garden.apply(Garden.initial(), { kind: 'place', type: 'rose', index: 60 });
     state = Garden.apply(state, { kind: 'pickup', index: 60 });
@@ -257,11 +301,11 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /phone-table-bar #finishTurnBtn\{margin-left:auto!important\}/, 'the optional finish action sits in the center of the phone table bar');
         assert.match(css, /fourfold-phone-dock \.action-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important\}/, 'the remaining dock actions use the space freed by the finish action');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mixed-harmony-rings-v1/, 'board sizing changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-fourfold-piece-rings-v1/, 'board sizing changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-mixed-harmony-rings-v1/, 'selection interaction changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-fourfold-piece-rings-v1/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-fourfold-finish-topbar-v1/, 'phone selection order changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-mixed-harmony-rings-v2/, 'the game uses the current bilingual catalog');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-fourfold-piece-rings-v1/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
@@ -367,6 +411,8 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     assert.equal(w.document.querySelector('.reserve-panel h2').textContent, 'Escoge una pieza');
     const guides = [...w.document.querySelectorAll('.piece-guide-card')].map(card => card.textContent);
     assert.equal(guides.length, 10);
+    assert.equal(w.document.querySelectorAll('.piece-guide-card .piece-affinity-dot').length, 29);
+    assert.match(w.document.querySelector('.reserve-intro').textContent, /Los puntos de color coincidentes indican compatibilidad de tipo/);
     assert.ok(guides.some(text => text.startsWith('Rosa')));
     assert.ok(guides.some(text => text.startsWith('Crisantemo')));
     assert.ok(guides.some(text => text.includes('Centidonia')));
@@ -382,6 +428,7 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     w.document.querySelector('.point[data-index="60"]').click();
     await new Promise(resolve => setTimeout(resolve, 25));
     assert.equal(w.document.querySelectorAll('.point .piece-icon').length, 1);
+    assert.equal(w.document.querySelectorAll('.point .piece-affinity-dot').length, 3);
     assert.match(w.document.querySelector('#statusMain').textContent, /Marfil/);
     assert.match(w.document.querySelector('#harmonyScore').textContent, /se repitió 1\/3 veces/);
     assert.match(w.document.querySelector('#log .log-entry').textContent, /Marfil colocó Rosa en/);
@@ -466,6 +513,7 @@ test('piece selection preserves the reserve button and tool choices without an i
     w.eval(read('fourfold-garden.js'));
     assert.equal(w.document.querySelectorAll('#flowerBank .reserve-flower').length, 6);
     assert.equal(w.document.querySelectorAll('#toolBank .reserve-flower').length, 4);
+    assert.equal(w.document.querySelectorAll('.reserve-flower .piece-affinity-dot').length, 29);
     const bell = w.document.querySelector('.reserve-flower[data-piece-type="bell"]');
     bell.focus();
     bell.click();
