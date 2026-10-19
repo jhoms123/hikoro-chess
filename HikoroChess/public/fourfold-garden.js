@@ -1,3 +1,4 @@
+(function(){
 "use strict";
 
 // Compact edition: an 11 × 11 point lattice clipped to a six-step circle.
@@ -2836,3 +2837,5 @@ if(typeof module!=="undefined"&&module.exports){
     resetGame();initOnline();
   }
 }
+
+})();

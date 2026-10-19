@@ -1,0 +1,67 @@
+/* Final shared layer: common navigation and readable controls, with game artwork retained. */
+:root{--collection-paper:#f4e8cc;--collection-ink:#302518;--collection-line:#aa9164;--collection-green:#203d36}
+.collection-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;width:min(1200px,calc(100% - 24px));margin:12px auto;padding:8px;border:1px solid #a58b6066;border-radius:8px;background:#1b302bf2;color:#f6ecd5}
+.collection-actions :is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;margin:0;border:1px solid #8f9f86;border-radius:5px;background:#29443c;color:#fff1d6;font:600 14px/1.25 system-ui,sans-serif;text-decoration:none;cursor:pointer;box-shadow:none;text-shadow:none}
+.collection-actions :is(a,button):hover{background:#3c5c50}
+.collection-actions [hidden]{display:none!important}
+.phone-game-shell .collection-actions{display:none}
+:is(.site-header,.collection-header){flex-wrap:wrap;gap:12px}
+:is(.match-panel,.city-sidebar,.game-sidebar,.control-panel){scroll-margin-top:16px;min-width:0}
+:is(.match-panel,.city-sidebar,.game-sidebar) :is(select,input:not([type=checkbox]):not([type=radio])){max-width:100%;min-height:44px;font-size:16px}
+:is(.match-panel,.city-sidebar) :is(.fine-print,.selected-detail,.city-move-log li,.city-guide-card p){font-size:14px;line-height:1.55}
+.city-sidebar :is(.count-chip strong,.city-panel-title span){font-size:13px}
+.city-sidebar .count-chip small{font-size:12px}
+:is(dialog,.modal,.hidden-modal) :is(p,li){line-height:1.65}
+:is(dialog,.modal,.hidden-modal){max-height:90dvh;overflow-y:auto;overscroll-behavior:contain}
+:is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #41a8c1;outline-offset:3px}
+@media(max-width:760px){
+ .collection-actions{justify-content:stretch;gap:6px;margin:8px auto;padding:6px}
+ .collection-actions :is(a,button){flex:1 1 auto;padding:9px 10px;font-size:13px}
+ /* Allow ordinary page scrolling around the board; only the enlarged viewport pans. */
+ html:has(body.phone-game-shell){height:auto!important;overflow-y:auto!important}
+ body.phone-game-shell{height:auto!important;min-height:100dvh;overflow-y:auto!important}
+ body.phone-game-shell main{min-height:calc(100dvh - var(--phone-top,44px));height:auto!important;overflow:visible!important}
+ body.phone-game-shell .match-layout{height:auto!important;overflow:visible!important}
+ body.phone-game-shell .play-area{height:auto!important;min-height:calc(100dvh - var(--phone-top,44px));overflow:visible!important}
+ body.phone-game-shell .play-area>.mobile-board-viewport{flex:0 0 auto!important;min-height:260px;max-height:none!important;overflow:auto!important}
+ body.phone-game-shell .phone-table-bar{height:auto!important;min-height:48px;flex-wrap:wrap;padding:5px 6px;position:sticky;top:0}
+ body.phone-game-shell .phone-table-bar button{height:auto!important;min-height:44px!important;max-height:none!important;padding:7px 9px!important;font-size:13px!important;white-space:normal}
+ body.phone-game-shell .phone-options-drawer{max-height:90dvh;overscroll-behavior:contain}
+ body.phone-game-shell .phone-options-list :is(button,select,summary){min-height:44px!important}
+ .city-rules-head{flex-wrap:wrap}.city-rules .rules-grid{grid-template-columns:1fr}
+ .city-sidebar :is(.city-controls,.history-tools),.match-panel .history-tools{display:flex;flex-wrap:wrap;gap:8px}
+ :is(.city-sidebar,.match-panel) button{min-height:44px}
+ .site-header .edition,.site-header .header-caption{display:none}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:760px){
+ .city-battle-page .mobile-board-viewport{max-width:100%;overflow:auto;touch-action:pan-x pan-y}
+ .city-battle-page .mobile-board-viewport.is-detailed .mobile-board-surface{min-width:760px!important;max-width:none!important}
+ .city-battle-page .mobile-board-viewport.is-detailed .city-board-frame{width:750px!important;max-width:none!important}
+ body.phone-game-shell .mobile-board-surface{max-height:none!important}
+}
+@media(max-width:760px){
+ body.phone-game-shell .phone-table-bar .phone-game-name{flex:1 1 65px;max-width:110px}
+ body.phone-game-shell .phone-table-bar .phone-options-toggle{margin-left:auto!important}
+ body.phone-game-shell .phone-table-bar button{background:#29443c!important;color:#fff1d6!important;border:1px solid #8f9f86!important;border-image:none!important;font:600 13px/1.25 system-ui,sans-serif!important}
+}
+/* Secondary information stays in the page's normal scroll flow. */
+@media(min-width:761px){
+ body[data-audio-theme] .match-panel{position:static;max-height:none;overflow:visible}
+ body.sds-page .game-layout>.game-sidebar,body.sds-page .game-layout>.inventory-sidebar{max-height:none!important;overflow:visible!important}
+}
+.sds-page .inventory-sidebar :is(p,.rules,.small-print,.reserve-hint){color:#e6d6b4;line-height:1.6}
+.sds-page .inventory-sidebar :is(h2,h3){color:#f4e6c5}
+.collection-practice{background:#182c27;color:#f4e6c5}
+.collection-practice :is(h1,h2,h3){font-family:Georgia,serif;color:#edcf94}
+.collection-practice :is(button,select,input){min-height:44px;font-size:15px}
+.collection-practice .hikoro-practice-banner{background:#203d36;border-color:#aa9164;border-radius:6px}
+.collection-practice .collection-actions{order:-1}
+@media(max-width:760px){.collection-practice header{flex-wrap:wrap}.collection-practice :is(main,aside,section){min-width:0}}
+@media(max-width:760px){
+ .collection-practice .sidebar{grid-template-columns:minmax(0,1fr)!important}
+ .collection-practice .controls{flex-wrap:wrap}
+ .collection-practice .control{min-width:0!important;max-width:100%;flex:1 1 150px}
+ .collection-practice :is(select,input){max-width:100%;min-width:0}
+ .collection-practice :is(p,li,.subtle){overflow-wrap:anywhere}
+}
