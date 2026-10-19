@@ -539,7 +539,7 @@ test('Prince Pai Sho RAVE confidence fades with parent visits so searched outcom
     const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
     t.after(() => dom.window.close());
     const anchor = 'const FourfoldGardenEngine=Object.freeze({initial:engineInitial,apply:engineApply});';
-    const source = read('fourfold-garden.js').replace(anchor, 'window.__PrinceRaveTest={select:botMctsSelectChild};\\n' + anchor);
+    const source = read('fourfold-garden.js').replace(anchor, 'window.__PrinceRaveTest={select:botMctsSelectChild};\n' + anchor);
     dom.window.eval(source);
 
     const children = [
