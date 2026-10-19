@@ -345,9 +345,9 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /phone-table-bar #finishTurnBtn\{margin-left:auto!important\}/, 'the optional finish action sits in the center of the phone table bar');
         assert.match(css, /fourfold-phone-dock \.action-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important\}/, 'the remaining dock actions use the space freed by the finish action');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-prince-v2/, 'the game stylesheet uses the current release cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-victory-board-review-v1/, 'the game stylesheet uses the current release cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-dissonance-abilities-v1/, 'the updated active-ability rules bypass stale game code');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-victory-board-review-v1/, 'the updated game code bypasses stale cached code');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-prince-v2/, 'the phone controls use the current release cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-dissonance-abilities-v1/, 'the updated rules use the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
@@ -355,6 +355,39 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
         assert.match(read('phone-game-shell.js'), /relocateTo\(finishTurn,bar,openButton\)/, 'Finish turn moves into the top bar on phones');
     } finally { dom.window.close(); }
+});
+
+test('the finished-game notice leaves the final board visible and readable', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const w = dom.window;
+    const style = w.document.createElement('style');
+    style.textContent = read('fourfold-garden.css');
+    w.document.head.append(style);
+    w.eval(read('fourfold-garden.js'));
+
+    let state = w.FourfoldGardenEngine.initial();
+    const ivory = [['rose', 38], ['vine', 62], ['chrysanthemum', 82], ['bamboo', 58]];
+    const indigo = [['orchid', 13], ['peony', 5], ['knotweed', 19], ['wheel', 24]];
+    for (let turn = 0; turn < ivory.length; turn++) {
+        state = w.FourfoldGardenEngine.apply(state, { kind: 'place', type: ivory[turn][0], index: ivory[turn][1] });
+        if (state.winner !== null) break;
+        state = w.FourfoldGardenEngine.apply(state, { kind: 'finish' });
+        state = w.FourfoldGardenEngine.apply(state, { kind: 'place', type: indigo[turn][0], index: indigo[turn][1] });
+        if (state.winner !== null) break;
+        state = w.FourfoldGardenEngine.apply(state, { kind: 'finish' });
+    }
+    assert.equal(state.winner, 0, 'the fixture reaches a real center-ring victory');
+
+    const result = w.document.getElementById('gameResult');
+    const boardWrap = w.document.querySelector('.board-wrap');
+    assert.equal(result.hidden, false, 'the result notice appears when the game ends');
+    assert.equal(result.getAttribute('role'), 'status', 'the result is announced without requiring a dialog');
+    assert.equal(result.hasAttribute('aria-modal'), false, 'the result never traps the player in a modal');
+    assert.ok(boardWrap.compareDocumentPosition(result) & w.Node.DOCUMENT_POSITION_FOLLOWING, 'the result appears after the board');
+    assert.equal(w.getComputedStyle(result).position, 'static', 'the result stays in the page flow');
+    assert.equal(w.document.querySelectorAll('#board .point').length, 109, 'all playable points remain available for review');
+    assert.equal(w.document.getElementById('resultReset').hidden, false, 'local players can start another game from the result notice');
 });
 
 test('reserve buttons show and toggle the selected piece without changing placement rules', t => {

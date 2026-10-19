@@ -964,8 +964,9 @@ function render(status){
   if(state.winner!==null||state.draw){
     document.getElementById("modalTitle").textContent=state.draw?"A balanced garden":ownersName(state.winner)+" wins";
     document.getElementById("modalText").textContent=state.log.length?state.log[0].text:(state.draw?"The game ended in a draw.":"The game has ended.");
-    document.getElementById("modalBackdrop").classList.add("show");
-  }else document.getElementById("modalBackdrop").classList.remove("show");
+    document.getElementById("gameResult").hidden=false;
+    document.getElementById("resultReset").hidden=!!onlineGameId;
+  }else document.getElementById("gameResult").hidden=true;
   scheduleBotTurn();
 }
 function snapshot(){if(state.turnStage==="place"||state.turnStage==="pickup"||!undoState)undoState=clone(state)}
@@ -2819,7 +2820,7 @@ if(typeof module!=="undefined"&&module.exports){
     state=undoState;undoState=null;selectedType=null;pending=null;engineActionIntent=null;mode="place";lastPoint=-1;render(resolveCapturesAndWin());
   });
   document.getElementById("resetBtn").addEventListener("click",resetGame);
-  document.getElementById("modalReset").addEventListener("click",resetGame);
+  document.getElementById("resultReset").addEventListener("click",resetGame);
   document.getElementById("opponentMode").addEventListener("change",botModeChanged);
   document.getElementById("pauseBotBtn").addEventListener("click",toggleBotPause);
   renderPieceGuide();

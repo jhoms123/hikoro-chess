@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/experience.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/table-companion.js?v=20261019-prince-v2"></script><script src="/experience.js?v=20261019-prince-v2" defer=""></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
 <script src="/i18n-catalog.js?v=20261019-dissonance-abilities-v1"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
-<link rel="stylesheet" href="fourfold-garden.css?v=20261019-prince-v2">
+<link rel="stylesheet" href="fourfold-garden.css?v=20261019-victory-board-review-v1">
 <link rel="stylesheet" href="/collection-ui.css?v=20261019-prince-v2">
 <script src="/collection-ui.js?v=20261019-prince-v2" defer></script>
 </head>
@@ -60,7 +60,7 @@
       </section></aside><div id="board-wrapper" class="board-stage" aria-label="Prince Pai Sho board and status"><div class="board-head">
         <div class="board-title">Compact Garden · 109 playable points</div>
         <div id="turnPill" class="turn-pill p0">Ivory to play</div>
-      </div><div class="board-wrap"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div><div id="harmonyScore" class="score-strip" aria-live="polite"></div><div class="legend">
+      </div><div class="board-wrap"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div><section id="gameResult" class="game-result" hidden role="status" aria-live="polite" aria-atomic="true"><h2 id="modalTitle">Ivory wins</h2><p id="modalText">A Harmony ring of three or more pieces has enclosed the center.</p><button id="resultReset" class="btn" type="button">Start another game</button></section><div id="harmonyScore" class="score-strip" aria-live="polite"></div><div class="legend">
         <span><i class="swatch red"></i>Red Garden</span>
         <span><i class="swatch white"></i>White Garden</span>
         <span><i class="swatch neutral"></i>Neutral Garden</span>
@@ -127,18 +127,11 @@
             <p>Repetition tiebreak: Count each active same-owner Flower, Tool, or mixed Harmony link once for that player. Count each active Dissonance link against every owner represented at either endpoint (so a cross-owner Dissonance counts against both). Compare Harmony ÷ Dissonance. A positive Harmony count with zero Dissonance is ∞; zero Harmony and zero Dissonance is 0. Equal ratios after the third occurrence are a draw.</p>
           </div>
         </details>
-      </section></div></div></div><div id="modalBackdrop" class="modal-backdrop">
-  <div class="modal">
-    <div class="eyebrow">The garden is claimed</div>
-    <h2 id="modalTitle">Ivory wins</h2>
-    <p id="modalText">A Harmony ring of three or more pieces has enclosed the center.</p>
-    <button id="modalReset" class="btn">Start another game</button>
-  </div>
-</div>
+      </section></div></div></div>
 
 
 
-<script src="fourfold-garden.js?v=20261019-dissonance-abilities-v1" defer=""></script>
+<script src="fourfold-garden.js?v=20261019-victory-board-review-v1" defer=""></script>
 
 
 </body></html>
