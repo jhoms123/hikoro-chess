@@ -14,6 +14,15 @@ const BOT_OPENING_PROFILES = [
 ];
 const FLOWER_RING = ["whiteJade", "whiteLotus", "rose", "vine", "chrysanthemum", "bamboo", "rhododendron", "thorn", "jasmine", "orchid", "lily", "peony"];
 const TOOL_RING = ["rock", "knotweed", "mirror", "bridge", "boat", "wheel", "fan", "bell"];
+const MIXED_TOOL_HARMONY = Object.freeze({
+  rose:["wheel","bell"],
+  vine:["knotweed","fan"],
+  chrysanthemum:["wheel","fan"],
+  bamboo:["knotweed","bell"],
+  orchid:["fan","bell"],
+  peony:["knotweed","wheel"]
+});
+const EXTRA_TOOL_HARMONY = new Set(["fan|knotweed","knotweed|wheel"]);
 const SIGHT_EXCLUSIONS = [
   {a:"rose",b:"vine",axis:"orthogonal",label:"Rose–Vine row/column"},
   {a:"rose",b:"chrysanthemum",axis:"diagonal",label:"Rose–Chrysanthemum diagonal"}
@@ -227,10 +236,17 @@ function chebyshev(a,b){const A=xy(a),B=xy(b);return Math.max(Math.abs(A.x-B.x),
 function relation(aType,bType,group){
   const ring=group==="flower"?FLOWER_RING:group==="tool"?TOOL_RING:null;
   if(!ring)return null;
+  if(group==="tool"&&EXTRA_TOOL_HARMONY.has([aType,bType].sort().join("|")))return "H";
   const a=ring.indexOf(aType),b=ring.indexOf(bType);
   if(a<0||b<0)return "D";
   const gap=Math.abs(a-b),distance=Math.min(gap,ring.length-gap);
   return distance>=1&&distance<=(group==="flower"?3:2)?"H":"D";
+}
+function mixedRelation(flowerType,toolType){
+  return (MIXED_TOOL_HARMONY[flowerType]||[]).indexOf(toolType)>=0?"H":"D";
+}
+function mixedHarmonyCanAlign(flowerType,flowerIndex,toolIndex){
+  return isAligned(flowerIndex,toolIndex)||(isDiagonal(flowerIndex,toolIndex)&&isDiagonalFlower(flowerType));
 }
 function pieceRelation(a,b,group){
   return relation(a&&a.type,b&&b.type,group);
@@ -392,12 +408,27 @@ function computeRawDissonance(group){
   links.forEach(function(link){counts[link.a]=(counts[link.a]||0)+1;counts[link.b]=(counts[link.b]||0)+1});
   return {counts:counts,links:links,counterpoints:counterpoints};
 }
+function computeRawMixedDissonance(){
+  const flowers=getPieces("flower"),tools=getPieces("tool"),counts={},links=[];
+  flowers.concat(tools).forEach(function(q){counts[q.piece.id]=0});
+  flowers.forEach(function(flower){
+    tools.forEach(function(tool){
+      if(mixedRelation(flower.piece.type,tool.piece.type)!=="D"||!isAligned(flower.index,tool.index))return;
+      if(rockBlocksFlowerLine(flower.index,tool.index)||!lineClear(flower.index,tool.index))return;
+      links.push({a:flower.piece.id,b:tool.piece.id,ia:flower.index,ib:tool.index});
+      counts[flower.piece.id]=(counts[flower.piece.id]||0)+1;
+      counts[tool.piece.id]=(counts[tool.piece.id]||0)+1;
+    });
+  });
+  return {counts:counts,links:links};
+}
 function refreshDissonance(){
   const flowerD=computeRawDissonance("flower");
   const toolD=computeRawDissonance("tool");
+  const mixedD=computeRawMixedDissonance();
   const fDisabled={};
   getPieces("flower").forEach(function(q){
-    const p=q.piece,raw=flowerD.counts[p.id]||0;
+    const p=q.piece,raw=(flowerD.counts[p.id]||0)+(mixedD.counts[p.id]||0);
     const region=regionAt(q.pos.x,q.pos.y);
     let threshold=region==="red"?1:region==="white"?3:2;
     if(isShielded(p))threshold++;
@@ -406,9 +437,9 @@ function refreshDissonance(){
   const tDisabled={};
   getPieces("tool").forEach(function(q){
     const p=q.piece;
-    tDisabled[p.id]=(toolD.counts[p.id]||0)>0;
+    tDisabled[p.id]=(toolD.counts[p.id]||0)+(mixedD.counts[p.id]||0)>0;
   });
-  return {flowerD:flowerD,toolD:toolD,fDisabled:fDisabled,tDisabled:tDisabled};
+  return {flowerD:flowerD,toolD:toolD,mixedD:mixedD,fDisabled:fDisabled,tDisabled:tDisabled};
 }
 function getFlowerLinks(disabled,counterpoints){
   const pieces=getPieces("flower"),links=[];
@@ -465,11 +496,26 @@ function getToolLinks(disabled,counterpoints){
   });
   return links;
 }
+function getMixedHarmonyLinks(fDisabled,tDisabled){
+  const flowers=getPieces("flower"),tools=getPieces("tool"),links=[];
+  flowers.forEach(function(flower){
+    tools.forEach(function(tool){
+      if(flower.piece.owner!==tool.piece.owner||mixedRelation(flower.piece.type,tool.piece.type)!=="H")return;
+      if(fDisabled[flower.piece.id]||tDisabled[tool.piece.id])return;
+      const diagonal=isDiagonal(flower.index,tool.index);
+      if(!mixedHarmonyCanAlign(flower.piece.type,flower.index,tool.index))return;
+      if(rockBlocksFlowerLine(flower.index,tool.index,diagonal)||!lineClear(flower.index,tool.index,[],diagonal))return;
+      links.push({a:flower.piece.id,b:tool.piece.id,ia:flower.index,ib:tool.index,path:"line",diagonal:diagonal});
+    });
+  });
+  return links;
+}
 function boardStatus(){
   const dis=refreshDissonance();
   const flowerLinks=getFlowerLinks(dis.fDisabled,dis.flowerD.counterpoints);
   const toolLinks=getToolLinks(dis.tDisabled,dis.toolD.counterpoints);
-  const status={flowerLinks:flowerLinks,toolLinks:toolLinks,flowerD:dis.flowerD.links,toolD:dis.toolD.links,fDisabled:dis.fDisabled,tDisabled:dis.tDisabled};
+  const mixedLinks=getMixedHarmonyLinks(dis.fDisabled,dis.tDisabled);
+  const status={flowerLinks:flowerLinks,toolLinks:toolLinks,mixedLinks:mixedLinks,flowerD:dis.flowerD.links,toolD:dis.toolD.links,mixedD:dis.mixedD.links,fDisabled:dis.fDisabled,tDisabled:dis.tDisabled};
   state.lastStatus=status;
   return status;
 }
@@ -496,11 +542,11 @@ function recordCompletedPosition(){
 }
 function harmonyDisharmonyScore(status){
   const harmony=[0,0],dissonance=[0,0];
-  status.flowerLinks.concat(status.toolLinks).forEach(function(link){
+  status.flowerLinks.concat(status.toolLinks,status.mixedLinks).forEach(function(link){
     const a=findById(link.a),b=findById(link.b);
     if(a&&b&&a.owner===b.owner)harmony[a.owner]++;
   });
-  status.flowerD.concat(status.toolD).forEach(function(link){
+  status.flowerD.concat(status.toolD,status.mixedD).forEach(function(link){
     const a=findById(link.a),b=findById(link.b),owners=new Set();
     if(a)owners.add(a.owner);if(b)owners.add(b.owner);
     owners.forEach(function(owner){dissonance[owner]++});
@@ -551,14 +597,25 @@ function pointInsidePolygon(point,points){
   }
   return inside;
 }
+function simpleHarmonyLoop(points){
+  if(points.length<3)return false;
+  for(let i=0;i<points.length;i++){
+    const nextI=(i+1)%points.length;
+    for(let j=i+1;j<points.length;j++){
+      const nextJ=(j+1)%points.length;
+      if(j===nextI||nextJ===i)continue;
+      if(segmentsIntersect(points[i],points[nextI],points[j],points[nextJ]))return false;
+    }
+  }
+  return true;
+}
 function simpleFourFlowerLoop(points){
-  if(points.length!==4)return false;
-  return !segmentsIntersect(points[0],points[1],points[2],points[3])&&!segmentsIntersect(points[1],points[2],points[3],points[0]);
+  return points.length===4&&simpleHarmonyLoop(points);
 }
 function validHarmonyRings(status){
-  const pieces=getPieces("flower"),byId=Object.create(null),neighbors=Object.create(null),rings=[];
+  const pieces=getPieces(),byId=Object.create(null),neighbors=Object.create(null),rings=[];
   pieces.forEach(function(q){byId[q.piece.id]=q;neighbors[q.piece.id]=new Set()});
-  status.flowerLinks.forEach(function(link){
+  status.flowerLinks.concat(status.toolLinks,status.mixedLinks).forEach(function(link){
     const a=byId[link.a],b=byId[link.b];
     if(!a||!b||a.piece.owner!==b.piece.owner)return;
     neighbors[link.a].add(link.b);neighbors[link.b].add(link.a);
@@ -568,13 +625,11 @@ function validHarmonyRings(status){
     vertices.forEach(function(start){
       function extend(path){
         const last=path[path.length-1];
-        if(path.length===4){
-          if(!neighbors[last.piece.id].has(start.piece.id)||path[1].index>=path[3].index)return;
+        if(path.length>=3&&neighbors[last.piece.id].has(start.piece.id)&&path[1].index<last.index){
           const points=path.map(function(q){return q.pos});
-          if(!simpleFourFlowerLoop(points))return;
-          rings.push({owner:owner,cells:path.map(function(q){return q.index}),pieces:path.map(function(q){return q.piece}),points:points,center:pointInsidePolygon({x:CENTER,y:CENTER},points)});
-          return;
+          if(simpleHarmonyLoop(points))rings.push({owner:owner,cells:path.map(function(q){return q.index}),pieces:path.map(function(q){return q.piece}),points:points,center:pointInsidePolygon({x:CENTER,y:CENTER},points)});
         }
+        if(path.length>=vertices.length)return;
         neighbors[last.piece.id].forEach(function(id){
           const next=byId[id];
           if(!next||next.piece.owner!==owner||next.index<=start.index||path.some(function(q){return q.piece.id===id}))return;
@@ -608,8 +663,8 @@ function resolveCapturesAndWin(){
   }
   const wins=[false,false];
   rings.forEach(function(r){if(r.center)wins[r.owner]=true});
-  if(wins[0]&&wins[1]){state.draw=false;state.winner=state.current;addLog("Both players completed a center ring in the same resolution. "+ownersName(state.current)+" captures the center on their turn.","win")}
-  else if(wins[0]||wins[1]){state.winner=wins[0]?0:1;addLog(ownersName(state.winner)+" captured the center with a four-flower ring.","win")}
+  if(wins[0]&&wins[1]){state.draw=false;state.winner=state.current;addLog("Both players completed center rings at once. "+ownersName(state.current)+" wins the tie by taking the center.","win")}
+  else if(wins[0]||wins[1]){state.winner=wins[0]?0:1;const winningRing=rings.find(function(r){return r.owner===state.winner&&r.center});addLog(ownersName(state.winner)+" captured the center with a "+winningRing.pieces.length+"-piece Harmony ring.","win")}
   state.lastStatus=status;
   return status;
 }
@@ -623,7 +678,7 @@ function commitOnlineAction(){
 }
 function tokenTitle(piece,status){
   const d=DEFS[piece.type],isD=d.group==="flower"?status.fDisabled[piece.id]:status.tDisabled[piece.id];
-  const links=(d.group==="flower"?status.flowerLinks:status.toolLinks).filter(function(link){return link.a===piece.id||link.b===piece.id}).length;
+  const links=(d.group==="flower"?status.flowerLinks:status.toolLinks).concat(status.mixedLinks).filter(function(link){return link.a===piece.id||link.b===piece.id}).length;
   const ownerName=ownersName(piece.owner);
   const displayOwner=ownerName===PLAYER_NAMES[piece.owner]?uiText(ownerName):ownerName;
   const extras=[];
@@ -669,7 +724,7 @@ function renderBoard(status,mandatoryAbilityActions){
     },{passive:false});
   }
   const harmonyIds=new Set();
-  status.flowerLinks.concat(status.toolLinks).forEach(function(link){harmonyIds.add(link.a);harmonyIds.add(link.b)});
+  status.flowerLinks.concat(status.toolLinks,status.mixedLinks).forEach(function(link){harmonyIds.add(link.a);harmonyIds.add(link.b)});
   const ns="http://www.w3.org/2000/svg";
   function artNode(tag,attrs,parent){
     const node=document.createElementNS(ns,tag);
@@ -722,6 +777,8 @@ function renderBoard(status,mandatoryAbilityActions){
   status.flowerD.forEach(function(l){drawLine(l,"ray-d")});
   status.toolLinks.forEach(function(l){drawLine(l,l.path==="counterpoint"?"ray-counterpoint":"ray-tool")});
   status.toolD.forEach(function(l){drawLine(l,"ray-tool-d")});
+  status.mixedLinks.forEach(function(l){drawLine(l,l.diagonal?"ray-mixed-diagonal":"ray-mixed")});
+  status.mixedD.forEach(function(l){drawLine(l,"ray-mixed-d")});
   board.appendChild(svg);
   const requiredAbilitySources=new Set(mode==="ability"&&state.turnStage==="bonus"?(mandatoryAbilityActions||availableAbilityActions(state.current,status)).map(function(action){return action.source}):[]);
   for(let i=0;i<SIZE*SIZE;i++){
@@ -888,7 +945,7 @@ function render(status){
   renderBank("flower",status);renderBank("tool",status);renderLog();
   if(state.winner!==null||state.draw){
     document.getElementById("modalTitle").textContent=state.draw?"A balanced garden":ownersName(state.winner)+" wins";
-    document.getElementById("modalText").textContent=state.log.length?state.log[0].text:(state.draw?"Both players closed a four-flower ring around the center at once.":"The game has ended.");
+    document.getElementById("modalText").textContent=state.log.length?state.log[0].text:(state.draw?"The game ended in a draw.":"The game has ended.");
     document.getElementById("modalBackdrop").classList.add("show");
   }else document.getElementById("modalBackdrop").classList.remove("show");
   scheduleBotTurn();
@@ -896,7 +953,7 @@ function render(status){
 function snapshot(){if(state.turnStage==="place"||state.turnStage==="pickup"||!undoState)undoState=clone(state)}
 function centralHarmonyScore(status){
   const score=[0,0];
-  status.flowerLinks.forEach(function(link){
+  status.flowerLinks.concat(status.mixedLinks).forEach(function(link){
     const a=findById(link.a),b=findById(link.b);
     if(!a||!b)return;
     const A=xy(indexOfId(a.id)),B=xy(indexOfId(b.id));
@@ -1300,29 +1357,47 @@ function trialCenterRingPlacementWins(owner,type,index){
   return wins;
 }
 function centerRingWinningPlacements(owner){
-  const ownFlowers=getPieces("flower").filter(function(q){return q.piece.owner===owner});
-  if(ownFlowers.length<3)return [];
-  const status=boardStatus(),linkKeys=flowerLinkKeySet(status),types=Object.keys(DEFS).filter(function(type){return DEFS[type].group==="flower"&&DEFS[type].count>0&&(state.reserves[owner][type]||0)>0});
+  const ownPieces=getPieces().filter(function(q){return q.piece.owner===owner});
+  if(ownPieces.length<2)return [];
+  const status=boardStatus(),links=status.flowerLinks.concat(status.toolLinks,status.mixedLinks),types=Object.keys(DEFS).filter(function(type){return DEFS[type].count>0&&(state.reserves[owner][type]||0)>0});
   if(!types.length)return [];
-  const found=[],seen=new Set(),paths=[];
-  ownFlowers.forEach(function(middle){
-    const linked=ownFlowers.filter(function(q){return q.piece.id!==middle.piece.id&&linkKeys.has([q.piece.id,middle.piece.id].sort().join("|"))});
+  const byId=Object.create(null),neighbors=Object.create(null),paths=[],found=[],seen=new Set();
+  ownPieces.forEach(function(q){byId[q.piece.id]=q;neighbors[q.piece.id]=[]});
+  links.forEach(function(link){
+    const a=byId[link.a],b=byId[link.b];
+    if(!a||!b||a.piece.owner!==b.piece.owner)return;
+    neighbors[a.piece.id].push(b);neighbors[b.piece.id].push(a);
+    if(a.index<b.index)paths.push([a,b]);
+  });
+  ownPieces.forEach(function(middle){
+    const linked=neighbors[middle.piece.id];
     for(let a=0;a<linked.length;a++)for(let c=a+1;c<linked.length;c++){
-      if(linked[a].index>=linked[c].index)continue;
-      paths.push([linked[a],middle,linked[c]]);
+      const left=linked[a],right=linked[c];
+      if(left.index>=right.index)continue;
+      paths.push([left,middle,right]);
     }
   });
   paths.forEach(function(path){
-    const a=path[0],b=path[1],c=path[2];
+    const first=path[0],last=path[path.length-1];
     for(let index=0;index<state.board.length;index++){
       const pos=xy(index);
       if(state.board[index]||!playableAt(pos.x,pos.y))continue;
-      const points=[a.pos,b.pos,c.pos,pos];
-      if(!simpleFourFlowerLoop(points)||!pointInsidePolygon({x:CENTER,y:CENTER},points))continue;
+      const points=path.map(function(q){return q.pos}).concat([pos]);
+      if(!simpleHarmonyLoop(points)||!pointInsidePolygon({x:CENTER,y:CENTER},points))continue;
       types.forEach(function(type){
-        const connectsA=pieceRelation({type:type},a.piece,"flower")==="H"&&canFlowerHarmonyAlign(type,a.piece.type,index,a.index);
-        const connectsC=pieceRelation({type:type},c.piece,"flower")==="H"&&canFlowerHarmonyAlign(type,c.piece.type,index,c.index);
-        if(!connectsA||!connectsC||placementSightConflict(type,index)||!trialCenterRingPlacementWins(owner,type,index))return;
+        function canCloseTo(partner){
+          const candidateGroup=DEFS[type].group,partnerGroup=DEFS[partner.piece.type].group;
+          const rel=candidateGroup===partnerGroup?relation(type,partner.piece.type,candidateGroup):candidateGroup==="flower"?mixedRelation(type,partner.piece.type):mixedRelation(partner.piece.type,type);
+          const flowerType=candidateGroup==="flower"?type:partner.piece.type,diagonal=isDiagonal(index,partner.index);
+          if(rel!=="H")return false;
+          if(diagonal){
+            if(candidateGroup===partnerGroup){if(candidateGroup==="flower"&&!canFlowerHarmonyAlign(type,partner.piece.type,index,partner.index))return false;if(candidateGroup==="tool")return false}
+            else if(!mixedHarmonyCanAlign(flowerType,candidateGroup==="flower"?index:partner.index,candidateGroup==="flower"?partner.index:index))return false;
+          }else if(!isAligned(index,partner.index))return false;
+          const flowerRay=candidateGroup==="flower"||partnerGroup==="flower";
+          return lineClear(index,partner.index,[],diagonal)&&(!flowerRay||!rockBlocksFlowerLine(index,partner.index,diagonal));
+        }
+        if(!canCloseTo(first)||!canCloseTo(last)||placementSightConflict(type,index)||!trialCenterRingPlacementWins(owner,type,index))return;
         const key=type+"|"+index;if(seen.has(key))return;seen.add(key);
         found.push({kind:"place",type:type,index:index,hint:1000000,tacticalWin:true});
       });
@@ -1747,7 +1822,17 @@ function quickPlacementScore(type,index,owner,status,plan,ringBonusCandidates){
   const pieces=getPieces();
   for(let i=0;i<pieces.length;i++){
     const q=pieces[i],otherGroup=DEFS[q.piece.type].group;
-    if(otherGroup!==group)continue;
+    if(otherGroup!==group){
+      const flowerType=group==="flower"?type:q.piece.type,toolType=group==="tool"?type:q.piece.type;
+      const rel=mixedRelation(flowerType,toolType),flowerIndex=group==="flower"?index:q.index,toolIndex=group==="tool"?index:q.index;
+      const diagonal=isDiagonal(index,q.index);
+      if(diagonal){if(rel!=="H"||!mixedHarmonyCanAlign(flowerType,flowerIndex,toolIndex))continue}
+      else if(!isAligned(index,q.index))continue;
+      if(!lineClear(index,q.index,[],diagonal)||rockBlocksFlowerLine(index,q.index,diagonal))continue;
+      if(rel==="H"&&q.piece.owner===owner)score+=3.1;
+      else if(rel==="D")score+=q.piece.owner===owner?-2.5:1.8;
+      continue;
+    }
     const rel=relation(type,q.piece.type,group);
     const diagonal=isDiagonal(index,q.index);
     if(diagonal){if(group!=="flower"||rel!=="H"||!canFlowerHarmonyAlign(type,q.piece.type,index,q.index))continue}
@@ -1773,7 +1858,7 @@ function quickPlacementScore(type,index,owner,status,plan,ringBonusCandidates){
   return score+counterpointPlacementBonus(type,index,owner)+(status?centerRingCornerBonus(type,index,owner,status,ringBonusCandidates&&ringBonusCandidates[index]):0)+centerTargetPathPenalty(index,plan)+centerTargetMoveBonus(type,index,plan)+openingVariation;
 }
 function botLinkCount(piece,status){
-  const links=DEFS[piece.type].group==="flower"?status.flowerLinks:status.toolLinks;
+  const links=(DEFS[piece.type].group==="flower"?status.flowerLinks:status.toolLinks).concat(status.mixedLinks);
   return links.reduce(function(n,l){return n+(l.a===piece.id||l.b===piece.id?1:0)},0);
 }
 function centerPlanPositionHint(type,index,owner,pieceOwner){
@@ -2020,10 +2105,8 @@ function generateBotActions(owner,searching){
   });
   const enemyWins=centerRingWinningPlacements(1-owner),threatSlots=Array.from(new Set(enemyWins.map(function(win){return win.index})));
   threatSlots.forEach(function(index){
-    ["flower","tool"].forEach(function(group){
-      const blocker=placements.filter(function(action){return action.index===index&&DEFS[action.type].group===group}).sort(function(a,b){return b.hint-a.hint})[0];
-      if(blocker){blocker.tacticalBlock=true;blocker.hint+=1000}
-    });
+    const blocker=placements.filter(function(action){return action.index===index}).sort(function(a,b){return b.hint-a.hint})[0];
+    if(blocker){blocker.tacticalBlock=true;blocker.hint+=1000}
   });
   const denialWeights=centerRingDenialWeights(owner,status);
   placements.forEach(function(action){
@@ -2131,6 +2214,7 @@ function scoreBotPosition(owner,status){
   });
   status.flowerLinks.forEach(function(link){const p=findById(link.a);if(p)score+=(p.owner===owner?1:-1)*7.2});
   status.toolLinks.forEach(function(link){const p=findById(link.a);if(p)score+=(p.owner===owner?1:-1)*(link.path==="counterpoint"?3.1:1.7)});
+  status.mixedLinks.forEach(function(link){const p=findById(link.a);if(p)score+=(p.owner===owner?1:-1)*4.2});
   const flowerKeys=new Set(status.flowerLinks.map(function(l){return [l.a,l.b].sort().join("|")}));
   const ringRectangles=centerRingRectangles().all;
   for(let r=0;r<ringRectangles.length;r++){
@@ -2358,6 +2442,7 @@ function scoreBotPositionAdvanced(owner,status){
   }
   valueDissonance(status.flowerD,1.15);
   valueDissonance(status.toolD,1.6);
+  valueDissonance(status.mixedD,1.35);
   score+=latentInteractionScore(owner,status);
   getPieces("flower").forEach(function(q){
     const sign=q.piece.owner===owner?1:-1;

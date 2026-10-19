@@ -100,6 +100,57 @@ test('four diagonal flower links complete the center ring and win', () => {
     assert.match(won.result.reason, /center/i);
 });
 
+test('a three-piece mixed Harmony ring captures its target and wins', () => {
+    const state = Garden.initial();
+    const piece = (id, type, owner = 0) => ({ id, type, owner, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
+    state.board[2 * 11 + 5] = piece('rose', 'rose');
+    state.board[7 * 11] = piece('wheel', 'wheel');
+    state.board[4 * 11 + 5] = piece('enemy-knotweed', 'knotweed', 1);
+    state.reserves[0].rose = 0;
+    state.reserves[0].wheel = 0;
+    state.reserves[1].knotweed = 0;
+    state.nextId = 4;
+    const won = Garden.apply(state, { kind: 'place', type: 'bell', index: 7 * 11 + 10 });
+    assert.equal(won.winner, 0);
+    assert.equal(won.captured[1].includes('knotweed'), true);
+    assert.equal(won.reserves[1].knotweed, 1, 'captured pieces return to their owner reserve');
+    assert.equal(won.lastStatus.mixedLinks.length, 2, 'the Rose connects diagonally to both Tools');
+    assert.equal(won.lastStatus.toolLinks.length, 1, 'Wheel and Bell close the third side');
+    assert.match(won.log[0].text, /3-piece Harmony ring/);
+});
+
+test('Knotweed, Wheel, Fan, and Bell can close a four-Tool center ring', () => {
+    const state = Garden.initial();
+    const piece = (id, type) => ({ id, type, owner: 0, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
+    state.board[2 * 11 + 2] = piece('knotweed', 'knotweed');
+    state.board[2 * 11 + 8] = piece('wheel', 'wheel');
+    state.board[8 * 11 + 2] = piece('fan', 'fan');
+    state.reserves[0].knotweed = 0;
+    state.reserves[0].wheel = 0;
+    state.reserves[0].fan = 0;
+    state.nextId = 4;
+    const won = Garden.apply(state, { kind: 'place', type: 'bell', index: 8 * 11 + 8 });
+    assert.equal(won.winner, 0);
+    const key = (a, b) => won.lastStatus.toolLinks.some(link => link.a === a && link.b === b || link.a === b && link.b === a);
+    assert.ok(key('knotweed', 'wheel'), 'the named Knotweed–Wheel exception is live');
+    assert.ok(key('knotweed', 'fan'), 'the named Knotweed–Fan exception is live');
+    assert.match(won.log[0].text, /4-piece Harmony ring/);
+});
+
+test('mixed Dissonance disables both endpoint groups and counts against a Red Flower', () => {
+    const state = Garden.initial();
+    const piece = (id, type) => ({ id, type, owner: 0, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
+    state.board[4 * 11 + 7] = piece('rose', 'rose');
+    state.board[5 * 11 + 7] = piece('knotweed', 'knotweed');
+    state.reserves[0].rose = 0;
+    state.reserves[0].knotweed = 0;
+    state.nextId = 3;
+    const result = Garden.apply(state, { kind: 'place', type: 'bamboo', index: 4 * 11 });
+    assert.equal(result.lastStatus.mixedD.length, 1);
+    assert.equal(result.lastStatus.fDisabled.rose, true, 'one mixed Dissonance blocks the Red Flower');
+    assert.equal(result.lastStatus.tDisabled.knotweed, true, 'any live Dissonance blocks the Tool');
+});
+
 test('Fourfold Garden match records replay and describe accepted actions', () => {
     const journal = [
         { kind: 'place', type: 'rose', index: 60 }, { kind: 'finish' },
@@ -139,23 +190,42 @@ test('the replay page loads and paints the garden engine without the playable bo
     } finally { dom.window.close(); }
 });
 
-test('lobby and bilingual game guide expose all ten pieces and full win rules', () => {
+test('lobby and bilingual game guide explain mixed links and three-piece rings', () => {
     const html = read('fourfold-garden.html');
     assert.match(html, /id="pieceGuideGrid"/);
-    assert.match(html, /four-flower Harmony loop enclosing the center wins/);
-    assert.match(html, /diagonal links/);
+    assert.match(html, /ring of three or more distinct same-owner pieces/);
+    assert.match(html, /Harmony Tools/);
+    assert.match(html, /Rose<\/th><td class="h">Wheel · Bell/);
     const translations = JSON.parse(read('locales/es-CU.json'));
+    const page = new JSDOM(html);
+    const normalize = value => value.replace(/\s+/g, ' ').trim();
     const sourceRules = [
-        'Each player starts with 10 pieces: six Flowers and four Tools. On a normal turn, place one reserve piece. If at least one legal active ability is available after placement, you must use one before the turn can end; you cannot skip it to pick up a piece or finish. If no legal active ability is available, you may pick up one of your own older pieces or finish your turn. A picked-up piece returns to your reserve. If your placement uses your last reserve piece and does not win, you must also pick up one of your own pieces before ending that same turn. If your new piece is captured immediately and you have no other piece on the board, that capture already removes it and your turn ends. If you start a turn with no reserve pieces, your whole turn is a mandatory pickup. You normally cannot pick up the piece you just placed; if it is your only piece on the board, you may pick it up to keep the game moving.',
-        'Orchid, Wheel, Fan, and Bell each have one active ability use; whenever a legal active ability is available after a placement, one must be used before the turn can end. If a used ability piece is picked up or captured, it remains spent when returned to reserve. Rose, Chrysanthemum, Vine, Bamboo, Peony, and Knotweed have passive effects that resolve automatically; Peony and Knotweed do not spend a turn converting links. This compact edition uses ten pieces: Rose, Vine, Chrysanthemum, Bamboo, Orchid, Peony, Knotweed, Wheel, Fan, and Bell. Picking up one of your own blockers can expose or break rays. There are no round counters or temporary range bonuses.',
-        'Tool wheel (8 types): Rock → Knotweed → Mirror → Bridge → Boat → Wheel → Fan → Bell → back to Rock.'
+        normalize(page.window.document.querySelector('.piece-guide .rules').textContent),
+        ...Array.from(page.window.document.querySelectorAll('#rules-section .rules li'), item => normalize(item.textContent)),
+        normalize(page.window.document.querySelector('#rules-section .small-print').textContent),
+        ...Array.from(page.window.document.querySelectorAll('#rules-section .compat-content > p'), item => normalize(item.textContent)),
+        'Flower and Tool Harmony and Dissonance chart', 'Harmony Tools', 'Dissonant Tools',
+        'Mixed Dissonance', 'Flower–Tool Harmony'
     ];
-    assert.ok(sourceRules.every(key => typeof translations[key] === 'string'), 'Spanish entries exist for full game rules');
+    page.window.close();
+    assert.ok(sourceRules.every(key => typeof translations[key] === 'string'), 'Spanish entries exist for the full game guide and mixed-link chart');
+    const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://example.test/', runScripts: 'outside-only' });
+    try {
+        dom.window.eval(read('i18n-catalog.js'));
+        dom.window.eval(read('i18n.js'));
+        dom.window.I18n.setLanguage('es-CU');
+        for (const key of sourceRules) assert.equal(dom.window.I18n.t(key), translations[key], 'the runtime language switch translates ' + key.slice(0, 48));
+        const win = '{0} captured the center with a {1}-piece Harmony ring.';
+        const match = dom.window.I18n.t(win.replace('{0}', 'Ivory').replace('{1}', '3'));
+        assert.match(match, /Marfil capturó el centro/);
+        assert.match(match, /3 piezas/);
+    } finally { dom.window.close(); }
     assert.equal(read('assets/collection/icons/fourfold-garden.svg').includes('<svg'), true);
     assert.match(read('script.js'), /fourfold-garden\.html\?mode=bot-indigo/);
 });
 
 test('shared collection styling leaves Fourfold board points under game-specific styling', () => {
+    const html = read('fourfold-garden.html');
     const dom = new JSDOM('<!doctype html><html><head></head><body class="fourfold-garden-page" data-audio-theme="fourfold-garden"><button class="point">intersection</button><button id="rules-button">How to play</button><button id="hidden-game-control" hidden>Hidden control</button></body></html>', { runScripts: 'outside-only' });
     try {
         const w = dom.window;
@@ -186,11 +256,11 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /phone-table-bar #finishTurnBtn\{margin-left:auto!important\}/, 'the optional finish action sits in the center of the phone table bar');
         assert.match(css, /fourfold-phone-dock \.action-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important\}/, 'the remaining dock actions use the space freed by the finish action');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mobile-finish-turn-v9/, 'board sizing changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-mixed-harmony-rings-v1/, 'board sizing changes get a fresh cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-optional-finish-turn-v1/, 'selection interaction changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-mixed-harmony-rings-v1/, 'selection interaction changes get a fresh cache key');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-fourfold-finish-topbar-v1/, 'phone selection order changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261018-fourfold-mandatory-abilities-v1/, 'the game uses the current bilingual catalog');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-mixed-harmony-rings-v1/, 'the game uses the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');

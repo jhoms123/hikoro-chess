@@ -230,3 +230,10 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
  body.phone-game-shell.fourfold-garden-page .phone-table-bar #finishTurnBtn{margin-left:auto!important}
  body.phone-game-shell.fourfold-garden-page .fourfold-phone-dock .action-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* Flower–Tool Harmony and Dissonance */
+.fourfold-garden-page .ray-mixed{stroke:#9b7430;stroke-width:8;stroke-dasharray:10 4;stroke-linecap:round;filter:drop-shadow(0 0 2px #fff0c0)}
+.fourfold-garden-page .ray-mixed-diagonal{stroke:#9b7430;stroke-width:8;stroke-dasharray:3 5;stroke-linecap:round;filter:drop-shadow(0 0 2px #fff0c0)}
+.fourfold-garden-page .ray-mixed-d{stroke:#9a3f69;stroke-width:6;stroke-dasharray:2 5;stroke-linecap:round;filter:drop-shadow(0 0 2px #ffe0ec)}
+.fourfold-garden-page .sample-line.mixed{border-top:4px dashed #9b7430}
+.fourfold-garden-page .sample-line.mixed-d{border-top:4px dotted #9a3f69}
