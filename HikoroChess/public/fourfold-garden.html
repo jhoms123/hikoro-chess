@@ -3,24 +3,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#211710">
-<title>Fourfold Garden · Hikoro collection</title>
+<title>Prince Pai Sho · Hikoro collection</title>
 
 <link rel="stylesheet" href="shodansho-utilities.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="shodansho-ui.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="shodansho-medieval.css?v=20261018-fourfold-mandatory-abilities-v1"><link rel="stylesheet" href="/site-audio.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/site-audio.js?v=20261019-polish" defer=""></script>
-<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/collection-theme.js?v=20261019-polish" defer=""></script>
+<link rel="stylesheet" href="/collection-theme.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/collection-theme.js?v=20261019-prince-v2" defer=""></script>
 <link rel="stylesheet" href="/mobile-table.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/mobile-table.js?v=20261019-polish" defer=""></script>
-<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-playfix"><script src="/phone-game-shell.js?v=20261019-polish" defer=""></script>
-<link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/socket.io/socket.io.js?v=20261018-fourfold-playfix"></script><script src="/accounts.js?v=20261018-fourfold-mandatory-abilities-v1"></script>
-<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/table-companion.js?v=20261018-fourfold-mandatory-abilities-v1"></script><script src="/experience.js?v=20261018-fourfold-mandatory-abilities-v1" defer=""></script>
+<link rel="stylesheet" href="/phone-game-shell.css?v=20261018-fourfold-playfix"><script src="/phone-game-shell.js?v=20261019-prince-v2" defer=""></script>
+<link rel="stylesheet" href="/accounts.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/vendor/supabase.js?v=20261008-dashboard"></script><script src="/player-identity.js?v=20261008-dashboard"></script><script src="/review-client.js?v=20261008-dashboard"></script><script src="/socket.io/socket.io.js?v=20261018-fourfold-playfix"></script><script src="/accounts.js?v=20261019-prince-v2"></script>
+<link rel="stylesheet" href="/experience.css?v=20261018-fourfold-mandatory-abilities-v1"><script src="/table-companion.js?v=20261019-prince-v2"></script><script src="/experience.js?v=20261019-prince-v2" defer=""></script>
 <link rel="stylesheet" href="/interface-polish.css?v=20261008-dashboard">
-<script src="/i18n-catalog.js?v=20261019-fourfold-piece-rings-v1"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
-<link rel="stylesheet" href="fourfold-garden.css?v=20261019-fourfold-piece-rings-v1">
-<link rel="stylesheet" href="/collection-ui.css?v=20261019-1">
-<script src="/collection-ui.js?v=20261019-1" defer></script>
+<script src="/i18n-catalog.js?v=20261019-prince-v2"></script><script src="/i18n.js?v=20261008-dashboard"></script><link rel="stylesheet" href="/i18n.css?v=20261008-dashboard">
+<link rel="stylesheet" href="fourfold-garden.css?v=20261019-prince-v2">
+<link rel="stylesheet" href="/collection-ui.css?v=20261019-prince-v2">
+<script src="/collection-ui.js?v=20261019-prince-v2" defer></script>
 </head>
 <body data-audio-theme="fourfold-garden" class="fourfold-garden-page sds-page">
 <header class="site-header"><a class="site-brand" href="/" id="lobby-link" aria-label="Hikoro Chess home"><img src="assets/harmony-seal.svg" alt="" width="36" height="36"><span>HIKORO <small>THE GAME COLLECTION</small></span></a><span class="header-caption">A garden of strategy &amp; harmony</span><label class="language-control" translate="no"><span>Language / Idioma</span><select class="language-select" aria-label="Language / Idioma"><option value="en">English</option><option value="es-CU">Español (Cuba)</option></select></label><button class="header-rules" id="rules-toggle" type="button" aria-haspopup="dialog" aria-controls="rules-modal">How to play <span aria-hidden="true">↗</span></button></header>
-<section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Fourfold Garden</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
-<main class="game-layout" aria-label="Fourfold Garden game"><aside class="game-sidebar" aria-label="Game status, piece selection, and actions"><section class="bg-game-panel reserve-panel"><h2>Choose a piece</h2><p class="reserve-intro">Choose a reserve piece and place it on an open point. If a legal active ability is available, you must use one before your turn can end. Matching colored dots mark type compatibility. Live links also require the same owner, a legal alignment, and any required clear line.</p><div id="hands-container" class="reserve-hands" role="group" tabindex="0" aria-label="Flowers and Tools"><div class="mobile-reserve-heading"><strong>Choose a piece</strong><span>Flowers and Tools</span></div><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="control-section bg-game-panel">
+<section class="garden-masthead" aria-label="Game introduction"><div class="masthead-ornament" aria-hidden="true"></div><p class="edition-label">THE HIKORO COLLECTION</p><h1>Prince Pai Sho</h1><p class="masthead-subtitle">Place flowers, weave relationships, and capture the center.</p><div class="masthead-ornament ornament-right" aria-hidden="true"></div></section>
+<main class="game-layout" aria-label="Prince Pai Sho game"><aside class="game-sidebar" aria-label="Game status, piece selection, and actions"><section class="bg-game-panel reserve-panel"><h2>Choose a piece</h2><p class="reserve-intro">Choose a reserve piece and place it on an open point. If a legal active ability is available, you must use one before your turn can end. Matching colored rim segments mark type compatibility. Live links also require the same owner, a legal alignment, and any required clear line.</p><div id="hands-container" class="reserve-hands" role="group" tabindex="0" aria-label="Flowers and Tools"><div class="mobile-reserve-heading"><strong>Choose a piece</strong><span>Flowers and Tools</span></div><div id="flowerBank"></div><div id="toolBank"></div></div></section><section class="control-section bg-game-panel">
         <h2>Turn and reserve</h2>
         <div class="status-box">
           <div id="statusMain" class="status-main">Ivory's turn</div>
@@ -57,7 +57,7 @@
         <div id="selectedNote" class="selected-note">Place one reserve piece first. If a legal active ability is available, use one before ending your turn; otherwise you may pick up one of your own pieces or finish the turn.</div>
 
 
-      </section></aside><div id="board-wrapper" class="board-stage" aria-label="Fourfold Garden board and status"><div class="board-head">
+      </section></aside><div id="board-wrapper" class="board-stage" aria-label="Prince Pai Sho board and status"><div class="board-head">
         <div class="board-title">Compact Garden · 109 playable points</div>
         <div id="turnPill" class="turn-pill p0">Ivory to play</div>
       </div><div class="board-wrap"><div id="board" class="board" aria-label="Compact Skud Pai Sho board, 11 by 11 points clipped to a circle, with four gates"></div></div><div id="harmonyScore" class="score-strip" aria-live="polite"></div><div class="legend">
@@ -79,7 +79,7 @@
       </section><section class="bg-game-panel log-panel">
         <h2>Turn log</h2>
         <div id="log" class="log"></div>
-      </section></aside></main><footer class="site-footer"><span>Fourfold Garden</span><span>Movement · Balance · Harmony</span><a class="asset-credits" href="assets/medieval/CREDITS.md" target="_blank" rel="noopener">Art credits</a></footer><div id="rules-modal" class="hidden-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true"><div id="rules-content"><div class="rules-book-header"><h2 id="rules-title">The Book of Harmony</h2><button class="header-rules" id="close-rules" type="button" aria-label="Close rules">Close</button></div><div class="rules-book-body"><section class="rules-section" id="rules-section">
+      </section></aside></main><footer class="site-footer"><span>Prince Pai Sho</span><span>Movement · Balance · Harmony</span><a class="asset-credits" href="assets/medieval/CREDITS.md" target="_blank" rel="noopener">Art credits</a></footer><div id="rules-modal" class="hidden-modal" role="dialog" aria-modal="true" aria-labelledby="rules-title" aria-hidden="true"><div id="rules-content"><div class="rules-book-header"><h2 id="rules-title">The Book of Harmony</h2><button class="header-rules" id="close-rules" type="button" aria-label="Close rules">Close</button></div><div class="rules-book-body"><section class="rules-section" id="rules-section">
         <h2>How to play</h2>
         <div class="rules">
           <ul>
@@ -138,7 +138,7 @@
 
 
 
-<script src="fourfold-garden.js?v=20261019-polish" defer=""></script>
+<script src="fourfold-garden.js?v=20261019-prince-v2" defer=""></script>
 
 
 </body></html>

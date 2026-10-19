@@ -1,0 +1,72 @@
+[
+  {
+    "game": "academy",
+    "ok": true,
+    "image": "academy-current.webp",
+    "position": "Teaching match after one accepted move; full starting armies.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "hikoruka",
+    "ok": true,
+    "image": "hikoruka-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "shavari",
+    "ok": true,
+    "image": "shavari-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "go",
+    "ok": true,
+    "image": "go-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "fourfold-garden",
+    "ok": true,
+    "image": "fourfold-garden-current.webp",
+    "position": "Eight-piece position from legal place and finish actions.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "valley-hunt",
+    "ok": true,
+    "image": "valley-hunt-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "shavari-city-battle",
+    "ok": true,
+    "image": "shavari-city-battle-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "shodansho",
+    "ok": true,
+    "image": "shodansho-current.webp",
+    "position": "Eighteen accepted placements through the live game engine.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "shavari-go",
+    "ok": true,
+    "image": "shavari-go-current.webp",
+    "position": "Four accepted Crownhold opening placements.",
+    "source": "Captured from the current website using the existing game artwork."
+  },
+  {
+    "game": "index",
+    "ok": true,
+    "image": "hikoro-current.webp",
+    "position": "Current match board after an accepted legal opening move.",
+    "source": "Captured from the current website using the existing game artwork."
+  }
+]

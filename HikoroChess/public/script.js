@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createGameBtn.disabled = !socket.connected || gameType === 'shavari-go' || gameType === 'valley-hunt' || gameType === 'shavari-city-battle';
             const setupHint = document.getElementById('setup-hint');
             if (setupHint) setupHint.textContent = gameType === 'fourfold-garden'
-                ? 'Fourfold Garden is untimed. Play locally against the garden bot or create an online room to invite another player.'
+                ? 'Prince Pai Sho is untimed. Play locally against the garden bot or create an online room to invite another player.'
                 : gameType === 'shavari-go'
                 ? 'Shavari Go is a shared-device two-player game. Online rooms are not available yet.'
                 : gameType === 'shavari-city-battle'

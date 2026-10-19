@@ -195,7 +195,7 @@ test('mixed Dissonance disables both endpoint groups and counts against a Red Fl
     assert.equal(result.lastStatus.tDisabled.knotweed, true, 'any live Dissonance blocks the Tool');
 });
 
-test('Fourfold Garden match records replay and describe accepted actions', () => {
+test('Prince Pai Sho match records replay and describe accepted actions', () => {
     const journal = [
         { kind: 'place', type: 'rose', index: 60 }, { kind: 'finish' },
         { kind: 'place', type: 'vine', index: 72 }, { kind: 'finish' }
@@ -412,7 +412,7 @@ test('live board, score and all ten piece explanations render in Cuban Spanish',
     const guides = [...w.document.querySelectorAll('.piece-guide-card')].map(card => card.textContent);
     assert.equal(guides.length, 10);
     assert.equal(w.document.querySelectorAll('.piece-guide-card .piece-affinity-dot').length, 29);
-    assert.match(w.document.querySelector('.reserve-intro').textContent, /Los puntos de color coincidentes indican compatibilidad de tipo/);
+    assert.match(w.document.querySelector('.reserve-intro').textContent, /Los segmentos de color coincidentes en el borde indican compatibilidad de tipo/);
     assert.ok(guides.some(text => text.startsWith('Rosa')));
     assert.ok(guides.some(text => text.startsWith('Crisantemo')));
     assert.ok(guides.some(text => text.includes('Centidonia')));

@@ -2,7 +2,7 @@
  'use strict';const KEY='hikoro-accessibility-v1',TUTORIALS='hikoro-tutorials-v1';let preferences={};try{preferences=JSON.parse(localStorage.getItem(KEY)||'{}');}catch{}
  function apply(){document.documentElement.dataset.pieceContrast=preferences.contrast||'standard';document.documentElement.dataset.reduceMotion=String(preferences.motion??matchMedia('(prefers-reduced-motion:reduce)').matches);document.documentElement.dataset.ownerLabels=String(preferences.labels!==false);window.dispatchEvent(new Event('accessibility-changed'));}apply();
  const el=(tag,text)=>{const n=document.createElement(tag);if(text)n.textContent=text;return n;};
- const titles={hikoro:'Hikoro Chess',shodansho:'Sho Dan Sho','fourfold-garden':'Fourfold Garden',shavari:'Shavari',hikoruka:'Hikorka',go:'Shield Go',bastion:'Bastion Marches',academy:'Academy','valley-hunt':'The Valley Hunt'};
+ const titles={hikoro:'Hikoro Chess',shodansho:'Sho Dan Sho','fourfold-garden':'Prince Pai Sho',shavari:'Shavari',hikoruka:'Hikorka',go:'Shield Go',bastion:'Bastion Marches',academy:'Academy','valley-hunt':'The Valley Hunt'};
  const checks={
  hikoro:[
  ['Captures','Can a normal Squid capture an enemy directly?',['Yes, on any highlighted square','No, it advances without capturing'],1,'Normal Squids advance into empty squares and provide shielding. Other creatures have their own capture rules.'],
