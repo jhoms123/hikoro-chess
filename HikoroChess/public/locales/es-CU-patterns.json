@@ -674,5 +674,13 @@
   [
     "Selected: {0}. Tap an open board point to place it; crossed-out points are forbidden.",
     "Seleccionada: {0}. Toca un punto vacío del tablero para colocarla; los puntos tachados están prohibidos."
+  ],
+  [
+    "{0} captured the center with a {1}-piece Harmony ring.",
+    "{0} capturó el centro con un circuito de Armonía formado por {1} piezas."
+  ],
+  [
+    "{0} wins the tie by taking the center.",
+    "{0} gana el desempate y captura el centro."
   ]
 ]
