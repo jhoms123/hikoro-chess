@@ -827,7 +827,10 @@ function render(status){
   document.getElementById("placeMode").disabled=humanInputLocked()||!placeStage;
   document.getElementById("pickupMode").disabled=humanInputLocked()||(!bonusStage&&!pickupStage)||(bonusStage&&abilityRequired);
   document.getElementById("pickupMode").textContent=pickupStage?"Pick up (required)":"Pick up yours";
-  document.getElementById("finishTurnBtn").disabled=humanInputLocked()||!bonusStage||abilityRequired||state.lastPlacementFinalReserve;
+  const finishTurnUnavailable=humanInputLocked()||!bonusStage||abilityRequired||state.lastPlacementFinalReserve;
+  const finishTurnButton=document.getElementById("finishTurnBtn");
+  finishTurnButton.hidden=finishTurnUnavailable;
+  finishTurnButton.disabled=finishTurnUnavailable;
   document.getElementById("undoBtn").disabled=!undoState||humanInputLocked()||!!onlineGameId;
   document.getElementById("pauseBotBtn").hidden=opponentMode!=="watch";
   document.getElementById("pauseBotBtn").textContent=botPaused?"Resume bot match":"Pause bot match";
