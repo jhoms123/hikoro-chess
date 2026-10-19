@@ -685,7 +685,7 @@ function tokenTitle(piece,status){
   const ownerName=ownersName(piece.owner);
   const displayOwner=ownerName===PLAYER_NAMES[piece.owner]?uiText(ownerName):ownerName;
   const extras=[];
-  if(isD)extras.push(uiText("Dissonant / jammed"));
+  if(isD)extras.push(uiText("Dissonant / Harmony links inactive"));
   if(links)extras.push(uiText("Harmony links: "+links));
   if(isShielded(piece))extras.push(uiText("Shielded until the Lotus or target moves"));
   if(piece.type==="mirror"&&piece.mirrorActive)extras.push(uiText("Mirror active until it moves"));
@@ -1045,10 +1045,6 @@ function sourceAbility(piece){
   const d=DEFS[piece.type];
   if(!d.ability)return "This piece has a passive effect, not an activated ability.";
   if(piece.used)return "This piece has already used its ability.";
-  const status=state.lastStatus||boardStatus();
-  const disabled=isFlower(piece)?status.fDisabled[piece.id]:status.tDisabled[piece.id];
-  const worksThroughDissonance=piece.type==="bell";
-  if(disabled&&!worksThroughDissonance)return "This piece is dissonant and cannot activate its ability.";
   return null;
 }
 function selectAbilitySource(index){
@@ -1889,8 +1885,7 @@ function botAbilityActions(owner,status){
   const enemies=getPieces().filter(function(q){return q.piece.owner!==owner});
   own.forEach(function(q){
     const source=q.piece,type=source.type,sourceIndex=q.index,d=DEFS[type],p=q.pos;
-    const disabled=isFlower(source)?status.fDisabled[source.id]:status.tDisabled[source.id];
-    if(!d.ability||source.used||(disabled&&type!=="bell"))return;
+    if(!d.ability||source.used)return;
     if(type==="wheel")add(type,{source:sourceIndex},1);
     if(type==="mirror")add(type,{source:sourceIndex},1.2);
     if(type==="bridge"){
@@ -2142,8 +2137,6 @@ function applyBotAction(action){
   const source=state.board[action.source];if(!source||source.owner!==state.current||source.used)return false;
   const sourcePos=xy(action.source),sourceNeutral=regionAt(sourcePos.x,sourcePos.y)==="neutral"?1:0;
   const targetIndex=action.target?indexOfId(action.target):-1,target=targetIndex>=0?state.board[targetIndex]:null;
-  const status=state.lastStatus||boardStatus(),disabled=DEFS[source.type].group==="flower"?status.fDisabled[source.id]:status.tDisabled[source.id];
-  if(disabled&&source.type!=="bell")return false;
   if(action.kind==="wheel"){
     if(!rotateWheel(action.source))return false;source.used=true;lastPoint=action.source;return true;
   }

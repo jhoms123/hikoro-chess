@@ -94,13 +94,15 @@ test('Harmony color dots mark exactly the active compatible piece pairs', () => 
     assert.deepEqual(marked.sort(), expected.sort());
 });
 
-test('Bell pulls an enemy Tool without changing its owner', () => {
+test('Bell pulls an enemy Tool without changing its owner while dissonant', () => {
     const state = Garden.initial();
     const piece = (id, type, owner) => ({ id, type, owner, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
     state.board[60] = piece('bell-own', 'bell', 0);
     state.board[38] = piece('wheel-enemy', 'wheel', 1);
     state.board[39] = piece('knotweed-enemy', 'knotweed', 1);
+    state.board[59] = piece('vine-own', 'vine', 0);
     state.reserves[0].bell = 0;
+    state.reserves[0].vine = 0;
     state.current = 0;
     state.turnStage = 'bonus';
     state.nextId = 4;
@@ -112,6 +114,46 @@ test('Bell pulls an enemy Tool without changing its owner', () => {
     assert.equal(moved.board[49].owner, 1, 'pulling preserves the enemy Tool owner');
     assert.equal(moved.board[39].owner, 1, 'the Tool Harmony partner remains with its owner');
     assert.equal(moved.board[60].used, true);
+    assert.equal(moved.lastStatus.tDisabled['bell-own'], true, 'the Bell remains dissonant after pulling');
+});
+
+test('Orchid, Wheel, and Fan can activate while dissonant', () => {
+    const makePiece = (id, type, owner) => ({ id, type, owner, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
+    const setup = placements => {
+        const state = Garden.initial();
+        for (const [index, id, type, owner] of placements) {
+            state.board[index] = makePiece(id, type, owner);
+            state.reserves[owner][type] = Math.max(0, state.reserves[owner][type] - 1);
+        }
+        state.current = 0;
+        state.turnStage = 'bonus';
+        return state;
+    };
+    const cases = [
+        {
+            name: 'Orchid', source: 60, sourceId: 'orchid-own', group: 'flower', action: { kind: 'ability', source: 60, targets: [49] },
+            placements: [[60, 'orchid-own', 'orchid', 0], [59, 'vine-own', 'vine', 0], [61, 'bamboo-own', 'bamboo', 0], [49, 'rose-enemy', 'rose', 1]],
+            check: state => assert.equal(state.board[38]?.id, 'rose-enemy', 'Orchid pushes its target while dissonant')
+        },
+        {
+            name: 'Wheel', source: 60, sourceId: 'wheel-own', group: 'tool', action: { kind: 'ability', source: 60, targets: [] },
+            placements: [[60, 'wheel-own', 'wheel', 0], [48, 'bamboo-own', 'bamboo', 0], [49, 'vine-own', 'vine', 0], [50, 'orchid-own', 'orchid', 0], [59, 'chrysanthemum-own', 'chrysanthemum', 0], [61, 'fan-own', 'fan', 0], [70, 'rose-own', 'rose', 0], [71, 'bell-own', 'bell', 0], [72, 'peony-own', 'peony', 0]],
+            check: state => assert.equal(state.board[59]?.id, 'vine-own', 'Wheel rotates its ring while dissonant')
+        },
+        {
+            name: 'Fan', source: 60, sourceId: 'fan-own', group: 'tool', action: { kind: 'ability', source: 60, targets: [62] },
+            placements: [[60, 'fan-own', 'fan', 0], [59, 'rose-own', 'rose', 0], [61, 'bamboo-enemy', 'bamboo', 1]],
+            check: state => assert.equal(state.board[62]?.id, 'bamboo-enemy', 'Fan pushes its line while dissonant')
+        }
+    ];
+    for (const ability of cases) {
+        const state = setup(ability.placements);
+        const result = Garden.apply(state, ability.action);
+        assert.ok(result, ability.name + ' should have a legal action while dissonant');
+        const disabled = ability.group === 'flower' ? result.lastStatus.fDisabled : result.lastStatus.tDisabled;
+        assert.equal(disabled[ability.sourceId], true, ability.name + ' is actually dissonant in this position');
+        ability.check(result);
+    }
 });
 
 test('pickup can return the just-placed piece only when it is your sole board piece', () => {
@@ -181,7 +223,7 @@ test('Knotweed, Wheel, Fan, and Bell can close a four-Tool center ring', () => {
     assert.match(won.log[0].text, /4-piece Harmony ring/);
 });
 
-test('mixed Dissonance disables both endpoint groups and counts against a Red Flower', () => {
+test('mixed Dissonance suppresses both endpoint groups’ Harmony links and counts against a Red Flower', () => {
     const state = Garden.initial();
     const piece = (id, type) => ({ id, type, owner: 0, used: false, bridgePair: null, mirrorActive: false, shieldTarget: null });
     state.board[4 * 11 + 7] = piece('rose', 'rose');
@@ -239,6 +281,8 @@ test('lobby and bilingual game guide explain mixed links and three-piece rings',
     assert.match(html, /id="pieceGuideGrid"/);
     assert.match(html, /ring of three or more distinct same-owner pieces/);
     assert.match(html, /Harmony Tools/);
+    assert.match(html, /Dissonance can suppress Harmony links, but it does not block any legal active ability/);
+    assert.doesNotMatch(html, /Dissonance jams abilities/);
     assert.match(html, /Rose<\/th><td class="h">Wheel · Bell/);
     const translations = JSON.parse(read('locales/es-CU.json'));
     const page = new JSDOM(html);
@@ -249,7 +293,7 @@ test('lobby and bilingual game guide explain mixed links and three-piece rings',
         normalize(page.window.document.querySelector('#rules-section .small-print').textContent),
         ...Array.from(page.window.document.querySelectorAll('#rules-section .compat-content > p'), item => normalize(item.textContent)),
         'Flower and Tool Harmony and Dissonance chart', 'Harmony Tools', 'Dissonant Tools',
-        'Mixed Dissonance', 'Flower–Tool Harmony',
+        'Mixed Dissonance', 'Flower–Tool Harmony', 'Dissonant / Harmony links inactive',
         'Use “Undo” to take back your whole last turn.'
     ];
     page.window.close();
@@ -296,16 +340,16 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.match(css, /tile-glyph \.piece-icon\{[^}]*aspect-ratio:1\/1/, 'piece emblem artwork keeps its square proportions');
         assert.doesNotMatch(html, /id="abilityMode"|Use ability/, 'there is no optional ability button');
         assert.match(html, /class="mobile-reserve-heading"[\s\S]*Flowers and Tools/, 'the phone picker visibly identifies both reserve groups');
-        assert.match(css, /fill:none;stroke:currentColor/, 'tile emblems render as engraved outlines rather than filled blobs');
+        assert.match(css, /\.piece-icon\{[^}]*fill:currentColor;stroke:none/, 'piece emblems use the current ink color for clear silhouettes');
         assert.match(css, /\.mobile-board-surface\{box-sizing:border-box;width:100%!important;max-width:none!important\}/, 'the mobile board fills the available phone width');
         assert.match(css, /phone-table-bar #finishTurnBtn\{margin-left:auto!important\}/, 'the optional finish action sits in the center of the phone table bar');
         assert.match(css, /fourfold-phone-dock \.action-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important\}/, 'the remaining dock actions use the space freed by the finish action');
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-fourfold-piece-rings-v1/, 'board sizing changes get a fresh cache key');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-prince-v2/, 'the game stylesheet uses the current release cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-fourfold-piece-rings-v1/, 'selection interaction changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-fourfold-finish-topbar-v1/, 'phone selection order changes get a fresh cache key');
-        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-fourfold-piece-rings-v1/, 'the game uses the current bilingual catalog');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-dissonance-abilities-v1/, 'the updated active-ability rules bypass stale game code');
+        assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-prince-v2/, 'the phone controls use the current release cache key');
+        assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-dissonance-abilities-v1/, 'the updated rules use the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
         assert.match(css, /\.fourfold-garden-page \.point:active:not\(:disabled\)\{transform:translate\(-50%,-50%\)\}/, 'pressed board points stay centered on their vertices');
         assert.match(read('phone-game-shell.js'), /relocateTo\(control,gameControlsDock\)/, 'phone mode and turn controls are moved into the game dock');
