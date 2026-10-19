@@ -2595,63 +2595,282 @@ function botReplyProbe(opening,owner,deadline){
   finally{state=previous;lastPoint=previousPoint}
   return {worst:worst,complete:complete&&Number.isFinite(worst)};
 }
+const BOT_MCTS_EXPLORATION=.76;
+const BOT_MCTS_ROLLOUT_TURNS=1;
+const BOT_MCTS_FINALIZE_RESERVE_MS=12;
+let botMctsLastStats={durationMs:0,iterations:0,maxDepth:0};
+function botMctsTerminalValue(position,owner){
+  if(position.winner!==null)return position.winner===owner?1:-1;
+  if(position.draw)return 0;
+  return null;
+}
+function botMctsValueCurrent(owner){
+  if(state.winner!==null)return state.winner===owner?1:-1;
+  if(state.draw)return 0;
+  const score=scoreBotPositionAdvanced(owner,state.lastStatus||boardStatus());
+  if(score>=99999)return 1;
+  if(score<=-99999)return -1;
+  return score/(Math.abs(score)+240);
+}
+function botMctsActionListCurrent(){
+  if(state.winner!==null||state.draw)return [];
+  const actions=generateBotActions(state.current,true);
+  if(state.turnStage==="bonus"&&!state.lastPlacementFinalReserve&&hasReservePieces(state.current)&&(!actions.length||actions[0].kind==="pickup")){
+    actions.push({kind:"finish",hint:-1});
+  }
+  return actions;
+}
+function botMctsActionListForPosition(position){
+  const previous=state,previousPoint=lastPoint;
+  try{
+    state=cloneBotSearchState(position);lastPoint=-1;
+    return botMctsActionListCurrent();
+  }finally{state=previous;lastPoint=previousPoint}
+}
+function botMctsFinishTurn(status){
+  if(state.winner!==null||state.draw)return;
+  const actor=state.current;
+  state.passes=0;state.turnCounts[actor]++;state.ply++;state.current=1-actor;
+  state.turnStage=hasReservePieces(state.current)?"place":"pickup";
+  state.turnPlacedId=null;state.lastPlacementFinalReserve=false;
+  const resolved=status||resolveCapturesAndWin();
+  if(state.winner!==null||state.draw)return;
+  if(recordCompletedPosition()>=3)adjudicateRepetition(resolved);
+}
+function botMctsApplyRequiredPickup(owner,status){
+  if(!hasOwnedBoardPiece(owner)){botMctsFinishTurn(status);return true}
+  state.lastPlacementFinalReserve=false;state.turnStage="pickupRequired";
+  const pickups=generateBotActions(owner,true);
+  if(!pickups.length||!applyBotAction(pickups[0]))return false;
+  const after=resolveCapturesAndWin();
+  if(state.winner===null&&!state.draw)botMctsFinishTurn(after);
+  return true;
+}
+function botMctsTryOptionalPickup(owner,status,deadline){
+  if(botClockNow()>=deadline-14)return false;
+  const pickups=generateBotActions(owner,true);
+  const best=pickups[0];
+  if(!best||best.kind!=="pickup"||(best.hint||0)<34||!applyBotAction(best))return false;
+  return true;
+}
+function botMctsApplyTurnAction(action,deadline){
+  const actor=state.current,stage=state.turnStage;
+  if(action.kind==="finish"){
+    if(stage!=="bonus"||state.lastPlacementFinalReserve)return false;
+    state.lastPlacementFinalReserve=false;
+    botMctsFinishTurn(state.lastStatus||boardStatus());
+    return true;
+  }
+  if(!applyBotAction(action))return false;
+  let status=resolveCapturesAndWin();
+  if(state.winner!==null||state.draw)return true;
+  if(stage==="place"){
+    const mustPickup=state.lastPlacementFinalReserve||!hasReservePieces(actor);
+    state.turnStage="bonus";
+    const abilities=availableAbilityActions(actor,status);
+    if(abilities.length){
+      if(!applyBotAction(abilities[0]))return false;
+      status=resolveCapturesAndWin();
+      if(state.winner!==null||state.draw)return true;
+      if(state.lastPlacementFinalReserve)return botMctsApplyRequiredPickup(actor,status);
+      botMctsFinishTurn(status);
+      return true;
+    }
+    if(mustPickup)return botMctsApplyRequiredPickup(actor,status);
+    state.lastPlacementFinalReserve=false;
+    if(botMctsTryOptionalPickup(actor,status,deadline))status=resolveCapturesAndWin();
+    if(state.winner===null&&!state.draw)botMctsFinishTurn(status);
+    return true;
+  }
+  if(stage==="bonus"&&action.kind!=="pickup"&&state.lastPlacementFinalReserve){
+    return botMctsApplyRequiredPickup(actor,status);
+  }
+  if(stage==="bonus"||stage==="pickup"||stage==="pickupRequired"){
+    state.lastPlacementFinalReserve=false;
+    botMctsFinishTurn(status);
+    return true;
+  }
+  return false;
+}
+function botMctsActionPriors(actions){
+  const weights=actions.map(function(action,index){
+    if(action.tacticalWin)return 8;
+    if(action.tacticalBlock)return 3.5;
+    if(action.endgameBlock)return 2.2;
+    return 1/Math.pow(index+1,.58);
+  });
+  const total=weights.reduce(function(sum,value){return sum+value},0)||1;
+  return weights.map(function(value){return value/total});
+}
+function botMctsMakeNode(position,actions,prior,deadline){
+  const terminal=botMctsTerminalValue(position,state.current);
+  const nextActions=actions||[];
+  return {position:position,owner:position.current,actions:nextActions,priors:botMctsActionPriors(nextActions),nextAction:0,children:[],visits:0,value:0,prior:prior||1,terminal:terminal,deadline:deadline};
+}
+function botMctsSelectChild(node,rootOwner){
+  const parent=Math.sqrt(node.visits+1),maximizing=node.owner===rootOwner;
+  let best=null,bestValue=-Infinity;
+  for(let i=0;i<node.children.length;i++){
+    const child=node.children[i];
+    const mean=child.visits?child.value/child.visits:0;
+    const exploit=(maximizing?mean:-mean);
+    const explore=BOT_MCTS_EXPLORATION*child.prior*parent/(1+child.visits);
+    const score=exploit+explore;
+    if(score>bestValue){bestValue=score;best=child}
+  }
+  return best;
+}
+function botMctsRandom(seed){
+  let value=seed>>>0||0x6d2b79f5;
+  return function(){
+    value^=value<<13;value^=value>>>17;value^=value<<5;
+    return (value>>>0)/4294967296;
+  };
+}
+function botMctsRolloutAction(actions,random){
+  const winning=actions.find(function(action){return action.tacticalWin});
+  if(winning)return winning;
+  const limit=Math.min(4,actions.length),weights=[];
+  let total=0;
+  for(let i=0;i<limit;i++){
+    const action=actions[i],weight=(action.tacticalBlock?3.2:action.endgameBlock?1.8:1)/Math.pow(i+1,.72);
+    weights.push(weight);total+=weight;
+  }
+  let ticket=random()*total;
+  for(let i=0;i<limit;i++){ticket-=weights[i];if(ticket<=0)return actions[i]}
+  return actions[0];
+}
+function botMctsCollectLeaves(node,depth,result){
+  if(depth>0&&node.terminal===null)result.push({node:node,depth:depth});
+  if(!node.children.length)return;
+  for(let i=0;i<node.children.length;i++)botMctsCollectLeaves(node.children[i],depth+1,result);
+}
+function botMctsTailRefine(root,owner,deadline,timing){
+  const leaves=[];botMctsCollectLeaves(root,0,leaves);
+  leaves.sort(function(a,b){return b.depth-a.depth||a.node.visits-b.node.visits});
+  let evaluations=0;
+  for(let i=0;i<leaves.length;i++){
+    const guard=Math.max(18,timing.evaluation*1.8+8);
+    if(deadline-botClockNow()<=guard)break;
+    const item=leaves[i],previous=state,previousPoint=lastPoint,started=botClockNow();
+    try{
+      state=cloneBotSearchState(item.node.position);lastPoint=-1;
+      item.node.tailValue=botMctsValueCurrent(owner);
+    }finally{
+      timing.evaluation=Math.max(timing.evaluation,botClockNow()-started);
+      state=previous;lastPoint=previousPoint;
+    }
+    evaluations++;
+  }
+  return evaluations;
+}
+function botMctsProjectedValue(node,rootOwner){
+  const mean=node.visits?node.value/node.visits:0;
+  if(!node.children.length)return node.tailValue===undefined?mean:mean*.68+node.tailValue*.32;
+  let best=node.owner===rootOwner?-Infinity:Infinity;
+  for(let i=0;i<node.children.length;i++){
+    const value=botMctsProjectedValue(node.children[i],rootOwner);
+    if(node.owner===rootOwner)best=Math.max(best,value);else best=Math.min(best,value);
+  }
+  const estimate=mean*.76+best*.24;
+  return node.tailValue===undefined?estimate:estimate*.8+node.tailValue*.2;
+}
+function botMctsSearch(actions,owner,deadline){
+  const started=botClockNow(),originalState=state,originalPoint=lastPoint;
+  let iterations=0,maxDepth=0,maxIterationMs=0,tailEvaluations=0,root=null,forcedWin=actions.find(function(action){return action.tacticalWin});
+  const timing={transition:0,actionList:0,evaluation:0};
+  function canStart(phase,minimum){
+    return deadline-botClockNow()>Math.max(minimum,timing[phase]*1.8+4);
+  }
+  function measure(phase,callback){
+    const began=botClockNow();
+    try{return callback()}
+    finally{timing[phase]=Math.max(timing[phase],botClockNow()-began)}
+  }
+  try{
+    const position=cloneBotSearchState(state),rootActions=actions.slice();
+    root=botMctsMakeNode(position,rootActions,1,deadline);
+    let seed=(position.botOpeningSeeds&&position.botOpeningSeeds[owner]||0x9e3779b9)>>>0;
+    seed^=(position.ply||0)*0x85ebca6b;
+    const random=botMctsRandom(seed);
+    while(botClockNow()<deadline-BOT_MCTS_FINALIZE_RESERVE_MS){
+      const remaining=deadline-botClockNow();
+      const nextCost=Math.max(10,timing.transition*1.25+4,timing.evaluation*1.25+4);
+      if(remaining<=nextCost)break;
+      const iterationStarted=botClockNow();
+      let node=root,path=[root],depth=0,value=null,failed=false;
+      while(true){
+        if(node.terminal!==null){value=node.terminal;break}
+        if(deadline-botClockNow()<=Math.max(8,timing.transition*1.25+4)){
+          value=node.visits?node.value/node.visits:0;
+          break;
+        }
+        const width=Math.min(node.actions.length,Math.max(1,Math.floor(1.45*Math.sqrt(node.visits+1))));
+        if(node.nextAction<node.actions.length&&node.children.length<width){
+          const actionIndex=node.nextAction++,action=node.actions[actionIndex];
+          state=cloneBotSearchState(node.position);lastPoint=-1;
+          if(!canStart("transition",10)){value=node.visits?node.value/node.visits:0;break}
+          if(!measure("transition",function(){return botMctsApplyTurnAction(action,deadline)})){failed=true;break}
+          const childPosition=cloneBotSearchState(state);
+          const childTerminal=botMctsTerminalValue(childPosition,owner);
+          const childActions=childTerminal===null&&canStart("actionList",14)?measure("actionList",botMctsActionListCurrent):[];
+          const child=botMctsMakeNode(childPosition,childActions,node.priors[actionIndex]||.01,deadline);
+          child.action=action;
+          node.children.push(child);node=child;path.push(child);depth++;
+          if(childTerminal!==null)value=childTerminal;
+          else{
+            for(let rollout=0;rollout<BOT_MCTS_ROLLOUT_TURNS&&canStart("actionList",14);rollout++){
+              const rolloutActions=measure("actionList",botMctsActionListCurrent);
+              if(!rolloutActions.length)break;
+              const rolloutAction=botMctsRolloutAction(rolloutActions,random);
+              if(!canStart("transition",18)||!measure("transition",function(){return botMctsApplyTurnAction(rolloutAction,deadline)}))break;
+              depth++;
+              if(state.winner!==null||state.draw)break;
+            }
+            value=canStart("evaluation",10)?measure("evaluation",function(){return botMctsValueCurrent(owner)}):(child.visits?child.value/child.visits:0);
+          }
+          break;
+        }
+        if(!node.children.length){
+          state=cloneBotSearchState(node.position);lastPoint=-1;
+          value=canStart("evaluation",10)?measure("evaluation",function(){return botMctsValueCurrent(owner)}):(node.visits?node.value/node.visits:0);
+          break;
+        }
+        const next=botMctsSelectChild(node,owner);
+        if(!next){value=0;break}
+        node=next;path.push(node);depth++;
+      }
+      maxIterationMs=Math.max(maxIterationMs,botClockNow()-iterationStarted);
+      if(failed)continue;
+      if(!Number.isFinite(value))value=0;
+      for(let i=0;i<path.length;i++){path[i].visits++;path[i].value+=value}
+      iterations++;maxDepth=Math.max(maxDepth,depth);
+    }
+    if(root&&deadline-botClockNow()>Math.max(18,timing.evaluation*1.8+8))tailEvaluations=botMctsTailRefine(root,owner,deadline,timing);
+  }catch(error){
+    console.error("Prince Pai Sho MCTS error:",error);
+  }finally{
+    state=originalState;lastPoint=originalPoint;
+    botMctsLastStats={durationMs:botClockNow()-started,iterations:iterations,maxDepth:maxDepth,maxIterationMs:maxIterationMs,tailEvaluations:tailEvaluations,maxTransitionMs:timing.transition,maxActionListMs:timing.actionList,maxEvaluationMs:timing.evaluation};
+  }
+  if(forcedWin)return forcedWin;
+  if(!root||!root.children.length)return actions[0]||null;
+  let best=null,bestScore=-Infinity;
+  for(let i=0;i<root.children.length;i++){
+    const child=root.children[i];
+    if(child.terminal===1)return child.action;
+    const mean=child.visits?child.value/child.visits:-Infinity;
+    const score=botMctsProjectedValue(child,owner)+Math.log(child.visits+1)*.012;
+    if(best===null||score>bestScore||(score===bestScore&&mean>(best.visits?best.value/best.visits:-Infinity))){best=child;bestScore=score}
+  }
+  return best.action||actions[0]||null;
+}
 function chooseBotAction(){
   const owner=state.current,deadline=botClockNow()+BOT_THINK_TIME_MS;
   const actions=generateBotActions(owner);
   if(!actions.length)return state.turnStage==="bonus"?{kind:"finish"}:null;
-  const immediateWin=actions.find(function(action){return action.tacticalWin});
-  if(immediateWin)return immediateWin;
-  if(botEndgameFactor()>=.35&&(state.turnStage==="bonus"||state.turnStage==="pickup"||state.turnStage==="pickupRequired")){
-    const urgentPickup=actions.find(function(action){return action.kind==="pickup"&&(action.hint||0)>=88});
-    if(urgentPickup){
-      for(let i=0;i<actions.length;i++){
-        const action=actions[i];if(action.kind==="pickup"||(action.hint||0)<18)continue;
-        if(scoreBotActionAdvanced(action,owner)>50000)return action;
-      }
-      return urgentPickup;
-    }
-  }
-  if(state.turnStage==="pickup"||state.turnStage==="pickupRequired"){
-    let best=actions[0],bestScore=-Infinity;
-    for(let i=0;i<actions.length;i++){
-      if(botClockNow()>=deadline-28)break;
-      const score=scoreBotActionAdvanced(actions[i],owner);
-      if(score>bestScore){bestScore=score;best=actions[i]}
-    }
-    return best;
-  }
-  if(state.turnStage==="bonus"){
-    const baseline=scoreBotPositionAdvanced(owner,boardStatus());
-    const candidates=actions.slice(0,12);
-    const abilityRequired=candidates.some(function(action){return action.kind!=="pickup"});
-    let best=null,bestScore=baseline+.05;
-    for(let i=0;i<candidates.length;i++){
-      if(botClockNow()>=deadline-28)break;
-      const score=scoreBotActionAdvanced(candidates[i],owner);
-      if(score>bestScore){bestScore=score;best=candidates[i]}
-    }
-    return best||(abilityRequired?candidates[0]:{kind:"finish"});
-  }
-  const candidates=actions.slice(0,6),evaluated=[];
-  for(let i=0;i<candidates.length;i++){
-    if(botClockNow()>=deadline-75)break;
-    evaluated.push({action:candidates[i],base:scoreBotActionAdvanced(candidates[i],owner),score:-Infinity,complete:false});
-  }
-  if(!evaluated.length)return actions[0];
-  evaluated.forEach(function(entry){entry.score=entry.base});
-  const ranked=evaluated.slice().sort(function(a,b){return b.base-a.base});
-  for(let i=0;i<Math.min(2,ranked.length);i++){
-    const entry=ranked[i];
-    if(botClockNow()>=deadline-100)break;
-    const probe=botReplyProbe(entry.action,owner,deadline);
-    if(Number.isFinite(probe.worst)){
-      const vulnerability=Math.max(0,entry.base-probe.worst);
-      entry.score=entry.base-vulnerability*(probe.complete?0.65:0.35);
-      entry.complete=probe.complete;
-    }
-  }
-  evaluated.sort(function(a,b){return b.score-a.score});
-  return evaluated[0].action;
+  if(state.turnStage==="bonus"&&!state.lastPlacementFinalReserve&&hasReservePieces(owner)&&actions[0].kind==="pickup")actions.push({kind:"finish",hint:-1});
+  return botMctsSearch(actions,owner,deadline);
 }
 function botActionMessage(action){
   if(action.kind==="place")return "placed "+DEFS[action.type].short+" at "+(xy(action.index).x+1)+","+(xy(action.index).y+1)+".";
