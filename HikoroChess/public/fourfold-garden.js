@@ -2632,7 +2632,7 @@ function chooseBotAction(){
     }
     return best||(abilityRequired?candidates[0]:{kind:"finish"});
   }
-  const candidates=actions.slice(0,3),evaluated=[];
+  const candidates=actions.slice(0,6),evaluated=[];
   for(let i=0;i<candidates.length;i++){
     if(botClockNow()>=deadline-75)break;
     evaluated.push({action:candidates[i],base:scoreBotActionAdvanced(candidates[i],owner),score:-Infinity,complete:false});
