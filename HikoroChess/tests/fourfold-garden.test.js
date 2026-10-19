@@ -347,7 +347,7 @@ test('shared collection styling leaves Fourfold board points under game-specific
         assert.doesNotMatch(css, /calc\(100dvh - var\(--phone-top,100px\) - 430px\)/, 'board size is not reduced to reserve vertical space for the picker');
         assert.match(read('fourfold-garden.html'), /fourfold-garden\.css\?v=20261019-victory-board-review-v1/, 'the game stylesheet uses the current release cache key');
         assert.match(css, /\.fourfold-garden-page \.bank-group\.reserve-card>div\.bank\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/, 'piece grids override the shared Sho Dan Sho single-column reserve rule');
-        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-prince-mcts-v1/, 'the updated bot code bypasses stale cached code');
+        assert.match(read('fourfold-garden.html'), /fourfold-garden\.js\?v=20261019-prince-rave-parent-visits-v1/, 'the updated bot code bypasses stale cached code');
         assert.match(read('fourfold-garden.html'), /phone-game-shell\.js\?v=20261019-prince-v2/, 'the phone controls use the current release cache key');
         assert.match(read('fourfold-garden.html'), /i18n-catalog\.js\?v=20261019-dissonance-abilities-v1/, 'the updated rules use the current bilingual catalog');
         assert.match(read('shodansho-medieval.css'), /\.sds-page button:active:not\(:disabled\) \{ transform:translateY\(2px\); \}/, 'the shared theme has a pressed-button transform that can affect board points');
@@ -533,6 +533,31 @@ test('Prince Pai Sho bot searches a legal move through its full 200 ms MCTS budg
     assert.ok(stats.iterations > 0, 'MCTS completes actual tree simulations');
     assert.ok(stats.maxDepth >= 2, 'the search reaches beyond the root move');
     assert.ok(stats.raveUpdates > 0, 'RAVE learns action values from moves played later in simulations');
+});
+
+test('Prince Pai Sho RAVE confidence fades with parent visits so searched outcomes take over', t => {
+    const dom = new JSDOM(read('fourfold-garden.html'), { url: 'https://example.test/fourfold-garden.html', runScripts: 'outside-only', pretendToBeVisual: true });
+    t.after(() => dom.window.close());
+    const anchor = 'const FourfoldGardenEngine=Object.freeze({initial:engineInitial,apply:engineApply});';
+    const source = read('fourfold-garden.js').replace(anchor, 'window.__PrinceRaveTest={select:botMctsSelectChild};\n' + anchor);
+    dom.window.eval(source);
+
+    const children = [
+        { actionIndex: 0, visits: 100, value: 20, prior: 0.5, action: 'AMAF favorite' },
+        { actionIndex: 1, visits: 100, value: 50, prior: 0.5, action: 'searched favorite' }
+    ];
+    const node = {
+        owner: 0,
+        visits: 10000,
+        children,
+        actionKeys: [['a:amaf'], ['a:searched']],
+        amaf: {
+            'a:amaf': { visits: 100, value: 90 },
+            'a:searched': { visits: 100, value: 40 }
+        }
+    };
+
+    assert.equal(dom.window.__PrinceRaveTest.select(node, 0), children[1], 'deep parent search evidence outweighs an early AMAF estimate');
 });
 
 test('a local bot answers a human placement and finishes its turn', async t => {
