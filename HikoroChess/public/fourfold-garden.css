@@ -141,12 +141,10 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
 .fourfold-garden-page .rules-book-body .rules-section>h2{display:none}
 .fourfold-garden-page .rules-book-body .rules-section .rules{padding:0}
 .fourfold-garden-page .rules-book-body .rules-section>.small-print{display:block}
-.fourfold-garden-page .modal-backdrop{position:fixed;inset:0;z-index:1100;display:none;place-items:center;padding:18px;background:#080f0cbb}
-.fourfold-garden-page .modal-backdrop.show{display:grid}
-.fourfold-garden-page .modal{width:min(100%,480px);padding:24px;border:18px solid transparent;border-image:url('assets/medieval/wood-panel.png') 24/18px/0 stretch;border-radius:0;background:#e6d9b5 url('assets/medieval/aged-parchment.webp') center/cover;color:#44341f;box-shadow:0 24px 90px #000a}
-.fourfold-garden-page .modal h2{margin:0 0 8px;color:#3d2a18;font:normal 26px/1.2 Georgia,serif;font-variant:small-caps}
-.fourfold-garden-page .modal p{color:#55422d;font:14px/1.55 Georgia,serif}
-.fourfold-garden-page .modal .btn{width:100%;min-height:42px;margin-top:8px;background:#6b4d30;border:1px solid #4a341f;color:#ffedc9}
+.fourfold-garden-page .game-result{display:grid;gap:7px;padding:13px 16px;border:1px solid #8e7143;background:#eee0bd url('assets/medieval/aged-parchment.webp') center/cover;color:#44351f;box-shadow:0 3px 10px #0004}
+.fourfold-garden-page .game-result h2{margin:0;color:#3d2a18;font:normal 21px/1.25 Georgia,serif;font-variant:small-caps}
+.fourfold-garden-page .game-result p{margin:0;color:#55422d;font:13px/1.5 Georgia,serif}
+.fourfold-garden-page .game-result .btn{justify-self:start;min-height:40px;margin-top:2px;padding:8px 15px;background:#6b4d30;border:1px solid #4a341f;color:#ffedc9}
 .fourfold-garden-page .site-footer{padding-inline:14px}
 .fourfold-garden-page .site-footer>span:first-child{font-variant:small-caps}
 @media(min-width:761px) and (max-width:1100px){.fourfold-garden-page .game-layout{grid-template-columns:minmax(0,1fr) minmax(230px,300px)!important;gap:14px!important}.fourfold-garden-page .game-layout>.mobile-board-viewport{grid-column:1;grid-row:1}.fourfold-garden-page .game-layout>.game-sidebar{grid-column:2;grid-row:1}.fourfold-garden-page .game-layout>.inventory-sidebar{grid-column:2;grid-row:2;max-height:calc(100dvh - 150px)}}
@@ -187,7 +185,6 @@ body.fourfold-garden-page[data-audio-theme="fourfold-garden"]{background:radial-
  body.phone-game-shell.fourfold-garden-page .phone-options-list .inventory-sidebar>.bg-game-panel{border:1px solid var(--table-line)!important;border-image:none!important;padding:12px!important;box-shadow:none!important}
  body.phone-game-shell.fourfold-garden-page .phone-options-list .piece-guide-grid{grid-template-columns:1fr 1fr}
  body.phone-game-shell.fourfold-garden-page .phone-options-list .header-rules{width:100%;min-height:40px;margin:4px 0}
- body.phone-game-shell.fourfold-garden-page .modal-backdrop{z-index:1100}
 }
 @media(max-width:420px){
  body.phone-game-shell.fourfold-garden-page .board-title{font-size:12px}
